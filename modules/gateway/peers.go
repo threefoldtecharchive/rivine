@@ -6,11 +6,11 @@ import (
 	"net"
 	"time"
 
+	"github.com/NebulousLabs/muxado"
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
-	"github.com/NebulousLabs/muxado"
 )
 
 var (
@@ -42,7 +42,6 @@ type peer struct {
 func (p *peer) open() (modules.PeerConn, error) {
 	conn, err := p.sess.Open()
 	if err != nil {
-		g.log.Debugln("[SESS] Unable to open muxado session:", err)
 		return nil, err
 	}
 	return &peerConn{conn, p.NetAddress}, nil

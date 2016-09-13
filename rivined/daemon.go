@@ -16,9 +16,6 @@ import (
 	"github.com/rivine/rivine/modules/consensus"
 	"github.com/rivine/rivine/modules/explorer"
 	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/host"
-	"github.com/rivine/rivine/modules/miner"
-	"github.com/rivine/rivine/modules/renter"
 	"github.com/rivine/rivine/modules/transactionpool"
 	"github.com/rivine/rivine/modules/wallet"
 	"github.com/rivine/rivine/profile"
@@ -66,7 +63,7 @@ func processNetAddr(addr string) string {
 // invalid module character.
 func processModules(modules string) (string, error) {
 	modules = strings.ToLower(modules)
-	validModules := "cghmrtwe"
+	validModules := "cgtwe"
 	invalidModules := modules
 	for _, m := range validModules {
 		invalidModules = strings.Replace(invalidModules, string(m), "", 1)
@@ -118,7 +115,7 @@ func startDaemon(config Config) (err error) {
 	loadStart := time.Now()
 
 	// Create the server and start serving daemon routes immediately.
-	fmt.Printf("(0/%d) Loading siad...\n", len(config.Siad.Modules))
+	fmt.Printf("(0/%d) Loading rivined...\n", len(config.Siad.Modules))
 	srv, err := NewServer(config.Siad.APIaddr, config.Siad.RequiredUserAgent, config.APIPassword)
 	if err != nil {
 		return err
@@ -181,36 +178,6 @@ func startDaemon(config Config) (err error) {
 		}
 		defer w.Close()
 	}
-	var m modules.Miner
-	if strings.Contains(config.Siad.Modules, "m") {
-		i++
-		fmt.Printf("(%d/%d) Loading miner...\n", i, len(config.Siad.Modules))
-		m, err = miner.New(cs, tpool, w, filepath.Join(config.Siad.SiaDir, modules.MinerDir))
-		if err != nil {
-			return err
-		}
-		defer m.Close()
-	}
-	var h modules.Host
-	if strings.Contains(config.Siad.Modules, "h") {
-		i++
-		fmt.Printf("(%d/%d) Loading host...\n", i, len(config.Siad.Modules))
-		h, err = host.New(cs, tpool, w, config.Siad.HostAddr, filepath.Join(config.Siad.SiaDir, modules.HostDir))
-		if err != nil {
-			return err
-		}
-		defer h.Close()
-	}
-	var r modules.Renter
-	if strings.Contains(config.Siad.Modules, "r") {
-		i++
-		fmt.Printf("(%d/%d) Loading renter...\n", i, len(config.Siad.Modules))
-		r, err = renter.New(cs, w, tpool, filepath.Join(config.Siad.SiaDir, modules.RenterDir))
-		if err != nil {
-			return err
-		}
-		defer r.Close()
-	}
 
 	// Create the Sia API
 	a := api.New(
@@ -219,9 +186,6 @@ func startDaemon(config Config) (err error) {
 		cs,
 		e,
 		g,
-		h,
-		m,
-		r,
 		tpool,
 		w,
 	)

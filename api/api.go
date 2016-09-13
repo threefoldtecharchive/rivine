@@ -123,9 +123,6 @@ type API struct {
 	cs       modules.ConsensusSet
 	explorer modules.Explorer
 	gateway  modules.Gateway
-	host     modules.Host
-	miner    modules.Miner
-	renter   modules.Renter
 	tpool    modules.TransactionPool
 	wallet   modules.Wallet
 
@@ -140,14 +137,11 @@ func (api *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // New creates a new Sia API from the provided modules.  The API will require
 // authentication using HTTP basic auth for certain endpoints of the supplied
 // password is not the empty string.  Usernames are ignored for authentication.
-func New(requiredUserAgent string, requiredPassword string, cs modules.ConsensusSet, e modules.Explorer, g modules.Gateway, h modules.Host, m modules.Miner, r modules.Renter, tp modules.TransactionPool, w modules.Wallet) *API {
+func New(requiredUserAgent string, requiredPassword string, cs modules.ConsensusSet, e modules.Explorer, g modules.Gateway, tp modules.TransactionPool, w modules.Wallet) *API {
 	api := &API{
 		cs:       cs,
 		explorer: e,
 		gateway:  g,
-		host:     h,
-		miner:    m,
-		renter:   r,
 		tpool:    tp,
 		wallet:   w,
 	}
@@ -173,55 +167,6 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 		router.GET("/gateway", api.gatewayHandler)
 		router.POST("/gateway/connect/:netaddress", RequirePassword(api.gatewayConnectHandler, requiredPassword))
 		router.POST("/gateway/disconnect/:netaddress", RequirePassword(api.gatewayDisconnectHandler, requiredPassword))
-	}
-
-	// Host API Calls
-	if api.host != nil {
-		// Calls directly pertaining to the host.
-		router.GET("/host", api.hostHandlerGET)                                                   // Get the host status.
-		router.POST("/host", RequirePassword(api.hostHandlerPOST, requiredPassword))              // Change the settings of the host.
-		router.POST("/host/announce", RequirePassword(api.hostAnnounceHandler, requiredPassword)) // Announce the host to the network.
-
-		// Calls pertaining to the storage manager that the host uses.
-		router.GET("/host/storage", api.storageHandler)
-		router.POST("/host/storage/folders/add", RequirePassword(api.storageFoldersAddHandler, requiredPassword))
-		router.POST("/host/storage/folders/remove", RequirePassword(api.storageFoldersRemoveHandler, requiredPassword))
-		router.POST("/host/storage/folders/resize", RequirePassword(api.storageFoldersResizeHandler, requiredPassword))
-		router.POST("/host/storage/sectors/delete/:merkleroot", RequirePassword(api.storageSectorsDeleteHandler, requiredPassword))
-	}
-
-	// Miner API Calls
-	if api.miner != nil {
-		router.GET("/miner", api.minerHandler)
-		router.GET("/miner/header", RequirePassword(api.minerHeaderHandlerGET, requiredPassword))
-		router.POST("/miner/header", RequirePassword(api.minerHeaderHandlerPOST, requiredPassword))
-		router.GET("/miner/start", RequirePassword(api.minerStartHandler, requiredPassword))
-		router.GET("/miner/stop", RequirePassword(api.minerStopHandler, requiredPassword))
-	}
-
-	// Renter API Calls
-	if api.renter != nil {
-		router.GET("/renter", api.renterHandlerGET)
-		router.POST("/renter", RequirePassword(api.renterHandlerPOST, requiredPassword))
-		router.GET("/renter/contracts", api.renterContractsHandler)
-		router.GET("/renter/downloads", api.renterDownloadsHandler)
-		router.GET("/renter/files", api.renterFilesHandler)
-
-		// TODO: re-enable these routes once the new .sia format has been
-		// standardized and implemented.
-		// router.POST("/renter/load", RequirePassword(api.renterLoadHandler, requiredPassword))
-		// router.POST("/renter/loadascii", RequirePassword(api.renterLoadAsciiHandler, requiredPassword))
-		// router.GET("/renter/share", RequirePassword(api.renterShareHandler, requiredPassword))
-		// router.GET("/renter/shareascii", RequirePassword(api.renterShareAsciiHandler, requiredPassword))
-
-		router.POST("/renter/delete/*siapath", RequirePassword(api.renterDeleteHandler, requiredPassword))
-		router.GET("/renter/download/*siapath", RequirePassword(api.renterDownloadHandler, requiredPassword))
-		router.POST("/renter/rename/*siapath", RequirePassword(api.renterRenameHandler, requiredPassword))
-		router.POST("/renter/upload/*siapath", RequirePassword(api.renterUploadHandler, requiredPassword))
-
-		// HostDB endpoints.
-		router.GET("/hostdb/active", api.renterHostsActiveHandler)
-		router.GET("/hostdb/all", api.renterHostsAllHandler)
 	}
 
 	// TransactionPool API Calls

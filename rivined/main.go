@@ -59,13 +59,13 @@ func die(args ...interface{}) {
 func versionCmd(*cobra.Command, []string) {
 	switch build.Release {
 	case "dev":
-		fmt.Println("Sia Daemon v" + build.Version + "-dev")
+		fmt.Println("Rivine Daemon v" + build.Version + "-dev")
 	case "standard":
-		fmt.Println("Sia Daemon v" + build.Version)
+		fmt.Println("Rivine Daemon v" + build.Version)
 	case "testing":
-		fmt.Println("Sia Daemon v" + build.Version + "-testing")
+		fmt.Println("Rivine Daemon v" + build.Version + "-testing")
 	default:
-		fmt.Println("Sia Daemon v" + build.Version + "-???")
+		fmt.Println("Rivine Daemon v" + build.Version + "-???")
 	}
 }
 
@@ -76,9 +76,9 @@ independent components of Sia. This flag should only be used by developers or
 people who want to reduce overhead from unused modules. Modules are specified by
 their first letter. If the -M or --modules flag is not specified the default
 modules are run. The default modules are:
-	gateway, consensus set, host, miner, renter, transaction pool, wallet
+	gateway, consensus set, transaction pool, wallet
 This is equivalent to:
-	siad -M cghmrtw
+	rivined -M cgtw
 Below is a list of all the modules available.
 
 Gateway (g):
@@ -103,24 +103,6 @@ Wallet (w):
 	The wallet requires the consensus set and transaction pool.
 	Example:
 		siad -M gctw
-Renter (r):
-	The renter manages the user's files on the network.
-	The renter requires the consensus set, transaction pool, and wallet.
-	Example:
-		siad -M gctwr
-Host (h):
-	The host provides storage from local disks to the network. The host
-	negotiates file contracts with remote renters to earn money for storing
-	other users' files.
-	The host requires the consensus set, transaction pool, and wallet.
-	Example:
-		siad -M gctwh
-Miner (m):
-	The miner provides a basic CPU mining implementation as well as an API
-	for external miners to use.
-	The miner requires the consensus set, transaction pool, and wallet.
-	Example:
-		siad -M gctwm
 Explorer (e):
 	The explorer provides statistics about the blockchain and can be
 	queried for information about specific transactions or other objects on
@@ -154,7 +136,7 @@ func main() {
 	})
 
 	// Set default values, which have the lowest priority.
-	root.Flags().StringVarP(&globalConfig.Siad.RequiredUserAgent, "agent", "", "Sia-Agent", "required substring for the user agent")
+	root.Flags().StringVarP(&globalConfig.Siad.RequiredUserAgent, "agent", "", "Rivine-Agent", "required substring for the user agent")
 	root.Flags().StringVarP(&globalConfig.Siad.HostAddr, "host-addr", "", ":9982", "which port the host listens on")
 	root.Flags().StringVarP(&globalConfig.Siad.ProfileDir, "profile-directory", "", "profiles", "location of the profiling directory")
 	root.Flags().StringVarP(&globalConfig.Siad.APIaddr, "api-addr", "", "localhost:9980", "which host:port the API server listens on")
@@ -162,7 +144,7 @@ func main() {
 	root.Flags().BoolVarP(&globalConfig.Siad.NoBootstrap, "no-bootstrap", "", false, "disable bootstrapping on this run")
 	root.Flags().BoolVarP(&globalConfig.Siad.Profile, "profile", "", false, "enable profiling")
 	root.Flags().StringVarP(&globalConfig.Siad.RPCaddr, "rpc-addr", "", ":9981", "which port the gateway listens on")
-	root.Flags().StringVarP(&globalConfig.Siad.Modules, "modules", "M", "cghmrtw", "enabled modules, see 'siad modules' for more info")
+	root.Flags().StringVarP(&globalConfig.Siad.Modules, "modules", "M", "cgtw", "enabled modules, see 'rivined modules' for more info")
 	root.Flags().BoolVarP(&globalConfig.Siad.AuthenticateAPI, "authenticate-api", "", false, "enable API password protection")
 	root.Flags().BoolVarP(&globalConfig.Siad.AllowAPIBind, "disable-api-security", "", false, "allow siad to listen on a non-localhost address (DANGEROUS)")
 
