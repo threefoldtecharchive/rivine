@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 // TestFileNumChunks checks the numChunks method of the file type.

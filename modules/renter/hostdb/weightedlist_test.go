@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // fakeAddr returns a modules.NetAddress to be used in a HostEntry. Such

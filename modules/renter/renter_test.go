@@ -3,16 +3,16 @@ package renter
 import (
 	"path/filepath"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/modules/consensus"
-	"github.com/NebulousLabs/Sia/modules/gateway"
-	"github.com/NebulousLabs/Sia/modules/miner"
-	"github.com/NebulousLabs/Sia/modules/renter/contractor"
-	"github.com/NebulousLabs/Sia/modules/transactionpool"
-	"github.com/NebulousLabs/Sia/modules/wallet"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/consensus"
+	"github.com/rivine/rivine/modules/gateway"
+	"github.com/rivine/rivine/modules/miner"
+	"github.com/rivine/rivine/modules/renter/contractor"
+	"github.com/rivine/rivine/modules/transactionpool"
+	"github.com/rivine/rivine/modules/wallet"
+	"github.com/rivine/rivine/types"
 )
 
 // renterTester contains all of the modules that are used while testing the renter.

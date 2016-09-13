@@ -3,8 +3,8 @@ package api
 import (
 	"math/big"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/types"
 )
 
 // scanAmount scans a types.Currency from a string.

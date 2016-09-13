@@ -12,8 +12,8 @@ import (
 
 	"github.com/NebulousLabs/go-upnp"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/modules"
 )
 
 // managedLearnHostname discovers the external IP of the Host. If the host's

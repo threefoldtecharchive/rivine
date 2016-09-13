@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // announcementFinder is a quick module that parses the blockchain for host

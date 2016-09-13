@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/modules"
 )
 
 func TestRPCID(t *testing.T) {

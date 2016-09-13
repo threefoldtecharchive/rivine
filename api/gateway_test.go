@@ -3,8 +3,8 @@ package api
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/modules/gateway"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/modules/gateway"
 )
 
 // TestGatewayStatus checks that the /gateway/status call is returning a corect

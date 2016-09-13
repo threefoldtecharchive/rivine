@@ -15,8 +15,8 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/encoding"
 )
 
 type (

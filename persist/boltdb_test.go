@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NebulousLabs/Sia/build"
+	"github.com/rivine/rivine/build"
 	"github.com/NebulousLabs/bolt"
 )
 

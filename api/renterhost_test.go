@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // TestIntegrationHostAndRent sets up an integration test where a host and

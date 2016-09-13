@@ -1,8 +1,8 @@
 package wallet
 
 import (
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/types"
 )
 
 // sortedOutputs is a struct containing a slice of siacoin outputs and their

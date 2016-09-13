@@ -62,7 +62,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/modules"
 )
 
 // TestRPCMetrics checks that the rpc tracking is counting incoming RPC cals.

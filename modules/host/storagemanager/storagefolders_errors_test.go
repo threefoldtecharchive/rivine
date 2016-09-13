@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/modules"
 )
 
 // TestClosedStorageManagerOperations tries a bunch of operations on the storage manager

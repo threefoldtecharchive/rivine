@@ -1045,7 +1045,7 @@ gets the transaction associated with a specific transaction id.
 {
   "transaction": {
     "transaction": {
-      // See types.Transaction in https://github.com/NebulousLabs/Sia/blob/master/types/transactions.go
+      // See types.Transaction in https://github.com/rivine/rivine/blob/master/types/transactions.go
     },
     "transactionid":         "1234567890abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "confirmationheight":    50000,

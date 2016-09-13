@@ -3,9 +3,9 @@ package transactionpool
 import (
 	"errors"
 
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // standard.go adds extra rules to transactions which help preserve network

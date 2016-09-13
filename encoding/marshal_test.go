@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/build"
+	"github.com/rivine/rivine/build"
 )
 
 // dummy types to test encoding

@@ -3,7 +3,7 @@ package storagemanager
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 // TestMaxVirtualSectors checks that the max virtual sector limit is enforced

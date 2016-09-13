@@ -4,8 +4,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/api"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/types"
 )
 
 // TestSortByValue tests that byValue sorts contracts correctly.

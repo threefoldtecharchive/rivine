@@ -6,9 +6,9 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/NebulousLabs/Sia/api"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 
 	"github.com/spf13/cobra"
 )

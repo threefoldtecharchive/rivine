@@ -3,8 +3,8 @@ package types
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
 )
 
 // BenchmarkStandaloneValid times how long it takes to verify a single

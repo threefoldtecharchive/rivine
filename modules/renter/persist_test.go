@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
 )
 
 // newTestingFile initializes a file object with random parameters.

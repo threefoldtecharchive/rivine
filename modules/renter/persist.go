@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/persist"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/persist"
+	"github.com/rivine/rivine/types"
 )
 
 const (

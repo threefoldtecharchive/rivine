@@ -1,7 +1,7 @@
 package consensus
 
 import (
-	"github.com/NebulousLabs/Sia/crypto"
+	"github.com/rivine/rivine/crypto"
 
 	"github.com/NebulousLabs/bolt"
 )

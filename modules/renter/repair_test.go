@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/modules/renter/contractor"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/renter/contractor"
+	"github.com/rivine/rivine/types"
 )
 
 // a testHost simulates a host. It implements the contractor.Editor interface.

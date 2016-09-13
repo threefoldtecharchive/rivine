@@ -3,11 +3,11 @@ package contractor
 import (
 	"errors"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/modules/renter/proto"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/renter/proto"
+	"github.com/rivine/rivine/types"
 )
 
 // the contractor will cap host's MaxCollateral setting to this value

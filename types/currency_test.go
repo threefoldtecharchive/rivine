@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/encoding"
 )
 
 // TestNewCurrency initializes a standard new currency.

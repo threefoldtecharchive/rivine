@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/NebulousLabs/Sia/crypto"
+	"github.com/rivine/rivine/crypto"
 )
 
 // unlockhash.go contains the unlockhash alias along with usability methods

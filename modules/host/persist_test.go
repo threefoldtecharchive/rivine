@@ -4,8 +4,8 @@ package host
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/types"
 )
 
 // TestEarlySaving checks that the early host is correctly saving values to

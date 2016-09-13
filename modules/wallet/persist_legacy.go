@@ -4,9 +4,9 @@ package wallet
 import (
 	"path/filepath"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/types"
 )
 
 // a savedKey contains a single-signature key and all the tools needed to spend

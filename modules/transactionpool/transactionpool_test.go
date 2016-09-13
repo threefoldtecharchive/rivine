@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/modules/consensus"
-	"github.com/NebulousLabs/Sia/modules/gateway"
-	"github.com/NebulousLabs/Sia/modules/miner"
-	"github.com/NebulousLabs/Sia/modules/wallet"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/consensus"
+	"github.com/rivine/rivine/modules/gateway"
+	"github.com/rivine/rivine/modules/miner"
+	"github.com/rivine/rivine/modules/wallet"
+	"github.com/rivine/rivine/types"
 )
 
 // A tpoolTester is used during testing to initialize a transaction pool and

@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/build"
+	"github.com/rivine/rivine/build"
 )
 
 // TestSaveLoad checks that saving and loading data behaves as expected.

@@ -3,7 +3,7 @@ package host
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 // TestStorageObligationID checks that the return function of the storage

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/persist"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/persist"
 )
 
 // dependencyErrMkdirAll is a dependency set that returns an error when MkdirAll

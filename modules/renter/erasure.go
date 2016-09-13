@@ -5,7 +5,7 @@ import (
 
 	"github.com/klauspost/reedsolomon"
 
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/modules"
 )
 
 // rsCode is a Reed-Solomon encoder/decoder. It implements the

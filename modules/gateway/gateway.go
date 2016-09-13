@@ -142,9 +142,9 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/persist"
-	siasync "github.com/NebulousLabs/Sia/sync"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/persist"
+	siasync "github.com/rivine/rivine/sync"
 )
 
 var (

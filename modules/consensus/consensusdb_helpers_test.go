@@ -4,8 +4,8 @@ package consensus
 // compatibility with the test suite.
 
 import (
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/types"
 
 	"github.com/NebulousLabs/bolt"
 )

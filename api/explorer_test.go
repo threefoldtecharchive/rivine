@@ -3,7 +3,7 @@ package api
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 // TestIntegrationExplorerGET probes the GET call to /explorer.

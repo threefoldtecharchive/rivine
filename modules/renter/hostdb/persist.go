@@ -1,7 +1,7 @@
 package hostdb
 
 import (
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/modules"
 )
 
 // hdbPersist defines what HostDB data persists across sessions.

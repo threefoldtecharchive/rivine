@@ -3,7 +3,7 @@ package hostdb
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 func calculateWeightFromUInt64Price(price uint64) (weight types.Currency) {

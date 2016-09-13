@@ -3,7 +3,7 @@ package explorer
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 // TestImmediateBlockFacts grabs the block facts object from the block explorer

@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 
 	"github.com/julienschmidt/httprouter"
 )

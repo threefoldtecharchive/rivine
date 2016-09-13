@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/encoding"
 )
 
 // BenchmarkEncodeEmptyBlock benchmarks encoding an empty block.

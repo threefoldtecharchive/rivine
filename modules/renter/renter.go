@@ -1,12 +1,12 @@
 package renter
 
 import (
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/modules/renter/contractor"
-	"github.com/NebulousLabs/Sia/modules/renter/hostdb"
-	"github.com/NebulousLabs/Sia/persist"
-	"github.com/NebulousLabs/Sia/sync"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/renter/contractor"
+	"github.com/rivine/rivine/modules/renter/hostdb"
+	"github.com/rivine/rivine/persist"
+	"github.com/rivine/rivine/sync"
+	"github.com/rivine/rivine/types"
 )
 
 // A hostDB is a database of hosts that the renter can use for figuring out who

@@ -374,7 +374,7 @@ gets the transaction associated with a specific transaction id.
     // transaction (the rest of the fields in this object) are usually what is
     // desired.
     "transaction": {
-      // See types.Transaction in https://github.com/NebulousLabs/Sia/blob/master/types/transactions.go
+      // See types.Transaction in https://github.com/rivine/rivine/blob/master/types/transactions.go
     },
 
     // ID of the transaction from which the wallet transaction was derived.

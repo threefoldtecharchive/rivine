@@ -9,8 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/NebulousLabs/Sia/api"
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/modules"
 )
 
 var (

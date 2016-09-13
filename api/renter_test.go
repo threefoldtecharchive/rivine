@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/modules/renter"
-	"github.com/NebulousLabs/Sia/modules/renter/contractor"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/modules/renter"
+	"github.com/rivine/rivine/modules/renter/contractor"
+	"github.com/rivine/rivine/types"
 )
 
 const (

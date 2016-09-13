@@ -3,7 +3,7 @@ package gateway
 import (
 	"time"
 
-	"github.com/NebulousLabs/Sia/build"
+	"github.com/rivine/rivine/build"
 )
 
 const (

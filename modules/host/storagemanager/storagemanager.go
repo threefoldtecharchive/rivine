@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/persist"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/persist"
 )
 
 const (

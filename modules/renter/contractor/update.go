@@ -1,8 +1,8 @@
 package contractor
 
 import (
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // ProcessConsensusChange will be called by the consensus set every time there

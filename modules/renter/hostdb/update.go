@@ -1,8 +1,8 @@
 package hostdb
 
 import (
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // findHostAnnouncements returns a list of the host announcements found within

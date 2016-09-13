@@ -3,8 +3,8 @@ package consensus
 import (
 	"errors"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/modules"
 
 	"github.com/NebulousLabs/bolt"
 )

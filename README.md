@@ -1,11 +1,11 @@
 Sia 1.0.1
 =========
 
-[![Build Status](https://travis-ci.org/NebulousLabs/Sia.svg?branch=master)](https://travis-ci.org/NebulousLabs/Sia)
-[![GoDoc](https://godoc.org/github.com/NebulousLabs/Sia?status.svg)](https://godoc.org/github.com/NebulousLabs/Sia)
-[![Go Report Card](https://goreportcard.com/badge/github.com/NebulousLabs/Sia)](https://goreportcard.com/report/github.com/NebulousLabs/Sia)
+[![Build Status](https://travis-ci.org/rivine/rivine.svg?branch=master)](https://travis-ci.org/rivine/rivine)
+[![GoDoc](https://godoc.org/github.com/rivine/rivine?status.svg)](https://godoc.org/github.com/rivine/rivine)
+[![Go Report Card](https://goreportcard.com/badge/github.com/rivine/rivine)](https://goreportcard.com/report/github.com/rivine/rivine)
 
-Binaries can be found at [our website](http://siacoin.com). Code for the graphical front-end can be found at the [Sia-UI](https://github.com/NebulousLabs/Sia-UI) repo.
+Binaries can be found at [our website](http://siacoin.com). Code for the graphical front-end can be found at the [Sia-UI](https://github.com/rivine/rivine-UI) repo.
 
 Sia is a new decentralized cloud storage platform aimed at giving users control
 of their data. Data is split into hundreds of erasure coded pieces and
@@ -53,7 +53,7 @@ To build from source, [Go 1.6 must be installed](https://golang.org/doc/install)
 on the system. Then simply use `go get`:
 
 ```
-go get -u github.com/NebulousLabs/Sia/...
+go get -u github.com/rivine/rivine/...
 ```
 
 This will download the Sia repo to your `$GOPATH/src` folder, and install the

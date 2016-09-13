@@ -16,16 +16,16 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/NebulousLabs/Sia/api"
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/types"
 
 	"github.com/inconshreveable/go-update"
 	"github.com/julienschmidt/httprouter"
 	"github.com/kardianos/osext"
 )
 
-var errEmptyUpdateResponse = errors.New("API call to https://api.github.com/repos/NebulousLabs/Sia/releases/latest is returning an empty response")
+var errEmptyUpdateResponse = errors.New("API call to https://api.github.com/repos/rivine/rivine/releases/latest is returning an empty response")
 
 type (
 	// Server creates and serves a HTTP server that offers communication with a
@@ -111,7 +111,7 @@ bwIDAQAB
 
 // fetchLatestRelease returns metadata about the most recent GitHub release.
 func fetchLatestRelease() (githubRelease, error) {
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/NebulousLabs/Sia/releases/latest", nil)
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/rivine/rivine/releases/latest", nil)
 	if err != nil {
 		return githubRelease{}, err
 	}

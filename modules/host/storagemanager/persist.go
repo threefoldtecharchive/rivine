@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/persist"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/persist"
 
 	"github.com/NebulousLabs/bolt"
 )

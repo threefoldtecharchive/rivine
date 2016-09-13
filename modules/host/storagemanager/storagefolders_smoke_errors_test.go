@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/modules"
 )
 
 // faultyFS is a mocked filesystem which can be configured to fail for certain

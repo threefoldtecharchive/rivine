@@ -1,7 +1,7 @@
 package storagemanager
 
 import (
-	"github.com/NebulousLabs/Sia/build"
+	"github.com/rivine/rivine/build"
 )
 
 const (

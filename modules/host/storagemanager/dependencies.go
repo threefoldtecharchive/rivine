@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/NebulousLabs/Sia/persist"
+	"github.com/rivine/rivine/persist"
 )
 
 // Fake errors that get returned when a simulated failure of a dependency is

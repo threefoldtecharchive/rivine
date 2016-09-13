@@ -13,7 +13,7 @@ import (
 	"errors"
 	"hash"
 
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/encoding"
 
 	"github.com/dchest/blake2b"
 )

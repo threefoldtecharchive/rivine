@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 // synchronizationCheck takes a bunch of server testers as input and checks

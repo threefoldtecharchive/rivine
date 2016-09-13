@@ -1,9 +1,9 @@
 package renter
 
 import (
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/modules/renter/contractor"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/renter/contractor"
 )
 
 // A hostPool is a collection of active host connections, in the form of

@@ -3,9 +3,9 @@ package contractor
 import (
 	"errors"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/modules/renter/proto"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/renter/proto"
 )
 
 // An Downloader retrieves sectors from with a host. It requests one sector at

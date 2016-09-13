@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/persist"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/persist"
 )
 
 // These interfaces define the HostDB's dependencies. Using the smallest

@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/crypto"
+	"github.com/rivine/rivine/crypto"
 )
 
 // TestUnlockHash runs the UnlockHash code.

@@ -3,10 +3,10 @@ package explorer
 import (
 	"fmt"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 
 	"github.com/NebulousLabs/bolt"
 )

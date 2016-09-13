@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/persist"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/persist"
 
 	"github.com/NebulousLabs/bolt"
 )

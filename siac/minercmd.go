@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/NebulousLabs/Sia/api"
+	"github.com/rivine/rivine/api"
 
 	"github.com/spf13/cobra"
 )

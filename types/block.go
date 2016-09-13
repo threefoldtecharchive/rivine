@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
 )
 
 const (

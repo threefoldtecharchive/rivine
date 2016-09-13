@@ -3,8 +3,8 @@ package storagemanager
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/modules"
 )
 
 // TestStorageFolderUIDString probes the uidString method of the storage

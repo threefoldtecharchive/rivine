@@ -3,7 +3,7 @@ package hostdb
 import (
 	"math/big"
 
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/types"
 )
 
 var (

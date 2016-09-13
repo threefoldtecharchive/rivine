@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NebulousLabs/Sia/crypto"
-	"github.com/NebulousLabs/Sia/encoding"
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/modules"
 )
 
 const dummyNode = "111.111.111.111:1111"

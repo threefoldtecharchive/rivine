@@ -3,8 +3,8 @@ package transactionpool
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // TestArbDataOnly tries submitting a transaction with only arbitrary data to

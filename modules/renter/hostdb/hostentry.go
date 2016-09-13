@@ -3,8 +3,8 @@ package hostdb
 import (
 	"bytes"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // A hostEntry represents a host on the network.

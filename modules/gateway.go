@@ -3,7 +3,7 @@ package modules
 import (
 	"net"
 
-	"github.com/NebulousLabs/Sia/build"
+	"github.com/rivine/rivine/build"
 )
 
 const (

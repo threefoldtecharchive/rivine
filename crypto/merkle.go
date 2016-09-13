@@ -3,7 +3,7 @@ package crypto
 import (
 	"bytes"
 
-	"github.com/NebulousLabs/Sia/encoding"
+	"github.com/rivine/rivine/encoding"
 
 	"github.com/NebulousLabs/merkletree"
 )
