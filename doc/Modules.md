@@ -32,4 +32,4 @@ parent module has not yet received (desynchronization).
 
 #### Module Update Flow
 
-consensus -> (host, hostdb, renter, (transaction pool -> miner, wallet))
+consensus -> ((transaction pool -> wallet))

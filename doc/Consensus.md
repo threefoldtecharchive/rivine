@@ -46,7 +46,7 @@ threshold signatures.
 
   This method allows new signature types to be easily added to the currency in
   a way that does not invalidate existing outputs and keys. Adding a new
-  signature type requires a hardfork, but allows easy protection against
+  signature type requires a hard fork, but allows easy protection against
   cryptographic breaks, and easy migration to new cryptography if there are any
   breakthroughs in areas like verification speed, ring signatures, etc.
 
@@ -91,11 +91,11 @@ There are future plans to enable sidechain compatibility with Sia. This would
 allow other currencies such as Bitcoin to be spent in all the same places that
 the Siacoin can be spent.
 
-Marshalling
+Marshaling
 -----------
 
 Many of the Sia types need to be hashed at some point, which requires having a
-consistent algorithm for marshalling types into a set of bytes that can be
+consistent algorithm for marshaling types into a set of bytes that can be
 hashed. The following rules are used for hashing:
 
  - Integers are little-endian, and are always encoded as 8 bytes.
@@ -266,55 +266,6 @@ an unlock conditions object. A 'file contract revision' can be submitted which
 fulfills the unlock conditions object, resulting in the file contract being
 replaced by a new file contract, as specified in the revision.
 
-File Contract Revisions
------------------------
-
-A file contract revision modifies a contract. File contracts have a revision
-number, and any revision submitted to the blockchain must have a higher
-revision number in order to be valid. Any field can be changed except for the
-payout - siacoins cannot be added to or removed from the file contract during a
-revision, though the destination upon a successful or unsuccessful storage
-proof can be changed.
-
-The greatest application for file contract revisions is file-diff channels - a
-file contract can be edited many times off-blockchain as a user uploads new or
-different content to the host. This improves the overall scalability of Sia.
-
-Storage Proofs
---------------
-
-A storage proof transaction is any transaction containing a storage proof.
-Storage proof transactions are not allowed to have siacoin or siafund outputs,
-and are not allowed to have file contracts.
-
-When creating a storage proof, you only prove that you have a single 64 byte
-segment of the file. The piece that you must prove you have is chosen
-randomly using the contract id and the id of the 'trigger block'.  The
-trigger block is the block at height 'Start' - 1, where 'Start' is the value
-'Start' in the contract that the storage proof is fulfilling.
-
-The file is composed of 64 byte segments whose hashes compose the leaves of a
-Merkle tree. When proving you have the file, you must prove you have one of the
-leaves. To determine which leaf, take the hash of the contract id concatenated
-to the trigger block id, then take the numerical value of the result modulus
-the number of segments:
-
-	Hash(file contract id + trigger block id) % num segments
-
-The proof is formed by providing the 64 byte segment, and then the missing
-hashes required to fill out the remaining tree. The total size of the proof
-will be 64 bytes + 32 bytes * log(num segments), and can be verified by anybody
-who knows the root hash and the file size.
-
-Storage proof transactions are not allowed to have siacoin outputs, siafund
-outputs, or contracts. All outputs created by the storage proofs cannot be
-spent for 50 blocks.
-
-These limits are in place because a simple blockchain reorganization can change
-the trigger block, which will invalidate the storage proof and therefore the
-entire transaction. This makes double spend attacks and false spend attacks
-significantly easier to execute.
-
 Siafund Inputs
 --------------
 
@@ -355,7 +306,6 @@ siafund pool at the moment the siafund output was created.
 Miner Fees
 ----------
 
-A miner fee is a volume of siacoins that get added to the block subsidy.
 
 Arbitrary Data
 --------------
@@ -390,7 +340,7 @@ signature. If the whole transaction flag is set, all other elements in the
 covered fields object must be empty except for the signatures field.
 
 The covered fields object contains a slice of indexes for each element of the
-transaction (siacoin inputs, miner fees, etc.). The slice must be sorted, and
+transaction (siacoin inputs, minting fees, etc.). The slice must be sorted, and
 there can be no repeated elements.
 
 Entirely nonmalleable transactions can be achieved by setting the 'whole

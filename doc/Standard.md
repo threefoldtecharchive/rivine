@@ -28,16 +28,6 @@ certain minimum. For the near future, there are no plans to prioritize
 transactions with substantially higher fees. Other mining software may take
 alternative approaches.
 
-File Contract Rules
--------------------
-
-File Contracts that start in less than 10 blocks time are not accepted into the
-transaction pool. This is because a file contract becomes invalid if it is not
-accepted into the blockchain by the start block, and this might result in a
-cascade of invalidated unconfirmed transactions, which may make it easier to
-launch double spend attacks on zero confirmation outputs. 10 blocks is plenty
-of time on the other hand for a file contract to make it into the blockchain.
-
 Signature Algorithms
 --------------------
 
