@@ -1,8 +1,8 @@
 package gateway
 
 import (
-	"github.com/NebulousLabs/Sia/build"
-	"github.com/NebulousLabs/Sia/modules"
+	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/modules"
 )
 
 // managedPeerManagerConnect is a blocking function which tries to connect to
