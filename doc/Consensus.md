@@ -186,15 +186,15 @@ A Transaction is composed of the following:
 - File Contracts
 - File Contract Revisions
 - Storage Proofs
-- Siafund Inputs
-- Siafund Outputs
+- BlockStake Inputs
+- BlockStake Outputs
 - Miner Fees
 - Arbitrary Data
 - Transaction Signatures
 
-The sum of all the siacoin inputs must equal the sum of all the miner fees,
-siacoin outputs, and file contract payouts. There can be no leftovers. The sum
-of all siafund inputs must equal the sum of all siafund outputs.
+The sum of all the siacoin inputs must equal the sum of all the miner fees and
+siacoin outputs. There can be no leftovers. The sum
+of all BlockStake inputs must equal the sum of all BlockStake outputs.
 
 Several objects have unlock hashes. An unlock hash is the Merkle root of the
 'unlock conditions' object. The unlock conditions contain a timelock, a number
@@ -237,71 +237,20 @@ Siacoin outputs contain a value and an unlock hash (also called a coin
 address). The unlock hash is the Merkle root of the spend conditions that must
 be met to spend the output.
 
-File Contracts
---------------
+BlockStake Inputs
+-----------------
 
-A file contract is an agreement by some party to prove they have a file at a
-given point in time. The contract contains the Merkle root of the data being
-stored, and the size in bytes of the data being stored.
-
-The Merkle root is formed by breaking the file into 64 byte segments and
-hashing each segment to form the leaves of the Merkle tree. The final segment
-is not padded out.
-
-The storage proof must be submitted between the 'WindowStart' and 'WindowEnd'
-fields of the contract. There is a 'Payout', which indicates how many siacoins
-are given out when the storage proof is provided. 3.9% of this payout (rounded
-down to the nearest 10,000) is put aside for the owners of siafunds. If the
-storage proof is provided and is valid, the remaining payout is put in an
-output spendable by the 'valid proof spend hash', and if a valid storage proof
-is not provided to the blockchain by 'end', the remaining payout is put in an
-output spendable by the 'missed proof spend hash'.
-
-All contracts must have a non-zero payout, 'start' must be before 'end', and
-'start' must be greater than the current height of the blockchain. A storage
-proof is acceptable if it is submitted in the block of height 'end'.
-
-File contracts are created with a 'Revision Hash', which is the Merkle root of
-an unlock conditions object. A 'file contract revision' can be submitted which
-fulfills the unlock conditions object, resulting in the file contract being
-replaced by a new file contract, as specified in the revision.
-
-Siafund Inputs
---------------
-
-A siafund input works similar to a siacoin input. It contains the id of a
-siafund output being spent, and the unlock conditions required to spend the
+A blockstake input works similar to a siacoin input. It contains the id of a
+blockstake output being spent, and the unlock conditions required to spend the
 output.
 
-A special output is created when a siafund output is used as input. All of the
-siacoins that have accrued in the siafund since its last spend are sent to the
-'claim spend hash' found in the siafund output, which is a normal siacoin
-address. The value of the siacoin output is determined by taking the size of
-the siacoin pool when the output was created and comparing it to the current
-size of the siacoin pool. The equation is:
+BlockStake Outputs
+------------------
 
-	((Current Pool Size - Previous Pool Size) / 10,000) * siafund quantity
-
-Like the miner outputs and the storage proof outputs, the siafund output cannot
-be spent for 50 blocks because the value of the output can change if the
-blockchain reorganizes. Reorganizations will not however cause the transaction
-to be invalidated, so the ban on contracts and outputs does not need to be in
-place.
-
-Siafund Outputs
----------------
-
-Like siacoin outputs, siafund outputs contain a value and an unlock hash. The
-value indicates the number of siafunds that are put into the output, and the
+Like siacoin outputs, blockstake outputs contain a value and an unlock hash. The
+value indicates the number of blockstakes that are put into the output, and the
 unlock hash is the Merkle root of the unlock conditions object which allows the
 output to be spent.
-
-Siafund outputs also contain a claim unlock hash field, which indicates the
-unlock hash of the siacoin output that is created when the siafund output is
-spent. The value of the output that gets created will depend on the growth of
-the siacoin pool between the creation and the spending of the output. This
-growth is measured by storing a 'claim start', which indicates the size of the
-siafund pool at the moment the siafund output was created.
 
 Miner Fees
 ----------
