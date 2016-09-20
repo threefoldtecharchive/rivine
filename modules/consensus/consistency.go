@@ -121,47 +121,10 @@ func checkSiacoinCount(tx *bolt.Tx) {
 		manageErr(tx, err)
 	}
 
-	// Add all of the payouts from file contracts.
-	var fcSiacoins types.Currency
-	err = tx.Bucket(FileContracts).ForEach(func(_, fcBytes []byte) error {
-		var fc types.FileContract
-		err := encoding.Unmarshal(fcBytes, &fc)
-		if err != nil {
-			manageErr(tx, err)
-		}
-		var fcCoins types.Currency
-		for _, output := range fc.ValidProofOutputs {
-			fcCoins = fcCoins.Add(output.Value)
-		}
-		fcSiacoins = fcSiacoins.Add(fcCoins)
-		return nil
-	})
-	if err != nil {
-		manageErr(tx, err)
-	}
-
-	// Add all of the siafund claims.
-	var claimSiacoins types.Currency
-	err = tx.Bucket(SiafundOutputs).ForEach(func(_, sfoBytes []byte) error {
-		var sfo types.SiafundOutput
-		err := encoding.Unmarshal(sfoBytes, &sfo)
-		if err != nil {
-			manageErr(tx, err)
-		}
-
-		coinsPerFund := getSiafundPool(tx).Sub(sfo.ClaimStart)
-		claimCoins := coinsPerFund.Mul(sfo.Value).Div(types.SiafundCount)
-		claimSiacoins = claimSiacoins.Add(claimCoins)
-		return nil
-	})
-	if err != nil {
-		manageErr(tx, err)
-	}
-
 	expectedSiacoins := types.CalculateNumSiacoins(blockHeight(tx))
-	totalSiacoins := dscoSiacoins.Add(scoSiacoins).Add(fcSiacoins).Add(claimSiacoins)
+	totalSiacoins := dscoSiacoins.Add(scoSiacoins)
 	if totalSiacoins.Cmp(expectedSiacoins) != 0 {
-		diagnostics := fmt.Sprintf("Wrong number of siacoins\nDsco: %v\nSco: %v\nFc: %v\nClaim: %v\n", dscoSiacoins, scoSiacoins, fcSiacoins, claimSiacoins)
+		diagnostics := fmt.Sprintf("Wrong number of siacoins\nDsco: %v\nSco: %v\n", dscoSiacoins, scoSiacoins)
 		if totalSiacoins.Cmp(expectedSiacoins) < 0 {
 			diagnostics += fmt.Sprintf("total: %v\nexpected: %v\n expected is bigger: %v", totalSiacoins, expectedSiacoins, expectedSiacoins.Sub(totalSiacoins))
 		} else {

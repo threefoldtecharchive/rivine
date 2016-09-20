@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -12,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
@@ -20,13 +18,9 @@ import (
 	"github.com/rivine/rivine/modules/consensus"
 	"github.com/rivine/rivine/modules/explorer"
 	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/host"
-	"github.com/rivine/rivine/modules/miner"
-	"github.com/rivine/rivine/modules/renter"
 	"github.com/rivine/rivine/modules/transactionpool"
 	"github.com/rivine/rivine/modules/wallet"
 	"github.com/rivine/rivine/persist"
-	"github.com/rivine/rivine/types"
 )
 
 // A Server is essentially a collection of modules and an API server to talk
@@ -49,13 +43,13 @@ type Server struct {
 // the empty string. Usernames are ignored for authentication. This type of
 // authentication sends passwords in plaintext and should therefore only be
 // used if the APIaddr is localhost.
-func NewServer(APIaddr string, requiredUserAgent string, requiredPassword string, cs modules.ConsensusSet, e modules.Explorer, g modules.Gateway, h modules.Host, m modules.Miner, r modules.Renter, tp modules.TransactionPool, w modules.Wallet) (*Server, error) {
+func NewServer(APIaddr string, requiredUserAgent string, requiredPassword string, cs modules.ConsensusSet, e modules.Explorer, g modules.Gateway, tp modules.TransactionPool, w modules.Wallet) (*Server, error) {
 	l, err := net.Listen("tcp", APIaddr)
 	if err != nil {
 		return nil, err
 	}
 
-	a := New(requiredUserAgent, requiredPassword, cs, e, g, h, m, r, tp, w)
+	a := New(requiredUserAgent, requiredPassword, cs, e, g, tp, w)
 	srv := &Server{
 		api: a,
 
@@ -105,9 +99,6 @@ func (srv *Server) Close() error {
 		c    io.Closer
 	}{
 		{"explorer", srv.api.explorer},
-		{"host", srv.api.host},
-		{"renter", srv.api.renter},
-		{"miner", srv.api.miner},
 		{"wallet", srv.api.wallet},
 		{"tpool", srv.api.tpool},
 		{"consensus", srv.api.cs},
@@ -129,9 +120,6 @@ func (srv *Server) Close() error {
 type serverTester struct {
 	cs        modules.ConsensusSet
 	gateway   modules.Gateway
-	host      modules.Host
-	miner     modules.TestMiner
-	renter    modules.Renter
 	tpool     modules.TransactionPool
 	explorer  modules.Explorer
 	wallet    modules.Wallet
@@ -178,19 +166,7 @@ func assembleServerTester(key crypto.TwofishKey, testdir string) (*serverTester,
 	if err != nil {
 		return nil, err
 	}
-	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.MinerDir))
-	if err != nil {
-		return nil, err
-	}
-	h, err := host.New(cs, tp, w, "localhost:0", filepath.Join(testdir, modules.HostDir))
-	if err != nil {
-		return nil, err
-	}
-	r, err := renter.New(cs, w, tp, filepath.Join(testdir, modules.RenterDir))
-	if err != nil {
-		return nil, err
-	}
-	srv, err := NewServer("localhost:0", "Sia-Agent", "", cs, nil, g, h, m, r, tp, w)
+	srv, err := NewServer("localhost:0", "Sia-Agent", "", cs, nil, g, tp, w)
 	if err != nil {
 		return nil, err
 	}
@@ -199,9 +175,6 @@ func assembleServerTester(key crypto.TwofishKey, testdir string) (*serverTester,
 	st := &serverTester{
 		cs:        cs,
 		gateway:   g,
-		host:      h,
-		miner:     m,
-		renter:    r,
 		tpool:     tp,
 		wallet:    w,
 		walletKey: key,
@@ -258,19 +231,7 @@ func assembleAuthenticatedServerTester(requiredPassword string, key crypto.Twofi
 	if err != nil {
 		return nil, err
 	}
-	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.MinerDir))
-	if err != nil {
-		return nil, err
-	}
-	h, err := host.New(cs, tp, w, "localhost:0", filepath.Join(testdir, modules.HostDir))
-	if err != nil {
-		return nil, err
-	}
-	r, err := renter.New(cs, w, tp, filepath.Join(testdir, modules.RenterDir))
-	if err != nil {
-		return nil, err
-	}
-	srv, err := NewServer("localhost:0", "Sia-Agent", requiredPassword, cs, nil, g, h, m, r, tp, w)
+	srv, err := NewServer("localhost:0", "Sia-Agent", requiredPassword, cs, nil, g, tp, w)
 	if err != nil {
 		return nil, err
 	}
@@ -279,9 +240,6 @@ func assembleAuthenticatedServerTester(requiredPassword string, key crypto.Twofi
 	st := &serverTester{
 		cs:        cs,
 		gateway:   g,
-		host:      h,
-		miner:     m,
-		renter:    r,
 		tpool:     tp,
 		wallet:    w,
 		walletKey: key,
@@ -324,7 +282,7 @@ func assembleExplorerServerTester(testdir string) (*serverTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	srv, err := NewServer("localhost:0", "", "", cs, e, g, nil, nil, nil, nil, nil)
+	srv, err := NewServer("localhost:0", "", "", cs, e, g, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -394,12 +352,13 @@ func createServerTester(name string) (*serverTester, error) {
 	}
 
 	// Mine blocks until the wallet has confirmed money.
-	for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
-		_, err := st.miner.AddBlock()
-		if err != nil {
-			return nil, err
-		}
-	}
+	//TODO: fix this
+	// for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
+	// 	_, err := st.miner.AddBlock()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	return st, nil
 }
@@ -427,12 +386,13 @@ func createAuthenticatedServerTester(name string, password string) (*serverTeste
 	}
 
 	// Mine blocks until the wallet has confirmed money.
-	for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
-		_, err := st.miner.AddBlock()
-		if err != nil {
-			return nil, err
-		}
-	}
+	//TODO: fix this
+	// for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
+	// 	_, err := st.miner.AddBlock()
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	return st, nil
 }
@@ -503,55 +463,6 @@ func (st *serverTester) acceptContracts() error {
 	settingsValues := url.Values{}
 	settingsValues.Set("acceptingcontracts", "true")
 	return st.stdPostAPI("/host", settingsValues)
-}
-
-// setHostStorage adds a 1 GB folder to the host.
-func (st *serverTester) setHostStorage() error {
-	values := url.Values{}
-	values.Set("path", st.dir)
-	values.Set("size", "1048576")
-	return st.stdPostAPI("/host/storage/folders/add", values)
-}
-
-// announceHost announces the host, mines a block, and waits for the
-// announcement to register.
-func (st *serverTester) announceHost() error {
-	// Set the host to be accepting contracts.
-	acceptingContractsValues := url.Values{}
-	acceptingContractsValues.Set("acceptingcontracts", "true")
-	err := st.stdPostAPI("/host", acceptingContractsValues)
-	if err != nil {
-		return err
-	}
-
-	announceValues := url.Values{}
-	announceValues.Set("address", string(st.host.ExternalSettings().NetAddress))
-	err = st.stdPostAPI("/host/announce", announceValues)
-	if err != nil {
-		return err
-	}
-	// mine block
-	_, err = st.miner.AddBlock()
-	if err != nil {
-		return err
-	}
-	// wait for announcement
-	var hosts ActiveHosts
-	err = st.getAPI("/hostdb/active", &hosts)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < 20 && len(hosts.Hosts) == 0; i++ {
-		time.Sleep(100 * time.Millisecond)
-		err = st.getAPI("/hostdb/active", &hosts)
-		if err != nil {
-			return err
-		}
-	}
-	if len(hosts.Hosts) == 0 {
-		return errors.New("host announcement not seen")
-	}
-	return nil
 }
 
 // getAPI makes an API call and decodes the response.

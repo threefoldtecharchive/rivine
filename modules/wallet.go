@@ -149,20 +149,6 @@ type (
 		// the index of the siacoin output within the transaction.
 		AddSiacoinOutput(types.SiacoinOutput) uint64
 
-		// AddFileContract adds a file contract to the transaction, returning
-		// the index of the file contract within the transaction.
-		AddFileContract(types.FileContract) uint64
-
-		// AddFileContractRevision adds a file contract revision to the
-		// transaction, returning the index of the file contract revision
-		// within the transaction. When 'Sign' gets called, this revision will
-		// be left unsigned.
-		AddFileContractRevision(types.FileContractRevision) uint64
-
-		// AddStorageProof adds a storage proof to the transaction, returning
-		// the index of the storage proof within the transaction.
-		AddStorageProof(types.StorageProof) uint64
-
 		// AddSiafundInput adds a siafund input to the transaction, returning
 		// the index of the siafund input within the transaction. When 'Sign'
 		// is called, this input will be left unsigned.

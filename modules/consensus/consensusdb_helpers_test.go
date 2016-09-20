@@ -118,43 +118,6 @@ func (cs *ConsensusSet) getArbSiacoinOutput() (scoid types.SiacoinOutputID, sco 
 	return scoid, sco, nil
 }
 
-// dbGetFileContract is a convenience function allowing getFileContract to be
-// called without a bolt.Tx.
-func (cs *ConsensusSet) dbGetFileContract(id types.FileContractID) (fc types.FileContract, err error) {
-	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		fc, err = getFileContract(tx, id)
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-	return fc, err
-}
-
-// dbAddFileContract is a convenience function allowing addFileContract to be
-// called without a bolt.Tx.
-func (cs *ConsensusSet) dbAddFileContract(id types.FileContractID, fc types.FileContract) {
-	dbErr := cs.db.Update(func(tx *bolt.Tx) error {
-		addFileContract(tx, id, fc)
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-}
-
-// dbRemoveFileContract is a convenience function allowing removeFileContract
-// to be called without a bolt.Tx.
-func (cs *ConsensusSet) dbRemoveFileContract(id types.FileContractID) {
-	dbErr := cs.db.Update(func(tx *bolt.Tx) error {
-		removeFileContract(tx, id)
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-}
-
 // dbGetSiafundOutput is a convenience function allowing getSiafundOutput to be
 // called without a bolt.Tx.
 func (cs *ConsensusSet) dbGetSiafundOutput(id types.SiafundOutputID) (sfo types.SiafundOutput, err error) {
@@ -178,19 +141,6 @@ func (cs *ConsensusSet) dbAddSiafundOutput(id types.SiafundOutputID, sfo types.S
 	if dbErr != nil {
 		panic(dbErr)
 	}
-}
-
-// dbGetSiafundPool is a convenience function allowing getSiafundPool to be
-// called without a bolt.Tx.
-func (cs *ConsensusSet) dbGetSiafundPool() (siafundPool types.Currency) {
-	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		siafundPool = getSiafundPool(tx)
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-	return siafundPool
 }
 
 // dbGetDSCO is a convenience function allowing a delayed siacoin output to be
@@ -219,43 +169,4 @@ func (cs *ConsensusSet) dbGetDSCO(height types.BlockHeight, id types.SiacoinOutp
 		panic(dbErr)
 	}
 	return dsco, err
-}
-
-// dbStorageProofSegment is a convenience function allowing
-// 'storageProofSegment' to be called during testing without a tx.
-func (cs *ConsensusSet) dbStorageProofSegment(fcid types.FileContractID) (index uint64, err error) {
-	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		index, err = storageProofSegment(tx, fcid)
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-	return index, err
-}
-
-// dbValidStorageProofs is a convenience function allowing 'validStorageProofs'
-// to be called during testing without a tx.
-func (cs *ConsensusSet) dbValidStorageProofs(t types.Transaction) (err error) {
-	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		err = validStorageProofs(tx, t)
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-	return err
-}
-
-// dbValidFileContractRevisions is a convenience function allowing
-// 'validFileContractRevisions' to be called during testing without a tx.
-func (cs *ConsensusSet) dbValidFileContractRevisions(t types.Transaction) (err error) {
-	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		err = validFileContractRevisions(tx, t)
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-	return err
 }

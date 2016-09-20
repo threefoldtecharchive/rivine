@@ -61,15 +61,6 @@ func commitSiacoinOutputDiff(tx *bolt.Tx, scod modules.SiacoinOutputDiff, dir mo
 	}
 }
 
-// commitFileContractDiff applies or reverts a FileContractDiff.
-func commitFileContractDiff(tx *bolt.Tx, fcd modules.FileContractDiff, dir modules.DiffDirection) {
-	if fcd.Direction == dir {
-		addFileContract(tx, fcd.ID, fcd.FileContract)
-	} else {
-		removeFileContract(tx, fcd.ID)
-	}
-}
-
 // commitSiafundOutputDiff applies or reverts a Siafund output diff.
 func commitSiafundOutputDiff(tx *bolt.Tx, sfod modules.SiafundOutputDiff, dir modules.DiffDirection) {
 	if sfod.Direction == dir {
@@ -131,9 +122,6 @@ func commitNodeDiffs(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirection)
 		for _, scod := range pb.SiacoinOutputDiffs {
 			commitSiacoinOutputDiff(tx, scod, dir)
 		}
-		for _, fcd := range pb.FileContractDiffs {
-			commitFileContractDiff(tx, fcd, dir)
-		}
 		for _, sfod := range pb.SiafundOutputDiffs {
 			commitSiafundOutputDiff(tx, sfod, dir)
 		}
@@ -146,9 +134,6 @@ func commitNodeDiffs(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirection)
 	} else {
 		for i := len(pb.SiacoinOutputDiffs) - 1; i >= 0; i-- {
 			commitSiacoinOutputDiff(tx, pb.SiacoinOutputDiffs[i], dir)
-		}
-		for i := len(pb.FileContractDiffs) - 1; i >= 0; i-- {
-			commitFileContractDiff(tx, pb.FileContractDiffs[i], dir)
 		}
 		for i := len(pb.SiafundOutputDiffs) - 1; i >= 0; i-- {
 			commitSiafundOutputDiff(tx, pb.SiafundOutputDiffs[i], dir)

@@ -2,10 +2,8 @@ package consensus
 
 import (
 	"errors"
-	"math/big"
 
 	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
@@ -14,16 +12,10 @@ import (
 )
 
 var (
-	errAlteredRevisionPayouts     = errors.New("file contract revision has altered payout volume")
-	errInvalidStorageProof        = errors.New("provided storage proof is invalid")
-	errLateRevision               = errors.New("file contract revision submitted after deadline")
-	errLowRevisionNumber          = errors.New("transaction has a file contract with an outdated revision number")
 	errMissingSiacoinOutput       = errors.New("transaction spends a nonexisting siacoin output")
 	errMissingSiafundOutput       = errors.New("transaction spends a nonexisting siafund output")
 	errSiacoinInputOutputMismatch = errors.New("siacoin inputs do not equal siacoin outputs for transaction")
 	errSiafundInputOutputMismatch = errors.New("siafund inputs do not equal siafund outputs for transaction")
-	errUnfinishedFileContract     = errors.New("file contract window has not yet openend")
-	errUnrecognizedFileContractID = errors.New("cannot fetch storage proof segment for unknown file contract")
 	errWrongUnlockConditions      = errors.New("transaction contains incorrect unlock conditions")
 )
 
@@ -53,203 +45,6 @@ func validSiacoins(tx *bolt.Tx, t types.Transaction) error {
 	}
 	if inputSum.Cmp(t.SiacoinOutputSum()) != 0 {
 		return errSiacoinInputOutputMismatch
-	}
-	return nil
-}
-
-// storageProofSegment returns the index of the segment that needs to be proven
-// exists in a file contract.
-func storageProofSegment(tx *bolt.Tx, fcid types.FileContractID) (uint64, error) {
-	// Check that the parent file contract exists.
-	fcBucket := tx.Bucket(FileContracts)
-	fcBytes := fcBucket.Get(fcid[:])
-	if fcBytes == nil {
-		return 0, errUnrecognizedFileContractID
-	}
-
-	// Decode the file contract.
-	var fc types.FileContract
-	err := encoding.Unmarshal(fcBytes, &fc)
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-
-	// Get the trigger block id.
-	blockPath := tx.Bucket(BlockPath)
-	triggerHeight := fc.WindowStart - 1
-	if triggerHeight > blockHeight(tx) {
-		return 0, errUnfinishedFileContract
-	}
-	var triggerID types.BlockID
-	copy(triggerID[:], blockPath.Get(encoding.EncUint64(uint64(triggerHeight))))
-
-	// Get the index by appending the file contract ID to the trigger block and
-	// taking the hash, then converting the hash to a numerical value and
-	// modding it against the number of segments in the file. The result is a
-	// random number in range [0, numSegments]. The probability is very
-	// slightly weighted towards the beginning of the file, but because the
-	// size difference between the number of segments and the random number
-	// being modded, the difference is too small to make any practical
-	// difference.
-	seed := crypto.HashAll(triggerID, fcid)
-	numSegments := int64(crypto.CalculateLeaves(fc.FileSize))
-	seedInt := new(big.Int).SetBytes(seed[:])
-	index := seedInt.Mod(seedInt, big.NewInt(numSegments)).Uint64()
-	return index, nil
-}
-
-// validStorageProofsPre100e3 runs the code that was running before height
-// 100e3, which contains a hardforking bug, fixed at block 100e3.
-//
-// HARDFORK 100,000
-//
-// Originally, it was impossible to provide a storage proof for data of length
-// zero. A hardfork was added triggering at block 100,000 to enable an
-// optimization where hosts could submit empty storage proofs for files of size
-// 0, saving space on the blockchain in conditions where the renter is content.
-func validStorageProofs100e3(tx *bolt.Tx, t types.Transaction) error {
-	for _, sp := range t.StorageProofs {
-		// Check that the storage proof itself is valid.
-		segmentIndex, err := storageProofSegment(tx, sp.ParentID)
-		if err != nil {
-			return err
-		}
-
-		fc, err := getFileContract(tx, sp.ParentID)
-		if err != nil {
-			return err
-		}
-		leaves := crypto.CalculateLeaves(fc.FileSize)
-		segmentLen := uint64(crypto.SegmentSize)
-		if segmentIndex == leaves-1 {
-			segmentLen = fc.FileSize % crypto.SegmentSize
-		}
-
-		// HARDFORK 21,000
-		//
-		// Originally, the code used the entire segment to verify the
-		// correctness of the storage proof. This made the code incompatible
-		// with data sizes that did not fill an entire segment.
-		//
-		// This was patched with a hardfork in block 21,000. The new code made
-		// it possible to perform successful storage proofs on the final
-		// segment of a file if the final segment was not crypto.SegmentSize
-		// bytes.
-		//
-		// Unfortunately, a new bug was introduced where storage proofs on the
-		// final segment would fail if the final segment was selected and was
-		// crypto.SegmentSize bytes, because the segmentLen would be set to 0
-		// instead of crypto.SegmentSize, due to an error with the modulus
-		// math. This new error has been fixed with the block 100,000 hardfork.
-		if (build.Release == "standard" && blockHeight(tx) < 21e3) || (build.Release == "testing" && blockHeight(tx) < 10) {
-			segmentLen = uint64(crypto.SegmentSize)
-		}
-
-		verified := crypto.VerifySegment(
-			sp.Segment[:segmentLen],
-			sp.HashSet,
-			leaves,
-			segmentIndex,
-			fc.FileMerkleRoot,
-		)
-		if !verified {
-			return errInvalidStorageProof
-		}
-	}
-
-	return nil
-}
-
-// validStorageProofs checks that the storage proofs are valid in the context
-// of the consensus set.
-func validStorageProofs(tx *bolt.Tx, t types.Transaction) error {
-	if (build.Release == "standard" && blockHeight(tx) < 100e3) || (build.Release == "testing" && blockHeight(tx) < 10) {
-		return validStorageProofs100e3(tx, t)
-	}
-
-	for _, sp := range t.StorageProofs {
-		// Check that the storage proof itself is valid.
-		segmentIndex, err := storageProofSegment(tx, sp.ParentID)
-		if err != nil {
-			return err
-		}
-
-		fc, err := getFileContract(tx, sp.ParentID)
-		if err != nil {
-			return err
-		}
-		leaves := crypto.CalculateLeaves(fc.FileSize)
-		segmentLen := uint64(crypto.SegmentSize)
-
-		// If this segment chosen is the final segment, it should only be as
-		// long as necessary to complete the filesize.
-		if segmentIndex == leaves-1 {
-			segmentLen = fc.FileSize % crypto.SegmentSize
-		}
-		if segmentLen == 0 {
-			segmentLen = uint64(crypto.SegmentSize)
-		}
-
-		verified := crypto.VerifySegment(
-			sp.Segment[:segmentLen],
-			sp.HashSet,
-			leaves,
-			segmentIndex,
-			fc.FileMerkleRoot,
-		)
-		if !verified && fc.FileSize > 0 {
-			return errInvalidStorageProof
-		}
-	}
-
-	return nil
-}
-
-// validFileContractRevision checks that each file contract revision is valid
-// in the context of the current consensus set.
-func validFileContractRevisions(tx *bolt.Tx, t types.Transaction) error {
-	for _, fcr := range t.FileContractRevisions {
-		fc, err := getFileContract(tx, fcr.ParentID)
-		if err != nil {
-			return err
-		}
-
-		// Check that the height is less than fc.WindowStart - revisions are
-		// not allowed to be submitted once the storage proof window has
-		// opened.  This reduces complexity for unconfirmed transactions.
-		if blockHeight(tx) > fc.WindowStart {
-			return errLateRevision
-		}
-
-		// Check that the revision number of the revision is greater than the
-		// revision number of the existing file contract.
-		if fc.RevisionNumber >= fcr.NewRevisionNumber {
-			return errLowRevisionNumber
-		}
-
-		// Check that the unlock conditions match the unlock hash.
-		if fcr.UnlockConditions.UnlockHash() != fc.UnlockHash {
-			return errWrongUnlockConditions
-		}
-
-		// Check that the payout of the revision matches the payout of the
-		// original, and that the payouts match each other.
-		var validPayout, missedPayout, oldPayout types.Currency
-		for _, output := range fcr.NewValidProofOutputs {
-			validPayout = validPayout.Add(output.Value)
-		}
-		for _, output := range fcr.NewMissedProofOutputs {
-			missedPayout = missedPayout.Add(output.Value)
-		}
-		for _, output := range fc.ValidProofOutputs {
-			oldPayout = oldPayout.Add(output.Value)
-		}
-		if validPayout.Cmp(oldPayout) != 0 {
-			return errAlteredRevisionPayouts
-		}
-		if missedPayout.Cmp(oldPayout) != 0 {
-			return errAlteredRevisionPayouts
-		}
 	}
 	return nil
 }
@@ -295,14 +90,6 @@ func validTransaction(tx *bolt.Tx, t types.Transaction) error {
 	// Check that each portion of the transaction is legal given the current
 	// consensus set.
 	err = validSiacoins(tx, t)
-	if err != nil {
-		return err
-	}
-	err = validStorageProofs(tx, t)
-	if err != nil {
-		return err
-	}
-	err = validFileContractRevisions(tx, t)
 	if err != nil {
 		return err
 	}
@@ -355,7 +142,6 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 	}
 	cc := modules.ConsensusChange{
 		SiacoinOutputDiffs:        diffHolder.SiacoinOutputDiffs,
-		FileContractDiffs:         diffHolder.FileContractDiffs,
 		SiafundOutputDiffs:        diffHolder.SiafundOutputDiffs,
 		DelayedSiacoinOutputDiffs: diffHolder.DelayedSiacoinOutputDiffs,
 		SiafundPoolDiffs:          diffHolder.SiafundPoolDiffs,

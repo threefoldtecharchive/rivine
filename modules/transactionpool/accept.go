@@ -49,15 +49,6 @@ func relatedObjectIDs(ts []types.Transaction) []ObjectID {
 		for i := range t.SiacoinOutputs {
 			oidMap[ObjectID(t.SiacoinOutputID(uint64(i)))] = struct{}{}
 		}
-		for i := range t.FileContracts {
-			oidMap[ObjectID(t.FileContractID(uint64(i)))] = struct{}{}
-		}
-		for _, fcr := range t.FileContractRevisions {
-			oidMap[ObjectID(fcr.ParentID)] = struct{}{}
-		}
-		for _, sp := range t.StorageProofs {
-			oidMap[ObjectID(sp.ParentID)] = struct{}{}
-		}
 		for _, sfi := range t.SiafundInputs {
 			oidMap[ObjectID(sfi.ParentID)] = struct{}{}
 		}
@@ -221,9 +212,6 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 	setID := TransactionSetID(crypto.HashObject(superset))
 	tp.transactionSets[setID] = superset
 	for _, diff := range cc.SiacoinOutputDiffs {
-		tp.knownObjects[ObjectID(diff.ID)] = setID
-	}
-	for _, diff := range cc.FileContractDiffs {
 		tp.knownObjects[ObjectID(diff.ID)] = setID
 	}
 	for _, diff := range cc.SiafundOutputDiffs {

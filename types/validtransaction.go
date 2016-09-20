@@ -26,87 +26,6 @@ var (
 	ErrZeroRevision                     = errors.New("transaction has a file contract revision with RevisionNumber=0")
 )
 
-// correctFileContracts checks that the file contracts adhere to the file
-// contract rules.
-func (t Transaction) correctFileContracts(currentHeight BlockHeight) error {
-	// Check that FileContract rules are being followed.
-	for _, fc := range t.FileContracts {
-		// Check that start and expiration are reasonable values.
-		if fc.WindowStart <= currentHeight {
-			return ErrFileContractWindowStartViolation
-		}
-		if fc.WindowEnd <= fc.WindowStart {
-			return ErrFileContractWindowEndViolation
-		}
-
-		// Check that the proof outputs sum to the payout after the
-		// siafund fee has been applied.
-		var validProofOutputSum, missedProofOutputSum Currency
-		for _, output := range fc.ValidProofOutputs {
-			/* - Future hardforking code.
-			if output.Value.IsZero() {
-				return ErrZeroOutput
-			}
-			*/
-			validProofOutputSum = validProofOutputSum.Add(output.Value)
-		}
-		for _, output := range fc.MissedProofOutputs {
-			/* - Future hardforking code.
-			if output.Value.IsZero() {
-				return ErrZeroOutput
-			}
-			*/
-			missedProofOutputSum = missedProofOutputSum.Add(output.Value)
-		}
-		outputPortion := PostTax(currentHeight, fc.Payout)
-		if validProofOutputSum.Cmp(outputPortion) != 0 {
-			return ErrFileContractOutputSumViolation
-		}
-		if missedProofOutputSum.Cmp(outputPortion) != 0 {
-			return ErrFileContractOutputSumViolation
-		}
-	}
-	return nil
-}
-
-// correctFileContractRevisions checks that any file contract revisions adhere
-// to the revision rules.
-func (t Transaction) correctFileContractRevisions(currentHeight BlockHeight) error {
-	for _, fcr := range t.FileContractRevisions {
-		// Check that start and expiration are reasonable values.
-		if fcr.NewWindowStart <= currentHeight {
-			return ErrFileContractWindowStartViolation
-		}
-		if fcr.NewWindowEnd <= fcr.NewWindowStart {
-			return ErrFileContractWindowEndViolation
-		}
-
-		// Check that the valid outputs and missed outputs sum to the same
-		// value.
-		var validProofOutputSum, missedProofOutputSum Currency
-		for _, output := range fcr.NewValidProofOutputs {
-			/* - Future hardforking code.
-			if output.Value.IsZero() {
-				return ErrZeroOutput
-			}
-			*/
-			validProofOutputSum = validProofOutputSum.Add(output.Value)
-		}
-		for _, output := range fcr.NewMissedProofOutputs {
-			/* - Future hardforking code.
-			if output.Value.IsZero() {
-				return ErrZeroOutput
-			}
-			*/
-			missedProofOutputSum = missedProofOutputSum.Add(output.Value)
-		}
-		if validProofOutputSum.Cmp(missedProofOutputSum) != 0 {
-			return ErrFileContractOutputSumViolation
-		}
-	}
-	return nil
-}
-
 // fitsInABlock checks if the transaction is likely to fit in a block.
 // Currently there is no limitation on transaction size other than it must fit
 // in a block.
@@ -127,18 +46,10 @@ func (t Transaction) followsMinimumValues() error {
 			return ErrZeroOutput
 		}
 	}
-	for _, fc := range t.FileContracts {
-		if fc.Payout.IsZero() {
-			return ErrZeroOutput
-		}
-	}
 	for _, sfo := range t.SiafundOutputs {
 		// SiafundOutputs are special in that they have a reserved field, the
 		// ClaimStart, which gets sent over the wire but must always be set to
 		// 0. The Value must always be greater than 0.
-		if !sfo.ClaimStart.IsZero() {
-			return ErrNonZeroClaimStart
-		}
 		if sfo.Value.IsZero() {
 			return ErrZeroOutput
 		}
@@ -148,37 +59,6 @@ func (t Transaction) followsMinimumValues() error {
 			return ErrZeroMinerFee
 		}
 	}
-	return nil
-}
-
-// FollowsStorageProofRules checks that a transaction follows the limitations
-// placed on transactions that have storage proofs.
-func (t Transaction) followsStorageProofRules() error {
-	// No storage proofs, no problems.
-	if len(t.StorageProofs) == 0 {
-		return nil
-	}
-
-	// If there are storage proofs, there can be no siacoin outputs, siafund
-	// outputs, new file contracts, or file contract terminations. These
-	// restrictions are in place because a storage proof can be invalidated by
-	// a simple reorg, which will also invalidate the rest of the transaction.
-	// These restrictions minimize blockchain turbulence. These other types
-	// cannot be invalidated by a simple reorg, and must instead by replaced by
-	// a conflicting transaction.
-	if len(t.SiacoinOutputs) != 0 {
-		return ErrStorageProofWithOutputs
-	}
-	if len(t.FileContracts) != 0 {
-		return ErrStorageProofWithOutputs
-	}
-	if len(t.FileContractRevisions) != 0 {
-		return ErrStorageProofWithOutputs
-	}
-	if len(t.SiafundOutputs) != 0 {
-		return ErrStorageProofWithOutputs
-	}
-
 	return nil
 }
 
@@ -198,21 +78,6 @@ func (t Transaction) noRepeats() error {
 			return ErrDoubleSpend
 		}
 		siacoinInputs[sci.ParentID] = struct{}{}
-	}
-	doneFileContracts := make(map[FileContractID]struct{})
-	for _, sp := range t.StorageProofs {
-		_, exists := doneFileContracts[sp.ParentID]
-		if exists {
-			return ErrDoubleSpend
-		}
-		doneFileContracts[sp.ParentID] = struct{}{}
-	}
-	for _, fcr := range t.FileContractRevisions {
-		_, exists := doneFileContracts[fcr.ParentID]
-		if exists {
-			return ErrDoubleSpend
-		}
-		doneFileContracts[fcr.ParentID] = struct{}{}
 	}
 	siafundInputs := make(map[SiafundOutputID]struct{})
 	for _, sfi := range t.SiafundInputs {
@@ -246,12 +111,6 @@ func (t Transaction) validUnlockConditions(currentHeight BlockHeight) (err error
 			return
 		}
 	}
-	for _, fcr := range t.FileContractRevisions {
-		err = validUnlockConditions(fcr.UnlockConditions, currentHeight)
-		if err != nil {
-			return
-		}
-	}
 	for _, sfi := range t.SiafundInputs {
 		err = validUnlockConditions(sfi.UnlockConditions, currentHeight)
 		if err != nil {
@@ -270,23 +129,11 @@ func (t Transaction) StandaloneValid(currentHeight BlockHeight) (err error) {
 	if err != nil {
 		return
 	}
-	err = t.followsStorageProofRules()
-	if err != nil {
-		return
-	}
 	err = t.noRepeats()
 	if err != nil {
 		return
 	}
 	err = t.followsMinimumValues()
-	if err != nil {
-		return
-	}
-	err = t.correctFileContracts(currentHeight)
-	if err != nil {
-		return
-	}
-	err = t.correctFileContractRevisions(currentHeight)
 	if err != nil {
 		return
 	}

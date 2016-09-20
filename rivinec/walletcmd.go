@@ -60,13 +60,6 @@ By default the wallet encryption / unlock password is the same as the generated 
 		// A subcommand must be provided.
 	}
 
-	walletLoad033xCmd = &cobra.Command{
-		Use:   "033x [filepath]",
-		Short: "Load a v0.3.3.x wallet",
-		Long:  "Load a v0.3.3.x wallet into the current wallet",
-		Run:   wrap(walletload033xcmd),
-	}
-
 	walletLoadSeedCmd = &cobra.Command{
 		Use:   `seed`,
 		Short: "Add a seed to the wallet",
@@ -189,20 +182,6 @@ func walletinitcmd() {
 	} else {
 		fmt.Printf("Wallet encrypted with password:\n%s\n", er.PrimarySeed)
 	}
-}
-
-// walletload033xcmd loads a v0.3.3.x wallet into the current wallet.
-func walletload033xcmd(source string) {
-	password, err := speakeasy.Ask("Wallet password: ")
-	if err != nil {
-		die("Reading password failed:", err)
-	}
-	qs := fmt.Sprintf("source=%s&encryptionpassword=%s", abs(source), password)
-	err = post("/wallet/033x", qs)
-	if err != nil {
-		die("Loading wallet failed:", err)
-	}
-	fmt.Println("Wallet loading successful.")
 }
 
 // walletloadseedcmd adds a seed to the wallet's list of seeds

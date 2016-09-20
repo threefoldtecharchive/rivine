@@ -64,21 +64,6 @@ func TestCalculateFee(t *testing.T) {
 	if CalculateFee(txnSet).Cmp(expectedFee) != 0 {
 		t.Error("CalculateFee doesn't seem to be calculating the correct transaction fee")
 	}
-	// Try the transaction set when there is more data.
-	txnSet[0].FileContracts = append(txnSet[0].FileContracts, types.FileContract{
-		FileSize: 10e3,
-	})
-	newSetLen := uint64(len(encoding.Marshal(txnSet)))
-	if newSetLen <= setLen {
-		t.Fatal("transaction set did not grow after adding a file contract")
-	}
-	newExpectedFee := baseFee.Div64(newSetLen)
-	if newExpectedFee.Cmp(expectedFee) >= 0 {
-		t.Error("the new expected fee should go down as the txn size increases")
-	}
-	if CalculateFee(txnSet).Cmp(newExpectedFee) != 0 {
-		t.Error("the new expected fee does not match the new actual fee")
-	}
 
 	// Try a transaction set with multiple transactions and multiple fees per
 	// transaction.

@@ -190,7 +190,6 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					Value:          sfo.Value,
 				})
 				w.historicOutputs[types.OutputID(txn.SiafundOutputID(uint64(i)))] = sfo.Value
-				w.historicClaimStarts[txn.SiafundOutputID(uint64(i))] = sfo.ClaimStart
 			}
 			for _, fee := range txn.MinerFees {
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{

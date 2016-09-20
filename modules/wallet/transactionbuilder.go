@@ -354,28 +354,6 @@ func (tb *transactionBuilder) AddSiacoinOutput(output types.SiacoinOutput) uint6
 	return uint64(len(tb.transaction.SiacoinOutputs) - 1)
 }
 
-// AddFileContract adds a file contract to the transaction, returning the index
-// of the file contract within the transaction.
-func (tb *transactionBuilder) AddFileContract(fc types.FileContract) uint64 {
-	tb.transaction.FileContracts = append(tb.transaction.FileContracts, fc)
-	return uint64(len(tb.transaction.FileContracts) - 1)
-}
-
-// AddFileContractRevision adds a file contract revision to the transaction,
-// returning the index of the file contract revision within the transaction.
-// When 'Sign' gets called, this revision will be left unsigned.
-func (tb *transactionBuilder) AddFileContractRevision(fcr types.FileContractRevision) uint64 {
-	tb.transaction.FileContractRevisions = append(tb.transaction.FileContractRevisions, fcr)
-	return uint64(len(tb.transaction.FileContractRevisions) - 1)
-}
-
-// AddStorageProof adds a storage proof to the transaction, returning the index
-// of the storage proof within the transaction.
-func (tb *transactionBuilder) AddStorageProof(sp types.StorageProof) uint64 {
-	tb.transaction.StorageProofs = append(tb.transaction.StorageProofs, sp)
-	return uint64(len(tb.transaction.StorageProofs) - 1)
-}
-
 // AddSiafundInput adds a siafund input to the transaction, returning the index
 // of the siafund input within the transaction. When 'Sign' is called, this
 // input will be left unsigned.
@@ -464,15 +442,6 @@ func (tb *transactionBuilder) Sign(wholeTransaction bool) ([]types.Transaction, 
 		}
 		for i := range tb.transaction.SiacoinOutputs {
 			coveredFields.SiacoinOutputs = append(coveredFields.SiacoinOutputs, uint64(i))
-		}
-		for i := range tb.transaction.FileContracts {
-			coveredFields.FileContracts = append(coveredFields.FileContracts, uint64(i))
-		}
-		for i := range tb.transaction.FileContractRevisions {
-			coveredFields.FileContractRevisions = append(coveredFields.FileContractRevisions, uint64(i))
-		}
-		for i := range tb.transaction.StorageProofs {
-			coveredFields.StorageProofs = append(coveredFields.StorageProofs, uint64(i))
 		}
 		for i := range tb.transaction.SiafundInputs {
 			coveredFields.SiafundInputs = append(coveredFields.SiafundInputs, uint64(i))

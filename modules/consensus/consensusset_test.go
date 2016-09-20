@@ -9,7 +9,6 @@ import (
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/miner"
 	"github.com/rivine/rivine/modules/transactionpool"
 	"github.com/rivine/rivine/modules/wallet"
 	"github.com/rivine/rivine/types"
@@ -20,7 +19,6 @@ import (
 // the tester and the modules.
 type consensusSetTester struct {
 	gateway   modules.Gateway
-	miner     modules.TestMiner
 	tpool     modules.TransactionPool
 	wallet    modules.Wallet
 	walletKey crypto.TwofishKey
@@ -67,26 +65,16 @@ func (cst *consensusSetTester) addSiafunds() {
 	if err != nil {
 		panic(err)
 	}
-	_, err = cst.miner.AddBlock()
-	if err != nil {
-		panic(err)
-	}
+	// TODO: make sure it is added
+	// _, err = cst.miner.AddBlock()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// Check that the siafunds made it to the wallet.
 	_, siafundBalance, _ := cst.wallet.ConfirmedBalance()
 	if siafundBalance.Cmp(types.NewCurrency64(1e3)) != 0 {
 		panic("wallet does not have the siafunds")
-	}
-}
-
-// mineCoins mines blocks until there are siacoins in the wallet.
-func (cst *consensusSetTester) mineSiacoins() {
-	for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
-		b, _ := cst.miner.FindBlock()
-		err := cst.cs.AcceptBlock(b)
-		if err != nil {
-			panic(err)
-		}
 	}
 }
 
@@ -124,15 +112,10 @@ func blankConsensusSetTester(name string) (*consensusSetTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.MinerDir))
-	if err != nil {
-		return nil, err
-	}
 
 	// Assemble all objects into a consensusSetTester.
 	cst := &consensusSetTester{
 		gateway:   g,
-		miner:     m,
 		tpool:     tp,
 		wallet:    w,
 		walletKey: key,
@@ -152,7 +135,8 @@ func createConsensusSetTester(name string) (*consensusSetTester, error) {
 		return nil, err
 	}
 	cst.addSiafunds()
-	cst.mineSiacoins()
+	//TODO: make sure it get's accepted in the chain
+	//cst.mineSiacoins()
 	return cst, nil
 }
 
@@ -163,7 +147,6 @@ func (cst *consensusSetTester) Close() error {
 	errs := []error{
 		cst.cs.Close(),
 		cst.gateway.Close(),
-		cst.miner.Close(),
 	}
 	if err := build.JoinErrors(errs, "; "); err != nil {
 		panic(err)

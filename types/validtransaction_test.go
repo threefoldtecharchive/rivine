@@ -4,138 +4,6 @@ import (
 	"testing"
 )
 
-// TestTransactionCorrectFileContracts probes the correctFileContracts function
-// of the Transaction type.
-func TestTransactionCorrectFileContracts(t *testing.T) {
-	// Try a transaction with a FileContract that is correct.
-	txn := Transaction{
-		FileContracts: []FileContract{
-			{
-				WindowStart: 35,
-				WindowEnd:   40,
-				Payout:      NewCurrency64(1e6),
-				ValidProofOutputs: []SiacoinOutput{
-					{Value: NewCurrency64(70e3)},
-					{Value: NewCurrency64(900e3)},
-				},
-				MissedProofOutputs: []SiacoinOutput{
-					{Value: NewCurrency64(70e3)},
-					{Value: NewCurrency64(900e3)},
-				},
-			},
-		},
-	}
-	err := txn.correctFileContracts(30)
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Try when the start height was missed.
-	err = txn.correctFileContracts(35)
-	if err != ErrFileContractWindowStartViolation {
-		t.Error(err)
-	}
-	err = txn.correctFileContracts(135)
-	if err != ErrFileContractWindowStartViolation {
-		t.Error(err)
-	}
-
-	// Try when the expiration equal to and less than the start.
-	txn.FileContracts[0].WindowEnd = 35
-	err = txn.correctFileContracts(30)
-	if err != ErrFileContractWindowEndViolation {
-		t.Error(err)
-	}
-	txn.FileContracts[0].WindowEnd = 35
-	err = txn.correctFileContracts(30)
-	if err != ErrFileContractWindowEndViolation {
-		t.Error(err)
-	}
-	txn.FileContracts[0].WindowEnd = 40
-
-	// Attempt under and over output sums.
-	txn.FileContracts[0].ValidProofOutputs[0].Value = NewCurrency64(69e3)
-	err = txn.correctFileContracts(30)
-	if err != ErrFileContractOutputSumViolation {
-		t.Error(err)
-	}
-	txn.FileContracts[0].ValidProofOutputs[0].Value = NewCurrency64(71e3)
-	err = txn.correctFileContracts(30)
-	if err != ErrFileContractOutputSumViolation {
-		t.Error(err)
-	}
-	txn.FileContracts[0].ValidProofOutputs[0].Value = NewCurrency64(70e3)
-
-	txn.FileContracts[0].MissedProofOutputs[0].Value = NewCurrency64(69e3)
-	err = txn.correctFileContracts(30)
-	if err != ErrFileContractOutputSumViolation {
-		t.Error(err)
-	}
-	txn.FileContracts[0].MissedProofOutputs[0].Value = NewCurrency64(71e3)
-	err = txn.correctFileContracts(30)
-	if err != ErrFileContractOutputSumViolation {
-		t.Error(err)
-	}
-	txn.FileContracts[0].MissedProofOutputs[0].Value = NewCurrency64(70e3)
-
-	// Try the payouts when the value of the contract is too low to incur a
-	// fee.
-	txn.FileContracts = append(txn.FileContracts, FileContract{
-		WindowStart: 35,
-		WindowEnd:   40,
-		Payout:      NewCurrency64(1e3),
-		ValidProofOutputs: []SiacoinOutput{
-			{Value: NewCurrency64(1e3)},
-		},
-		MissedProofOutputs: []SiacoinOutput{
-			{Value: NewCurrency64(1e3)},
-		},
-	})
-	err = txn.correctFileContracts(30)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-// TestCorrectFileContractRevisions probes the correctFileContractRevisions
-// method of the Transaction type.
-func TestCorrectFileContractRevisions(t *testing.T) {
-	// Try a revision that starts in the past.
-	txn := Transaction{
-		FileContractRevisions: []FileContractRevision{{}},
-	}
-	err := txn.correctFileContractRevisions(0)
-	if err != ErrFileContractWindowStartViolation {
-		t.Error(err)
-	}
-
-	// Try a revision that has a window which ends before it starts.
-	txn = Transaction{
-		FileContractRevisions: []FileContractRevision{
-			{NewWindowStart: 1},
-		},
-	}
-	err = txn.correctFileContractRevisions(0)
-	if err != ErrFileContractWindowEndViolation {
-		t.Error(err)
-	}
-
-	// Try a revision with misaligned payouts.
-	txn.FileContractRevisions = []FileContractRevision{
-		{
-			NewWindowStart: 1,
-			NewWindowEnd:   2,
-			NewMissedProofOutputs: []SiacoinOutput{
-				{Value: NewCurrency64(10)},
-			},
-		},
-	}
-	err = txn.correctFileContractRevisions(0)
-	if err != ErrFileContractOutputSumViolation {
-		t.Error("Expecting ErrFileContractOutputSumViolation:", err)
-	}
-}
-
 // TestTransactionFitsInABlock probes the fitsInABlock method of the
 // Transaction type.
 func TestTransactionFitsInABlock(t *testing.T) {
@@ -160,7 +28,6 @@ func TestTransactionFollowsMinimumValues(t *testing.T) {
 	// Start with a transaction that follows all of minimum-values rules.
 	txn := Transaction{
 		SiacoinOutputs: []SiacoinOutput{{Value: NewCurrency64(1)}},
-		FileContracts:  []FileContract{{Payout: NewCurrency64(1)}},
 		SiafundOutputs: []SiafundOutput{{Value: NewCurrency64(1)}},
 		MinerFees:      []Currency{NewCurrency64(1)},
 	}
@@ -176,12 +43,6 @@ func TestTransactionFollowsMinimumValues(t *testing.T) {
 		t.Error(err)
 	}
 	txn.SiacoinOutputs[0].Value = NewCurrency64(1)
-	txn.FileContracts[0].Payout = ZeroCurrency
-	err = txn.followsMinimumValues()
-	if err != ErrZeroOutput {
-		t.Error(err)
-	}
-	txn.FileContracts[0].Payout = NewCurrency64(1)
 	txn.SiafundOutputs[0].Value = ZeroCurrency
 	err = txn.followsMinimumValues()
 	if err != ErrZeroOutput {
@@ -195,63 +56,6 @@ func TestTransactionFollowsMinimumValues(t *testing.T) {
 	}
 	txn.MinerFees[0] = NewCurrency64(1)
 
-	// Try a non-zero value for the ClaimStart field of a siafund output.
-	txn.SiafundOutputs[0].ClaimStart = NewCurrency64(1)
-	err = txn.followsMinimumValues()
-	if err != ErrNonZeroClaimStart {
-		t.Error(err)
-	}
-	txn.SiafundOutputs[0].ClaimStart = ZeroCurrency
-}
-
-// TestTransactionFollowsStorageProofRules probes the followsStorageProofRules
-// method of the Transaction type.
-func TestTransactionFollowsStorageProofRules(t *testing.T) {
-	// Try a transaction with no storage proofs.
-	txn := Transaction{}
-	err := txn.followsStorageProofRules()
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Try a transaction with a legal storage proof.
-	txn.StorageProofs = append(txn.StorageProofs, StorageProof{})
-	err = txn.followsStorageProofRules()
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Try a transaction with a storage proof and a SiacoinOutput.
-	txn.SiacoinOutputs = append(txn.SiacoinOutputs, SiacoinOutput{})
-	err = txn.followsStorageProofRules()
-	if err != ErrStorageProofWithOutputs {
-		t.Error(err)
-	}
-	txn.SiacoinOutputs = nil
-
-	// Try a transaction with a storage proof and a FileContract.
-	txn.FileContracts = append(txn.FileContracts, FileContract{})
-	err = txn.followsStorageProofRules()
-	if err != ErrStorageProofWithOutputs {
-		t.Error(err)
-	}
-	txn.FileContracts = nil
-
-	// Try a transaction with a storage proof and a FileContractRevision.
-	txn.FileContractRevisions = append(txn.FileContractRevisions, FileContractRevision{})
-	err = txn.followsStorageProofRules()
-	if err != ErrStorageProofWithOutputs {
-		t.Error(err)
-	}
-	txn.FileContractRevisions = nil
-
-	// Try a transaction with a storage proof and a FileContractRevision.
-	txn.SiafundOutputs = append(txn.SiafundOutputs, SiafundOutput{})
-	err = txn.followsStorageProofRules()
-	if err != ErrStorageProofWithOutputs {
-		t.Error(err)
-	}
-	txn.SiafundOutputs = nil
 }
 
 // TestTransactionNoRepeats probes the noRepeats method of the Transaction
@@ -259,50 +63,17 @@ func TestTransactionFollowsStorageProofRules(t *testing.T) {
 func TestTransactionNoRepeats(t *testing.T) {
 	// Try a transaction all the repeatable types but no conflicts.
 	txn := Transaction{
-		SiacoinInputs:         []SiacoinInput{{}},
-		StorageProofs:         []StorageProof{{}},
-		FileContractRevisions: []FileContractRevision{{}},
-		SiafundInputs:         []SiafundInput{{}},
-	}
-	txn.FileContractRevisions[0].ParentID[0] = 1 // Otherwise it will conflict with the storage proof.
-	err := txn.noRepeats()
-	if err != nil {
-		t.Error(err)
+		SiacoinInputs: []SiacoinInput{{}},
+		SiafundInputs: []SiafundInput{{}},
 	}
 
 	// Try a transaction double spending a siacoin output.
 	txn.SiacoinInputs = append(txn.SiacoinInputs, SiacoinInput{})
-	err = txn.noRepeats()
+	err := txn.noRepeats()
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
 	txn.SiacoinInputs = txn.SiacoinInputs[:1]
-
-	// Try double spending a file contract, checking that both storage proofs
-	// and terminations can conflict with each other.
-	txn.StorageProofs = append(txn.StorageProofs, StorageProof{})
-	err = txn.noRepeats()
-	if err != ErrDoubleSpend {
-		t.Error(err)
-	}
-	txn.StorageProofs = txn.StorageProofs[:1]
-
-	// Have the storage proof conflict with the file contract termination.
-	txn.StorageProofs[0].ParentID[0] = 1
-	err = txn.noRepeats()
-	if err != ErrDoubleSpend {
-		t.Error(err)
-	}
-	txn.StorageProofs[0].ParentID[0] = 0
-
-	// Have the file contract termination conflict with itself.
-	txn.FileContractRevisions = append(txn.FileContractRevisions, FileContractRevision{})
-	txn.FileContractRevisions[1].ParentID[0] = 1
-	err = txn.noRepeats()
-	if err != ErrDoubleSpend {
-		t.Error(err)
-	}
-	txn.FileContractRevisions = txn.FileContractRevisions[:1]
 
 	// Try a transaction double spending a siafund output.
 	txn.SiafundInputs = append(txn.SiafundInputs, SiafundInput{})
@@ -339,9 +110,6 @@ func TestTransactionValidUnlockConditions(t *testing.T) {
 		SiacoinInputs: []SiacoinInput{
 			{UnlockConditions: UnlockConditions{Timelock: 3}},
 		},
-		FileContractRevisions: []FileContractRevision{
-			{UnlockConditions: UnlockConditions{Timelock: 3}},
-		},
 		SiafundInputs: []SiafundInput{
 			{UnlockConditions: UnlockConditions{Timelock: 3}},
 		},
@@ -358,14 +126,6 @@ func TestTransactionValidUnlockConditions(t *testing.T) {
 		t.Error(err)
 	}
 	txn.SiacoinInputs[0].UnlockConditions.Timelock = 3
-
-	// Try with illegal conditions in the siafund inputs.
-	txn.FileContractRevisions[0].UnlockConditions.Timelock = 5
-	err = txn.validUnlockConditions(4)
-	if err == nil {
-		t.Error(err)
-	}
-	txn.FileContractRevisions[0].UnlockConditions.Timelock = 3
 
 	// Try with illegal conditions in the siafund inputs.
 	txn.SiafundInputs[0].UnlockConditions.Timelock = 5
@@ -395,17 +155,6 @@ func TestTransactionStandaloneValid(t *testing.T) {
 	}
 	txn.ArbitraryData = nil
 
-	// Violate followsStorageProofRules
-	txn.StorageProofs = []StorageProof{{}}
-	txn.SiacoinOutputs = []SiacoinOutput{{}}
-	txn.SiacoinOutputs[0].Value = NewCurrency64(1)
-	err = txn.StandaloneValid(0)
-	if err == nil {
-		t.Error("failed to trigger followsStorageProofRules error")
-	}
-	txn.StorageProofs = nil
-	txn.SiacoinOutputs = nil
-
 	// Violate noRepeats
 	txn.SiacoinInputs = []SiacoinInput{{}, {}}
 	err = txn.StandaloneValid(0)
@@ -421,28 +170,6 @@ func TestTransactionStandaloneValid(t *testing.T) {
 		t.Error("failed to trigger followsMinimumValues error")
 	}
 	txn.SiacoinOutputs = nil
-
-	// Violate correctFileContracts
-	txn.FileContracts = []FileContract{
-		{
-			Payout:      NewCurrency64(1),
-			WindowStart: 5,
-			WindowEnd:   5,
-		},
-	}
-	err = txn.StandaloneValid(0)
-	if err == nil {
-		t.Error("failed to trigger correctFileContracts error")
-	}
-	txn.FileContracts = nil
-
-	// Violate correctFileContractRevisions
-	txn.FileContractRevisions = []FileContractRevision{{}}
-	err = txn.StandaloneValid(0)
-	if err == nil {
-		t.Error("failed to trigger correctFileContractRevisions error")
-	}
-	txn.FileContractRevisions = nil
 
 	// Violate validUnlockConditions
 	txn.SiacoinInputs = []SiacoinInput{{}}

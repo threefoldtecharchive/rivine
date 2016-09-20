@@ -33,18 +33,10 @@ type (
 		Parent         types.BlockID       `json:"parent"`
 		RawTransaction types.Transaction   `json:"rawtransaction"`
 
-		SiacoinInputOutputs                      []types.SiacoinOutput     `json:"siacoininputoutputs"` // the outputs being spent
-		SiacoinOutputIDs                         []types.SiacoinOutputID   `json:"siacoinoutputids"`
-		FileContractIDs                          []types.FileContractID    `json:"filecontractids"`
-		FileContractValidProofOutputIDs          [][]types.SiacoinOutputID `json:"filecontractvalidproofoutputids"`          // outer array is per-contract
-		FileContractMissedProofOutputIDs         [][]types.SiacoinOutputID `json:"filecontractmissedproofoutputids"`         // outer array is per-contract
-		FileContractRevisionValidProofOutputIDs  [][]types.SiacoinOutputID `json:"filecontractrevisionvalidproofoutputids"`  // outer array is per-revision
-		FileContractRevisionMissedProofOutputIDs [][]types.SiacoinOutputID `json:"filecontractrevisionmissedproofoutputids"` // outer array is per-revision
-		StorageProofOutputIDs                    [][]types.SiacoinOutputID `json:"storageproofoutputids"`                    // outer array is per-payout
-		StorageProofOutputs                      [][]types.SiacoinOutput   `json:"storageproofoutputs"`                      // outer array is per-payout
-		SiafundInputOutputs                      []types.SiafundOutput     `json:"siafundinputoutputs"`                      // the outputs being spent
-		SiafundOutputIDs                         []types.SiafundOutputID   `json:"siafundoutputids"`
-		SiafundClaimOutputIDs                    []types.SiacoinOutputID   `json:"siafundclaimoutputids"`
+		SiacoinInputOutputs []types.SiacoinOutput   `json:"siacoininputoutputs"` // the outputs being spent
+		SiacoinOutputIDs    []types.SiacoinOutputID `json:"siacoinoutputids"`
+		SiafundInputOutputs []types.SiafundOutput   `json:"siafundinputoutputs"` // the outputs being spent
+		SiafundOutputIDs    []types.SiafundOutputID `json:"siafundoutputids"`
 	}
 
 	// ExplorerGET is the object returned as a response to a GET request to
@@ -98,59 +90,6 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 		et.SiacoinOutputIDs = append(et.SiacoinOutputIDs, txn.SiacoinOutputID(uint64(i)))
 	}
 
-	// Add all of the valid and missed proof ids as extra data to the file
-	// contracts.
-	for i, fc := range txn.FileContracts {
-		fcid := txn.FileContractID(uint64(i))
-		var fcvpoids []types.SiacoinOutputID
-		var fcmpoids []types.SiacoinOutputID
-		for j := range fc.ValidProofOutputs {
-			fcvpoids = append(fcvpoids, fcid.StorageProofOutputID(types.ProofValid, uint64(j)))
-		}
-		for j := range fc.MissedProofOutputs {
-			fcmpoids = append(fcmpoids, fcid.StorageProofOutputID(types.ProofMissed, uint64(j)))
-		}
-		et.FileContractIDs = append(et.FileContractIDs, fcid)
-		et.FileContractValidProofOutputIDs = append(et.FileContractValidProofOutputIDs, fcvpoids)
-		et.FileContractMissedProofOutputIDs = append(et.FileContractMissedProofOutputIDs, fcmpoids)
-	}
-
-	// Add all of the valid and missed proof ids as extra data to the file
-	// contract revisions.
-	for _, fcr := range txn.FileContractRevisions {
-		var fcrvpoids []types.SiacoinOutputID
-		var fcrmpoids []types.SiacoinOutputID
-		for j := range fcr.NewValidProofOutputs {
-			fcrvpoids = append(fcrvpoids, fcr.ParentID.StorageProofOutputID(types.ProofValid, uint64(j)))
-		}
-		for j := range fcr.NewMissedProofOutputs {
-			fcrmpoids = append(fcrmpoids, fcr.ParentID.StorageProofOutputID(types.ProofMissed, uint64(j)))
-		}
-		et.FileContractValidProofOutputIDs = append(et.FileContractValidProofOutputIDs, fcrvpoids)
-		et.FileContractMissedProofOutputIDs = append(et.FileContractMissedProofOutputIDs, fcrmpoids)
-	}
-
-	// Add all of the output ids and outputs corresponding with each storage
-	// proof.
-	for _, sp := range txn.StorageProofs {
-		fileContract, fileContractRevisions, fileContractExists, _ := api.explorer.FileContractHistory(sp.ParentID)
-		if !fileContractExists && build.DEBUG {
-			panic("could not find a file contract connected with a storage proof")
-		}
-		var storageProofOutputs []types.SiacoinOutput
-		if len(fileContractRevisions) > 0 {
-			storageProofOutputs = fileContractRevisions[len(fileContractRevisions)-1].NewValidProofOutputs
-		} else {
-			storageProofOutputs = fileContract.ValidProofOutputs
-		}
-		var storageProofOutputIDs []types.SiacoinOutputID
-		for i := range storageProofOutputs {
-			storageProofOutputIDs = append(storageProofOutputIDs, sp.ParentID.StorageProofOutputID(types.ProofValid, uint64(i)))
-		}
-		et.StorageProofOutputIDs = append(et.StorageProofOutputIDs, storageProofOutputIDs)
-		et.StorageProofOutputs = append(et.StorageProofOutputs, storageProofOutputs)
-	}
-
 	// Add the siafund outputs that correspond to each siacoin input.
 	for _, sci := range txn.SiafundInputs {
 		sco, exists := api.explorer.SiafundOutput(sci.ParentID)
@@ -164,9 +103,6 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 		et.SiafundOutputIDs = append(et.SiafundOutputIDs, txn.SiafundOutputID(uint64(i)))
 	}
 
-	for _, sfi := range txn.SiafundInputs {
-		et.SiafundClaimOutputIDs = append(et.SiafundClaimOutputIDs, sfi.ParentID.SiaClaimOutputID())
-	}
 	return et
 }
 
@@ -298,18 +234,6 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 		txns, blocks := api.buildTransactionSet(txids)
 		WriteJSON(w, ExplorerHashGET{
 			HashType:     "siacoinoutputid",
-			Blocks:       blocks,
-			Transactions: txns,
-		})
-		return
-	}
-
-	// Try the hash as a file contract id.
-	txids = api.explorer.FileContractID(types.FileContractID(hash))
-	if len(txids) != 0 {
-		txns, blocks := api.buildTransactionSet(txids)
-		WriteJSON(w, ExplorerHashGET{
-			HashType:     "filecontractid",
 			Blocks:       blocks,
 			Transactions: txns,
 		})

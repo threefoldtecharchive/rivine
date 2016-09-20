@@ -27,11 +27,6 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 			scod.Direction = !scod.Direction
 			cc.SiacoinOutputDiffs = append(cc.SiacoinOutputDiffs, scod)
 		}
-		for i := len(revertedBlock.FileContractDiffs) - 1; i >= 0; i-- {
-			fcd := revertedBlock.FileContractDiffs[i]
-			fcd.Direction = !fcd.Direction
-			cc.FileContractDiffs = append(cc.FileContractDiffs, fcd)
-		}
 		for i := len(revertedBlock.SiafundOutputDiffs) - 1; i >= 0; i-- {
 			sfod := revertedBlock.SiafundOutputDiffs[i]
 			sfod.Direction = !sfod.Direction
@@ -58,9 +53,6 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 		cc.AppliedBlocks = append(cc.AppliedBlocks, appliedBlock.Block)
 		for _, scod := range appliedBlock.SiacoinOutputDiffs {
 			cc.SiacoinOutputDiffs = append(cc.SiacoinOutputDiffs, scod)
-		}
-		for _, fcd := range appliedBlock.FileContractDiffs {
-			cc.FileContractDiffs = append(cc.FileContractDiffs, fcd)
 		}
 		for _, sfod := range appliedBlock.SiafundOutputDiffs {
 			cc.SiafundOutputDiffs = append(cc.SiafundOutputDiffs, sfod)

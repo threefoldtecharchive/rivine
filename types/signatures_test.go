@@ -25,15 +25,12 @@ func TestUnlockHash(t *testing.T) {
 // TestSigHash runs the SigHash function of the transaction type.
 func TestSigHash(t *testing.T) {
 	txn := Transaction{
-		SiacoinInputs:         []SiacoinInput{{}},
-		SiacoinOutputs:        []SiacoinOutput{{}},
-		FileContracts:         []FileContract{{}},
-		FileContractRevisions: []FileContractRevision{{}},
-		StorageProofs:         []StorageProof{{}},
-		SiafundInputs:         []SiafundInput{{}},
-		SiafundOutputs:        []SiafundOutput{{}},
-		MinerFees:             []Currency{{}},
-		ArbitraryData:         [][]byte{{'o'}, {'t'}},
+		SiacoinInputs:  []SiacoinInput{{}},
+		SiacoinOutputs: []SiacoinOutput{{}},
+		SiafundInputs:  []SiafundInput{{}},
+		SiafundOutputs: []SiafundOutput{{}},
+		MinerFees:      []Currency{{}},
+		ArbitraryData:  [][]byte{{'o'}, {'t'}},
 		TransactionSignatures: []TransactionSignature{
 			{
 				CoveredFields: CoveredFields{
@@ -44,9 +41,6 @@ func TestSigHash(t *testing.T) {
 				CoveredFields: CoveredFields{
 					SiacoinInputs:         []uint64{0},
 					SiacoinOutputs:        []uint64{0},
-					FileContracts:         []uint64{0},
-					FileContractRevisions: []uint64{0},
-					StorageProofs:         []uint64{0},
 					SiafundInputs:         []uint64{0},
 					SiafundOutputs:        []uint64{0},
 					MinerFees:             []uint64{0},
@@ -101,15 +95,12 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 	// Create a transaction with all fields filled in minimally. The first
 	// check has a legal CoveredFields object with 'WholeTransaction' set.
 	txn := Transaction{
-		SiacoinInputs:         []SiacoinInput{{}},
-		SiacoinOutputs:        []SiacoinOutput{{}},
-		FileContracts:         []FileContract{{}},
-		FileContractRevisions: []FileContractRevision{{}},
-		StorageProofs:         []StorageProof{{}},
-		SiafundInputs:         []SiafundInput{{}},
-		SiafundOutputs:        []SiafundOutput{{}},
-		MinerFees:             []Currency{{}},
-		ArbitraryData:         [][]byte{{'o'}, {'t'}},
+		SiacoinInputs:  []SiacoinInput{{}},
+		SiacoinOutputs: []SiacoinOutput{{}},
+		SiafundInputs:  []SiafundInput{{}},
+		SiafundOutputs: []SiafundOutput{{}},
+		MinerFees:      []Currency{{}},
+		ArbitraryData:  [][]byte{{'o'}, {'t'}},
 		TransactionSignatures: []TransactionSignature{
 			{
 				CoveredFields: CoveredFields{
@@ -127,10 +118,9 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 	// set.
 	txn.TransactionSignatures = append(txn.TransactionSignatures, TransactionSignature{
 		CoveredFields: CoveredFields{
-			SiacoinOutputs:        []uint64{0},
-			MinerFees:             []uint64{0},
-			ArbitraryData:         []uint64{0},
-			FileContractRevisions: []uint64{0},
+			SiacoinOutputs: []uint64{0},
+			MinerFees:      []uint64{0},
+			ArbitraryData:  []uint64{0},
 		},
 	})
 	err = txn.validCoveredFields()
@@ -191,15 +181,11 @@ func TestTransactionValidSignatures(t *testing.T) {
 		SiacoinInputs: []SiacoinInput{
 			{UnlockConditions: uc},
 		},
-		FileContractRevisions: []FileContractRevision{
-			{UnlockConditions: uc},
-		},
 		SiafundInputs: []SiafundInput{
 			{UnlockConditions: uc},
 		},
 	}
-	txn.FileContractRevisions[0].ParentID[0] = 1 // can't overlap with other objects
-	txn.SiafundInputs[0].ParentID[0] = 2         // can't overlap with other objects
+	txn.SiafundInputs[0].ParentID[0] = 2 // can't overlap with other objects
 
 	// Create the signatures that spend the output.
 	txn.TransactionSignatures = []TransactionSignature{
@@ -275,12 +261,10 @@ func TestTransactionValidSignatures(t *testing.T) {
 		t.Error("failed to double spend a siacoin input")
 	}
 	txn.SiacoinInputs = txn.SiacoinInputs[:len(txn.SiacoinInputs)-1]
-	txn.FileContractRevisions = append(txn.FileContractRevisions, FileContractRevision{UnlockConditions: UnlockConditions{}})
 	err = txn.validSignatures(10)
 	if err == nil {
 		t.Error("failed to double spend a file contract termination")
 	}
-	txn.FileContractRevisions = txn.FileContractRevisions[:len(txn.FileContractRevisions)-1]
 	txn.SiafundInputs = append(txn.SiafundInputs, SiafundInput{UnlockConditions: UnlockConditions{}})
 	err = txn.validSignatures(10)
 	if err == nil {

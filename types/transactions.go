@@ -20,17 +20,13 @@ const (
 // These Specifiers are used internally when calculating a type's ID. See
 // Specifier for more details.
 var (
-	SpecifierMinerPayout          = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'p', 'a', 'y', 'o', 'u', 't'}
-	SpecifierSiacoinInput         = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'i', 'n', 'p', 'u', 't'}
-	SpecifierSiacoinOutput        = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'o', 'u', 't', 'p', 'u', 't'}
-	SpecifierFileContract         = Specifier{'f', 'i', 'l', 'e', ' ', 'c', 'o', 'n', 't', 'r', 'a', 'c', 't'}
-	SpecifierFileContractRevision = Specifier{'f', 'i', 'l', 'e', ' ', 'c', 'o', 'n', 't', 'r', 'a', 'c', 't', ' ', 'r', 'e'}
-	SpecifierStorageProof         = Specifier{'s', 't', 'o', 'r', 'a', 'g', 'e', ' ', 'p', 'r', 'o', 'o', 'f'}
-	SpecifierStorageProofOutput   = Specifier{'s', 't', 'o', 'r', 'a', 'g', 'e', ' ', 'p', 'r', 'o', 'o', 'f'}
-	SpecifierSiafundInput         = Specifier{'s', 'i', 'a', 'f', 'u', 'n', 'd', ' ', 'i', 'n', 'p', 'u', 't'}
-	SpecifierSiafundOutput        = Specifier{'s', 'i', 'a', 'f', 'u', 'n', 'd', ' ', 'o', 'u', 't', 'p', 'u', 't'}
-	SpecifierClaimOutput          = Specifier{'c', 'l', 'a', 'i', 'm', ' ', 'o', 'u', 't', 'p', 'u', 't'}
-	SpecifierMinerFee             = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'f', 'e', 'e'}
+	SpecifierMinerPayout   = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'p', 'a', 'y', 'o', 'u', 't'}
+	SpecifierSiacoinInput  = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'i', 'n', 'p', 'u', 't'}
+	SpecifierSiacoinOutput = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'o', 'u', 't', 'p', 'u', 't'}
+	SpecifierSiafundInput  = Specifier{'s', 'i', 'a', 'f', 'u', 'n', 'd', ' ', 'i', 'n', 'p', 'u', 't'}
+	SpecifierSiafundOutput = Specifier{'s', 'i', 'a', 'f', 'u', 'n', 'd', ' ', 'o', 'u', 't', 'p', 'u', 't'}
+	SpecifierClaimOutput   = Specifier{'c', 'l', 'a', 'i', 'm', ' ', 'o', 'u', 't', 'p', 'u', 't'}
+	SpecifierMinerFee      = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'f', 'e', 'e'}
 
 	ErrTransactionIDWrongLen = errors.New("input has wrong length to be an encoded transaction id")
 )
@@ -55,11 +51,10 @@ type (
 	TransactionID   crypto.Hash
 	SiacoinOutputID crypto.Hash
 	SiafundOutputID crypto.Hash
-	FileContractID  crypto.Hash
 	OutputID        crypto.Hash
 
 	// A Transaction is an atomic component of a block. Transactions can contain
-	// inputs and outputs, file contracts, storage proofs, and even arbitrary
+	// inputs and outputs and even arbitrary
 	// data. They can also contain signatures to prove that a given party has
 	// approved the transaction, or at least a particular subset of it.
 	//
@@ -69,9 +64,6 @@ type (
 	Transaction struct {
 		SiacoinInputs         []SiacoinInput         `json:"siacoininputs"`
 		SiacoinOutputs        []SiacoinOutput        `json:"siacoinoutputs"`
-		FileContracts         []FileContract         `json:"filecontracts"`
-		FileContractRevisions []FileContractRevision `json:"filecontractrevisions"`
-		StorageProofs         []StorageProof         `json:"storageproofs"`
 		SiafundInputs         []SiafundInput         `json:"siafundinputs"`
 		SiafundOutputs        []SiafundOutput        `json:"siafundoutputs"`
 		MinerFees             []Currency             `json:"minerfees"`
@@ -113,19 +105,9 @@ type (
 	// atomically; that is, they must all be spent in the same transaction. The
 	// UnlockHash is the hash of a set of UnlockConditions that must be fulfilled
 	// in order to spend the output.
-	//
-	// When the SiafundOutput is spent, a SiacoinOutput is created, where:
-	//
-	//     SiacoinOutput.Value := (SiafundPool - ClaimStart) / 10,000
-	//     SiacoinOutput.UnlockHash := SiafundOutput.ClaimUnlockHash
-	//
-	// When a SiafundOutput is put into a transaction, the ClaimStart must always
-	// equal zero. While the transaction is being processed, the ClaimStart is set
-	// to the value of the SiafundPool.
 	SiafundOutput struct {
 		Value      Currency   `json:"value"`
 		UnlockHash UnlockHash `json:"unlockhash"`
-		ClaimStart Currency   `json:"claimstart"`
 	}
 )
 
@@ -135,9 +117,6 @@ func (t Transaction) ID() TransactionID {
 	return TransactionID(crypto.HashAll(
 		t.SiacoinInputs,
 		t.SiacoinOutputs,
-		t.FileContracts,
-		t.FileContractRevisions,
-		t.StorageProofs,
 		t.SiafundInputs,
 		t.SiafundOutputs,
 		t.MinerFees,
@@ -154,29 +133,6 @@ func (t Transaction) SiacoinOutputID(i uint64) SiacoinOutputID {
 		SpecifierSiacoinOutput,
 		t.SiacoinInputs,
 		t.SiacoinOutputs,
-		t.FileContracts,
-		t.FileContractRevisions,
-		t.StorageProofs,
-		t.SiafundInputs,
-		t.SiafundOutputs,
-		t.MinerFees,
-		t.ArbitraryData,
-		i,
-	))
-}
-
-// FileContractID returns the ID of a file contract at the given index, which
-// is calculated by hashing the concatenation of the FileContract Specifier,
-// all of the fields in the transaction (except the signatures), and the
-// contract index.
-func (t Transaction) FileContractID(i uint64) FileContractID {
-	return FileContractID(crypto.HashAll(
-		SpecifierFileContract,
-		t.SiacoinInputs,
-		t.SiacoinOutputs,
-		t.FileContracts,
-		t.FileContractRevisions,
-		t.StorageProofs,
 		t.SiafundInputs,
 		t.SiafundOutputs,
 		t.MinerFees,
@@ -194,9 +150,6 @@ func (t Transaction) SiafundOutputID(i uint64) SiafundOutputID {
 		SpecifierSiafundOutput,
 		t.SiacoinInputs,
 		t.SiacoinOutputs,
-		t.FileContracts,
-		t.FileContractRevisions,
-		t.StorageProofs,
 		t.SiafundInputs,
 		t.SiafundOutputs,
 		t.MinerFees,
@@ -216,23 +169,12 @@ func (t Transaction) SiacoinOutputSum() (sum Currency) {
 		sum = sum.Add(sco.Value)
 	}
 
-	// Add the file contract payouts.
-	for _, fc := range t.FileContracts {
-		sum = sum.Add(fc.Payout)
-	}
-
 	// Add the miner fees.
 	for _, fee := range t.MinerFees {
 		sum = sum.Add(fee)
 	}
 
 	return
-}
-
-// SiaClaimOutputID returns the ID of the SiacoinOutput that is created when
-// the siafund output is spent. The ID is the hash the SiafundOutputID.
-func (id SiafundOutputID) SiaClaimOutputID() SiacoinOutputID {
-	return SiacoinOutputID(crypto.HashObject(id))
 }
 
 // Below this point is a bunch of repeated definitions so that all type aliases
@@ -334,31 +276,6 @@ func (scoid *SiacoinOutputID) UnmarshalJSON(b []byte) error {
 		return errors.New("could not unmarshal types.BlockID: " + err.Error())
 	}
 	copy(scoid[:], scoidBytes)
-	return nil
-}
-
-// MarshalJSON marshales an id as a hex string.
-func (fcid FileContractID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(fcid.String())
-}
-
-// String prints the id in hex.
-func (fcid FileContractID) String() string {
-	return fmt.Sprintf("%x", fcid[:])
-}
-
-// UnmarshalJSON decodes the json hex string of the id.
-func (fcid *FileContractID) UnmarshalJSON(b []byte) error {
-	if len(b) != crypto.HashSize*2+2 {
-		return crypto.ErrHashWrongLen
-	}
-
-	var fcidBytes []byte
-	_, err := fmt.Sscanf(string(b[1:len(b)-1]), "%x", &fcidBytes)
-	if err != nil {
-		return errors.New("could not unmarshal types.BlockID: " + err.Error())
-	}
-	copy(fcid[:], fcidBytes)
 	return nil
 }
 

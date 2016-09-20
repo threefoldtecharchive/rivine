@@ -54,9 +54,6 @@ type (
 		WholeTransaction      bool     `json:"wholetransaction"`
 		SiacoinInputs         []uint64 `json:"siacoininputs"`
 		SiacoinOutputs        []uint64 `json:"siacoinoutputs"`
-		FileContracts         []uint64 `json:"filecontracts"`
-		FileContractRevisions []uint64 `json:"filecontractrevisions"`
-		StorageProofs         []uint64 `json:"storageproofs"`
 		SiafundInputs         []uint64 `json:"siafundinputs"`
 		SiafundOutputs        []uint64 `json:"siafundoutputs"`
 		MinerFees             []uint64 `json:"minerfees"`
@@ -149,9 +146,6 @@ func (t Transaction) SigHash(i int) crypto.Hash {
 		signedData = encoding.MarshalAll(
 			t.SiacoinInputs,
 			t.SiacoinOutputs,
-			t.FileContracts,
-			t.FileContractRevisions,
-			t.StorageProofs,
 			t.SiafundInputs,
 			t.SiafundOutputs,
 			t.MinerFees,
@@ -166,15 +160,6 @@ func (t Transaction) SigHash(i int) crypto.Hash {
 		}
 		for _, output := range cf.SiacoinOutputs {
 			signedData = append(signedData, encoding.Marshal(t.SiacoinOutputs[output])...)
-		}
-		for _, contract := range cf.FileContracts {
-			signedData = append(signedData, encoding.Marshal(t.FileContracts[contract])...)
-		}
-		for _, revision := range cf.FileContractRevisions {
-			signedData = append(signedData, encoding.Marshal(t.FileContractRevisions[revision])...)
-		}
-		for _, storageProof := range cf.StorageProofs {
-			signedData = append(signedData, encoding.Marshal(t.StorageProofs[storageProof])...)
 		}
 		for _, siafundInput := range cf.SiafundInputs {
 			signedData = append(signedData, encoding.Marshal(t.SiafundInputs[siafundInput])...)
@@ -231,9 +216,6 @@ func (t Transaction) validCoveredFields() error {
 		}{
 			{cf.SiacoinInputs, len(t.SiacoinInputs)},
 			{cf.SiacoinOutputs, len(t.SiacoinOutputs)},
-			{cf.FileContracts, len(t.FileContracts)},
-			{cf.FileContractRevisions, len(t.FileContractRevisions)},
-			{cf.StorageProofs, len(t.StorageProofs)},
 			{cf.SiafundInputs, len(t.SiafundInputs)},
 			{cf.SiafundOutputs, len(t.SiafundOutputs)},
 			{cf.MinerFees, len(t.MinerFees)},
@@ -288,20 +270,6 @@ func (t *Transaction) validSignatures(currentHeight BlockHeight) error {
 		sigMap[id] = &inputSignatures{
 			remainingSignatures: input.UnlockConditions.SignaturesRequired,
 			possibleKeys:        input.UnlockConditions.PublicKeys,
-			usedKeys:            make(map[uint64]struct{}),
-			index:               i,
-		}
-	}
-	for i, revision := range t.FileContractRevisions {
-		id := crypto.Hash(revision.ParentID)
-		_, exists := sigMap[id]
-		if exists {
-			return ErrDoubleSpend
-		}
-
-		sigMap[id] = &inputSignatures{
-			remainingSignatures: revision.UnlockConditions.SignaturesRequired,
-			possibleKeys:        revision.UnlockConditions.PublicKeys,
 			usedKeys:            make(map[uint64]struct{}),
 			index:               i,
 		}

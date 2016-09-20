@@ -183,9 +183,6 @@ A Transaction is composed of the following:
 
 - Siacoin Inputs
 - Siacoin Outputs
-- File Contracts
-- File Contract Revisions
-- Storage Proofs
 - BlockStake Inputs
 - BlockStake Outputs
 - Miner Fees

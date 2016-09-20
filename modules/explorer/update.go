@@ -70,42 +70,6 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 					dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
 					dbRemoveSiacoinOutput(tx, scoid)
 				}
-				for k, fc := range txn.FileContracts {
-					fcid := txn.FileContractID(uint64(k))
-					dbRemoveFileContractID(tx, fcid, txid)
-					dbRemoveUnlockHash(tx, fc.UnlockHash, txid)
-					for l, sco := range fc.ValidProofOutputs {
-						scoid := fcid.StorageProofOutputID(types.ProofValid, uint64(l))
-						dbRemoveSiacoinOutputID(tx, scoid, txid)
-						dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
-					}
-					for l, sco := range fc.MissedProofOutputs {
-						scoid := fcid.StorageProofOutputID(types.ProofMissed, uint64(l))
-						dbRemoveSiacoinOutputID(tx, scoid, txid)
-						dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
-					}
-					dbRemoveFileContract(tx, fcid)
-				}
-				for _, fcr := range txn.FileContractRevisions {
-					dbRemoveFileContractID(tx, fcr.ParentID, txid)
-					dbRemoveUnlockHash(tx, fcr.UnlockConditions.UnlockHash(), txid)
-					dbRemoveUnlockHash(tx, fcr.NewUnlockHash, txid)
-					for l, sco := range fcr.NewValidProofOutputs {
-						scoid := fcr.ParentID.StorageProofOutputID(types.ProofValid, uint64(l))
-						dbRemoveSiacoinOutputID(tx, scoid, txid)
-						dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
-					}
-					for l, sco := range fcr.NewMissedProofOutputs {
-						scoid := fcr.ParentID.StorageProofOutputID(types.ProofMissed, uint64(l))
-						dbRemoveSiacoinOutputID(tx, scoid, txid)
-						dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
-					}
-					// Remove the file contract revision from the revision chain.
-					dbRemoveFileContractRevision(tx, fcr.ParentID)
-				}
-				for _, sp := range txn.StorageProofs {
-					dbRemoveStorageProof(tx, sp.ParentID)
-				}
 				for _, sfi := range txn.SiafundInputs {
 					dbRemoveSiafundOutputID(tx, sfi.ParentID, txid)
 					dbRemoveUnlockHash(tx, sfi.UnlockConditions.UnlockHash(), txid)
@@ -166,42 +130,6 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 					dbAddUnlockHash(tx, sco.UnlockHash, txid)
 					dbAddSiacoinOutput(tx, scoid, sco)
 				}
-				for k, fc := range txn.FileContracts {
-					fcid := txn.FileContractID(uint64(k))
-					dbAddFileContractID(tx, fcid, txid)
-					dbAddUnlockHash(tx, fc.UnlockHash, txid)
-					dbAddFileContract(tx, fcid, fc)
-					for l, sco := range fc.ValidProofOutputs {
-						scoid := fcid.StorageProofOutputID(types.ProofValid, uint64(l))
-						dbAddSiacoinOutputID(tx, scoid, txid)
-						dbAddUnlockHash(tx, sco.UnlockHash, txid)
-					}
-					for l, sco := range fc.MissedProofOutputs {
-						scoid := fcid.StorageProofOutputID(types.ProofMissed, uint64(l))
-						dbAddSiacoinOutputID(tx, scoid, txid)
-						dbAddUnlockHash(tx, sco.UnlockHash, txid)
-					}
-				}
-				for _, fcr := range txn.FileContractRevisions {
-					dbAddFileContractID(tx, fcr.ParentID, txid)
-					dbAddUnlockHash(tx, fcr.UnlockConditions.UnlockHash(), txid)
-					dbAddUnlockHash(tx, fcr.NewUnlockHash, txid)
-					for l, sco := range fcr.NewValidProofOutputs {
-						scoid := fcr.ParentID.StorageProofOutputID(types.ProofValid, uint64(l))
-						dbAddSiacoinOutputID(tx, scoid, txid)
-						dbAddUnlockHash(tx, sco.UnlockHash, txid)
-					}
-					for l, sco := range fcr.NewMissedProofOutputs {
-						scoid := fcr.ParentID.StorageProofOutputID(types.ProofMissed, uint64(l))
-						dbAddSiacoinOutputID(tx, scoid, txid)
-						dbAddUnlockHash(tx, sco.UnlockHash, txid)
-					}
-					dbAddFileContractRevision(tx, fcr.ParentID, fcr)
-				}
-				for _, sp := range txn.StorageProofs {
-					dbAddFileContractID(tx, sp.ParentID, txid)
-					dbAddStorageProof(tx, sp.ParentID, sp)
-				}
 				for _, sfi := range txn.SiafundInputs {
 					dbAddSiafundOutputID(tx, sfi.ParentID, txid)
 					dbAddUnlockHash(tx, sfi.UnlockConditions.UnlockHash(), txid)
@@ -235,17 +163,6 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 		var facts blockFacts
 		err = dbGetAndDecode(bucketBlockFacts, currentID, &facts)(tx)
 		if err == nil {
-			for _, diff := range cc.FileContractDiffs {
-				if diff.Direction == modules.DiffApply {
-					facts.ActiveContractCount++
-					facts.ActiveContractCost = facts.ActiveContractCost.Add(diff.FileContract.Payout)
-					facts.ActiveContractSize = facts.ActiveContractSize.Add(types.NewCurrency64(diff.FileContract.FileSize))
-				} else {
-					facts.ActiveContractCount--
-					facts.ActiveContractCost = facts.ActiveContractCost.Sub(diff.FileContract.Payout)
-					facts.ActiveContractSize = facts.ActiveContractSize.Sub(types.NewCurrency64(diff.FileContract.FileSize))
-				}
-			}
 			err = tx.Bucket(bucketBlockFacts).Put(encoding.Marshal(currentID), encoding.Marshal(facts))
 			if err != nil {
 				return err
@@ -314,40 +231,6 @@ func dbRemoveBlockTarget(tx *bolt.Tx, id types.BlockID, target types.Target) {
 	mustDelete(tx.Bucket(bucketBlockTargets), id)
 }
 
-// Add/Remove file contract
-func dbAddFileContract(tx *bolt.Tx, id types.FileContractID, fc types.FileContract) {
-	history := fileContractHistory{Contract: fc}
-	mustPut(tx.Bucket(bucketFileContractHistories), id, history)
-}
-func dbRemoveFileContract(tx *bolt.Tx, id types.FileContractID) {
-	mustDelete(tx.Bucket(bucketFileContractHistories), id)
-}
-
-// Add/Remove txid from file contract ID bucket
-func dbAddFileContractID(tx *bolt.Tx, id types.FileContractID, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketFileContractIDs).CreateBucketIfNotExists(encoding.Marshal(id))
-	assertNil(err)
-	mustPutSet(b, txid)
-}
-func dbRemoveFileContractID(tx *bolt.Tx, id types.FileContractID, txid types.TransactionID) {
-	// TODO: delete bucket when it becomes empty
-	mustDelete(tx.Bucket(bucketFileContractIDs).Bucket(encoding.Marshal(id)), txid)
-}
-
-func dbAddFileContractRevision(tx *bolt.Tx, fcid types.FileContractID, fcr types.FileContractRevision) {
-	var history fileContractHistory
-	assertNil(dbGetAndDecode(bucketFileContractHistories, fcid, &history)(tx))
-	history.Revisions = append(history.Revisions, fcr)
-	mustPut(tx.Bucket(bucketFileContractHistories), fcid, history)
-}
-func dbRemoveFileContractRevision(tx *bolt.Tx, fcid types.FileContractID) {
-	var history fileContractHistory
-	assertNil(dbGetAndDecode(bucketFileContractHistories, fcid, &history)(tx))
-	// TODO: could be more rigorous
-	history.Revisions = history.Revisions[:len(history.Revisions)-1]
-	mustPut(tx.Bucket(bucketFileContractHistories), fcid, history)
-}
-
 // Add/Remove siacoin output
 func dbAddSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID, output types.SiacoinOutput) {
 	mustPut(tx.Bucket(bucketSiacoinOutputs), id, output)
@@ -384,17 +267,6 @@ func dbAddSiafundOutputID(tx *bolt.Tx, id types.SiafundOutputID, txid types.Tran
 func dbRemoveSiafundOutputID(tx *bolt.Tx, id types.SiafundOutputID, txid types.TransactionID) {
 	// TODO: delete bucket when it becomes empty
 	mustDelete(tx.Bucket(bucketSiafundOutputIDs).Bucket(encoding.Marshal(id)), txid)
-}
-
-// Add/Remove storage proof
-func dbAddStorageProof(tx *bolt.Tx, fcid types.FileContractID, sp types.StorageProof) {
-	var history fileContractHistory
-	assertNil(dbGetAndDecode(bucketFileContractHistories, fcid, &history)(tx))
-	history.StorageProof = sp
-	mustPut(tx.Bucket(bucketFileContractHistories), fcid, history)
-}
-func dbRemoveStorageProof(tx *bolt.Tx, fcid types.FileContractID) {
-	dbAddStorageProof(tx, fcid, types.StorageProof{})
 }
 
 // Add/Remove transaction ID
@@ -474,23 +346,12 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 	for _, txn := range block.Transactions {
 		bf.SiacoinInputCount += uint64(len(txn.SiacoinInputs))
 		bf.SiacoinOutputCount += uint64(len(txn.SiacoinOutputs))
-		bf.FileContractCount += uint64(len(txn.FileContracts))
-		bf.FileContractRevisionCount += uint64(len(txn.FileContractRevisions))
-		bf.StorageProofCount += uint64(len(txn.StorageProofs))
 		bf.SiafundInputCount += uint64(len(txn.SiafundInputs))
 		bf.SiafundOutputCount += uint64(len(txn.SiafundOutputs))
 		bf.MinerFeeCount += uint64(len(txn.MinerFees))
 		bf.ArbitraryDataCount += uint64(len(txn.ArbitraryData))
 		bf.TransactionSignatureCount += uint64(len(txn.TransactionSignatures))
 
-		for _, fc := range txn.FileContracts {
-			bf.TotalContractCost = bf.TotalContractCost.Add(fc.Payout)
-			bf.TotalContractSize = bf.TotalContractSize.Add(types.NewCurrency64(fc.FileSize))
-		}
-		for _, fcr := range txn.FileContractRevisions {
-			bf.TotalContractSize = bf.TotalContractSize.Add(types.NewCurrency64(fcr.NewFileSize))
-			bf.TotalRevisionVolume = bf.TotalRevisionVolume.Add(types.NewCurrency64(fcr.NewFileSize))
-		}
 	}
 
 	return bf

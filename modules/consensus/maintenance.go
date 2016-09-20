@@ -101,93 +101,10 @@ func applyMaturedSiacoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 	deleteDSCOBucket(tx, pb.Height)
 }
 
-// applyMissedStorageProof adds the outputs and diffs that result from a file
-// contract expiring.
-func applyMissedStorageProof(tx *bolt.Tx, pb *processedBlock, fcid types.FileContractID) (dscods []modules.DelayedSiacoinOutputDiff, fcd modules.FileContractDiff) {
-	// Sanity checks.
-	fc, err := getFileContract(tx, fcid)
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-	if build.DEBUG {
-		// Check that the file contract in question expires at pb.Height.
-		if fc.WindowEnd != pb.Height {
-			panic(errStorageProofTiming)
-		}
-	}
-
-	// Add all of the outputs in the missed proof outputs to the consensus set.
-	for i, mpo := range fc.MissedProofOutputs {
-		// Sanity check - output should not already exist.
-		spoid := fcid.StorageProofOutputID(types.ProofMissed, uint64(i))
-		if build.DEBUG && isSiacoinOutput(tx, spoid) {
-			panic(errPayoutsAlreadyPaid)
-		}
-
-		// Don't add the output if the value is zero.
-		dscod := modules.DelayedSiacoinOutputDiff{
-			Direction:      modules.DiffApply,
-			ID:             spoid,
-			SiacoinOutput:  mpo,
-			MaturityHeight: pb.Height + types.MaturityDelay,
-		}
-		dscods = append(dscods, dscod)
-	}
-
-	// Remove the file contract from the consensus set and record the diff in
-	// the blockNode.
-	fcd = modules.FileContractDiff{
-		Direction:    modules.DiffRevert,
-		ID:           fcid,
-		FileContract: fc,
-	}
-	return dscods, fcd
-}
-
-// applyFileContractMaintenance looks for all of the file contracts that have
-// expired without an appropriate storage proof, and calls 'applyMissedProof'
-// for the file contract.
-func applyFileContractMaintenance(tx *bolt.Tx, pb *processedBlock) {
-	// Get the bucket pointing to all of the expiring file contracts.
-	fceBucketID := append(prefixFCEX, encoding.Marshal(pb.Height)...)
-	fceBucket := tx.Bucket(fceBucketID)
-	// Finish if there are no expiring file contracts.
-	if fceBucket == nil {
-		return
-	}
-
-	var dscods []modules.DelayedSiacoinOutputDiff
-	var fcds []modules.FileContractDiff
-	err := fceBucket.ForEach(func(keyBytes, valBytes []byte) error {
-		var id types.FileContractID
-		copy(id[:], keyBytes)
-		amspDSCODS, fcd := applyMissedStorageProof(tx, pb, id)
-		fcds = append(fcds, fcd)
-		dscods = append(dscods, amspDSCODS...)
-		return nil
-	})
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-	for _, dscod := range dscods {
-		pb.DelayedSiacoinOutputDiffs = append(pb.DelayedSiacoinOutputDiffs, dscod)
-		commitDelayedSiacoinOutputDiff(tx, dscod, modules.DiffApply)
-	}
-	for _, fcd := range fcds {
-		pb.FileContractDiffs = append(pb.FileContractDiffs, fcd)
-		commitFileContractDiff(tx, fcd, modules.DiffApply)
-	}
-	err = tx.DeleteBucket(fceBucketID)
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-}
-
 // applyMaintenance applies block-level alterations to the consensus set.
 // Maintenance is applied after all of the transcations for the block have been
 // applied.
 func applyMaintenance(tx *bolt.Tx, pb *processedBlock) {
 	applyMinerPayouts(tx, pb)
 	applyMaturedSiacoinOutputs(tx, pb)
-	applyFileContractMaintenance(tx, pb)
 }

@@ -93,11 +93,6 @@ type (
 		// diffs is 'DiffApply'.
 		SiacoinOutputDiffs []SiacoinOutputDiff
 
-		// FileContractDiffs contains the set of file contract diffs that were
-		// applied to the consensus set in the recent change. The direction for the
-		// set of diffs is 'DiffApply'.
-		FileContractDiffs []FileContractDiff
-
 		// SiafundOutputDiffs contains the set of siafund diffs that were applied
 		// to the consensus set in the recent change. The direction for the set of
 		// diffs is 'DiffApply'.
@@ -131,14 +126,6 @@ type (
 		Direction     DiffDirection
 		ID            types.SiacoinOutputID
 		SiacoinOutput types.SiacoinOutput
-	}
-
-	// A FileContractDiff indicates the addition or removal of a FileContract in
-	// the consensus set.
-	FileContractDiff struct {
-		Direction    DiffDirection
-		ID           types.FileContractID
-		FileContract types.FileContract
 	}
 
 	// A SiafundOutputDiff indicates the addition or removal of a SiafundOutput in
@@ -223,10 +210,6 @@ type (
 		// risk of mining invalid blocks.
 		MinimumValidChildTimestamp(types.BlockID) (types.Timestamp, bool)
 
-		// StorageProofSegment returns the segment to be used in the storage proof for
-		// a given file contract.
-		StorageProofSegment(types.FileContractID) (uint64, error)
-
 		// TryTransactionSet checks whether the transaction set would be valid if
 		// it were added in the next block. A consensus change is returned
 		// detailing the diffs that would result from the application of the
@@ -249,7 +232,6 @@ func (cc ConsensusChange) Append(cc2 ConsensusChange) ConsensusChange {
 		RevertedBlocks:            append(cc.RevertedBlocks, cc2.RevertedBlocks...),
 		AppliedBlocks:             append(cc.AppliedBlocks, cc2.AppliedBlocks...),
 		SiacoinOutputDiffs:        append(cc.SiacoinOutputDiffs, cc2.SiacoinOutputDiffs...),
-		FileContractDiffs:         append(cc.FileContractDiffs, cc2.FileContractDiffs...),
 		SiafundOutputDiffs:        append(cc.SiafundOutputDiffs, cc2.SiafundOutputDiffs...),
 		DelayedSiacoinOutputDiffs: append(cc.DelayedSiacoinOutputDiffs, cc2.DelayedSiacoinOutputDiffs...),
 	}

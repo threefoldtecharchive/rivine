@@ -11,27 +11,18 @@ func TestIDs(t *testing.T) {
 	// Create every type of ID using empty fields.
 	txn := Transaction{
 		SiacoinOutputs: []SiacoinOutput{{}},
-		FileContracts:  []FileContract{{}},
 		SiafundOutputs: []SiafundOutput{{}},
 	}
 	tid := txn.ID()
 	scoid := txn.SiacoinOutputID(0)
-	fcid := txn.FileContractID(0)
-	spidT := fcid.StorageProofOutputID(ProofValid, 0)
-	spidF := fcid.StorageProofOutputID(ProofMissed, 0)
 	sfoid := txn.SiafundOutputID(0)
-	scloid := sfoid.SiaClaimOutputID()
 
 	// Put all of the ids into a slice.
 	var ids []crypto.Hash
 	ids = append(ids,
 		crypto.Hash(tid),
 		crypto.Hash(scoid),
-		crypto.Hash(fcid),
-		crypto.Hash(spidT),
-		crypto.Hash(spidF),
 		crypto.Hash(sfoid),
-		crypto.Hash(scloid),
 	)
 
 	// Check that each id is unique.
@@ -53,10 +44,6 @@ func TestTransactionSiacoinOutputSum(t *testing.T) {
 		SiacoinOutputs: []SiacoinOutput{
 			{Value: NewCurrency64(1)},
 			{Value: NewCurrency64(20)},
-		},
-		FileContracts: []FileContract{
-			{Payout: NewCurrency64(300)},
-			{Payout: NewCurrency64(4000)},
 		},
 		MinerFees: []Currency{
 			NewCurrency64(50000),

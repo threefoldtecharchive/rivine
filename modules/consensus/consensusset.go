@@ -322,20 +322,3 @@ func (cs *ConsensusSet) MinimumValidChildTimestamp(id types.BlockID) (timestamp 
 	})
 	return timestamp, exists
 }
-
-// StorageProofSegment returns the segment to be used in the storage proof for
-// a given file contract.
-func (cs *ConsensusSet) StorageProofSegment(fcid types.FileContractID) (index uint64, err error) {
-	// A call to a closed database can cause undefined behavior.
-	err = cs.tg.Add()
-	if err != nil {
-		return 0, err
-	}
-	defer cs.tg.Done()
-
-	_ = cs.db.View(func(tx *bolt.Tx) error {
-		index, err = storageProofSegment(tx, fcid)
-		return nil
-	})
-	return index, err
-}

@@ -21,15 +21,6 @@ var (
 )
 
 type (
-	// fileContractHistory stores the original file contract and the chain of
-	// revisions that have affected a file contract through the life of the
-	// blockchain.
-	fileContractHistory struct {
-		Contract     types.FileContract
-		Revisions    []types.FileContractRevision
-		StorageProof types.StorageProof
-	}
-
 	// blockFacts contains a set of facts about the consensus set related to a
 	// certain block. The explorer needs some additional information in the
 	// history so that it can calculate certain values, which is one of the

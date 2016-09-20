@@ -1,103 +1,92 @@
 package consensus
 
-import (
-	"path/filepath"
-	"testing"
+import "testing"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/miner"
-	"github.com/rivine/rivine/modules/transactionpool"
-	"github.com/rivine/rivine/modules/wallet"
-	"github.com/rivine/rivine/types"
-)
-
-// TestIntegrationMinimumValidChildTimestamp probes the
-// MinimumValidChildTimestamp method of the consensus type.
-func TestIntegrationMinimumValidChildTimestamp(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	t.Parallel()
-
-	// Create a custom consensus set to control the blocks.
-	testdir := build.TempDir(modules.ConsensusDir, "TestIntegrationMinimumValidChildTimestamp")
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	cs, err := New(g, false, filepath.Join(testdir, modules.ConsensusDir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	w, err := wallet.New(cs, tp, filepath.Join(testdir, modules.WalletDir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	key, err := crypto.GenerateTwofishKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = w.Encrypt(key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = w.Unlock(key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.MinerDir))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer g.Close()
-
-	// The earliest child timestamp of the genesis block should be the
-	// timestamp of the genesis block.
-	genesisTime := cs.blockRoot.Block.Timestamp
-	earliest, ok := cs.MinimumValidChildTimestamp(cs.blockRoot.Block.ID())
-	if !ok || genesisTime != earliest {
-		t.Error("genesis block earliest timestamp producing unexpected results")
-	}
-
-	timestampOffsets := []types.Timestamp{1, 3, 2, 5, 4, 6, 7, 8, 9, 10}
-	blockIDs := []types.BlockID{cs.blockRoot.Block.ID()}
-	for _, offset := range timestampOffsets {
-		bfw, target, err := m.BlockForWork()
-		if err != nil {
-			t.Fatal(err)
-		}
-		bfw.Timestamp = genesisTime + offset
-		solvedBlock, _ := m.SolveBlock(bfw, target)
-		err = cs.AcceptBlock(solvedBlock)
-		if err != nil {
-			t.Fatal(err)
-		}
-		blockIDs = append(blockIDs, solvedBlock.ID())
-	}
-
-	// Median should be genesisTime for 6th block.
-	earliest, ok = cs.MinimumValidChildTimestamp(blockIDs[5])
-	if !ok || earliest != genesisTime {
-		t.Error("incorrect child timestamp")
-	}
-	// Median should be genesisTime+1 for 7th block.
-	earliest, ok = cs.MinimumValidChildTimestamp(blockIDs[6])
-	if !ok || earliest != genesisTime+1 {
-		t.Error("incorrect child timestamp")
-	}
-	// Median should be genesisTime + 5 for pb11.
-	earliest, ok = cs.MinimumValidChildTimestamp(blockIDs[10])
-	if !ok || earliest != genesisTime+5 {
-		t.Error("incorrect child timestamp")
-	}
-}
+//
+// // TestIntegrationMinimumValidChildTimestamp probes the
+// // MinimumValidChildTimestamp method of the consensus type.
+// func TestIntegrationMinimumValidChildTimestamp(t *testing.T) {
+// 	if testing.Short() {
+// 		t.SkipNow()
+// 	}
+// 	t.Parallel()
+//
+// 	// Create a custom consensus set to control the blocks.
+// 	testdir := build.TempDir(modules.ConsensusDir, "TestIntegrationMinimumValidChildTimestamp")
+// 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	cs, err := New(g, false, filepath.Join(testdir, modules.ConsensusDir))
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir))
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	w, err := wallet.New(cs, tp, filepath.Join(testdir, modules.WalletDir))
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	key, err := crypto.GenerateTwofishKey()
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	_, err = w.Encrypt(key)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	err = w.Unlock(key)
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.MinerDir))
+// 	if err != nil {
+// 		t.Fatal(err)
+// 	}
+// 	defer g.Close()
+//
+// 	// The earliest child timestamp of the genesis block should be the
+// 	// timestamp of the genesis block.
+// 	genesisTime := cs.blockRoot.Block.Timestamp
+// 	earliest, ok := cs.MinimumValidChildTimestamp(cs.blockRoot.Block.ID())
+// 	if !ok || genesisTime != earliest {
+// 		t.Error("genesis block earliest timestamp producing unexpected results")
+// 	}
+//
+// 	timestampOffsets := []types.Timestamp{1, 3, 2, 5, 4, 6, 7, 8, 9, 10}
+// 	blockIDs := []types.BlockID{cs.blockRoot.Block.ID()}
+// 	for _, offset := range timestampOffsets {
+// 		bfw, target, err := m.BlockForWork()
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		bfw.Timestamp = genesisTime + offset
+// 		solvedBlock, _ := m.SolveBlock(bfw, target)
+// 		err = cs.AcceptBlock(solvedBlock)
+// 		if err != nil {
+// 			t.Fatal(err)
+// 		}
+// 		blockIDs = append(blockIDs, solvedBlock.ID())
+// 	}
+//
+// 	// Median should be genesisTime for 6th block.
+// 	earliest, ok = cs.MinimumValidChildTimestamp(blockIDs[5])
+// 	if !ok || earliest != genesisTime {
+// 		t.Error("incorrect child timestamp")
+// 	}
+// 	// Median should be genesisTime+1 for 7th block.
+// 	earliest, ok = cs.MinimumValidChildTimestamp(blockIDs[6])
+// 	if !ok || earliest != genesisTime+1 {
+// 		t.Error("incorrect child timestamp")
+// 	}
+// 	// Median should be genesisTime + 5 for pb11.
+// 	earliest, ok = cs.MinimumValidChildTimestamp(blockIDs[10])
+// 	if !ok || earliest != genesisTime+5 {
+// 		t.Error("incorrect child timestamp")
+// 	}
+// }
 
 // TestUnitHeavierThan probes the heavierThan method of the processedBlock type.
 func TestUnitHeavierThan(t *testing.T) {

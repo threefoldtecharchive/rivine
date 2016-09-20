@@ -104,33 +104,6 @@ func (e *Explorer) SiacoinOutputID(id types.SiacoinOutputID) []types.Transaction
 	return ids
 }
 
-// FileContractHistory returns the history associated with the specified file
-// contract ID, which includes the file contract itself and all of the
-// revisions that have been submitted to the blockchain. The first bool
-// indicates whether the file contract exists, and the second bool indicates
-// whether a storage proof was successfully submitted for the file contract.
-func (e *Explorer) FileContractHistory(id types.FileContractID) (fc types.FileContract, fcrs []types.FileContractRevision, fcE bool, spE bool) {
-	var history fileContractHistory
-	err := e.db.View(dbGetAndDecode(bucketFileContractHistories, id, &history))
-	fc = history.Contract
-	fcrs = history.Revisions
-	fcE = err == nil
-	spE = history.StorageProof.ParentID == id
-	return
-}
-
-// FileContractIDs returns all of the transactions that contain the specified
-// file contract ID. An empty set indicates that the file contract ID does not
-// appear in the blockchain.
-func (e *Explorer) FileContractID(id types.FileContractID) []types.TransactionID {
-	var ids []types.TransactionID
-	err := e.db.View(dbGetTransactionIDSet(bucketFileContractIDs, id, &ids))
-	if err != nil {
-		ids = nil
-	}
-	return ids
-}
-
 // SiafundOutput returns the siafund output associated with the specified ID.
 func (e *Explorer) SiafundOutput(id types.SiafundOutputID) (types.SiafundOutput, bool) {
 	var sco types.SiafundOutput

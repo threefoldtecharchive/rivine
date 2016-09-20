@@ -10,7 +10,6 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/modules/consensus"
 	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/miner"
 	"github.com/rivine/rivine/modules/transactionpool"
 	"github.com/rivine/rivine/types"
 )
@@ -21,8 +20,8 @@ type walletTester struct {
 	cs      modules.ConsensusSet
 	gateway modules.Gateway
 	tpool   modules.TransactionPool
-	miner   modules.TestMiner
-	wallet  *Wallet
+	// miner   modules.TestMiner
+	wallet *Wallet
 
 	walletMasterKey crypto.TwofishKey
 
@@ -62,32 +61,32 @@ func createWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.WalletDir))
-	if err != nil {
-		return nil, err
-	}
+	// m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.WalletDir))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Assemble all componenets into a wallet tester.
 	wt := &walletTester{
 		cs:      cs,
 		gateway: g,
 		tpool:   tp,
-		miner:   m,
-		wallet:  w,
+		// miner:   m,
+		wallet: w,
 
 		walletMasterKey: masterKey,
 
 		persistDir: testdir,
 	}
-
-	// Mine blocks until there is money in the wallet.
-	for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
-		b, _ := wt.miner.FindBlock()
-		err := wt.cs.AcceptBlock(b)
-		if err != nil {
-			return nil, err
-		}
-	}
+	//
+	// // Mine blocks until there is money in the wallet.
+	// for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
+	// 	b, _ := wt.miner.FindBlock()
+	// 	err := wt.cs.AcceptBlock(b)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 	return wt, nil
 }
 
@@ -112,18 +111,18 @@ func createBlankWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.WalletDir))
-	if err != nil {
-		return nil, err
-	}
+	// m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.WalletDir))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Assemble all componenets into a wallet tester.
 	wt := &walletTester{
 		gateway: g,
 		cs:      cs,
 		tpool:   tp,
-		miner:   m,
-		wallet:  w,
+		// miner:   m,
+		wallet: w,
 
 		persistDir: testdir,
 	}
@@ -136,7 +135,7 @@ func (wt *walletTester) closeWt() {
 		wt.gateway.Close(),
 		wt.cs.Close(),
 		wt.tpool.Close(),
-		wt.miner.Close(),
+		//		wt.miner.Close(),
 		wt.wallet.Close(),
 	}
 	if err := build.JoinErrors(errs, "; "); err != nil {

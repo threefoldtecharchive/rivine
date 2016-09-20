@@ -10,18 +10,16 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/modules/consensus"
 	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/miner"
 	"github.com/rivine/rivine/modules/wallet"
-	"github.com/rivine/rivine/types"
 )
 
 // A tpoolTester is used during testing to initialize a transaction pool and
 // useful helper modules.
 type tpoolTester struct {
-	cs        modules.ConsensusSet
-	gateway   modules.Gateway
-	tpool     *TransactionPool
-	miner     modules.TestMiner
+	cs      modules.ConsensusSet
+	gateway modules.Gateway
+	tpool   *TransactionPool
+	//	miner     modules.TestMiner
 	wallet    modules.Wallet
 	walletKey crypto.TwofishKey
 
@@ -62,17 +60,17 @@ func createTpoolTester(name string) (*tpoolTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.MinerDir))
-	if err != nil {
-		return nil, err
-	}
+	// m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.MinerDir))
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	// Assemble all of the objects into a tpoolTester
 	tpt := &tpoolTester{
-		cs:        cs,
-		gateway:   g,
-		tpool:     tp,
-		miner:     m,
+		cs:      cs,
+		gateway: g,
+		tpool:   tp,
+		//	miner:     m,
 		wallet:    w,
 		walletKey: key,
 
@@ -80,13 +78,13 @@ func createTpoolTester(name string) (*tpoolTester, error) {
 	}
 
 	// Mine blocks until there is money in the wallet.
-	for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
-		b, _ := tpt.miner.FindBlock()
-		err = tpt.cs.AcceptBlock(b)
-		if err != nil {
-			return nil, err
-		}
-	}
+	// for i := types.BlockHeight(0); i <= types.MaturityDelay; i++ {
+	// 	b, _ := tpt.miner.FindBlock()
+	// 	err = tpt.cs.AcceptBlock(b)
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	return tpt, nil
 }
@@ -98,7 +96,7 @@ func (tpt *tpoolTester) Close() error {
 		tpt.cs.Close(),
 		tpt.gateway.Close(),
 		tpt.tpool.Close(),
-		tpt.miner.Close(),
+		//		tpt.miner.Close(),
 		// TODO: implement modules.Wallet.Close()
 		// tpt.wallet.Close()
 	}

@@ -78,12 +78,6 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 			return err
 		}
 	}
-	for _, fcr := range t.FileContractRevisions {
-		err := tp.checkUnlockConditions(fcr.UnlockConditions)
-		if err != nil {
-			return err
-		}
-	}
 	for _, sfi := range t.SiafundInputs {
 		err := tp.checkUnlockConditions(sfi.UnlockConditions)
 		if err != nil {
@@ -100,8 +94,7 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 	for _, arb := range t.ArbitraryData {
 		// Check for a whilelisted prefix.
 		copy(prefix[:], arb)
-		if prefix == modules.PrefixHostAnnouncement ||
-			prefix == modules.PrefixNonSia {
+		if prefix == modules.PrefixNonSia {
 			continue
 		}
 

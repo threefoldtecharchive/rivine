@@ -18,11 +18,8 @@ import (
 
 // flags
 var (
-	addr              string // override default API address
-	initPassword      bool   // supply a custom password when creating a wallet
-	hostVerbose       bool   // display additional host info
-	renterShowHistory bool   // Show download history in addition to download queue.
-	renterListVerbose bool   // Show additional info about uploaded files.
+	addr         string // override default API address
+	initPassword bool   // supply a custom password when creating a wallet
 )
 
 // exit codes
@@ -220,14 +217,14 @@ func die(args ...interface{}) {
 }
 
 func version() {
-	println("Sia Client v" + build.Version)
+	println("Rivine Client v" + build.Version)
 }
 
 func main() {
 	root := &cobra.Command{
 		Use:   os.Args[0],
-		Short: "Sia Client v" + build.Version,
-		Long:  "Sia Client v" + build.Version,
+		Short: "Rivine Client v" + build.Version,
+		Long:  "Rivine Client v" + build.Version,
 		Run:   wrap(consensuscmd),
 	}
 
@@ -244,33 +241,12 @@ func main() {
 	root.AddCommand(updateCmd)
 	updateCmd.AddCommand(updateCheckCmd)
 
-	root.AddCommand(hostCmd)
-	hostCmd.AddCommand(hostConfigCmd, hostAnnounceCmd, hostFolderCmd, hostSectorCmd)
-	hostFolderCmd.AddCommand(hostFolderAddCmd, hostFolderRemoveCmd, hostFolderResizeCmd)
-	hostSectorCmd.AddCommand(hostSectorDeleteCmd)
-	hostCmd.Flags().BoolVarP(&hostVerbose, "verbose", "v", false, "Display detailed host info")
-
-	root.AddCommand(hostdbCmd)
-
-	root.AddCommand(minerCmd)
-	minerCmd.AddCommand(minerStartCmd, minerStopCmd)
-
 	root.AddCommand(walletCmd)
 	walletCmd.AddCommand(walletAddressCmd, walletAddressesCmd, walletInitCmd,
 		walletLoadCmd, walletLockCmd, walletSeedsCmd, walletSendCmd,
 		walletBalanceCmd, walletTransactionsCmd, walletUnlockCmd)
 	walletInitCmd.Flags().BoolVarP(&initPassword, "password", "p", false, "Prompt for a custom password")
-	walletLoadCmd.AddCommand(walletLoad033xCmd, walletLoadSeedCmd, walletLoadSiagCmd)
 	walletSendCmd.AddCommand(walletSendSiacoinsCmd, walletSendSiafundsCmd)
-
-	root.AddCommand(renterCmd)
-	renterCmd.AddCommand(renterFilesDeleteCmd, renterFilesDownloadCmd,
-		renterDownloadsCmd, renterAllowanceCmd, renterSetAllowanceCmd,
-		renterContractsCmd, renterFilesListCmd, renterFilesRenameCmd,
-		renterFilesUploadCmd, renterUploadsCmd)
-	renterCmd.Flags().BoolVarP(&renterListVerbose, "verbose", "v", false, "Show additional file info such as redundancy")
-	renterDownloadsCmd.Flags().BoolVarP(&renterShowHistory, "history", "H", false, "Show download history in addition to the download queue")
-	renterFilesListCmd.Flags().BoolVarP(&renterListVerbose, "verbose", "v", false, "Show additional file info such as redundancy")
 
 	root.AddCommand(gatewayCmd)
 	gatewayCmd.AddCommand(gatewayConnectCmd, gatewayDisconnectCmd, gatewayAddressCmd, gatewayListCmd)
