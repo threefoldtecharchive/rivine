@@ -31,31 +31,24 @@ func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 			delete(w.siacoinOutputs, diff.ID)
 		}
 	}
-	for _, diff := range cc.SiafundOutputDiffs {
+	for _, diff := range cc.BlockStakeOutputDiffs {
 		// Verify that the diff is relevant to the wallet.
-		_, exists := w.keys[diff.SiafundOutput.UnlockHash]
+		_, exists := w.keys[diff.BlockStakeOutput.UnlockHash]
 		if !exists {
 			continue
 		}
 
-		_, exists = w.siafundOutputs[diff.ID]
+		_, exists = w.blockstakeOutputs[diff.ID]
 		if diff.Direction == modules.DiffApply {
 			if build.DEBUG && exists {
 				panic("adding an existing output to wallet")
 			}
-			w.siafundOutputs[diff.ID] = diff.SiafundOutput
+			w.blockstakeOutputs[diff.ID] = diff.BlockStakeOutput
 		} else {
 			if build.DEBUG && !exists {
 				panic("deleting nonexisting output from wallet")
 			}
-			delete(w.siafundOutputs, diff.ID)
-		}
-	}
-	for _, diff := range cc.SiafundPoolDiffs {
-		if diff.Direction == modules.DiffApply {
-			w.siafundPool = diff.Adjusted
-		} else {
-			w.siafundPool = diff.Previous
+			delete(w.blockstakeOutputs, diff.ID)
 		}
 	}
 }
@@ -156,40 +149,32 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				})
 				w.historicOutputs[types.OutputID(txn.SiacoinOutputID(uint64(i)))] = sco.Value
 			}
-			for _, sfi := range txn.SiafundInputs {
+			for _, sfi := range txn.BlockStakeInputs {
 				_, exists := w.keys[sfi.UnlockConditions.UnlockHash()]
 				if exists {
 					relevant = true
 				}
 				sfiValue := w.historicOutputs[types.OutputID(sfi.ParentID)]
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
-					FundType:       types.SpecifierSiafundInput,
+					FundType:       types.SpecifierBlockStakeInput,
 					WalletAddress:  exists,
 					RelatedAddress: sfi.UnlockConditions.UnlockHash(),
 					Value:          sfiValue,
 				})
-				claimValue := w.siafundPool.Sub(w.historicClaimStarts[sfi.ParentID]).Mul(sfiValue)
-				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
-					FundType:       types.SpecifierClaimOutput,
-					MaturityHeight: w.consensusSetHeight + types.MaturityDelay,
-					WalletAddress:  exists,
-					RelatedAddress: sfi.ClaimUnlockHash,
-					Value:          claimValue,
-				})
 			}
-			for i, sfo := range txn.SiafundOutputs {
+			for i, sfo := range txn.BlockStakeOutputs {
 				_, exists := w.keys[sfo.UnlockHash]
 				if exists {
 					relevant = true
 				}
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
-					FundType:       types.SpecifierSiafundOutput,
+					FundType:       types.SpecifierBlockStakeOutput,
 					MaturityHeight: w.consensusSetHeight,
 					WalletAddress:  exists,
 					RelatedAddress: sfo.UnlockHash,
 					Value:          sfo.Value,
 				})
-				w.historicOutputs[types.OutputID(txn.SiafundOutputID(uint64(i)))] = sfo.Value
+				w.historicOutputs[types.OutputID(txn.BlockStakeOutputID(uint64(i)))] = sfo.Value
 			}
 			for _, fee := range txn.MinerFees {
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{

@@ -27,8 +27,8 @@ type (
 		TransactionCount          uint64 `json:"transactioncount"`
 		SiacoinInputCount         uint64 `json:"siacoininputcount"`
 		SiacoinOutputCount        uint64 `json:"siacoinoutputcount"`
-		SiafundInputCount         uint64 `json:"siafundinputcount"`
-		SiafundOutputCount        uint64 `json:"siafundoutputcount"`
+		BlockStakeInputCount      uint64 `json:"blockstakeinputcount"`
+		BlockStakeOutputCount     uint64 `json:"blockstakeoutputcount"`
 		MinerFeeCount             uint64 `json:"minerfeecount"`
 		ArbitraryDataCount        uint64 `json:"arbitrarydatacount"`
 		TransactionSignatureCount uint64 `json:"transactionsignaturecount"`
@@ -68,13 +68,13 @@ type (
 		// the provided siacoin output id.
 		SiacoinOutputID(types.SiacoinOutputID) []types.TransactionID
 
-		// SiafundOutput will return the siafund output associated with the
+		// BlockStakeOutput will return the blockstake output associated with the
 		// input id.
-		SiafundOutput(types.SiafundOutputID) (types.SiafundOutput, bool)
+		BlockStakeOutput(types.BlockStakeOutputID) (types.BlockStakeOutput, bool)
 
 		// SiafundOutputID returns all of the transaction ids associated with
-		// the provided siafund output id.
-		SiafundOutputID(types.SiafundOutputID) []types.TransactionID
+		// the provided blockstake output id.
+		BlockStakeOutputID(types.BlockStakeOutputID) []types.TransactionID
 
 		Close() error
 	}

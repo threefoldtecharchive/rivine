@@ -60,7 +60,6 @@ type Wallet struct {
 	cs                 modules.ConsensusSet
 	tpool              modules.TransactionPool
 	consensusSetHeight types.BlockHeight
-	siafundPool        types.Currency
 
 	// The following set of fields are responsible for tracking the confirmed
 	// outputs, and for being able to spend them. The seeds are used to derive
@@ -71,11 +70,11 @@ type Wallet struct {
 	//
 	// siacoinOutptus, siafundOutputs, and spentOutputs are kept so that they
 	// can be scanned when trying to fund transactions.
-	seeds          []modules.Seed
-	keys           map[types.UnlockHash]spendableKey
-	siacoinOutputs map[types.SiacoinOutputID]types.SiacoinOutput
-	siafundOutputs map[types.SiafundOutputID]types.SiafundOutput
-	spentOutputs   map[types.OutputID]types.BlockHeight
+	seeds             []modules.Seed
+	keys              map[types.UnlockHash]spendableKey
+	siacoinOutputs    map[types.SiacoinOutputID]types.SiacoinOutput
+	blockstakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
+	spentOutputs      map[types.OutputID]types.BlockHeight
 
 	// The following fields are kept to track transaction history.
 	// processedTransactions are stored in chronological order, and have a map for
@@ -95,8 +94,7 @@ type Wallet struct {
 
 	// TODO: Storing the whole set of historic outputs is expensive and
 	// unnecessary. There's a better way to do it.
-	historicOutputs     map[types.OutputID]types.Currency
-	historicClaimStarts map[types.SiafundOutputID]types.Currency
+	historicOutputs map[types.OutputID]types.Currency
 
 	persistDir string
 	log        *persist.Logger
@@ -124,15 +122,14 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		cs:    cs,
 		tpool: tpool,
 
-		keys:           make(map[types.UnlockHash]spendableKey),
-		siacoinOutputs: make(map[types.SiacoinOutputID]types.SiacoinOutput),
-		siafundOutputs: make(map[types.SiafundOutputID]types.SiafundOutput),
-		spentOutputs:   make(map[types.OutputID]types.BlockHeight),
+		keys:              make(map[types.UnlockHash]spendableKey),
+		siacoinOutputs:    make(map[types.SiacoinOutputID]types.SiacoinOutput),
+		blockstakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+		spentOutputs:      make(map[types.OutputID]types.BlockHeight),
 
 		processedTransactionMap: make(map[types.TransactionID]*modules.ProcessedTransaction),
 
-		historicOutputs:     make(map[types.OutputID]types.Currency),
-		historicClaimStarts: make(map[types.SiafundOutputID]types.Currency),
+		historicOutputs: make(map[types.OutputID]types.Currency),
 
 		persistDir: persistDir,
 	}

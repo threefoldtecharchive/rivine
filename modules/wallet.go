@@ -122,7 +122,7 @@ type (
 		// transaction failed.
 		FundSiacoins(amount types.Currency) error
 
-		// FundSiafunds will add a siafund input of exactly 'amount' to the
+		// FundBlockStakes will add a siafund input of exactly 'amount' to the
 		// transaction. A parent transaction may be needed to achieve an input
 		// with the correct value. The siafund input will not be signed until
 		// 'Sign' is called on the transaction builder. Any siacoins that are
@@ -131,7 +131,7 @@ type (
 		// will be completed and broadcast within a few hours. Longer risks
 		// double-spends, because the wallet will assume the transaction
 		// failed.
-		FundSiafunds(amount types.Currency) error
+		FundBlockStakes(amount types.Currency) error
 
 		// AddParents adds a set of parents to the transaction.
 		AddParents([]types.Transaction)
@@ -149,14 +149,14 @@ type (
 		// the index of the siacoin output within the transaction.
 		AddSiacoinOutput(types.SiacoinOutput) uint64
 
-		// AddSiafundInput adds a siafund input to the transaction, returning
+		// AddBlockStakeInput adds a blockstake input to the transaction, returning
 		// the index of the siafund input within the transaction. When 'Sign'
 		// is called, this input will be left unsigned.
-		AddSiafundInput(types.SiafundInput) uint64
+		AddBlockStakeInput(types.BlockStakeInput) uint64
 
-		// AddSiafundOutput adds a siafund output to the transaction, returning
-		// the index of the siafund output within the transaction.
-		AddSiafundOutput(types.SiafundOutput) uint64
+		// AddBlockStakeOutput adds a blockstake output to the transaction, returning
+		// the index of the blockstake output within the transaction.
+		AddBlockStakeOutput(types.BlockStakeOutput) uint64
 
 		// AddArbitraryData adds arbitrary data to the transaction, returning
 		// the index of the data within the transaction.
@@ -271,10 +271,6 @@ type (
 		// as a primary seed.
 		// LoadBackup(masterKey, backupMasterKey crypto.TwofishKey, string) error
 
-		// Load033xWallet will load a version 0.3.3.x wallet from disk and add all of
-		// the keys in the wallet as unseeded keys.
-		Load033xWallet(crypto.TwofishKey, string) error
-
 		// LoadSeed will recreate a wallet file using the recovery phrase.
 		// LoadSeed only needs to be called if the original seed file or
 		// encryption password was lost. The master key is used to encrypt the
@@ -300,7 +296,7 @@ type (
 		// ConfirmedBalance returns the confirmed balance of the wallet, minus
 		// any outgoing transactions. ConfirmedBalance will include unconfirmed
 		// refund transactions.
-		ConfirmedBalance() (siacoinBalance types.Currency, siafundBalance types.Currency, siacoinClaimBalance types.Currency)
+		ConfirmedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
 
 		// UnconfirmedBalance returns the unconfirmed balance of the wallet.
 		// Outgoing funds and incoming funds are reported separately. Refund
@@ -345,11 +341,11 @@ type (
 		// are also returned to the caller.
 		SendSiacoins(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
 
-		// SendSiafunds is a tool for sending siafunds from the wallet to an
+		// SendBlockStakes is a tool for sending blockstakes from the wallet to an
 		// address. Sending money usually results in multiple transactions. The
 		// transactions are automatically given to the transaction pool, and
 		// are also returned to the caller.
-		SendSiafunds(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
+		SendBlockStakes(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
 	}
 )
 

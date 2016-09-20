@@ -49,11 +49,11 @@ func relatedObjectIDs(ts []types.Transaction) []ObjectID {
 		for i := range t.SiacoinOutputs {
 			oidMap[ObjectID(t.SiacoinOutputID(uint64(i)))] = struct{}{}
 		}
-		for _, sfi := range t.SiafundInputs {
+		for _, sfi := range t.BlockStakeInputs {
 			oidMap[ObjectID(sfi.ParentID)] = struct{}{}
 		}
-		for i := range t.SiafundOutputs {
-			oidMap[ObjectID(t.SiafundOutputID(uint64(i)))] = struct{}{}
+		for i := range t.BlockStakeOutputs {
+			oidMap[ObjectID(t.BlockStakeOutputID(uint64(i)))] = struct{}{}
 		}
 	}
 
@@ -214,7 +214,7 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 	for _, diff := range cc.SiacoinOutputDiffs {
 		tp.knownObjects[ObjectID(diff.ID)] = setID
 	}
-	for _, diff := range cc.SiafundOutputDiffs {
+	for _, diff := range cc.BlockStakeOutputDiffs {
 		tp.knownObjects[ObjectID(diff.ID)] = setID
 	}
 	tp.transactionSetDiffs[setID] = cc

@@ -13,18 +13,16 @@ var (
 	errNotExist = errors.New("entry does not exist")
 
 	// database buckets
-	bucketBlockFacts            = []byte("BlockFacts")
-	bucketBlockIDs              = []byte("BlockIDs")
-	bucketBlocksDifficulty      = []byte("BlocksDifficulty")
-	bucketBlockTargets          = []byte("BlockTargets")
-	bucketFileContractHistories = []byte("FileContractHistories")
-	bucketFileContractIDs       = []byte("FileContractIDs")
-	bucketSiacoinOutputIDs      = []byte("SiacoinOutputIDs")
-	bucketSiacoinOutputs        = []byte("SiacoinOutputs")
-	bucketSiafundOutputIDs      = []byte("SiafundOutputIDs")
-	bucketSiafundOutputs        = []byte("SiafundOutputs")
-	bucketTransactionIDs        = []byte("TransactionIDs")
-	bucketUnlockHashes          = []byte("UnlockHashes")
+	bucketBlockFacts          = []byte("BlockFacts")
+	bucketBlockIDs            = []byte("BlockIDs")
+	bucketBlocksDifficulty    = []byte("BlocksDifficulty")
+	bucketBlockTargets        = []byte("BlockTargets")
+	bucketSiacoinOutputIDs    = []byte("SiacoinOutputIDs")
+	bucketSiacoinOutputs      = []byte("SiacoinOutputs")
+	bucketBlockStakeOutputIDs = []byte("BlockStakeOutputIDs")
+	bucketBlockStakeOutputs   = []byte("BlockStakeOutputs")
+	bucketTransactionIDs      = []byte("TransactionIDs")
+	bucketUnlockHashes        = []byte("UnlockHashes")
 
 	// bucketInternal is used to store values internal to the explorer
 	bucketInternal = []byte("Internal")

@@ -24,8 +24,7 @@ type (
 		UnconfirmedOutgoingSiacoins types.Currency `json:"unconfirmedoutgoingsiacoins"`
 		UnconfirmedIncomingSiacoins types.Currency `json:"unconfirmedincomingsiacoins"`
 
-		SiafundBalance      types.Currency `json:"siafundbalance"`
-		SiacoinClaimBalance types.Currency `json:"siacoinclaimbalance"`
+		BlockStakeBalance types.Currency `json:"blockstakebalance"`
 	}
 
 	// WalletAddressGET contains an address returned by a GET call to
@@ -52,9 +51,9 @@ type (
 		TransactionIDs []types.TransactionID `json:"transactionids"`
 	}
 
-	// WalletSiafundsPOST contains the transaction sent in the POST call to
-	// /wallet/siafunds.
-	WalletSiafundsPOST struct {
+	// WalletBlockStakesPOST contains the transaction sent in the POST call to
+	// /wallet/blockstakes.
+	WalletBlockStakesPOST struct {
 		TransactionIDs []types.TransactionID `json:"transactionids"`
 	}
 
@@ -104,7 +103,7 @@ func encryptionKeys(seedStr string) (validKeys []crypto.TwofishKey) {
 
 // walletHander handles API calls to /wallet.
 func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	siacoinBal, siafundBal, siaclaimBal := api.wallet.ConfirmedBalance()
+	siacoinBal, blockstakeBal := api.wallet.ConfirmedBalance()
 	siacoinsOut, siacoinsIn := api.wallet.UnconfirmedBalance()
 	WriteJSON(w, WalletGET{
 		Encrypted: api.wallet.Encrypted(),
@@ -114,32 +113,8 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 		UnconfirmedOutgoingSiacoins: siacoinsOut,
 		UnconfirmedIncomingSiacoins: siacoinsIn,
 
-		SiafundBalance:      siafundBal,
-		SiacoinClaimBalance: siaclaimBal,
+		BlockStakeBalance: blockstakeBal,
 	})
-}
-
-// wallet033xHandler handles API calls to /wallet/033x.
-func (api *API) wallet033xHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	source := req.FormValue("source")
-	// Check that source is an absolute paths.
-	if !filepath.IsAbs(source) {
-		WriteError(w, Error{"error when calling /wallet/033x: source must be an absolute path"}, http.StatusBadRequest)
-		return
-	}
-	potentialKeys := encryptionKeys(req.FormValue("encryptionpassword"))
-	for _, key := range potentialKeys {
-		err := api.wallet.Load033xWallet(key, source)
-		if err == nil {
-			WriteSuccess(w)
-			return
-		}
-		if err != nil && err != modules.ErrBadEncryptionKey {
-			WriteError(w, Error{"error when calling /wallet/033x: " + err.Error()}, http.StatusBadRequest)
-			return
-		}
-	}
-	WriteError(w, Error{modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
 }
 
 // walletAddressHandler handles API calls to /wallet/address.
@@ -338,28 +313,28 @@ func (api *API) walletSiacoinsHandler(w http.ResponseWriter, req *http.Request, 
 }
 
 // walletSiafundsHandler handles API calls to /wallet/siafunds.
-func (api *API) walletSiafundsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (api *API) walletBlockStakesHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	amount, ok := scanAmount(req.FormValue("amount"))
 	if !ok {
-		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/siafunds"}, http.StatusBadRequest)
+		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/blockstakes"}, http.StatusBadRequest)
 		return
 	}
 	dest, err := scanAddress(req.FormValue("destination"))
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/siafunds: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 
-	txns, err := api.wallet.SendSiafunds(amount, dest)
+	txns, err := api.wallet.SendBlockStakes(amount, dest)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/siafunds: " + err.Error()}, http.StatusInternalServerError)
+		WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
 	var txids []types.TransactionID
 	for _, txn := range txns {
 		txids = append(txids, txn.ID())
 	}
-	WriteJSON(w, WalletSiafundsPOST{
+	WriteJSON(w, WalletBlockStakesPOST{
 		TransactionIDs: txids,
 	})
 }

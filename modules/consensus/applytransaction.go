@@ -46,39 +46,39 @@ func applySiacoinOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 	}
 }
 
-// applyTxSiafundInputs takes all of the siafund inputs in a transaction and
+// applyBlockStakeInputs takes all of the siafund inputs in a transaction and
 // applies them to the state, updating the diffs in the processed block.
-func applySiafundInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
-	for _, sfi := range t.SiafundInputs {
+func applyBlockStakeInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
+	for _, sfi := range t.BlockStakeInputs {
 		// Calculate the volume of siacoins to put in the claim output.
-		sfo, err := getSiafundOutput(tx, sfi.ParentID)
+		sfo, err := getBlockStakeOutput(tx, sfi.ParentID)
 		if build.DEBUG && err != nil {
 			panic(err)
 		}
 
 		// Create the siafund output diff and remove the output from the
 		// consensus set.
-		sfod := modules.SiafundOutputDiff{
-			Direction:     modules.DiffRevert,
-			ID:            sfi.ParentID,
-			SiafundOutput: sfo,
+		sfod := modules.BlockStakeOutputDiff{
+			Direction:        modules.DiffRevert,
+			ID:               sfi.ParentID,
+			BlockStakeOutput: sfo,
 		}
-		pb.SiafundOutputDiffs = append(pb.SiafundOutputDiffs, sfod)
-		commitSiafundOutputDiff(tx, sfod, modules.DiffApply)
+		pb.BlockStakeOutputDiffs = append(pb.BlockStakeOutputDiffs, sfod)
+		commitBlockStakeOutputDiff(tx, sfod, modules.DiffApply)
 	}
 }
 
-// applySiafundOutput applies a siafund output to the consensus set.
-func applySiafundOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
-	for i, sfo := range t.SiafundOutputs {
-		sfoid := t.SiafundOutputID(uint64(i))
-		sfod := modules.SiafundOutputDiff{
-			Direction:     modules.DiffApply,
-			ID:            sfoid,
-			SiafundOutput: sfo,
+// applyBlockStakeOutput applies a siafund output to the consensus set.
+func applyBlockStakeOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
+	for i, sfo := range t.BlockStakeOutputs {
+		sfoid := t.BlockStakeOutputID(uint64(i))
+		sfod := modules.BlockStakeOutputDiff{
+			Direction:        modules.DiffApply,
+			ID:               sfoid,
+			BlockStakeOutput: sfo,
 		}
-		pb.SiafundOutputDiffs = append(pb.SiafundOutputDiffs, sfod)
-		commitSiafundOutputDiff(tx, sfod, modules.DiffApply)
+		pb.BlockStakeOutputDiffs = append(pb.BlockStakeOutputDiffs, sfod)
+		commitBlockStakeOutputDiff(tx, sfod, modules.DiffApply)
 	}
 }
 
@@ -88,6 +88,6 @@ func applySiafundOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 func applyTransaction(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 	applySiacoinInputs(tx, pb, t)
 	applySiacoinOutputs(tx, pb, t)
-	applySiafundInputs(tx, pb, t)
-	applySiafundOutputs(tx, pb, t)
+	applyBlockStakeInputs(tx, pb, t)
+	applyBlockStakeOutputs(tx, pb, t)
 }

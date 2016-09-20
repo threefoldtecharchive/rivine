@@ -33,10 +33,10 @@ type (
 		Parent         types.BlockID       `json:"parent"`
 		RawTransaction types.Transaction   `json:"rawtransaction"`
 
-		SiacoinInputOutputs []types.SiacoinOutput   `json:"siacoininputoutputs"` // the outputs being spent
-		SiacoinOutputIDs    []types.SiacoinOutputID `json:"siacoinoutputids"`
-		SiafundInputOutputs []types.SiafundOutput   `json:"siafundinputoutputs"` // the outputs being spent
-		SiafundOutputIDs    []types.SiafundOutputID `json:"siafundoutputids"`
+		SiacoinInputOutputs    []types.SiacoinOutput      `json:"siacoininputoutputs"` // the outputs being spent
+		SiacoinOutputIDs       []types.SiacoinOutputID    `json:"siacoinoutputids"`
+		BlockStakeInputOutputs []types.BlockStakeOutput   `json:"blockstakeinputoutputs"` // the outputs being spent
+		BlockStakeOutputIDs    []types.BlockStakeOutputID `json:"blockstakeoutputids"`
 	}
 
 	// ExplorerGET is the object returned as a response to a GET request to
@@ -91,16 +91,16 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 	}
 
 	// Add the siafund outputs that correspond to each siacoin input.
-	for _, sci := range txn.SiafundInputs {
-		sco, exists := api.explorer.SiafundOutput(sci.ParentID)
+	for _, sci := range txn.BlockStakeInputs {
+		sco, exists := api.explorer.BlockStakeOutput(sci.ParentID)
 		if build.DEBUG && !exists {
-			panic("could not find corresponding siafund output")
+			panic("could not find corresponding blockstake output")
 		}
-		et.SiafundInputOutputs = append(et.SiafundInputOutputs, sco)
+		et.BlockStakeInputOutputs = append(et.BlockStakeInputOutputs, sco)
 	}
 
-	for i := range txn.SiafundOutputs {
-		et.SiafundOutputIDs = append(et.SiafundOutputIDs, txn.SiafundOutputID(uint64(i)))
+	for i := range txn.BlockStakeOutputs {
+		et.BlockStakeOutputIDs = append(et.BlockStakeOutputIDs, txn.BlockStakeOutputID(uint64(i)))
 	}
 
 	return et
@@ -241,11 +241,11 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 	}
 
 	// Try the hash as a siafund output id.
-	txids = api.explorer.SiafundOutputID(types.SiafundOutputID(hash))
+	txids = api.explorer.BlockStakeOutputID(types.BlockStakeOutputID(hash))
 	if len(txids) != 0 {
 		txns, blocks := api.buildTransactionSet(txids)
 		WriteJSON(w, ExplorerHashGET{
-			HashType:     "siafundoutputid",
+			HashType:     "blockstakeoutputid",
 			Blocks:       blocks,
 			Transactions: txns,
 		})

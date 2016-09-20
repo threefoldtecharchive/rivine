@@ -32,9 +32,8 @@ type processedBlock struct {
 
 	DiffsGenerated            bool
 	SiacoinOutputDiffs        []modules.SiacoinOutputDiff
-	SiafundOutputDiffs        []modules.SiafundOutputDiff
+	BlockStakeOutputDiffs     []modules.BlockStakeOutputDiff
 	DelayedSiacoinOutputDiffs []modules.DelayedSiacoinOutputDiff
-	SiafundPoolDiffs          []modules.SiafundPoolDiff
 
 	ConsensusChecksum crypto.Hash
 }

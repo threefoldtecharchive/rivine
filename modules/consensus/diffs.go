@@ -12,14 +12,11 @@ import (
 )
 
 var (
-	errApplySiafundPoolDiffMismatch  = errors.New("committing a siafund pool diff with an invalid 'previous' field")
-	errDiffsNotGenerated             = errors.New("applying diff set before generating errors")
-	errInvalidSuccessor              = errors.New("generating diffs for a block that's an invalid successsor to the current block")
-	errNegativePoolAdjustment        = errors.New("committing a siafund pool diff with a negative adjustment")
-	errNonApplySiafundPoolDiff       = errors.New("commiting a siafund pool diff that doesn't have the 'apply' direction")
-	errRevertSiafundPoolDiffMismatch = errors.New("committing a siafund pool diff with an invalid 'adjusted' field")
-	errWrongAppliedDiffSet           = errors.New("applying a diff set that isn't the current block")
-	errWrongRevertDiffSet            = errors.New("reverting a diff set that isn't the current block")
+	errApplySiafundPoolDiffMismatch = errors.New("committing a siafund pool diff with an invalid 'previous' field")
+	errDiffsNotGenerated            = errors.New("applying diff set before generating errors")
+	errInvalidSuccessor             = errors.New("generating diffs for a block that's an invalid successsor to the current block")
+	errWrongAppliedDiffSet          = errors.New("applying a diff set that isn't the current block")
+	errWrongRevertDiffSet           = errors.New("reverting a diff set that isn't the current block")
 )
 
 // commitDiffSetSanity performs a series of sanity checks before committing a
@@ -61,12 +58,12 @@ func commitSiacoinOutputDiff(tx *bolt.Tx, scod modules.SiacoinOutputDiff, dir mo
 	}
 }
 
-// commitSiafundOutputDiff applies or reverts a Siafund output diff.
-func commitSiafundOutputDiff(tx *bolt.Tx, sfod modules.SiafundOutputDiff, dir modules.DiffDirection) {
+// commitBlockStakeOutputDiff applies or reverts a Siafund output diff.
+func commitBlockStakeOutputDiff(tx *bolt.Tx, sfod modules.BlockStakeOutputDiff, dir modules.DiffDirection) {
 	if sfod.Direction == dir {
-		addSiafundOutput(tx, sfod.ID, sfod.SiafundOutput)
+		addBlockStakeOutput(tx, sfod.ID, sfod.BlockStakeOutput)
 	} else {
-		removeSiafundOutput(tx, sfod.ID)
+		removeBlockStakeOutput(tx, sfod.ID)
 	}
 }
 
@@ -76,33 +73,6 @@ func commitDelayedSiacoinOutputDiff(tx *bolt.Tx, dscod modules.DelayedSiacoinOut
 		addDSCO(tx, dscod.MaturityHeight, dscod.ID, dscod.SiacoinOutput)
 	} else {
 		removeDSCO(tx, dscod.MaturityHeight, dscod.ID)
-	}
-}
-
-// commitSiafundPoolDiff applies or reverts a SiafundPoolDiff.
-func commitSiafundPoolDiff(tx *bolt.Tx, sfpd modules.SiafundPoolDiff, dir modules.DiffDirection) {
-	// Sanity check - siafund pool should only ever increase.
-	if build.DEBUG {
-		if sfpd.Adjusted.Cmp(sfpd.Previous) < 0 {
-			panic(errNegativePoolAdjustment)
-		}
-		if sfpd.Direction != modules.DiffApply {
-			panic(errNonApplySiafundPoolDiff)
-		}
-	}
-
-	if dir == modules.DiffApply {
-		// Sanity check - sfpd.Previous should equal the current siafund pool.
-		if build.DEBUG && getSiafundPool(tx).Cmp(sfpd.Previous) != 0 {
-			panic(errApplySiafundPoolDiffMismatch)
-		}
-		setSiafundPool(tx, sfpd.Adjusted)
-	} else {
-		// Sanity check - sfpd.Adjusted should equal the current siafund pool.
-		if build.DEBUG && getSiafundPool(tx).Cmp(sfpd.Adjusted) != 0 {
-			panic(errRevertSiafundPoolDiffMismatch)
-		}
-		setSiafundPool(tx, sfpd.Previous)
 	}
 }
 
@@ -122,27 +92,21 @@ func commitNodeDiffs(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirection)
 		for _, scod := range pb.SiacoinOutputDiffs {
 			commitSiacoinOutputDiff(tx, scod, dir)
 		}
-		for _, sfod := range pb.SiafundOutputDiffs {
-			commitSiafundOutputDiff(tx, sfod, dir)
+		for _, sfod := range pb.BlockStakeOutputDiffs {
+			commitBlockStakeOutputDiff(tx, sfod, dir)
 		}
 		for _, dscod := range pb.DelayedSiacoinOutputDiffs {
 			commitDelayedSiacoinOutputDiff(tx, dscod, dir)
-		}
-		for _, sfpd := range pb.SiafundPoolDiffs {
-			commitSiafundPoolDiff(tx, sfpd, dir)
 		}
 	} else {
 		for i := len(pb.SiacoinOutputDiffs) - 1; i >= 0; i-- {
 			commitSiacoinOutputDiff(tx, pb.SiacoinOutputDiffs[i], dir)
 		}
-		for i := len(pb.SiafundOutputDiffs) - 1; i >= 0; i-- {
-			commitSiafundOutputDiff(tx, pb.SiafundOutputDiffs[i], dir)
+		for i := len(pb.BlockStakeOutputDiffs) - 1; i >= 0; i-- {
+			commitBlockStakeOutputDiff(tx, pb.BlockStakeOutputDiffs[i], dir)
 		}
 		for i := len(pb.DelayedSiacoinOutputDiffs) - 1; i >= 0; i-- {
 			commitDelayedSiacoinOutputDiff(tx, pb.DelayedSiacoinOutputDiffs[i], dir)
-		}
-		for i := len(pb.SiafundPoolDiffs) - 1; i >= 0; i-- {
-			commitSiafundPoolDiff(tx, pb.SiafundPoolDiffs[i], dir)
 		}
 	}
 }

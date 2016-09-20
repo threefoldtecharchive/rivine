@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	errMissingSiacoinOutput       = errors.New("transaction spends a nonexisting siacoin output")
-	errMissingSiafundOutput       = errors.New("transaction spends a nonexisting siafund output")
-	errSiacoinInputOutputMismatch = errors.New("siacoin inputs do not equal siacoin outputs for transaction")
-	errSiafundInputOutputMismatch = errors.New("siafund inputs do not equal siafund outputs for transaction")
-	errWrongUnlockConditions      = errors.New("transaction contains incorrect unlock conditions")
+	errMissingSiacoinOutput          = errors.New("transaction spends a nonexisting siacoin output")
+	errMissingBlockStakeOutput       = errors.New("transaction spends a nonexisting blockstake output")
+	errSiacoinInputOutputMismatch    = errors.New("siacoin inputs do not equal siacoin outputs for transaction")
+	errBlockStakeInputOutputMismatch = errors.New("blockstake inputs do not equal blockstake outputs for transaction")
+	errWrongUnlockConditions         = errors.New("transaction contains incorrect unlock conditions")
 )
 
 // validSiacoins checks that the siacoin inputs and outputs are valid in the
@@ -49,14 +49,14 @@ func validSiacoins(tx *bolt.Tx, t types.Transaction) error {
 	return nil
 }
 
-// validSiafunds checks that the siafund portions of the transaction are valid
+// validBlockStakes checks that the blockstake portions of the transaction are valid
 // in the context of the consensus set.
-func validSiafunds(tx *bolt.Tx, t types.Transaction) (err error) {
+func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 	// Compare the number of input siafunds to the output siafunds.
-	var siafundInputSum types.Currency
-	var siafundOutputSum types.Currency
-	for _, sfi := range t.SiafundInputs {
-		sfo, err := getSiafundOutput(tx, sfi.ParentID)
+	var blockstakeInputSum types.Currency
+	var blockstakeOutputSum types.Currency
+	for _, sfi := range t.BlockStakeInputs {
+		sfo, err := getBlockStakeOutput(tx, sfi.ParentID)
 		if err != nil {
 			return err
 		}
@@ -66,13 +66,13 @@ func validSiafunds(tx *bolt.Tx, t types.Transaction) (err error) {
 			return errWrongUnlockConditions
 		}
 
-		siafundInputSum = siafundInputSum.Add(sfo.Value)
+		blockstakeInputSum = blockstakeInputSum.Add(sfo.Value)
 	}
-	for _, sfo := range t.SiafundOutputs {
-		siafundOutputSum = siafundOutputSum.Add(sfo.Value)
+	for _, sfo := range t.BlockStakeOutputs {
+		blockstakeOutputSum = blockstakeOutputSum.Add(sfo.Value)
 	}
-	if siafundOutputSum.Cmp(siafundInputSum) != 0 {
-		return errSiafundInputOutputMismatch
+	if blockstakeOutputSum.Cmp(blockstakeInputSum) != 0 {
+		return errBlockStakeInputOutputMismatch
 	}
 	return
 }
@@ -93,7 +93,7 @@ func validTransaction(tx *bolt.Tx, t types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	err = validSiafunds(tx, t)
+	err = validBlockStakes(tx, t)
 	if err != nil {
 		return err
 	}
@@ -142,9 +142,8 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 	}
 	cc := modules.ConsensusChange{
 		SiacoinOutputDiffs:        diffHolder.SiacoinOutputDiffs,
-		SiafundOutputDiffs:        diffHolder.SiafundOutputDiffs,
+		BlockStakeOutputDiffs:     diffHolder.BlockStakeOutputDiffs,
 		DelayedSiacoinOutputDiffs: diffHolder.DelayedSiacoinOutputDiffs,
-		SiafundPoolDiffs:          diffHolder.SiafundPoolDiffs,
 	}
 	return cc, nil
 }

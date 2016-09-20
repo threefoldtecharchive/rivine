@@ -70,14 +70,13 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 					dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
 					dbRemoveSiacoinOutput(tx, scoid)
 				}
-				for _, sfi := range txn.SiafundInputs {
-					dbRemoveSiafundOutputID(tx, sfi.ParentID, txid)
+				for _, sfi := range txn.BlockStakeInputs {
+					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
 					dbRemoveUnlockHash(tx, sfi.UnlockConditions.UnlockHash(), txid)
-					dbRemoveUnlockHash(tx, sfi.ClaimUnlockHash, txid)
 				}
-				for k, sfo := range txn.SiafundOutputs {
-					sfoid := txn.SiafundOutputID(uint64(k))
-					dbRemoveSiafundOutputID(tx, sfoid, txid)
+				for k, sfo := range txn.BlockStakeOutputs {
+					sfoid := txn.BlockStakeOutputID(uint64(k))
+					dbRemoveBlockStakeOutputID(tx, sfoid, txid)
 					dbRemoveUnlockHash(tx, sfo.UnlockHash, txid)
 				}
 			}
@@ -130,16 +129,15 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 					dbAddUnlockHash(tx, sco.UnlockHash, txid)
 					dbAddSiacoinOutput(tx, scoid, sco)
 				}
-				for _, sfi := range txn.SiafundInputs {
-					dbAddSiafundOutputID(tx, sfi.ParentID, txid)
+				for _, sfi := range txn.BlockStakeInputs {
+					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
 					dbAddUnlockHash(tx, sfi.UnlockConditions.UnlockHash(), txid)
-					dbAddUnlockHash(tx, sfi.ClaimUnlockHash, txid)
 				}
-				for k, sfo := range txn.SiafundOutputs {
-					sfoid := txn.SiafundOutputID(uint64(k))
-					dbAddSiafundOutputID(tx, sfoid, txid)
+				for k, sfo := range txn.BlockStakeOutputs {
+					sfoid := txn.BlockStakeOutputID(uint64(k))
+					dbAddBlockStakeOutputID(tx, sfoid, txid)
 					dbAddUnlockHash(tx, sfo.UnlockHash, txid)
-					dbAddSiafundOutput(tx, sfoid, sfo)
+					dbAddBlockStakeOutput(tx, sfoid, sfo)
 				}
 			}
 
@@ -250,23 +248,23 @@ func dbRemoveSiacoinOutputID(tx *bolt.Tx, id types.SiacoinOutputID, txid types.T
 	mustDelete(tx.Bucket(bucketSiacoinOutputIDs).Bucket(encoding.Marshal(id)), txid)
 }
 
-// Add/Remove siafund output
-func dbAddSiafundOutput(tx *bolt.Tx, id types.SiafundOutputID, output types.SiafundOutput) {
-	mustPut(tx.Bucket(bucketSiafundOutputs), id, output)
+// Add/Remove blockstake output
+func dbAddBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, output types.BlockStakeOutput) {
+	mustPut(tx.Bucket(bucketBlockStakeOutputs), id, output)
 }
-func dbRemoveSiafundOutput(tx *bolt.Tx, id types.SiafundOutputID) {
-	mustDelete(tx.Bucket(bucketSiafundOutputs), id)
+func dbRemoveBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
+	mustDelete(tx.Bucket(bucketBlockStakeOutputs), id)
 }
 
-// Add/Remove txid from siafund output ID bucket
-func dbAddSiafundOutputID(tx *bolt.Tx, id types.SiafundOutputID, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketSiafundOutputIDs).CreateBucketIfNotExists(encoding.Marshal(id))
+// Add/Remove txid from blockstake output ID bucket
+func dbAddBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
+	b, err := tx.Bucket(bucketBlockStakeOutputIDs).CreateBucketIfNotExists(encoding.Marshal(id))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
-func dbRemoveSiafundOutputID(tx *bolt.Tx, id types.SiafundOutputID, txid types.TransactionID) {
+func dbRemoveBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
 	// TODO: delete bucket when it becomes empty
-	mustDelete(tx.Bucket(bucketSiafundOutputIDs).Bucket(encoding.Marshal(id)), txid)
+	mustDelete(tx.Bucket(bucketBlockStakeOutputIDs).Bucket(encoding.Marshal(id)), txid)
 }
 
 // Add/Remove transaction ID
@@ -346,8 +344,8 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 	for _, txn := range block.Transactions {
 		bf.SiacoinInputCount += uint64(len(txn.SiacoinInputs))
 		bf.SiacoinOutputCount += uint64(len(txn.SiacoinOutputs))
-		bf.SiafundInputCount += uint64(len(txn.SiafundInputs))
-		bf.SiafundOutputCount += uint64(len(txn.SiafundOutputs))
+		bf.BlockStakeInputCount += uint64(len(txn.BlockStakeInputs))
+		bf.BlockStakeOutputCount += uint64(len(txn.BlockStakeOutputs))
 		bf.MinerFeeCount += uint64(len(txn.MinerFees))
 		bf.ArbitraryDataCount += uint64(len(txn.ArbitraryData))
 		bf.TransactionSignatureCount += uint64(len(txn.TransactionSignatures))
@@ -363,21 +361,21 @@ func dbAddGenesisBlock(tx *bolt.Tx) {
 	dbAddBlockID(tx, id, 0)
 	txid := types.GenesisBlock.Transactions[0].ID()
 	dbAddTransactionID(tx, txid, 0)
-	for i, sfo := range types.GenesisSiafundAllocation {
-		sfoid := types.GenesisBlock.Transactions[0].SiafundOutputID(uint64(i))
-		dbAddSiafundOutputID(tx, sfoid, txid)
+	for i, sfo := range types.GenesisBlockStakeAllocation {
+		sfoid := types.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
+		dbAddBlockStakeOutputID(tx, sfoid, txid)
 		dbAddUnlockHash(tx, sfo.UnlockHash, txid)
-		dbAddSiafundOutput(tx, sfoid, sfo)
+		dbAddBlockStakeOutput(tx, sfoid, sfo)
 	}
 	dbAddBlockFacts(tx, blockFacts{
 		BlockFacts: modules.BlockFacts{
-			BlockID:            id,
-			Height:             0,
-			Difficulty:         types.RootTarget.Difficulty(),
-			Target:             types.RootTarget,
-			TotalCoins:         types.CalculateCoinbase(0),
-			TransactionCount:   1,
-			SiafundOutputCount: uint64(len(types.GenesisSiafundAllocation)),
+			BlockID:               id,
+			Height:                0,
+			Difficulty:            types.RootTarget.Difficulty(),
+			Target:                types.RootTarget,
+			TotalCoins:            types.CalculateCoinbase(0),
+			TransactionCount:      1,
+			BlockStakeOutputCount: uint64(len(types.GenesisBlockStakeAllocation)),
 		},
 		Timestamp: types.GenesisBlock.Timestamp,
 	})

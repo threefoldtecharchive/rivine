@@ -104,22 +104,22 @@ func (e *Explorer) SiacoinOutputID(id types.SiacoinOutputID) []types.Transaction
 	return ids
 }
 
-// SiafundOutput returns the siafund output associated with the specified ID.
-func (e *Explorer) SiafundOutput(id types.SiafundOutputID) (types.SiafundOutput, bool) {
-	var sco types.SiafundOutput
-	err := e.db.View(dbGetAndDecode(bucketSiafundOutputs, id, &sco))
+// BlockStakeOutput returns the blockstake output associated with the specified ID.
+func (e *Explorer) BlockStakeOutput(id types.BlockStakeOutputID) (types.BlockStakeOutput, bool) {
+	var sco types.BlockStakeOutput
+	err := e.db.View(dbGetAndDecode(bucketBlockStakeOutputs, id, &sco))
 	if err != nil {
-		return types.SiafundOutput{}, false
+		return types.BlockStakeOutput{}, false
 	}
 	return sco, true
 }
 
-// SiafundOutputID returns all of the transactions that contain the specified
-// siafund output ID. An empty set indicates that the siafund output ID does
+// BlockStakeOutputID returns all of the transactions that contain the specified
+// blockstake output ID. An empty set indicates that the blockstake output ID does
 // not appear in the blockchain.
-func (e *Explorer) SiafundOutputID(id types.SiafundOutputID) []types.TransactionID {
+func (e *Explorer) BlockStakeOutputID(id types.BlockStakeOutputID) []types.TransactionID {
 	var ids []types.TransactionID
-	err := e.db.View(dbGetTransactionIDSet(bucketSiafundOutputIDs, id, &ids))
+	err := e.db.View(dbGetTransactionIDSet(bucketBlockStakeOutputIDs, id, &ids))
 	if err != nil {
 		ids = nil
 	}

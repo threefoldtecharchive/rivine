@@ -36,9 +36,7 @@ func consensusChecksum(tx *bolt.Tx) crypto.Hash {
 	consensusSetBuckets := []*bolt.Bucket{
 		tx.Bucket(BlockPath),
 		tx.Bucket(SiacoinOutputs),
-		tx.Bucket(FileContracts),
-		tx.Bucket(SiafundOutputs),
-		tx.Bucket(SiafundPool),
+		tx.Bucket(BlockStakeOutputs),
 	}
 	for i := range consensusSetBuckets {
 		err := consensusSetBuckets[i].ForEach(func(k, v []byte) error {
@@ -134,12 +132,12 @@ func checkSiacoinCount(tx *bolt.Tx) {
 	}
 }
 
-// checkSiafundCount checks that the number of siafunds countable within the
-// consensus set equal the expected number of siafunds for the block height.
-func checkSiafundCount(tx *bolt.Tx) {
+// checkBlockStakeCount checks that the number of siafunds countable within the
+// consensus set equal the expected number of BlockStakeOutputs for the block height.
+func checkBlockStakeCount(tx *bolt.Tx) {
 	var total types.Currency
-	err := tx.Bucket(SiafundOutputs).ForEach(func(_, siafundOutputBytes []byte) error {
-		var sfo types.SiafundOutput
+	err := tx.Bucket(BlockStakeOutputs).ForEach(func(_, siafundOutputBytes []byte) error {
+		var sfo types.BlockStakeOutput
 		err := encoding.Unmarshal(siafundOutputBytes, &sfo)
 		if err != nil {
 			manageErr(tx, err)
@@ -281,7 +279,7 @@ func (cs *ConsensusSet) checkConsistency(tx *bolt.Tx) {
 	cs.checkingConsistency = true
 	checkDSCOs(tx)
 	checkSiacoinCount(tx)
-	checkSiafundCount(tx)
+	checkBlockStakeCount(tx)
 	if build.DEBUG {
 		cs.checkRevertApply(tx)
 	}

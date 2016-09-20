@@ -49,17 +49,9 @@ var (
 	// siacoin outputs.
 	SiacoinOutputs = []byte("SiacoinOutputs")
 
-	// FileContracts is a database bucket that contains all of the open file
-	// contracts.
-	FileContracts = []byte("FileContracts")
-
 	// SiafundOutputs is a database bucket that contains all of the unspent
 	// siafund outputs.
-	SiafundOutputs = []byte("SiafundOutputs")
-
-	// SiafundPool is a database bucket storing the current value of the
-	// siafund pool.
-	SiafundPool = []byte("SiafundPool")
+	BlockStakeOutputs = []byte("BlockStakeOutputs")
 )
 
 // createConsensusObjects initialzes the consensus portions of the database.
@@ -71,9 +63,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 		BlockPath,
 		Consistency,
 		SiacoinOutputs,
-		FileContracts,
-		SiafundOutputs,
-		SiafundPool,
+		BlockStakeOutputs,
 	}
 	for _, bucket := range buckets {
 		_, err := tx.CreateBucket(bucket)
@@ -90,14 +80,11 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 		return err
 	}
 
-	// Set the siafund pool to 0.
-	setSiafundPool(tx, types.NewCurrency64(0))
-
 	// Update the siafund output diffs map for the genesis block on disk. This
 	// needs to happen between the database being opened/initilized and the
 	// consensus set hash being calculated
-	for _, sfod := range cs.blockRoot.SiafundOutputDiffs {
-		commitSiafundOutputDiff(tx, sfod, modules.DiffApply)
+	for _, sfod := range cs.blockRoot.BlockStakeOutputDiffs {
+		commitBlockStakeOutputDiff(tx, sfod, modules.DiffApply)
 	}
 
 	// Add the miner payout from the genesis block to the delayed siacoin
@@ -297,71 +284,48 @@ func removeSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID) {
 	}
 }
 
-// getSiafundOutput fetches a siafund output from the database. An error is
-// returned if the siafund output does not exist.
-func getSiafundOutput(tx *bolt.Tx, id types.SiafundOutputID) (types.SiafundOutput, error) {
-	sfoBytes := tx.Bucket(SiafundOutputs).Get(id[:])
+// getBlockStakeOutput fetches a siafund output from the database. An error is
+// returned if the blockstake output does not exist.
+func getBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) (types.BlockStakeOutput, error) {
+	sfoBytes := tx.Bucket(BlockStakeOutputs).Get(id[:])
 	if sfoBytes == nil {
-		return types.SiafundOutput{}, errNilItem
+		return types.BlockStakeOutput{}, errNilItem
 	}
-	var sfo types.SiafundOutput
+	var sfo types.BlockStakeOutput
 	err := encoding.Unmarshal(sfoBytes, &sfo)
 	if err != nil {
-		return types.SiafundOutput{}, err
+		return types.BlockStakeOutput{}, err
 	}
 	return sfo, nil
 }
 
-// addSiafundOutput adds a siafund output to the database. An error is returned
-// if the siafund output is already in the database.
-func addSiafundOutput(tx *bolt.Tx, id types.SiafundOutputID, sfo types.SiafundOutput) {
-	siafundOutputs := tx.Bucket(SiafundOutputs)
+// addBlockStakeOutput adds a siafund output to the database. An error is returned
+// if the blockstake output is already in the database.
+func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.BlockStakeOutput) {
+	blockstakeOutputs := tx.Bucket(BlockStakeOutputs)
 	// Sanity check - should not be adding a siafund output with a value of
 	// zero.
 	if build.DEBUG && sfo.Value.IsZero() {
-		panic("zero value siafund being added")
+		panic("zero value blockstake being added")
 	}
 	// Sanity check - should not be adding an item already in the db.
-	if build.DEBUG && siafundOutputs.Get(id[:]) != nil {
-		panic("repeat siafund output")
+	if build.DEBUG && blockstakeOutputs.Get(id[:]) != nil {
+		panic("repeat blockstake output")
 	}
-	err := siafundOutputs.Put(id[:], encoding.Marshal(sfo))
+	err := blockstakeOutputs.Put(id[:], encoding.Marshal(sfo))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
 }
 
-// removeSiafundOutput removes a siafund output from the database. An error is
+// removeBlockStakeOutput removes a siafund output from the database. An error is
 // returned if the siafund output is not in the database prior to removal.
-func removeSiafundOutput(tx *bolt.Tx, id types.SiafundOutputID) {
-	sfoBucket := tx.Bucket(SiafundOutputs)
+func removeBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
+	sfoBucket := tx.Bucket(BlockStakeOutputs)
 	if build.DEBUG && sfoBucket.Get(id[:]) == nil {
-		panic("nil siafund output")
+		panic("nil blockstake output")
 	}
 	err := sfoBucket.Delete(id[:])
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-}
-
-// getSiafundPool returns the current value of the siafund pool. No error is
-// returned as the siafund pool should always be available.
-func getSiafundPool(tx *bolt.Tx) (pool types.Currency) {
-	bucket := tx.Bucket(SiafundPool)
-	poolBytes := bucket.Get(SiafundPool)
-	// An error should only be returned if the object stored in the siafund
-	// pool bucket is either unavailable or otherwise malformed. As this is a
-	// developer error, a panic is appropriate.
-	err := encoding.Unmarshal(poolBytes, &pool)
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-	return pool
-}
-
-// setSiafundPool updates the saved siafund pool on disk
-func setSiafundPool(tx *bolt.Tx, c types.Currency) {
-	err := tx.Bucket(SiafundPool).Put(SiafundPool, encoding.Marshal(c))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}

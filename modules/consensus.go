@@ -93,18 +93,14 @@ type (
 		// diffs is 'DiffApply'.
 		SiacoinOutputDiffs []SiacoinOutputDiff
 
-		// SiafundOutputDiffs contains the set of siafund diffs that were applied
+		// BlockStakeOutputDiffs contains the set of blockstake diffs that were applied
 		// to the consensus set in the recent change. The direction for the set of
 		// diffs is 'DiffApply'.
-		SiafundOutputDiffs []SiafundOutputDiff
+		BlockStakeOutputDiffs []BlockStakeOutputDiff
 
 		// DelayedSiacoinOutputDiffs contains the set of delayed siacoin output
 		// diffs that were applied to the consensus set in the recent change.
 		DelayedSiacoinOutputDiffs []DelayedSiacoinOutputDiff
-
-		// SiafundPoolDiffs are the siafund pool diffs that were applied to the
-		// consensus set in the recent change.
-		SiafundPoolDiffs []SiafundPoolDiff
 
 		// ChildTarget defines the target of any block that would be the child
 		// of the block most recently appended to the consensus set.
@@ -128,12 +124,12 @@ type (
 		SiacoinOutput types.SiacoinOutput
 	}
 
-	// A SiafundOutputDiff indicates the addition or removal of a SiafundOutput in
+	// A BlockStakeOutputDiff indicates the addition or removal of a BlockStakeOutput in
 	// the consensus set.
-	SiafundOutputDiff struct {
-		Direction     DiffDirection
-		ID            types.SiafundOutputID
-		SiafundOutput types.SiafundOutput
+	BlockStakeOutputDiff struct {
+		Direction        DiffDirection
+		ID               types.BlockStakeOutputID
+		BlockStakeOutput types.BlockStakeOutput
 	}
 
 	// A DelayedSiacoinOutputDiff indicates the introduction of a siacoin output
@@ -150,7 +146,7 @@ type (
 	// was applied, and after the block was applied. When applying the diff, set
 	// siafundPool to 'Adjusted'. When reverting the diff, set siafundPool to
 	// 'Previous'.
-	SiafundPoolDiff struct {
+	BlockStakePoolDiff struct {
 		Direction DiffDirection
 		Previous  types.Currency
 		Adjusted  types.Currency
@@ -232,7 +228,7 @@ func (cc ConsensusChange) Append(cc2 ConsensusChange) ConsensusChange {
 		RevertedBlocks:            append(cc.RevertedBlocks, cc2.RevertedBlocks...),
 		AppliedBlocks:             append(cc.AppliedBlocks, cc2.AppliedBlocks...),
 		SiacoinOutputDiffs:        append(cc.SiacoinOutputDiffs, cc2.SiacoinOutputDiffs...),
-		SiafundOutputDiffs:        append(cc.SiafundOutputDiffs, cc2.SiafundOutputDiffs...),
+		BlockStakeOutputDiffs:     append(cc.BlockStakeOutputDiffs, cc2.BlockStakeOutputDiffs...),
 		DelayedSiacoinOutputDiffs: append(cc.DelayedSiacoinOutputDiffs, cc2.DelayedSiacoinOutputDiffs...),
 	}
 }

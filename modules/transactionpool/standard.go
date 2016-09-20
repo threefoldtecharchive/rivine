@@ -78,7 +78,7 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 			return err
 		}
 	}
-	for _, sfi := range t.SiafundInputs {
+	for _, sfi := range t.BlockStakeInputs {
 		err := tp.checkUnlockConditions(sfi.UnlockConditions)
 		if err != nil {
 			return err

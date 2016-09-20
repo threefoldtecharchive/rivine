@@ -27,20 +27,15 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 			scod.Direction = !scod.Direction
 			cc.SiacoinOutputDiffs = append(cc.SiacoinOutputDiffs, scod)
 		}
-		for i := len(revertedBlock.SiafundOutputDiffs) - 1; i >= 0; i-- {
-			sfod := revertedBlock.SiafundOutputDiffs[i]
+		for i := len(revertedBlock.BlockStakeOutputDiffs) - 1; i >= 0; i-- {
+			sfod := revertedBlock.BlockStakeOutputDiffs[i]
 			sfod.Direction = !sfod.Direction
-			cc.SiafundOutputDiffs = append(cc.SiafundOutputDiffs, sfod)
+			cc.BlockStakeOutputDiffs = append(cc.BlockStakeOutputDiffs, sfod)
 		}
 		for i := len(revertedBlock.DelayedSiacoinOutputDiffs) - 1; i >= 0; i-- {
 			dscod := revertedBlock.DelayedSiacoinOutputDiffs[i]
 			dscod.Direction = !dscod.Direction
 			cc.DelayedSiacoinOutputDiffs = append(cc.DelayedSiacoinOutputDiffs, dscod)
-		}
-		for i := len(revertedBlock.SiafundPoolDiffs) - 1; i >= 0; i-- {
-			sfpd := revertedBlock.SiafundPoolDiffs[i]
-			sfpd.Direction = modules.DiffRevert
-			cc.SiafundPoolDiffs = append(cc.SiafundPoolDiffs, sfpd)
 		}
 	}
 	for _, appliedBlockID := range ce.AppliedBlocks {
@@ -54,14 +49,11 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 		for _, scod := range appliedBlock.SiacoinOutputDiffs {
 			cc.SiacoinOutputDiffs = append(cc.SiacoinOutputDiffs, scod)
 		}
-		for _, sfod := range appliedBlock.SiafundOutputDiffs {
-			cc.SiafundOutputDiffs = append(cc.SiafundOutputDiffs, sfod)
+		for _, sfod := range appliedBlock.BlockStakeOutputDiffs {
+			cc.BlockStakeOutputDiffs = append(cc.BlockStakeOutputDiffs, sfod)
 		}
 		for _, dscod := range appliedBlock.DelayedSiacoinOutputDiffs {
 			cc.DelayedSiacoinOutputDiffs = append(cc.DelayedSiacoinOutputDiffs, dscod)
-		}
-		for _, sfpd := range appliedBlock.SiafundPoolDiffs {
-			cc.SiafundPoolDiffs = append(cc.SiafundPoolDiffs, sfpd)
 		}
 	}
 

@@ -46,11 +46,8 @@ func (t Transaction) followsMinimumValues() error {
 			return ErrZeroOutput
 		}
 	}
-	for _, sfo := range t.SiafundOutputs {
-		// SiafundOutputs are special in that they have a reserved field, the
-		// ClaimStart, which gets sent over the wire but must always be set to
-		// 0. The Value must always be greater than 0.
-		if sfo.Value.IsZero() {
+	for _, bso := range t.BlockStakeOutputs {
+		if bso.Value.IsZero() {
 			return ErrZeroOutput
 		}
 	}
@@ -79,13 +76,13 @@ func (t Transaction) noRepeats() error {
 		}
 		siacoinInputs[sci.ParentID] = struct{}{}
 	}
-	siafundInputs := make(map[SiafundOutputID]struct{})
-	for _, sfi := range t.SiafundInputs {
-		_, exists := siafundInputs[sfi.ParentID]
+	blockstakeInputs := make(map[BlockStakeOutputID]struct{})
+	for _, bsi := range t.BlockStakeInputs {
+		_, exists := blockstakeInputs[bsi.ParentID]
 		if exists {
 			return ErrDoubleSpend
 		}
-		siafundInputs[sfi.ParentID] = struct{}{}
+		blockstakeInputs[bsi.ParentID] = struct{}{}
 	}
 	return nil
 }
@@ -111,8 +108,8 @@ func (t Transaction) validUnlockConditions(currentHeight BlockHeight) (err error
 			return
 		}
 	}
-	for _, sfi := range t.SiafundInputs {
-		err = validUnlockConditions(sfi.UnlockConditions, currentHeight)
+	for _, bsi := range t.BlockStakeInputs {
+		err = validUnlockConditions(bsi.UnlockConditions, currentHeight)
 		if err != nil {
 			return
 		}

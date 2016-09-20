@@ -88,7 +88,7 @@ func (cs *ConsensusSet) openDB(filename string) (err error) {
 // sufficient to determine whether the database has gone through the
 // initialization process.
 func dbInitialized(tx *bolt.Tx) bool {
-	return tx.Bucket(SiafundPool) != nil
+	return tx.Bucket(BlockStakeOutputs) != nil
 }
 
 // initDB is run if there is no existing consensus database, creating a

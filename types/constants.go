@@ -33,8 +33,8 @@ var (
 	InitialCoinbase  = uint64(300e3)
 	MinimumCoinbase  uint64
 
-	GenesisSiafundAllocation []SiafundOutput
-	GenesisBlock             Block
+	GenesisBlockStakeAllocation []BlockStakeOutput
+	GenesisBlock                Block
 
 	// The GenesisID is used in many places. Calculating it once saves lots of
 	// redundant computation.
@@ -63,7 +63,7 @@ func init() {
 
 		MinimumCoinbase = 30e3
 
-		GenesisSiafundAllocation = []SiafundOutput{
+		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
 				Value:      NewCurrency64(2000),
 				UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
@@ -97,7 +97,7 @@ func init() {
 
 		MinimumCoinbase = 299990 // Minimum coinbase is hit after 10 blocks to make testing minimum-coinbase code easier.
 
-		GenesisSiafundAllocation = []SiafundOutput{
+		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
 				Value:      NewCurrency64(2000),
 				UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
@@ -174,7 +174,7 @@ func init() {
 		// or less permanently settles around 2%.
 		MinimumCoinbase = 30e3
 
-		GenesisSiafundAllocation = []SiafundOutput{
+		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
 				Value:      NewCurrency64(2),
 				UnlockHash: UnlockHash{4, 57, 229, 188, 127, 20, 204, 245, 211, 167, 232, 130, 208, 64, 146, 62, 69, 98, 81, 102, 221, 7, 123, 100, 70, 107, 199, 113, 121, 26, 198, 252},
@@ -370,7 +370,7 @@ func init() {
 	GenesisBlock = Block{
 		Timestamp: GenesisTimestamp,
 		Transactions: []Transaction{
-			{SiafundOutputs: GenesisSiafundAllocation},
+			{BlockStakeOutputs: GenesisBlockStakeAllocation},
 		},
 	}
 	// Calculate the genesis ID.

@@ -20,13 +20,12 @@ const (
 // These Specifiers are used internally when calculating a type's ID. See
 // Specifier for more details.
 var (
-	SpecifierMinerPayout   = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'p', 'a', 'y', 'o', 'u', 't'}
-	SpecifierSiacoinInput  = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'i', 'n', 'p', 'u', 't'}
-	SpecifierSiacoinOutput = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'o', 'u', 't', 'p', 'u', 't'}
-	SpecifierSiafundInput  = Specifier{'s', 'i', 'a', 'f', 'u', 'n', 'd', ' ', 'i', 'n', 'p', 'u', 't'}
-	SpecifierSiafundOutput = Specifier{'s', 'i', 'a', 'f', 'u', 'n', 'd', ' ', 'o', 'u', 't', 'p', 'u', 't'}
-	SpecifierClaimOutput   = Specifier{'c', 'l', 'a', 'i', 'm', ' ', 'o', 'u', 't', 'p', 'u', 't'}
-	SpecifierMinerFee      = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'f', 'e', 'e'}
+	SpecifierMinerPayout      = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'p', 'a', 'y', 'o', 'u', 't'}
+	SpecifierSiacoinInput     = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'i', 'n', 'p', 'u', 't'}
+	SpecifierSiacoinOutput    = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'o', 'u', 't', 'p', 'u', 't'}
+	SpecifierBlockStakeInput  = Specifier{'b', 'l', 's', 't', 'a', 'k', 'e', ' ', 'i', 'n', 'p', 'u', 't'}
+	SpecifierBlockStakeOutput = Specifier{'b', 'l', 's', 't', 'a', 'k', 'e', ' ', 'o', 'u', 't', 'p', 'u', 't'}
+	SpecifierMinerFee         = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'f', 'e', 'e'}
 
 	ErrTransactionIDWrongLen = errors.New("input has wrong length to be an encoded transaction id")
 )
@@ -48,10 +47,10 @@ type (
 	// are constructed by hashing specific fields of the type, along with a
 	// Specifier. While all of these types are hashes, defining type aliases
 	// gives us type safety and makes the code more readable.
-	TransactionID   crypto.Hash
-	SiacoinOutputID crypto.Hash
-	SiafundOutputID crypto.Hash
-	OutputID        crypto.Hash
+	TransactionID      crypto.Hash
+	SiacoinOutputID    crypto.Hash
+	BlockStakeOutputID crypto.Hash
+	OutputID           crypto.Hash
 
 	// A Transaction is an atomic component of a block. Transactions can contain
 	// inputs and outputs and even arbitrary
@@ -64,8 +63,8 @@ type (
 	Transaction struct {
 		SiacoinInputs         []SiacoinInput         `json:"siacoininputs"`
 		SiacoinOutputs        []SiacoinOutput        `json:"siacoinoutputs"`
-		SiafundInputs         []SiafundInput         `json:"siafundinputs"`
-		SiafundOutputs        []SiafundOutput        `json:"siafundoutputs"`
+		BlockStakeInputs      []BlockStakeInput      `json:"blockstakeinputs"`
+		BlockStakeOutputs     []BlockStakeOutput     `json:"blockstakeoutputs"`
 		MinerFees             []Currency             `json:"minerfees"`
 		ArbitraryData         [][]byte               `json:"arbitrarydata"`
 		TransactionSignatures []TransactionSignature `json:"transactionsignatures"`
@@ -90,22 +89,21 @@ type (
 		UnlockHash UnlockHash `json:"unlockhash"`
 	}
 
-	// A SiafundInput consumes a SiafundOutput and adds the siafunds to the set of
-	// siafunds that can be spent in the transaction. The ParentID points to the
+	// A BlockStakeInput consumes a BlockStakeOutput and adds the blockstakes to the set of
+	// blockstakes that can be spent in the transaction. The ParentID points to the
 	// output that is getting consumed, and the UnlockConditions contain the rules
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
-	SiafundInput struct {
-		ParentID         SiafundOutputID  `json:"parentid"`
-		UnlockConditions UnlockConditions `json:"unlockconditions"`
-		ClaimUnlockHash  UnlockHash       `json:"claimunlockhash"`
+	BlockStakeInput struct {
+		ParentID         BlockStakeOutputID `json:"parentid"`
+		UnlockConditions UnlockConditions   `json:"unlockconditions"`
 	}
 
-	// A SiafundOutput holds a volume of siafunds. Outputs must be spent
+	// A BlockStakeOutput holds a volume of blockstakes. Outputs must be spent
 	// atomically; that is, they must all be spent in the same transaction. The
 	// UnlockHash is the hash of a set of UnlockConditions that must be fulfilled
 	// in order to spend the output.
-	SiafundOutput struct {
+	BlockStakeOutput struct {
 		Value      Currency   `json:"value"`
 		UnlockHash UnlockHash `json:"unlockhash"`
 	}
@@ -117,8 +115,8 @@ func (t Transaction) ID() TransactionID {
 	return TransactionID(crypto.HashAll(
 		t.SiacoinInputs,
 		t.SiacoinOutputs,
-		t.SiafundInputs,
-		t.SiafundOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
 		t.MinerFees,
 		t.ArbitraryData,
 	))
@@ -133,25 +131,25 @@ func (t Transaction) SiacoinOutputID(i uint64) SiacoinOutputID {
 		SpecifierSiacoinOutput,
 		t.SiacoinInputs,
 		t.SiacoinOutputs,
-		t.SiafundInputs,
-		t.SiafundOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
 		t.MinerFees,
 		t.ArbitraryData,
 		i,
 	))
 }
 
-// SiafundOutputID returns the ID of a SiafundOutput at the given index, which
-// is calculated by hashing the concatenation of the SiafundOutput Specifier,
+// BlockStakeOutputID returns the ID of a BlockStakeOutput at the given index, which
+// is calculated by hashing the concatenation of the BlockStakeOutput Specifier,
 // all of the fields in the transaction (except the signatures), and output
 // index.
-func (t Transaction) SiafundOutputID(i uint64) SiafundOutputID {
-	return SiafundOutputID(crypto.HashAll(
-		SpecifierSiafundOutput,
+func (t Transaction) BlockStakeOutputID(i uint64) BlockStakeOutputID {
+	return BlockStakeOutputID(crypto.HashAll(
+		SpecifierBlockStakeOutput,
 		t.SiacoinInputs,
 		t.SiacoinOutputs,
-		t.SiafundInputs,
-		t.SiafundOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
 		t.MinerFees,
 		t.ArbitraryData,
 		i,
@@ -280,26 +278,26 @@ func (scoid *SiacoinOutputID) UnmarshalJSON(b []byte) error {
 }
 
 // MarshalJSON marshales an id as a hex string.
-func (sfoid SiafundOutputID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(sfoid.String())
+func (bsoid BlockStakeOutputID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(bsoid.String())
 }
 
 // String prints the id in hex.
-func (sfoid SiafundOutputID) String() string {
-	return fmt.Sprintf("%x", sfoid[:])
+func (bsoid BlockStakeOutputID) String() string {
+	return fmt.Sprintf("%x", bsoid[:])
 }
 
 // UnmarshalJSON decodes the json hex string of the id.
-func (sfoid *SiafundOutputID) UnmarshalJSON(b []byte) error {
+func (bsoid *BlockStakeOutputID) UnmarshalJSON(b []byte) error {
 	if len(b) != crypto.HashSize*2+2 {
 		return crypto.ErrHashWrongLen
 	}
 
-	var sfoidBytes []byte
-	_, err := fmt.Sscanf(string(b[1:len(b)-1]), "%x", &sfoidBytes)
+	var bsoidBytes []byte
+	_, err := fmt.Sscanf(string(b[1:len(b)-1]), "%x", &bsoidBytes)
 	if err != nil {
 		return errors.New("could not unmarshal types.BlockID: " + err.Error())
 	}
-	copy(sfoid[:], sfoidBytes)
+	copy(bsoid[:], bsoidBytes)
 	return nil
 }

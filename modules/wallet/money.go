@@ -14,15 +14,15 @@ type sortedOutputs struct {
 
 // ConfirmedBalance returns the balance of the wallet according to all of the
 // confirmed transactions.
-func (w *Wallet) ConfirmedBalance() (siacoinBalance types.Currency, siafundBalance types.Currency, siafundClaimBalance types.Currency) {
+func (w *Wallet) ConfirmedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	for _, sco := range w.siacoinOutputs {
 		siacoinBalance = siacoinBalance.Add(sco.Value)
 	}
-	for _, sfo := range w.siafundOutputs {
-		siafundBalance = siafundBalance.Add(sfo.Value)
+	for _, sfo := range w.blockstakeOutputs {
+		blockstakeBalance = blockstakeBalance.Add(sfo.Value)
 	}
 	return
 }
@@ -81,15 +81,15 @@ func (w *Wallet) SendSiacoins(amount types.Currency, dest types.UnlockHash) ([]t
 	return txnSet, nil
 }
 
-// SendSiafunds creates a transaction sending 'amount' to 'dest'. The transaction
+// SendBlockStakes creates a transaction sending 'amount' to 'dest'. The transaction
 // is submitted to the transaction pool and is also returned.
-func (w *Wallet) SendSiafunds(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error) {
+func (w *Wallet) SendBlockStakes(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error) {
 	if err := w.tg.Add(); err != nil {
 		return nil, err
 	}
 	defer w.tg.Done()
 	tpoolFee := types.SiacoinPrecision.Mul64(10) // TODO: better fee algo.
-	output := types.SiafundOutput{
+	output := types.BlockStakeOutput{
 		Value:      amount,
 		UnlockHash: dest,
 	}
@@ -99,12 +99,12 @@ func (w *Wallet) SendSiafunds(amount types.Currency, dest types.UnlockHash) ([]t
 	if err != nil {
 		return nil, err
 	}
-	err = txnBuilder.FundSiafunds(amount)
+	err = txnBuilder.FundBlockStakes(amount)
 	if err != nil {
 		return nil, err
 	}
 	txnBuilder.AddMinerFee(tpoolFee)
-	txnBuilder.AddSiafundOutput(output)
+	txnBuilder.AddBlockStakeOutput(output)
 	txnSet, err := txnBuilder.Sign(true)
 	if err != nil {
 		return nil, err
