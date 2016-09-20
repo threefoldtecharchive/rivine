@@ -278,7 +278,7 @@ func main() {
 	root.AddCommand(consensusCmd)
 
 	// parse flags
-	root.PersistentFlags().StringVarP(&addr, "addr", "a", "localhost:9980", "which host/port to communicate with (i.e. the host/port siad is listening on)")
+	root.PersistentFlags().StringVarP(&addr, "addr", "a", "localhost:23110", "which host/port to communicate with (i.e. the host/port rivined is listening on)")
 
 	// run
 	if err := root.Execute(); err != nil {

@@ -27,7 +27,7 @@ sole means of storing important data.
 
 This release comes with 2 binaries, siad and siac. siad is a background
 service, or "daemon," that runs the Sia protocol, and siac is a client that is
-used to interact with siad. Siad exposes an HTTP API on 'localhost:9980' which
+used to interact with siad. Siad exposes an HTTP API on 'localhost:23110' which
 can be used to interact with the daemon. There is a front-end program called
 Sia-UI which can be used to interact with the daemon in a more user-friendly
 way. Documentation on the API can be found in doc/API.md.
@@ -82,8 +82,8 @@ Troubleshooting
   connections, but it will still accept incoming connection requests (up to 128
   total peers). However, if you are behind a firewall, you will not be able to
   accept incoming connections. You must configure your firewall to allow Sia
-  connections by forwarding your ports. By default, Sia communicates on ports
-  9981 and 9982. The specific instructions for forwarding a port vary by
+  connections by forwarding your ports. By default, Rivine communicates on port
+  23112. The specific instructions for forwarding a port vary by
   router. For more information, consult [this guide](http://portfoward.com).
 
   Sia currently has support for UPnP. While not all routers support UPnP, a
@@ -100,11 +100,11 @@ If your issue is not addressed above, you can get in touch with us personally:
   slack: http://slackin.siacoin.com (ping @taek, @nemo, or @jordan)
 
   email:
-  
+
   david@nebulouslabs.com
-  
+
   luke@nebulouslabs.com
-  
+
   jordan@nebulouslabs.com
 
 Version Information

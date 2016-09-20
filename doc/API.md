@@ -12,19 +12,19 @@ in production.
 
 Notes:
 - Requests must set their User-Agent string to contain the substring "Rivine-Agent".
-- By default, rivined listens on "localhost:9980". This can be changed using the
+- By default, rivined listens on "localhost:23110". This can be changed using the
   `--api-addr` flag when running rivined.
 - **Do not bind or expose the API to a non-loopback address unless you are
   aware of the possible dangers.**
 
 Example GET curl call:
 ```
-curl -A "Rivine-Agent" "localhost:9980/wallet/transactions?startheight=1&endheight=250"
+curl -A "Rivine-Agent" "localhost:23110/wallet/transactions?startheight=1&endheight=250"
 ```
 
 Example POST curl call:
 ```
-curl -A "Rivine-Agent" --data "amount=123&destination=abcd" "localhost:9980/wallet/siacoins"
+curl -A "Rivine-Agent" --data "amount=123&destination=abcd" "localhost:23110/wallet/siacoins"
 ```
 
 Standard responses
