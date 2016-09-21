@@ -187,7 +187,6 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 		router.GET("/wallet/seeds", RequirePassword(api.walletSeedsHandler, requiredPassword))
 		router.POST("/wallet/siacoins", RequirePassword(api.walletSiacoinsHandler, requiredPassword))
 		router.POST("/wallet/blockstakes", RequirePassword(api.walletBlockStakesHandler, requiredPassword))
-		router.POST("/wallet/siagkey", RequirePassword(api.walletSiagkeyHandler, requiredPassword))
 		router.GET("/wallet/transaction/:id", api.walletTransactionHandler)
 		router.GET("/wallet/transactions", api.walletTransactionsHandler)
 		router.GET("/wallet/transactions/:addr", api.walletTransactionsAddrHandler)

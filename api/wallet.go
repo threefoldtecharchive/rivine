@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
@@ -204,34 +203,6 @@ func (api *API) walletSeedHandler(w http.ResponseWriter, req *http.Request, _ ht
 		}
 	}
 	WriteError(w, Error{"error when calling /wallet/seed: " + modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
-}
-
-// walletSiagkeyHandler handles API calls to /wallet/siagkey.
-func (api *API) walletSiagkeyHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	// Fetch the list of keyfiles from the post body.
-	keyfiles := strings.Split(req.FormValue("keyfiles"), ",")
-	potentialKeys := encryptionKeys(req.FormValue("encryptionpassword"))
-
-	for _, keypath := range keyfiles {
-		// Check that all key paths are absolute paths.
-		if !filepath.IsAbs(keypath) {
-			WriteError(w, Error{"error when calling /wallet/siagkey: keyfiles contains a non-absolute path"}, http.StatusBadRequest)
-			return
-		}
-	}
-
-	for _, key := range potentialKeys {
-		err := api.wallet.LoadSiagKeys(key, keyfiles)
-		if err == nil {
-			WriteSuccess(w)
-			return
-		}
-		if err != nil && err != modules.ErrBadEncryptionKey {
-			WriteError(w, Error{"error when calling /wallet/siagkey: " + err.Error()}, http.StatusBadRequest)
-			return
-		}
-	}
-	WriteError(w, Error{"error when calling /wallet/siagkey: " + modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
 }
 
 // walletLockHanlder handles API calls to /wallet/lock.

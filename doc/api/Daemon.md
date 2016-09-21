@@ -93,7 +93,7 @@ returns the version of the Sia daemon currently running.
 ###### JSON Response
 ```javascript
 {
-  // Version number of the running Sia Daemon. This number is visible to its
+  // Version number of the running Rivine Daemon. This number is visible to its
   // peers on the network.
   "version": "1.0.0"
 }

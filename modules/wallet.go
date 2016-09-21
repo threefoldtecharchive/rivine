@@ -276,11 +276,6 @@ type (
 		// encryption password was lost. The master key is used to encrypt the
 		// recovery seed before saving it to disk.
 		LoadSeed(crypto.TwofishKey, Seed) error
-
-		// LoadSiagKeys will take a set of filepaths that point to a siag key
-		// and will have the siag keys loaded into the wallet so that they will
-		// become spendable.
-		LoadSiagKeys(crypto.TwofishKey, []string) error
 	}
 
 	// Wallet stores and manages siacoins and siafunds. The wallet file is

@@ -45,7 +45,3 @@ consensus, but only certain arbitrary data is considered standard.
 Arbitrary data that is prefixed by the string 'NonSia' is always allowed. This
 indicates that the remaining data has no relevance to Sia protocol rules, and
 never will.
-
-Arbitrary data that is prefixed by the string 'HostAnnouncement' is allowed,
-but only if the data within accurately decodes to the HostAnnouncement struct
-found in modules/hostdb.go, and contains no extra information.
