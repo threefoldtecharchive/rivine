@@ -43,7 +43,7 @@ func HttpGET(url string) (resp *http.Response, err error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Sia-Agent")
+	req.Header.Set("User-Agent", "Rivine-Agent")
 	return http.DefaultClient.Do(req)
 }
 
@@ -55,7 +55,7 @@ func HttpGETAuthenticated(url string, password string) (resp *http.Response, err
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Sia-Agent")
+	req.Header.Set("User-Agent", "Rivine-Agent")
 	req.SetBasicAuth("", password)
 	return http.DefaultClient.Do(req)
 }
@@ -67,7 +67,7 @@ func HttpPOST(url string, data string) (resp *http.Response, err error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Sia-Agent")
+	req.Header.Set("User-Agent", "Rivine-Agent")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	return http.DefaultClient.Do(req)
 }
@@ -80,7 +80,7 @@ func HttpPOSTAuthenticated(url string, data string, password string) (resp *http
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "Sia-Agent")
+	req.Header.Set("User-Agent", "Rivine-Agent")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.SetBasicAuth("", password)
 	return http.DefaultClient.Do(req)
@@ -91,7 +91,7 @@ func HttpPOSTAuthenticated(url string, data string, password string) (resp *http
 func RequireUserAgent(h http.Handler, ua string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		if !strings.Contains(req.UserAgent(), ua) {
-			WriteError(w, Error{"Browser access disabled due to security vulnerability. Use Sia-UI or siac."}, http.StatusBadRequest)
+			WriteError(w, Error{"Browser access disabled due to security vulnerability. Use rivinec."}, http.StatusBadRequest)
 			return
 		}
 		h.ServeHTTP(w, req)
@@ -186,7 +186,7 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 		router.POST("/wallet/seed", RequirePassword(api.walletSeedHandler, requiredPassword))
 		router.GET("/wallet/seeds", RequirePassword(api.walletSeedsHandler, requiredPassword))
 		router.POST("/wallet/siacoins", RequirePassword(api.walletSiacoinsHandler, requiredPassword))
-		router.POST("/wallet/siafunds", RequirePassword(api.walletBlockStakesHandler, requiredPassword))
+		router.POST("/wallet/blockstakes", RequirePassword(api.walletBlockStakesHandler, requiredPassword))
 		router.POST("/wallet/siagkey", RequirePassword(api.walletSiagkeyHandler, requiredPassword))
 		router.GET("/wallet/transaction/:id", api.walletTransactionHandler)
 		router.GET("/wallet/transactions", api.walletTransactionsHandler)

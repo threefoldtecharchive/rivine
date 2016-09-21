@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"strings"
 
@@ -11,54 +10,6 @@ import (
 )
 
 var errUnableToParseSize = errors.New("unable to parse size")
-
-// filesize returns a string that displays a filesize in human-readable units.
-func filesizeUnits(size int64) string {
-	if size == 0 {
-		return "0 B"
-	}
-	sizes := []string{"B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
-	i := int(math.Log10(float64(size)) / 3)
-	return fmt.Sprintf("%.*f %s", i, float64(size)/math.Pow10(3*i), sizes[i])
-}
-
-// parseFilesize converts strings of form 10GB to a size in bytes. Fractional
-// sizes are truncated at the byte size.
-func parseFilesize(strSize string) (string, error) {
-	units := []struct {
-		suffix     string
-		multiplier int64
-	}{
-		{"kb", 1e3},
-		{"mb", 1e6},
-		{"gb", 1e9},
-		{"tb", 1e12},
-		{"kib", 1 << 10},
-		{"mib", 1 << 20},
-		{"gib", 1 << 30},
-		{"tib", 1 << 40},
-		{"b", 1}, // must be after others else it'll match on them all
-		{"", 1},  // no suffix is still a valid suffix
-	}
-
-	strSize = strings.ToLower(strSize)
-	for _, unit := range units {
-		if strings.HasSuffix(strSize, unit.suffix) {
-			r, ok := new(big.Rat).SetString(strings.TrimSuffix(strSize, unit.suffix))
-			if !ok {
-				return "", errUnableToParseSize
-			}
-			r.Mul(r, new(big.Rat).SetInt(big.NewInt(unit.multiplier)))
-			if !r.IsInt() {
-				f, _ := r.Float64()
-				return fmt.Sprintf("%d", int64(f)), nil
-			}
-			return r.RatString(), nil
-		}
-	}
-
-	return "", errUnableToParseSize
-}
 
 // periodUnits turns a period in terms of blocks to a number of weeks.
 func periodUnits(blocks types.BlockHeight) string {
