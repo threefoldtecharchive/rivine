@@ -130,11 +130,7 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 		return
 	}
 
-	if build.VersionCmp(remoteVersion, handshakeUpgradeVersion) < 0 {
-		err = g.managedAcceptConnOldPeer(conn, remoteVersion)
-	} else {
-		err = g.managedAcceptConnNewPeer(conn, remoteVersion)
-	}
+	err = g.managedAcceptConnNewPeer(conn, remoteVersion)
 	if err != nil {
 		g.log.Debugf("INFO: %v wanted to connect, but failed: %v", addr, err)
 		conn.Close()
@@ -144,31 +140,6 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	conn.SetDeadline(time.Time{})
 
 	g.log.Debugf("INFO: accepted connection from new peer %v (v%v)", addr, remoteVersion)
-}
-
-// managedAcceptConnOldPeer accepts a connection request from peers < v1.0.0.
-// The requesting peer is added as a peer, but is not added to the node list
-// (older peers do not share their dialback address). The peer is only added if
-// a nil error is returned.
-func (g *Gateway) managedAcceptConnOldPeer(conn net.Conn, remoteVersion string) error {
-	addr := modules.NetAddress(conn.RemoteAddr().String())
-
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	// Old peers are unable to give us a dialback port, so we can't verify
-	// whether or not they are local peers.
-	g.acceptPeer(&peer{
-		Peer: modules.Peer{
-			Inbound:    true,
-			Local:      false,
-			NetAddress: addr,
-			Version:    remoteVersion,
-		},
-		sess: muxado.Server(conn),
-	})
-
-	return nil
 }
 
 // managedAcceptConnNewPeer accepts connection requests from peers >= v1.0.0.
@@ -442,11 +413,8 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 		conn.Close()
 		return err
 	}
-	if build.VersionCmp(remoteVersion, handshakeUpgradeVersion) < 0 {
-		err = g.managedConnectOldPeer(conn, remoteVersion, addr)
-	} else {
-		err = g.managedConnectNewPeer(conn, remoteVersion, addr)
-	}
+
+	err = g.managedConnectNewPeer(conn, remoteVersion, addr)
 	if err != nil {
 		conn.Close()
 		return err

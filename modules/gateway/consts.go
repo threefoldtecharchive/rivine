@@ -7,9 +7,6 @@ import (
 )
 
 const (
-	// handshakeUpgradeVersion is the version where the gateway handshake RPC
-	// was altered to include adiitional information transfer.
-	handshakeUpgradeVersion = "1.0.0"
 
 	// maxLocalOutbound is currently set to 3, meaning the gateway will not
 	// consider a local node to be an outbound peer if the gateway already has
@@ -22,10 +19,7 @@ const (
 
 	// minAcceptableVersion is the version below which the gateway will refuse to
 	// connect to peers and reject connection attempts.
-	//
-	// Reject peers < v0.4.0 as the previous version is v0.3.3 which is
-	// pre-hardfork.
-	minAcceptableVersion = "0.4.0"
+	minAcceptableVersion = "0.0.1"
 )
 
 var (

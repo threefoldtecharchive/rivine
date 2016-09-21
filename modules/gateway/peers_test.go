@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NebulousLabs/muxado"
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
-	"github.com/NebulousLabs/muxado"
 )
 
 // dummyConn implements the net.Conn interface, but does not carry any actual
@@ -95,7 +95,7 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr := modules.NetAddress(conn.LocalAddr().String())
-	ack, err := connectVersionHandshake(conn, "0.1")
+	ack, err := connectVersionHandshake(conn, "0.0.0.1")
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
@@ -443,7 +443,7 @@ func TestConnectRejectsVersions(t *testing.T) {
 			invalidVersion: true,
 			msg:            "Connect should fail when the remote peer's version is utf8 gibberish",
 		},
-		// Test that Connect fails when the remote peer's version is < 0.4.0 (0).
+		// Test that Connect fails when the remote peer's version is < 0.0.1 (0).
 		{
 			version:             "0",
 			insufficientVersion: true,
@@ -458,21 +458,6 @@ func TestConnectRejectsVersions(t *testing.T) {
 			version:             "0000.0000.0000",
 			insufficientVersion: true,
 			msg:                 "Connect should fail when the remote peer's version is 0000.0000.0000",
-		},
-		{
-			version:             "0.3.9",
-			insufficientVersion: true,
-			msg:                 "Connect should fail when the remote peer's version is 0.3.9",
-		},
-		{
-			version:             "0.3.9999",
-			insufficientVersion: true,
-			msg:                 "Connect should fail when the remote peer's version is 0.3.9999",
-		},
-		{
-			version:             "0.3.9.9.9",
-			insufficientVersion: true,
-			msg:                 "Connect should fail when the remote peer's version is 0.3.9.9.9",
 		},
 		// Test that Connect succeeds when the remote peer's version is 0.4.0.
 		{
@@ -586,24 +571,6 @@ func TestAcceptConnRejectsVersions(t *testing.T) {
 			versionResponseWant: "",
 			errWant:             errPeerRejectedConn,
 			msg:                 "acceptConn shouldn't accept a remote peer whose version is 0000.000.000",
-		},
-		{
-			remoteVersion:       "0.3.9",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is 0.3.9",
-		},
-		{
-			remoteVersion:       "0.3.9999",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is 0.3.9999",
-		},
-		{
-			remoteVersion:       "0.3.9.9.9",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is 0.3.9.9.9",
 		},
 		// Test that acceptConn succeeds when the remote peer's version is 0.4.0.
 		{

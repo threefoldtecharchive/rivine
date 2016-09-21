@@ -43,14 +43,6 @@ type SiagKeyPair struct {
 	UnlockConditions types.UnlockConditions
 }
 
-// SavedKey033x is the persist structure that was used to save and load private
-// keys in versions v0.3.3.x for siad.
-type SavedKey033x struct {
-	SecretKey        crypto.SecretKey
-	UnlockConditions types.UnlockConditions
-	Visible          bool
-}
-
 // initUnseededKeys loads all of the unseeded keys into the wallet after the
 // wallet gets unlocked.
 func (w *Wallet) initUnseededKeys(masterKey crypto.TwofishKey) error {
@@ -188,47 +180,4 @@ func (w *Wallet) LoadSiagKeys(masterKey crypto.TwofishKey, keyfiles []string) er
 		return err
 	}
 	return w.loadSiagKeys(masterKey, keyfiles)
-}
-
-// Load033xWallet loads a v0.3.3.x wallet as an unseeded key, such that the
-// funds become spendable to the current wallet.
-func (w *Wallet) Load033xWallet(masterKey crypto.TwofishKey, filepath033x string) error {
-	if err := w.tg.Add(); err != nil {
-		return err
-	}
-	defer w.tg.Done()
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	err := w.checkMasterKey(masterKey)
-	if err != nil {
-		return err
-	}
-
-	var savedKeys []SavedKey033x
-	err = encoding.ReadFile(filepath033x, &savedKeys)
-	if err != nil {
-		return err
-	}
-	var seedsLoaded int
-	for _, savedKey := range savedKeys {
-		spendKey := spendableKey{
-			UnlockConditions: savedKey.UnlockConditions,
-			SecretKeys:       []crypto.SecretKey{savedKey.SecretKey},
-		}
-		err = w.loadSpendableKey(masterKey, spendKey)
-		if err != nil && err != errDuplicateSpendableKey {
-			return err
-		}
-		if err == nil {
-			seedsLoaded++
-		}
-	}
-	err = w.saveSettingsSync()
-	if err != nil {
-		return err
-	}
-	if seedsLoaded == 0 {
-		return errAllDuplicates
-	}
-	return w.createBackup(filepath.Join(w.persistDir, "Sia Wallet Encrypted Backup - "+persist.RandomSuffix()+settingsFileSuffix))
 }
