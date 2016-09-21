@@ -55,7 +55,7 @@ By default the wallet encryption / unlock password is the same as the generated 
 
 	walletLoadCmd = &cobra.Command{
 		Use:   "load",
-		Short: "Load a wallet seed, v0.3.3.x wallet, or siag keyset",
+		Short: "Load a wallet seed, or siag keyset",
 		// Run field is not set, as the load command itself is not a valid command.
 		// A subcommand must be provided.
 	}
@@ -70,7 +70,7 @@ By default the wallet encryption / unlock password is the same as the generated 
 	walletLoadSiagCmd = &cobra.Command{
 		Use:   `siag [filepaths]`,
 		Short: "Load a siag keyset into the wallet",
-		Long: `Load a set of siag keys into the wallet - typically used for siafunds.
+		Long: `Load a set of siag keys into the wallet - typically used for blockstakes.
 Example: 'siac wallet load siag key1.siakey,key2.siakey'`,
 		Run: wrap(walletloadsiagcmd),
 	}
@@ -91,8 +91,8 @@ Example: 'siac wallet load siag key1.siakey,key2.siakey'`,
 
 	walletSendCmd = &cobra.Command{
 		Use:   "send",
-		Short: "Send either siacoins or siafunds to an address",
-		Long:  "Send either siacoins or siafunds to an address",
+		Short: "Send either siacoins or blockstakes to an address",
+		Long:  "Send either siacoins or blockstakes to an address",
 		// Run field is not set, as the load command itself is not a valid command.
 		// A subcommand must be provided.
 	}
@@ -109,24 +109,24 @@ A miner fee of 10 SC is levied on all transactions.`,
 	}
 
 	walletSendSiafundsCmd = &cobra.Command{
-		Use:   "siafunds [amount] [dest]",
-		Short: "Send siafunds",
-		Long: `Send siafunds to an address, and transfer the claim siacoins to your wallet.
+		Use:   "blockstakes [amount] [dest]",
+		Short: "Send blockstakes",
+		Long: `Send blockstakes to an address.
 Run 'wallet send --help' to see a list of available units.`,
-		Run: wrap(walletsendsiafundscmd),
+		Run: wrap(walletsendblockstakescmd),
 	}
 
 	walletBalanceCmd = &cobra.Command{
 		Use:   "balance",
 		Short: "View wallet balance",
-		Long:  "View wallet balance, including confirmed and unconfirmed siacoins and siafunds.",
+		Long:  "View wallet balance, including confirmed and unconfirmed siacoins and blockstakes.",
 		Run:   wrap(walletbalancecmd),
 	}
 
 	walletTransactionsCmd = &cobra.Command{
 		Use:   "transactions",
 		Short: "View transactions",
-		Long:  "View transactions related to addresses spendable by the wallet, providing a net flow of siacoins and siafunds for each transaction",
+		Long:  "View transactions related to addresses spendable by the wallet, providing a net flow of siacoins and blockstakes for each transaction",
 		Run:   wrap(wallettransactionscmd),
 	}
 
@@ -252,13 +252,13 @@ func walletsendsiacoinscmd(amount, dest string) {
 	fmt.Printf("Sent %s hastings to %s\n", hastings, dest)
 }
 
-// walletsendsiafundscmd sends siafunds to a destination address.
-func walletsendsiafundscmd(amount, dest string) {
-	err := post("/wallet/siafunds", fmt.Sprintf("amount=%s&destination=%s", amount, dest))
+// walletsendblockstakescmd sends siafunds to a destination address.
+func walletsendblockstakescmd(amount, dest string) {
+	err := post("/wallet/blockstakes", fmt.Sprintf("amount=%s&destination=%s", amount, dest))
 	if err != nil {
 		die("Could not send siafunds:", err)
 	}
-	fmt.Printf("Sent %s siafunds to %s\n", amount, dest)
+	fmt.Printf("Sent %s blockstakes to %s\n", amount, dest)
 }
 
 // walletbalancecmd retrieves and displays information about the wallet.
@@ -293,10 +293,9 @@ Unlock the wallet to view balance
 Confirmed Balance:   %v
 Unconfirmed Delta:  %v
 Exact:               %v H
-Siafunds:            %v SF
-Siafund Claims:      %v H
+BlockStakes:            %v SF
 `, encStatus, currencyUnits(status.ConfirmedSiacoinBalance), delta,
-		status.ConfirmedSiacoinBalance, status.SiafundBalance, status.SiacoinClaimBalance)
+		status.ConfirmedSiacoinBalance, status.BlockStakeBalance)
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,
@@ -308,24 +307,24 @@ func wallettransactionscmd() {
 		die("Could not fetch transaction history:", err)
 	}
 
-	fmt.Println("    [height]                                                   [transaction id]    [net siacoins]   [net siafunds]")
+	fmt.Println("    [height]                                                   [transaction id]    [net siacoins]   [net blockstakes]")
 	txns := append(wtg.ConfirmedTransactions, wtg.UnconfirmedTransactions...)
 	for _, txn := range txns {
 		// Determine the number of outgoing siacoins and siafunds.
 		var outgoingSiacoins types.Currency
-		var outgoingSiafunds types.Currency
+		var outgoingBlockStakes types.Currency
 		for _, input := range txn.Inputs {
 			if input.FundType == types.SpecifierSiacoinInput && input.WalletAddress {
 				outgoingSiacoins = outgoingSiacoins.Add(input.Value)
 			}
-			if input.FundType == types.SpecifierSiafundInput && input.WalletAddress {
-				outgoingSiafunds = outgoingSiafunds.Add(input.Value)
+			if input.FundType == types.SpecifierBlockStakeInput && input.WalletAddress {
+				outgoingBlockStakes = outgoingBlockStakes.Add(input.Value)
 			}
 		}
 
 		// Determine the number of incoming siacoins and siafunds.
 		var incomingSiacoins types.Currency
-		var incomingSiafunds types.Currency
+		var incomingBlockStakes types.Currency
 		for _, output := range txn.Outputs {
 			if output.FundType == types.SpecifierMinerPayout {
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
@@ -333,8 +332,8 @@ func wallettransactionscmd() {
 			if output.FundType == types.SpecifierSiacoinOutput && output.WalletAddress {
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
 			}
-			if output.FundType == types.SpecifierSiafundOutput && output.WalletAddress {
-				incomingSiafunds = incomingSiafunds.Add(output.Value)
+			if output.FundType == types.SpecifierBlockStakeOutput && output.WalletAddress {
+				incomingBlockStakes = incomingBlockStakes.Add(output.Value)
 			}
 		}
 
@@ -350,10 +349,10 @@ func wallettransactionscmd() {
 		}
 		fmt.Printf("%67v%15.2f SC", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
 		// For siafunds, need to avoid having a negative types.Currency.
-		if incomingSiafunds.Cmp(outgoingSiafunds) >= 0 {
-			fmt.Printf("%14v SF\n", incomingSiafunds.Sub(outgoingSiafunds))
+		if incomingBlockStakes.Cmp(outgoingBlockStakes) >= 0 {
+			fmt.Printf("%14v SF\n", incomingBlockStakes.Sub(outgoingBlockStakes))
 		} else {
-			fmt.Printf("-%14v SF\n", outgoingSiafunds.Sub(incomingSiafunds))
+			fmt.Printf("-%14v SF\n", outgoingBlockStakes.Sub(incomingBlockStakes))
 		}
 	}
 }
