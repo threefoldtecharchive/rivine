@@ -25,12 +25,12 @@ func TestUnlockHash(t *testing.T) {
 // TestSigHash runs the SigHash function of the transaction type.
 func TestSigHash(t *testing.T) {
 	txn := Transaction{
-		SiacoinInputs:  []SiacoinInput{{}},
-		SiacoinOutputs: []SiacoinOutput{{}},
-		SiafundInputs:  []SiafundInput{{}},
-		SiafundOutputs: []SiafundOutput{{}},
-		MinerFees:      []Currency{{}},
-		ArbitraryData:  [][]byte{{'o'}, {'t'}},
+		SiacoinInputs:     []SiacoinInput{{}},
+		SiacoinOutputs:    []SiacoinOutput{{}},
+		BlockStakeInputs:  []BlockStakeInput{{}},
+		BlockStakeOutputs: []BlockStakeOutput{{}},
+		MinerFees:         []Currency{{}},
+		ArbitraryData:     [][]byte{{'o'}, {'t'}},
 		TransactionSignatures: []TransactionSignature{
 			{
 				CoveredFields: CoveredFields{
@@ -41,8 +41,8 @@ func TestSigHash(t *testing.T) {
 				CoveredFields: CoveredFields{
 					SiacoinInputs:         []uint64{0},
 					SiacoinOutputs:        []uint64{0},
-					SiafundInputs:         []uint64{0},
-					SiafundOutputs:        []uint64{0},
+					BlockStakeInputs:      []uint64{0},
+					BlockStakeOutputs:     []uint64{0},
 					MinerFees:             []uint64{0},
 					ArbitraryData:         []uint64{0},
 					TransactionSignatures: []uint64{0},
@@ -95,12 +95,12 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 	// Create a transaction with all fields filled in minimally. The first
 	// check has a legal CoveredFields object with 'WholeTransaction' set.
 	txn := Transaction{
-		SiacoinInputs:  []SiacoinInput{{}},
-		SiacoinOutputs: []SiacoinOutput{{}},
-		SiafundInputs:  []SiafundInput{{}},
-		SiafundOutputs: []SiafundOutput{{}},
-		MinerFees:      []Currency{{}},
-		ArbitraryData:  [][]byte{{'o'}, {'t'}},
+		SiacoinInputs:     []SiacoinInput{{}},
+		SiacoinOutputs:    []SiacoinOutput{{}},
+		BlockStakeInputs:  []BlockStakeInput{{}},
+		BlockStakeOutputs: []BlockStakeOutput{{}},
+		MinerFees:         []Currency{{}},
+		ArbitraryData:     [][]byte{{'o'}, {'t'}},
 		TransactionSignatures: []TransactionSignature{
 			{
 				CoveredFields: CoveredFields{
@@ -181,11 +181,11 @@ func TestTransactionValidSignatures(t *testing.T) {
 		SiacoinInputs: []SiacoinInput{
 			{UnlockConditions: uc},
 		},
-		SiafundInputs: []SiafundInput{
+		BlockStakeInputs: []BlockStakeInput{
 			{UnlockConditions: uc},
 		},
 	}
-	txn.SiafundInputs[0].ParentID[0] = 2 // can't overlap with other objects
+	txn.BlockStakeInputs[0].ParentID[0] = 2 // can't overlap with other objects
 
 	// Create the signatures that spend the output.
 	txn.TransactionSignatures = []TransactionSignature{
@@ -265,12 +265,12 @@ func TestTransactionValidSignatures(t *testing.T) {
 	if err == nil {
 		t.Error("failed to double spend a file contract termination")
 	}
-	txn.SiafundInputs = append(txn.SiafundInputs, SiafundInput{UnlockConditions: UnlockConditions{}})
+	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{UnlockConditions: UnlockConditions{}})
 	err = txn.validSignatures(10)
 	if err == nil {
 		t.Error("failed to double spend a siafund input")
 	}
-	txn.SiafundInputs = txn.SiafundInputs[:len(txn.SiafundInputs)-1]
+	txn.BlockStakeInputs = txn.BlockStakeInputs[:len(txn.BlockStakeInputs)-1]
 
 	// Add a frivilous signature
 	txn.TransactionSignatures = append(txn.TransactionSignatures, TransactionSignature{})

@@ -50,11 +50,11 @@ func (cst *consensusSetTester) addSiafunds() {
 	// Create the transaction that sends the anyone-can-spend siafund output to
 	// the wallet address (output only available during testing).
 	txn := types.Transaction{
-		SiafundInputs: []types.SiafundInput{{
-			ParentID:         cst.cs.blockRoot.Block.Transactions[0].SiafundOutputID(2),
+		BlockStakeInputs: []types.BlockStakeInput{{
+			ParentID:         cst.cs.blockRoot.Block.Transactions[0].BlockStakeOutputID(2),
 			UnlockConditions: types.UnlockConditions{},
 		}},
-		SiafundOutputs: []types.SiafundOutput{{
+		BlockStakeOutputs: []types.BlockStakeOutput{{
 			Value:      types.NewCurrency64(1e3),
 			UnlockHash: uc.UnlockHash(),
 		}},
@@ -72,8 +72,8 @@ func (cst *consensusSetTester) addSiafunds() {
 	// }
 
 	// Check that the siafunds made it to the wallet.
-	_, siafundBalance, _ := cst.wallet.ConfirmedBalance()
-	if siafundBalance.Cmp(types.NewCurrency64(1e3)) != 0 {
+	_, blockstakeBalance := cst.wallet.ConfirmedBalance()
+	if blockstakeBalance.Cmp(types.NewCurrency64(1e3)) != 0 {
 		panic("wallet does not have the siafunds")
 	}
 }

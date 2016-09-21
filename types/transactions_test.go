@@ -10,12 +10,12 @@ import (
 func TestIDs(t *testing.T) {
 	// Create every type of ID using empty fields.
 	txn := Transaction{
-		SiacoinOutputs: []SiacoinOutput{{}},
-		SiafundOutputs: []SiafundOutput{{}},
+		SiacoinOutputs:    []SiacoinOutput{{}},
+		BlockStakeOutputs: []BlockStakeOutput{{}},
 	}
 	tid := txn.ID()
 	scoid := txn.SiacoinOutputID(0)
-	sfoid := txn.SiafundOutputID(0)
+	sfoid := txn.BlockStakeOutputID(0)
 
 	// Put all of the ids into a slice.
 	var ids []crypto.Hash

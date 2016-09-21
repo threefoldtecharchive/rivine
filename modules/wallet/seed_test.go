@@ -122,7 +122,7 @@ func TestLoadSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Balance of wallet should be 0.
-	siacoinBal, _, _ := w.ConfirmedBalance()
+	siacoinBal, _ := w.ConfirmedBalance()
 	if siacoinBal.Cmp(types.NewCurrency64(0)) != 0 {
 		t.Error("fresh wallet should not have a balance")
 	}
@@ -155,7 +155,7 @@ func TestLoadSeed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	siacoinBal2, _, _ := w2.ConfirmedBalance()
+	siacoinBal2, _ := w2.ConfirmedBalance()
 	if siacoinBal2.Cmp(types.NewCurrency64(0)) <= 0 {
 		t.Error("wallet failed to load a seed with money in it")
 	}

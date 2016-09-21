@@ -29,21 +29,15 @@ func TestUnitProcessModules(t *testing.T) {
 		in  string
 		out string
 	}{
-		{"cghmrtwe", "cghmrtwe"},
-		{"CGHMRTWE", "cghmrtwe"},
+		{"cgtwe", "cgtwe"},
+		{"CGTWE", "cgtwe"},
 		{"c", "c"},
 		{"g", "g"},
-		{"h", "h"},
-		{"m", "m"},
-		{"r", "r"},
 		{"t", "t"},
 		{"w", "w"},
 		{"e", "e"},
 		{"C", "c"},
 		{"G", "g"},
-		{"H", "h"},
-		{"M", "m"},
-		{"R", "r"},
 		{"T", "t"},
 		{"W", "w"},
 		{"E", "e"},
@@ -76,12 +70,12 @@ func TestUnitProcessConfig(t *testing.T) {
 		expectedOutputs [][]string
 	}{
 		inputs: [][]string{
-			{"localhost:9980", "localhost:9981", "localhost:9982", "cghmrtwe"},
+			{"localhost:9980", "localhost:9981", "localhost:9982", "cgtwe"},
 			{"localhost:9980", "localhost:9981", "localhost:9982", "CGHMRTWE"},
 		},
 		expectedOutputs: [][]string{
-			{"localhost:9980", "localhost:9981", "localhost:9982", "cghmrtwe"},
-			{"localhost:9980", "localhost:9981", "localhost:9982", "cghmrtwe"},
+			{"localhost:9980", "localhost:9981", "localhost:9982", "cgtwe"},
+			{"localhost:9980", "localhost:9981", "localhost:9982", "cgtwe"},
 		},
 	}
 	var config Config

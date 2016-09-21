@@ -118,11 +118,11 @@ func (cs *ConsensusSet) getArbSiacoinOutput() (scoid types.SiacoinOutputID, sco 
 	return scoid, sco, nil
 }
 
-// dbGetSiafundOutput is a convenience function allowing getSiafundOutput to be
+// dbGetBlockStakeOutput is a convenience function allowing getSiafundOutput to be
 // called without a bolt.Tx.
-func (cs *ConsensusSet) dbGetSiafundOutput(id types.SiafundOutputID) (sfo types.SiafundOutput, err error) {
+func (cs *ConsensusSet) dbGetBlockStakeOutput(id types.BlockStakeOutputID) (sfo types.BlockStakeOutput, err error) {
 	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		sfo, err = getSiafundOutput(tx, id)
+		sfo, err = getBlockStakeOutput(tx, id)
 		return nil
 	})
 	if dbErr != nil {
@@ -131,11 +131,11 @@ func (cs *ConsensusSet) dbGetSiafundOutput(id types.SiafundOutputID) (sfo types.
 	return sfo, err
 }
 
-// dbAddSiafundOutput is a convenience function allowing addSiafundOutput to be
+// dbAddBlockStakeOutput is a convenience function allowing addBlockStakeOutput to be
 // called without a bolt.Tx.
-func (cs *ConsensusSet) dbAddSiafundOutput(id types.SiafundOutputID, sfo types.SiafundOutput) {
+func (cs *ConsensusSet) dbAddBlockStakeOutput(id types.BlockStakeOutputID, sfo types.BlockStakeOutput) {
 	dbErr := cs.db.Update(func(tx *bolt.Tx) error {
-		addSiafundOutput(tx, id, sfo)
+		addBlockStakeOutput(tx, id, sfo)
 		return nil
 	})
 	if dbErr != nil {
