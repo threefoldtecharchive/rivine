@@ -1,0 +1,8 @@
+FROM scratch
+
+COPY ./dist/rivined /rivined
+COPY ./dist/rivinec /rivinec
+
+EXPOSE 23112
+
+ENTRYPOINT ["/rivined"]

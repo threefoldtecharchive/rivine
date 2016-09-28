@@ -11,6 +11,7 @@ doc/whitepaper.aux
 doc/whitepaper.log
 doc/whitepaper.pdf
 
-# IntelliJ IDEA
-.idea
 sia.iml
+dist
+rivinec/rivinec
+rivined/rivined

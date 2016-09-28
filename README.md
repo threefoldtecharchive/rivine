@@ -38,12 +38,11 @@ This will download the Rivine repo to your `$GOPATH/src` folder, and install the
 `rivined` and `rivinec` binaries in your `$GOPATH/bin` folder.
 
 To stay up-to-date, run the previous `go get` command again. Alternatively, you
-can use the Makefile provided in this repo. Run `git pull origin master` to
-pull the latest changes, and `make release-std` to build the new binaries. You
-can also run `make test` and `make test-long` to run the short and full test
-suites, respectively. Finally, `make cover` will generate code coverage reports
-for each package; they are stored in the `cover` folder and can be viewed in
-your browser.
+can use the Dockerfile provided in this repo. Run `docker build -t rivine --name rivine .`
+to build and `docker run rivine` to start the daemon.
+Running the client can be done with `docker run -it rivine rivinec`.
+Add client commands just like you would calling rivinec normally (like `docker run -it rivine rivinec wallet transactions`).
+
 
 Troubleshooting
 ---------------
