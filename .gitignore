@@ -15,3 +15,7 @@ sia.iml
 dist
 rivinec/rivinec
 rivined/rivined
+rivined/consensus
+rivined/gateway
+rivined/transactionpool
+rivined/wallet

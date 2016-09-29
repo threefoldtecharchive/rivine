@@ -38,8 +38,8 @@ This will download the Rivine repo to your `$GOPATH/src` folder, and install the
 `rivined` and `rivinec` binaries in your `$GOPATH/bin` folder.
 
 To stay up-to-date, run the previous `go get` command again. Alternatively, you
-can use the Dockerfile provided in this repo. Run `docker build -t rivine --name rivine .`
-to build and `docker run rivine` to start the daemon.
+can use the Dockerfile provided in this repo. Run `docker build -t rivine .`
+to build and `docker run --name rivine rivine` to start the daemon.
 Running the client can be done with `docker run -it rivine rivinec`.
 Add client commands just like you would calling rivinec normally (like `docker run -it rivine rivinec wallet transactions`).
 
