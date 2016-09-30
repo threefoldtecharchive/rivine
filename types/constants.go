@@ -27,11 +27,8 @@ var (
 	FutureThreshold        Timestamp
 	ExtremeFutureThreshold Timestamp
 
-	SiafundCount     = NewCurrency64(10000)
-	SiafundPortion   = big.NewRat(39, 1000)
+	BlockStakeCount  = NewCurrency64(1000000)
 	SiacoinPrecision = NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
-	InitialCoinbase  = uint64(300e3)
-	MinimumCoinbase  uint64
 
 	GenesisBlockStakeAllocation []BlockStakeOutput
 	GenesisBlock                Block
@@ -60,8 +57,6 @@ func init() {
 		MaxAdjustmentDown = big.NewRat(100, 120) // Difficulty adjusts quickly.
 		FutureThreshold = 2 * 60                 // 2 minutes.
 		ExtremeFutureThreshold = 4 * 60          // 4 minutes.
-
-		MinimumCoinbase = 30e3
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
@@ -94,8 +89,6 @@ func init() {
 		MaxAdjustmentDown = big.NewRat(9999, 10000)
 		FutureThreshold = 3        // 3 seconds
 		ExtremeFutureThreshold = 6 // 6 seconds
-
-		MinimumCoinbase = 299990 // Minimum coinbase is hit after 10 blocks to make testing minimum-coinbase code easier.
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
@@ -167,12 +160,6 @@ func init() {
 		// vector.
 		FutureThreshold = 3 * 60 * 60        // 3 hours.
 		ExtremeFutureThreshold = 5 * 60 * 60 // 5 hours.
-
-		// The minimum coinbase is set to 30,000. Because the coinbase
-		// decreases by 1 every time, it means that Sia's coinbase will have an
-		// increasingly potent dropoff for about 5 years, until inflation more
-		// or less permanently settles around 2%.
-		MinimumCoinbase = 30e3
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{

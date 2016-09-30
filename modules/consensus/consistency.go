@@ -76,37 +76,10 @@ func consensusChecksum(tx *bolt.Tx) crypto.Hash {
 // checkSiacoinCount checks that the number of siacoins countable within the
 // consensus set equal the expected number of siacoins for the block height.
 func checkSiacoinCount(tx *bolt.Tx) {
-	// Iterate through all the buckets looking for the delayed siacoin output
-	// buckets, and check that they are for the correct heights.
-	var dscoSiacoins types.Currency
-	err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-		// Check if the bucket is a delayed siacoin output bucket.
-		if !bytes.HasPrefix(name, prefixDSCO) {
-			return nil
-		}
-
-		// Sum up the delayed outputs in this bucket.
-		err := b.ForEach(func(_, delayedOutput []byte) error {
-			var sco types.SiacoinOutput
-			err := encoding.Unmarshal(delayedOutput, &sco)
-			if err != nil {
-				manageErr(tx, err)
-			}
-			dscoSiacoins = dscoSiacoins.Add(sco.Value)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		manageErr(tx, err)
-	}
 
 	// Add all of the siacoin outputs.
 	var scoSiacoins types.Currency
-	err = tx.Bucket(SiacoinOutputs).ForEach(func(_, scoBytes []byte) error {
+	err := tx.Bucket(SiacoinOutputs).ForEach(func(_, scoBytes []byte) error {
 		var sco types.SiacoinOutput
 		err := encoding.Unmarshal(scoBytes, &sco)
 		if err != nil {
@@ -119,10 +92,10 @@ func checkSiacoinCount(tx *bolt.Tx) {
 		manageErr(tx, err)
 	}
 
-	expectedSiacoins := types.CalculateNumSiacoins(blockHeight(tx))
-	totalSiacoins := dscoSiacoins.Add(scoSiacoins)
+	expectedSiacoins := types.NewCurrency64(0) //TODO rivine
+	totalSiacoins := scoSiacoins
 	if totalSiacoins.Cmp(expectedSiacoins) != 0 {
-		diagnostics := fmt.Sprintf("Wrong number of siacoins\nDsco: %v\nSco: %v\n", dscoSiacoins, scoSiacoins)
+		diagnostics := fmt.Sprintf("Wrong number of coins: %v\n", scoSiacoins)
 		if totalSiacoins.Cmp(expectedSiacoins) < 0 {
 			diagnostics += fmt.Sprintf("total: %v\nexpected: %v\n expected is bigger: %v", totalSiacoins, expectedSiacoins, expectedSiacoins.Sub(totalSiacoins))
 		} else {
@@ -148,91 +121,8 @@ func checkBlockStakeCount(tx *bolt.Tx) {
 	if err != nil {
 		manageErr(tx, err)
 	}
-	if total.Cmp(types.SiafundCount) != 0 {
-		manageErr(tx, errors.New("wrong number if siafunds in the consensus set"))
-	}
-}
-
-// checkDSCOs scans the sets of delayed siacoin outputs and checks for
-// consistency.
-func checkDSCOs(tx *bolt.Tx) {
-	// Create a map to track which delayed siacoin output maps exist, and
-	// another map to track which ids have appeared in the dsco set.
-	dscoTracker := make(map[types.BlockHeight]struct{})
-	idMap := make(map[types.SiacoinOutputID]struct{})
-
-	// Iterate through all the buckets looking for the delayed siacoin output
-	// buckets, and check that they are for the correct heights.
-	err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-		// If the bucket is not a delayed siacoin output bucket or a file
-		// contract expiration bucket, skip.
-		if !bytes.HasPrefix(name, prefixDSCO) {
-			return nil
-		}
-
-		// Add the bucket to the dscoTracker.
-		var height types.BlockHeight
-		err := encoding.Unmarshal(name[len(prefixDSCO):], &height)
-		if err != nil {
-			manageErr(tx, err)
-		}
-		_, exists := dscoTracker[height]
-		if exists {
-			return errors.New("repeat dsco map")
-		}
-		dscoTracker[height] = struct{}{}
-
-		var total types.Currency
-		err = b.ForEach(func(idBytes, delayedOutput []byte) error {
-			// Check that the output id has not appeared in another dsco.
-			var id types.SiacoinOutputID
-			copy(id[:], idBytes)
-			_, exists := idMap[id]
-			if exists {
-				return errors.New("repeat delayed siacoin output")
-			}
-			idMap[id] = struct{}{}
-
-			// Sum the funds in the bucket.
-			var sco types.SiacoinOutput
-			err := encoding.Unmarshal(delayedOutput, &sco)
-			if err != nil {
-				manageErr(tx, err)
-			}
-			total = total.Add(sco.Value)
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-
-		// Check that the minimum value has been achieved - the coinbase from
-		// an earlier block is guaranteed to be in the bucket.
-		minimumValue := types.CalculateCoinbase(height - types.MaturityDelay)
-		if total.Cmp(minimumValue) < 0 {
-			return errors.New("total number of coins in the delayed output bucket is incorrect")
-		}
-		return nil
-	})
-	if err != nil {
-		manageErr(tx, err)
-	}
-
-	// Check that all of the correct heights are represented.
-	currentHeight := blockHeight(tx)
-	expectedBuckets := 0
-	for i := currentHeight + 1; i <= currentHeight+types.MaturityDelay; i++ {
-		if i < types.MaturityDelay {
-			continue
-		}
-		_, exists := dscoTracker[i]
-		if !exists {
-			manageErr(tx, errors.New("missing a dsco bucket"))
-		}
-		expectedBuckets++
-	}
-	if len(dscoTracker) != expectedBuckets {
-		manageErr(tx, errors.New("too many dsco buckets"))
+	if total.Cmp(types.BlockStakeCount) != 0 {
+		manageErr(tx, errors.New("wrong number if blockstakes in the consensus set"))
 	}
 }
 
@@ -277,7 +167,6 @@ func (cs *ConsensusSet) checkConsistency(tx *bolt.Tx) {
 		return
 	}
 	cs.checkingConsistency = true
-	checkDSCOs(tx)
 	checkSiacoinCount(tx)
 	checkBlockStakeCount(tx)
 	if build.DEBUG {

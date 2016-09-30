@@ -91,7 +91,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 	// outputs - unspendable, as the unlock hash is blank.
 	createDSCOBucket(tx, types.MaturityDelay)
 	addDSCO(tx, types.MaturityDelay, cs.blockRoot.Block.MinerPayoutID(0), types.SiacoinOutput{
-		Value:      types.CalculateCoinbase(0),
+		Value:      types.NewCurrency64(0),
 		UnlockHash: types.UnlockHash{},
 	})
 

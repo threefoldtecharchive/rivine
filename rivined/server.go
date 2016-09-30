@@ -44,12 +44,8 @@ type (
 		TargetWindow          types.BlockHeight `json:"targetwindow"`
 		MedianTimestampWindow uint64            `json:"mediantimestampwindow"`
 		FutureThreshold       types.Timestamp   `json:"futurethreshold"`
-		SiafundCount          types.Currency    `json:"siafundcount"`
-		SiafundPortion        *big.Rat          `json:"siafundportion"`
+		BlockStakeCount       types.Currency    `json:"blockstakecount"`
 		MaturityDelay         types.BlockHeight `json:"maturitydelay"`
-
-		InitialCoinbase uint64 `json:"initialcoinbase"`
-		MinimumCoinbase uint64 `json:"minimumcoinbase"`
 
 		RootTarget types.Target `json:"roottarget"`
 		RootDepth  types.Target `json:"rootdepth"`
@@ -272,12 +268,8 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 		TargetWindow:          types.TargetWindow,
 		MedianTimestampWindow: types.MedianTimestampWindow,
 		FutureThreshold:       types.FutureThreshold,
-		SiafundCount:          types.SiafundCount,
-		SiafundPortion:        types.SiafundPortion,
+		BlockStakeCount:       types.BlockStakeCount,
 		MaturityDelay:         types.MaturityDelay,
-
-		InitialCoinbase: types.InitialCoinbase,
-		MinimumCoinbase: types.MinimumCoinbase,
 
 		RootTarget: types.RootTarget,
 		RootDepth:  types.RootDepth,

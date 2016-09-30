@@ -50,47 +50,9 @@ type (
 	BlockNonce  [8]byte
 )
 
-// CalculateCoinbase calculates the coinbase for a given height. The coinbase
-// equation is:
-//
-//     coinbase := max(InitialCoinbase - height, MinimumCoinbase) * SiacoinPrecision
-func CalculateCoinbase(height BlockHeight) Currency {
-	base := InitialCoinbase - uint64(height)
-	if uint64(height) > InitialCoinbase || base < MinimumCoinbase {
-		base = MinimumCoinbase
-	}
-	return NewCurrency64(base).Mul(SiacoinPrecision)
-}
-
-// CalculateNumSiacoins calculates the number of siacoins in circulation at a
-// given height.
-func CalculateNumSiacoins(height BlockHeight) Currency {
-	deflationBlocks := BlockHeight(InitialCoinbase - MinimumCoinbase)
-	avgDeflationSiacoins := CalculateCoinbase(0).Add(CalculateCoinbase(height)).Div(NewCurrency64(2))
-	if height <= deflationBlocks {
-		deflationSiacoins := avgDeflationSiacoins.Mul(NewCurrency64(uint64(height + 1)))
-		return deflationSiacoins
-	}
-	deflationSiacoins := avgDeflationSiacoins.Mul(NewCurrency64(uint64(deflationBlocks + 1)))
-	trailingSiacoins := NewCurrency64(uint64(height - deflationBlocks)).Mul(CalculateCoinbase(height))
-	return deflationSiacoins.Add(trailingSiacoins)
-}
-
 // ID returns the ID of a Block, which is calculated by hashing the header.
 func (h BlockHeader) ID() BlockID {
 	return BlockID(crypto.HashObject(h))
-}
-
-// CalculateSubsidy takes a block and a height and determines the block
-// subsidy.
-func (b Block) CalculateSubsidy(height BlockHeight) Currency {
-	subsidy := CalculateCoinbase(height)
-	for _, txn := range b.Transactions {
-		for _, fee := range txn.MinerFees {
-			subsidy = subsidy.Add(fee)
-		}
-	}
-	return subsidy
 }
 
 // Header returns the header of a block.

@@ -304,7 +304,8 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 	bf.Difficulty = target.Difficulty()
 	bf.Target = target
 	bf.Timestamp = block.Timestamp
-	bf.TotalCoins = types.CalculateNumSiacoins(bf.Height)
+	//TODO rivine
+	bf.TotalCoins = types.NewCurrency64(0)
 
 	// calculate maturity timestamp
 	var maturityTimestamp types.Timestamp
@@ -373,7 +374,7 @@ func dbAddGenesisBlock(tx *bolt.Tx) {
 			Height:                0,
 			Difficulty:            types.RootTarget.Difficulty(),
 			Target:                types.RootTarget,
-			TotalCoins:            types.CalculateCoinbase(0),
+			TotalCoins:            types.NewCurrency64(0), //TODO rivine
 			TransactionCount:      1,
 			BlockStakeOutputCount: uint64(len(types.GenesisBlockStakeAllocation)),
 		},
