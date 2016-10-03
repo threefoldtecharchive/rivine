@@ -99,7 +99,7 @@ Transaction Pool (t):
 	Example:
 		rivined -M gct
 Wallet (w):
-	The wallet stores and manages siacoins and siafunds.
+	The wallet stores and manages coins and blockstakes.
 	The wallet requires the consensus set and transaction pool.
 	Example:
 		siad -M gctw
@@ -107,7 +107,7 @@ Explorer (e):
 	The explorer provides statistics about the blockchain and can be
 	queried for information about specific transactions or other objects on
 	the blockchain.
-	The explorer requires the consenus set.
+	The explorer requires the consensus set.
 	Example:
 		rivined -M gce`)
 }

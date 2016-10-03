@@ -53,8 +53,8 @@ type (
 	// cannot sign itself).
 	CoveredFields struct {
 		WholeTransaction      bool     `json:"wholetransaction"`
-		SiacoinInputs         []uint64 `json:"siacoininputs"`
-		SiacoinOutputs        []uint64 `json:"siacoinoutputs"`
+		CoinInputs            []uint64 `json:"coininputs"`
+		CoinOutputs           []uint64 `json:"coinoutputs"`
 		BlockStakeInputs      []uint64 `json:"blockstakeinputs"`
 		BlockStakeOutputs     []uint64 `json:"blockstakeoutputs"`
 		MinerFees             []uint64 `json:"minerfees"`
@@ -145,8 +145,8 @@ func (t Transaction) SigHash(i int) crypto.Hash {
 	var signedData []byte
 	if cf.WholeTransaction {
 		signedData = encoding.MarshalAll(
-			t.SiacoinInputs,
-			t.SiacoinOutputs,
+			t.CoinInputs,
+			t.CoinOutputs,
 			t.BlockStakeInputs,
 			t.BlockStakeOutputs,
 			t.MinerFees,
@@ -156,11 +156,11 @@ func (t Transaction) SigHash(i int) crypto.Hash {
 			t.TransactionSignatures[i].Timelock,
 		)
 	} else {
-		for _, input := range cf.SiacoinInputs {
-			signedData = append(signedData, encoding.Marshal(t.SiacoinInputs[input])...)
+		for _, input := range cf.CoinInputs {
+			signedData = append(signedData, encoding.Marshal(t.CoinInputs[input])...)
 		}
-		for _, output := range cf.SiacoinOutputs {
-			signedData = append(signedData, encoding.Marshal(t.SiacoinOutputs[output])...)
+		for _, output := range cf.CoinOutputs {
+			signedData = append(signedData, encoding.Marshal(t.CoinOutputs[output])...)
 		}
 		for _, blockstakeInput := range cf.BlockStakeInputs {
 			signedData = append(signedData, encoding.Marshal(t.BlockStakeInputs[blockstakeInput])...)
@@ -215,8 +215,8 @@ func (t Transaction) validCoveredFields() error {
 			field []uint64
 			max   int
 		}{
-			{cf.SiacoinInputs, len(t.SiacoinInputs)},
-			{cf.SiacoinOutputs, len(t.SiacoinOutputs)},
+			{cf.CoinInputs, len(t.CoinInputs)},
+			{cf.CoinOutputs, len(t.CoinOutputs)},
 			{cf.BlockStakeInputs, len(t.BlockStakeInputs)},
 			{cf.BlockStakeOutputs, len(t.BlockStakeOutputs)},
 			{cf.MinerFees, len(t.MinerFees)},
@@ -261,7 +261,7 @@ func (t *Transaction) validSignatures(currentHeight BlockHeight) error {
 
 	// Create the inputSignatures object for each input.
 	sigMap := make(map[crypto.Hash]*inputSignatures)
-	for i, input := range t.SiacoinInputs {
+	for i, input := range t.CoinInputs {
 		id := crypto.Hash(input.ParentID)
 		_, exists := sigMap[id]
 		if exists {

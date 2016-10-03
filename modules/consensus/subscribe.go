@@ -22,20 +22,15 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 		// Because the direction is 'revert', the order of the diffs needs to
 		// be flipped and the direction of the diffs also needs to be flipped.
 		cc.RevertedBlocks = append(cc.RevertedBlocks, revertedBlock.Block)
-		for i := len(revertedBlock.SiacoinOutputDiffs) - 1; i >= 0; i-- {
-			scod := revertedBlock.SiacoinOutputDiffs[i]
+		for i := len(revertedBlock.CoinOutputDiffs) - 1; i >= 0; i-- {
+			scod := revertedBlock.CoinOutputDiffs[i]
 			scod.Direction = !scod.Direction
-			cc.SiacoinOutputDiffs = append(cc.SiacoinOutputDiffs, scod)
+			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, scod)
 		}
 		for i := len(revertedBlock.BlockStakeOutputDiffs) - 1; i >= 0; i-- {
 			sfod := revertedBlock.BlockStakeOutputDiffs[i]
 			sfod.Direction = !sfod.Direction
 			cc.BlockStakeOutputDiffs = append(cc.BlockStakeOutputDiffs, sfod)
-		}
-		for i := len(revertedBlock.DelayedSiacoinOutputDiffs) - 1; i >= 0; i-- {
-			dscod := revertedBlock.DelayedSiacoinOutputDiffs[i]
-			dscod.Direction = !dscod.Direction
-			cc.DelayedSiacoinOutputDiffs = append(cc.DelayedSiacoinOutputDiffs, dscod)
 		}
 	}
 	for _, appliedBlockID := range ce.AppliedBlocks {
@@ -46,14 +41,11 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 		}
 
 		cc.AppliedBlocks = append(cc.AppliedBlocks, appliedBlock.Block)
-		for _, scod := range appliedBlock.SiacoinOutputDiffs {
-			cc.SiacoinOutputDiffs = append(cc.SiacoinOutputDiffs, scod)
+		for _, scod := range appliedBlock.CoinOutputDiffs {
+			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, scod)
 		}
 		for _, sfod := range appliedBlock.BlockStakeOutputDiffs {
 			cc.BlockStakeOutputDiffs = append(cc.BlockStakeOutputDiffs, sfod)
-		}
-		for _, dscod := range appliedBlock.DelayedSiacoinOutputDiffs {
-			cc.DelayedSiacoinOutputDiffs = append(cc.DelayedSiacoinOutputDiffs, dscod)
 		}
 	}
 

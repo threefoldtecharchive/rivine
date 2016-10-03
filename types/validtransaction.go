@@ -35,7 +35,7 @@ func (t Transaction) fitsInABlock() error {
 // followsMinimumValues checks that all outputs adhere to the rules for the
 // minimum allowed value (generally 1).
 func (t Transaction) followsMinimumValues() error {
-	for _, sco := range t.SiacoinOutputs {
+	for _, sco := range t.CoinOutputs {
 		if sco.Value.IsZero() {
 			return ErrZeroOutput
 		}
@@ -60,15 +60,15 @@ func (t Transaction) followsMinimumValues() error {
 // and the check is only frivilous because of the current rule that file
 // contract terminations are not valid after the proof window opens.
 func (t Transaction) noRepeats() error {
-	// Check that there are no repeat instances of siacoin outputs, storage
+	// Check that there are no repeat instances of coin outputs, storage
 	// proofs, contract terminations, or siafund outputs.
-	siacoinInputs := make(map[SiacoinOutputID]struct{})
-	for _, sci := range t.SiacoinInputs {
-		_, exists := siacoinInputs[sci.ParentID]
+	coinInputs := make(map[CoinOutputID]struct{})
+	for _, sci := range t.CoinInputs {
+		_, exists := coinInputs[sci.ParentID]
 		if exists {
 			return ErrDoubleSpend
 		}
-		siacoinInputs[sci.ParentID] = struct{}{}
+		coinInputs[sci.ParentID] = struct{}{}
 	}
 	blockstakeInputs := make(map[BlockStakeOutputID]struct{})
 	for _, bsi := range t.BlockStakeInputs {
@@ -96,7 +96,7 @@ func validUnlockConditions(uc UnlockConditions, currentHeight BlockHeight) (err 
 // validUnlockConditions checks that all of the unlock conditions in the
 // transaction are valid.
 func (t Transaction) validUnlockConditions(currentHeight BlockHeight) (err error) {
-	for _, sci := range t.SiacoinInputs {
+	for _, sci := range t.CoinInputs {
 		err = validUnlockConditions(sci.UnlockConditions, currentHeight)
 		if err != nil {
 			return

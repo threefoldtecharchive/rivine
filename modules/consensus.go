@@ -88,19 +88,15 @@ type (
 		// applied.
 		AppliedBlocks []types.Block
 
-		// SiacoinOutputDiffs contains the set of siacoin diffs that were applied
+		// CoinOutputDiffs contains the set of coin diffs that were applied
 		// to the consensus set in the recent change. The direction for the set of
 		// diffs is 'DiffApply'.
-		SiacoinOutputDiffs []SiacoinOutputDiff
+		CoinOutputDiffs []CoinOutputDiff
 
 		// BlockStakeOutputDiffs contains the set of blockstake diffs that were applied
 		// to the consensus set in the recent change. The direction for the set of
 		// diffs is 'DiffApply'.
 		BlockStakeOutputDiffs []BlockStakeOutputDiff
-
-		// DelayedSiacoinOutputDiffs contains the set of delayed siacoin output
-		// diffs that were applied to the consensus set in the recent change.
-		DelayedSiacoinOutputDiffs []DelayedSiacoinOutputDiff
 
 		// ChildTarget defines the target of any block that would be the child
 		// of the block most recently appended to the consensus set.
@@ -116,12 +112,12 @@ type (
 		Synced bool
 	}
 
-	// A SiacoinOutputDiff indicates the addition or removal of a SiacoinOutput in
+	// A CoinOutputDiff indicates the addition or removal of a CoinOutput in
 	// the consensus set.
-	SiacoinOutputDiff struct {
-		Direction     DiffDirection
-		ID            types.SiacoinOutputID
-		SiacoinOutput types.SiacoinOutput
+	CoinOutputDiff struct {
+		Direction  DiffDirection
+		ID         types.CoinOutputID
+		CoinOutput types.CoinOutput
 	}
 
 	// A BlockStakeOutputDiff indicates the addition or removal of a BlockStakeOutput in
@@ -130,26 +126,6 @@ type (
 		Direction        DiffDirection
 		ID               types.BlockStakeOutputID
 		BlockStakeOutput types.BlockStakeOutput
-	}
-
-	// A DelayedSiacoinOutputDiff indicates the introduction of a siacoin output
-	// that cannot be spent until after maturing for 144 blocks. When the output
-	// has matured, a SiacoinOutputDiff will be provided.
-	DelayedSiacoinOutputDiff struct {
-		Direction      DiffDirection
-		ID             types.SiacoinOutputID
-		SiacoinOutput  types.SiacoinOutput
-		MaturityHeight types.BlockHeight
-	}
-
-	// A SiafundPoolDiff contains the value of the siafundPool before the block
-	// was applied, and after the block was applied. When applying the diff, set
-	// siafundPool to 'Adjusted'. When reverting the diff, set siafundPool to
-	// 'Previous'.
-	BlockStakePoolDiff struct {
-		Direction DiffDirection
-		Previous  types.Currency
-		Adjusted  types.Currency
 	}
 
 	// A ConsensusSet accepts blocks and builds an understanding of network
@@ -225,10 +201,9 @@ type (
 // should only be used with consecutive or disjoint consensus change objects.
 func (cc ConsensusChange) Append(cc2 ConsensusChange) ConsensusChange {
 	return ConsensusChange{
-		RevertedBlocks:            append(cc.RevertedBlocks, cc2.RevertedBlocks...),
-		AppliedBlocks:             append(cc.AppliedBlocks, cc2.AppliedBlocks...),
-		SiacoinOutputDiffs:        append(cc.SiacoinOutputDiffs, cc2.SiacoinOutputDiffs...),
-		BlockStakeOutputDiffs:     append(cc.BlockStakeOutputDiffs, cc2.BlockStakeOutputDiffs...),
-		DelayedSiacoinOutputDiffs: append(cc.DelayedSiacoinOutputDiffs, cc2.DelayedSiacoinOutputDiffs...),
+		RevertedBlocks:        append(cc.RevertedBlocks, cc2.RevertedBlocks...),
+		AppliedBlocks:         append(cc.AppliedBlocks, cc2.AppliedBlocks...),
+		CoinOutputDiffs:       append(cc.CoinOutputDiffs, cc2.CoinOutputDiffs...),
+		BlockStakeOutputDiffs: append(cc.BlockStakeOutputDiffs, cc2.BlockStakeOutputDiffs...),
 	}
 }

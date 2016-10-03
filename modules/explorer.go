@@ -25,8 +25,8 @@ type (
 		// Transaction type counts.
 		MinerPayoutCount          uint64 `json:"minerpayoutcount"`
 		TransactionCount          uint64 `json:"transactioncount"`
-		SiacoinInputCount         uint64 `json:"siacoininputcount"`
-		SiacoinOutputCount        uint64 `json:"siacoinoutputcount"`
+		CoinInputCount            uint64 `json:"coininputcount"`
+		CoinOutputCount           uint64 `json:"coinoutputcount"`
 		BlockStakeInputCount      uint64 `json:"blockstakeinputcount"`
 		BlockStakeOutputCount     uint64 `json:"blockstakeoutputcount"`
 		MinerFeeCount             uint64 `json:"minerfeecount"`
@@ -60,13 +60,13 @@ type (
 		// provided unlock hash.
 		UnlockHash(types.UnlockHash) []types.TransactionID
 
-		// SiacoinOutput will return the siacoin output associated with the
+		// CoinOutput will return the coin output associated with the
 		// input id.
-		SiacoinOutput(types.SiacoinOutputID) (types.SiacoinOutput, bool)
+		CoinOutput(types.CoinOutputID) (types.CoinOutput, bool)
 
-		// SiacoinOutputID returns all of the transaction ids associated with
-		// the provided siacoin output id.
-		SiacoinOutputID(types.SiacoinOutputID) []types.TransactionID
+		// CoinOutputID returns all of the transaction ids associated with
+		// the provided coin output id.
+		CoinOutputID(types.CoinOutputID) []types.TransactionID
 
 		// BlockStakeOutput will return the blockstake output associated with the
 		// input id.

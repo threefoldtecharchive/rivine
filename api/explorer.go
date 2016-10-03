@@ -17,9 +17,9 @@ type (
 	// height. This information is provided for programs that may not be
 	// complex enough to compute the ID on their own.
 	ExplorerBlock struct {
-		MinerPayoutIDs []types.SiacoinOutputID `json:"minerpayoutids"`
-		Transactions   []ExplorerTransaction   `json:"transactions"`
-		RawBlock       types.Block             `json:"rawblock"`
+		MinerPayoutIDs []types.CoinOutputID  `json:"minerpayoutids"`
+		Transactions   []ExplorerTransaction `json:"transactions"`
+		RawBlock       types.Block           `json:"rawblock"`
 
 		modules.BlockFacts
 	}
@@ -33,8 +33,8 @@ type (
 		Parent         types.BlockID       `json:"parent"`
 		RawTransaction types.Transaction   `json:"rawtransaction"`
 
-		SiacoinInputOutputs    []types.SiacoinOutput      `json:"siacoininputoutputs"` // the outputs being spent
-		SiacoinOutputIDs       []types.SiacoinOutputID    `json:"siacoinoutputids"`
+		CoinInputOutputs       []types.CoinOutput         `json:"coininputoutputs"` // the outputs being spent
+		CoinOutputIDs          []types.CoinOutputID       `json:"coinoutputids"`
 		BlockStakeInputOutputs []types.BlockStakeOutput   `json:"blockstakeinputoutputs"` // the outputs being spent
 		BlockStakeOutputIDs    []types.BlockStakeOutputID `json:"blockstakeoutputids"`
 	}
@@ -78,16 +78,16 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 	et.RawTransaction = txn
 
 	// Add the siacoin outputs that correspond with each siacoin input.
-	for _, sci := range txn.SiacoinInputs {
-		sco, exists := api.explorer.SiacoinOutput(sci.ParentID)
+	for _, sci := range txn.CoinInputs {
+		sco, exists := api.explorer.CoinOutput(sci.ParentID)
 		if build.DEBUG && !exists {
-			panic("could not find corresponding siacoin output")
+			panic("could not find corresponding coin output")
 		}
-		et.SiacoinInputOutputs = append(et.SiacoinInputOutputs, sco)
+		et.CoinInputOutputs = append(et.CoinInputOutputs, sco)
 	}
 
-	for i := range txn.SiacoinOutputs {
-		et.SiacoinOutputIDs = append(et.SiacoinOutputIDs, txn.SiacoinOutputID(uint64(i)))
+	for i := range txn.CoinOutputs {
+		et.CoinOutputIDs = append(et.CoinOutputIDs, txn.CoinOutputID(uint64(i)))
 	}
 
 	// Add the siafund outputs that correspond to each siacoin input.
@@ -109,7 +109,7 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 // buildExplorerBlock takes a block and its height and uses it to construct an
 // explorer block.
 func (api *API) buildExplorerBlock(height types.BlockHeight, block types.Block) ExplorerBlock {
-	var mpoids []types.SiacoinOutputID
+	var mpoids []types.CoinOutputID
 	for i := range block.MinerPayouts {
 		mpoids = append(mpoids, block.MinerPayoutID(uint64(i)))
 	}
@@ -229,11 +229,11 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 	}
 
 	// Try the hash as a siacoin output id.
-	txids := api.explorer.SiacoinOutputID(types.SiacoinOutputID(hash))
+	txids := api.explorer.CoinOutputID(types.CoinOutputID(hash))
 	if len(txids) != 0 {
 		txns, blocks := api.buildTransactionSet(txids)
 		WriteJSON(w, ExplorerHashGET{
-			HashType:     "siacoinoutputid",
+			HashType:     "coinoutputid",
 			Blocks:       blocks,
 			Transactions: txns,
 		})

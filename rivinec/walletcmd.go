@@ -18,16 +18,16 @@ var (
 		Long: `Generate a new address, send coins to another wallet, or view info about the wallet.
 
 Units:
-The smallest unit of siacoins is the hasting. One siacoin is 10^24 hastings. Other supported units are:
-  pS (pico,  10^-12 SC)
-  nS (nano,  10^-9 SC)
-  uS (micro, 10^-6 SC)
-  mS (milli, 10^-3 SC)
-  SC
-  KS (kilo, 10^3 SC)
-  MS (mega, 10^6 SC)
-  GS (giga, 10^9 SC)
-  TS (tera, 10^12 SC)`,
+The smallest unit of coins is the hasting. One coin is 10^24 hastings. Other supported units are:
+  p (pico,  10^-12 SC)
+  n (nano,  10^-9 SC)
+  u (micro, 10^-6 SC)
+  m (milli, 10^-3 SC)
+  C
+  K (kilo, 10^3 SC)
+  M (mega, 10^6 SC)
+  G (giga, 10^9 SC)
+  T (tera, 10^12 SC)`,
 		Run: wrap(walletbalancecmd),
 	}
 
@@ -67,14 +67,6 @@ By default the wallet encryption / unlock password is the same as the generated 
 		Run:   wrap(walletloadseedcmd),
 	}
 
-	walletLoadSiagCmd = &cobra.Command{
-		Use:   `siag [filepaths]`,
-		Short: "Load a siag keyset into the wallet",
-		Long: `Load a set of siag keys into the wallet - typically used for blockstakes.
-Example: 'siac wallet load siag key1.siakey,key2.siakey'`,
-		Run: wrap(walletloadsiagcmd),
-	}
-
 	walletLockCmd = &cobra.Command{
 		Use:   "lock",
 		Short: "Lock the wallet",
@@ -98,13 +90,13 @@ Example: 'siac wallet load siag key1.siakey,key2.siakey'`,
 	}
 
 	walletSendSiacoinsCmd = &cobra.Command{
-		Use:   "siacoins [amount] [dest]",
-		Short: "Send siacoins to an address",
-		Long: `Send siacoins to an address. 'dest' must be a 76-byte hexadecimal address.
-'amount' can be specified in units, e.g. 1.23KS. Run 'wallet --help' for a list of units.
+		Use:   "coins [amount] [dest]",
+		Short: "Send coins to an address",
+		Long: `Send coins to an address. 'dest' must be a 76-byte hexadecimal address.
+'amount' can be specified in units, e.g. 1.23K. Run 'wallet --help' for a list of units.
 If no unit is supplied, hastings will be assumed.
 
-A miner fee of 10 SC is levied on all transactions.`,
+A miner fee of 10 C is levied on all transactions.`,
 		Run: wrap(walletsendsiacoinscmd),
 	}
 
@@ -202,20 +194,6 @@ func walletloadseedcmd() {
 	fmt.Println("Added Key")
 }
 
-// walletloadsiagcmd loads a siag key set into the wallet.
-func walletloadsiagcmd(keyfiles string) {
-	password, err := speakeasy.Ask("Wallet password: ")
-	if err != nil {
-		die("Reading password failed:", err)
-	}
-	qs := fmt.Sprintf("keyfiles=%s&encryptionpassword=%s", keyfiles, password)
-	err = post("/wallet/siagkey", qs)
-	if err != nil {
-		die("Loading siag key failed:", err)
-	}
-	fmt.Println("Wallet loading successful.")
-}
-
 // walletlockcmd locks the wallet
 func walletlockcmd() {
 	err := post("/wallet/lock", "")
@@ -245,9 +223,9 @@ func walletsendsiacoinscmd(amount, dest string) {
 	if err != nil {
 		die("Could not parse amount:", err)
 	}
-	err = post("/wallet/siacoins", fmt.Sprintf("amount=%s&destination=%s", hastings, dest))
+	err = post("/wallet/coins", fmt.Sprintf("amount=%s&destination=%s", hastings, dest))
 	if err != nil {
-		die("Could not send siacoins:", err)
+		die("Could not send coins:", err)
 	}
 	fmt.Printf("Sent %s hastings to %s\n", hastings, dest)
 }
@@ -256,7 +234,7 @@ func walletsendsiacoinscmd(amount, dest string) {
 func walletsendblockstakescmd(amount, dest string) {
 	err := post("/wallet/blockstakes", fmt.Sprintf("amount=%s&destination=%s", amount, dest))
 	if err != nil {
-		die("Could not send siafunds:", err)
+		die("Could not send blockstakes:", err)
 	}
 	fmt.Printf("Sent %s blockstakes to %s\n", amount, dest)
 }
@@ -280,22 +258,22 @@ Unlock the wallet to view balance
 		return
 	}
 
-	unconfirmedBalance := status.ConfirmedSiacoinBalance.Add(status.UnconfirmedIncomingSiacoins).Sub(status.UnconfirmedOutgoingSiacoins)
+	unconfirmedBalance := status.ConfirmedCoinBalance.Add(status.UnconfirmedIncomingCoins).Sub(status.UnconfirmedOutgoingCoins)
 	var delta string
-	if unconfirmedBalance.Cmp(status.ConfirmedSiacoinBalance) >= 0 {
-		delta = "+" + currencyUnits(unconfirmedBalance.Sub(status.ConfirmedSiacoinBalance))
+	if unconfirmedBalance.Cmp(status.ConfirmedCoinBalance) >= 0 {
+		delta = "+" + currencyUnits(unconfirmedBalance.Sub(status.ConfirmedCoinBalance))
 	} else {
-		delta = "-" + currencyUnits(status.ConfirmedSiacoinBalance.Sub(unconfirmedBalance))
+		delta = "-" + currencyUnits(status.ConfirmedCoinBalance.Sub(unconfirmedBalance))
 	}
 
 	fmt.Printf(`Wallet status:
 %s, Unlocked
 Confirmed Balance:   %v
-Unconfirmed Delta:  %v
+Unconfirmed Delta:   %v
 Exact:               %v H
-BlockStakes:            %v SF
-`, encStatus, currencyUnits(status.ConfirmedSiacoinBalance), delta,
-		status.ConfirmedSiacoinBalance, status.BlockStakeBalance)
+BlockStakes:         %v BS
+`, encStatus, currencyUnits(status.ConfirmedCoinBalance), delta,
+		status.ConfirmedCoinBalance, status.BlockStakeBalance)
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,
@@ -307,7 +285,7 @@ func wallettransactionscmd() {
 		die("Could not fetch transaction history:", err)
 	}
 
-	fmt.Println("    [height]                                                   [transaction id]    [net siacoins]   [net blockstakes]")
+	fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
 	txns := append(wtg.ConfirmedTransactions, wtg.UnconfirmedTransactions...)
 	for _, txn := range txns {
 		// Determine the number of outgoing siacoins and siafunds.
@@ -347,12 +325,12 @@ func wallettransactionscmd() {
 		} else {
 			fmt.Printf(" unconfirmed")
 		}
-		fmt.Printf("%67v%15.2f SC", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
+		fmt.Printf("%67v%15.2f C", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
 		// For siafunds, need to avoid having a negative types.Currency.
 		if incomingBlockStakes.Cmp(outgoingBlockStakes) >= 0 {
-			fmt.Printf("%14v SF\n", incomingBlockStakes.Sub(outgoingBlockStakes))
+			fmt.Printf("%14v BS\n", incomingBlockStakes.Sub(outgoingBlockStakes))
 		} else {
-			fmt.Printf("-%14v SF\n", outgoingBlockStakes.Sub(incomingBlockStakes))
+			fmt.Printf("-%14v BS\n", outgoingBlockStakes.Sub(incomingBlockStakes))
 		}
 	}
 }

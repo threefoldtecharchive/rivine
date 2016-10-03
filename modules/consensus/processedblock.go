@@ -30,10 +30,9 @@ type processedBlock struct {
 	Depth       types.Target
 	ChildTarget types.Target
 
-	DiffsGenerated            bool
-	SiacoinOutputDiffs        []modules.SiacoinOutputDiff
-	BlockStakeOutputDiffs     []modules.BlockStakeOutputDiff
-	DelayedSiacoinOutputDiffs []modules.DelayedSiacoinOutputDiff
+	DiffsGenerated        bool
+	CoinOutputDiffs       []modules.CoinOutputDiff
+	BlockStakeOutputDiffs []modules.BlockStakeOutputDiff
 
 	ConsensusChecksum crypto.Hash
 }

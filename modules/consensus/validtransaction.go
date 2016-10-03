@@ -12,27 +12,27 @@ import (
 )
 
 var (
-	errMissingSiacoinOutput          = errors.New("transaction spends a nonexisting siacoin output")
+	errMissingCoinOutput             = errors.New("transaction spends a nonexisting coin output")
 	errMissingBlockStakeOutput       = errors.New("transaction spends a nonexisting blockstake output")
-	errSiacoinInputOutputMismatch    = errors.New("siacoin inputs do not equal siacoin outputs for transaction")
+	errSiacoinInputOutputMismatch    = errors.New("coin inputs do not equal coin outputs for transaction")
 	errBlockStakeInputOutputMismatch = errors.New("blockstake inputs do not equal blockstake outputs for transaction")
 	errWrongUnlockConditions         = errors.New("transaction contains incorrect unlock conditions")
 )
 
-// validSiacoins checks that the siacoin inputs and outputs are valid in the
+// validCoins checks that the coin inputs and outputs are valid in the
 // context of the current consensus set.
-func validSiacoins(tx *bolt.Tx, t types.Transaction) error {
-	scoBucket := tx.Bucket(SiacoinOutputs)
+func validCoins(tx *bolt.Tx, t types.Transaction) error {
+	scoBucket := tx.Bucket(CoinOutputs)
 	var inputSum types.Currency
-	for _, sci := range t.SiacoinInputs {
+	for _, sci := range t.CoinInputs {
 		// Check that the input spends an existing output.
 		scoBytes := scoBucket.Get(sci.ParentID[:])
 		if scoBytes == nil {
-			return errMissingSiacoinOutput
+			return errMissingCoinOutput
 		}
 
 		// Check that the unlock conditions match the required unlock hash.
-		var sco types.SiacoinOutput
+		var sco types.CoinOutput
 		err := encoding.Unmarshal(scoBytes, &sco)
 		if build.DEBUG && err != nil {
 			panic(err)
@@ -43,7 +43,7 @@ func validSiacoins(tx *bolt.Tx, t types.Transaction) error {
 
 		inputSum = inputSum.Add(sco.Value)
 	}
-	if inputSum.Cmp(t.SiacoinOutputSum()) != 0 {
+	if inputSum.Cmp(t.CoinOutputSum()) != 0 {
 		return errSiacoinInputOutputMismatch
 	}
 	return nil
@@ -89,7 +89,7 @@ func validTransaction(tx *bolt.Tx, t types.Transaction) error {
 
 	// Check that each portion of the transaction is legal given the current
 	// consensus set.
-	err = validSiacoins(tx, t)
+	err = validCoins(tx, t)
 	if err != nil {
 		return err
 	}
@@ -141,9 +141,8 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 		return modules.ConsensusChange{}, err
 	}
 	cc := modules.ConsensusChange{
-		SiacoinOutputDiffs:        diffHolder.SiacoinOutputDiffs,
-		BlockStakeOutputDiffs:     diffHolder.BlockStakeOutputDiffs,
-		DelayedSiacoinOutputDiffs: diffHolder.DelayedSiacoinOutputDiffs,
+		CoinOutputDiffs:       diffHolder.CoinOutputDiffs,
+		BlockStakeOutputDiffs: diffHolder.BlockStakeOutputDiffs,
 	}
 	return cc, nil
 }

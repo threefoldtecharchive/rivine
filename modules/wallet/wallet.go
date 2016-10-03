@@ -68,11 +68,11 @@ type Wallet struct {
 	// are not referenced at all. The seeds are only stored so that the user
 	// may access them.
 	//
-	// siacoinOutptus, siafundOutputs, and spentOutputs are kept so that they
+	// coinOutputs, blockstakeOutputs, and spentOutputs are kept so that they
 	// can be scanned when trying to fund transactions.
 	seeds             []modules.Seed
 	keys              map[types.UnlockHash]spendableKey
-	siacoinOutputs    map[types.SiacoinOutputID]types.SiacoinOutput
+	coinOutputs       map[types.CoinOutputID]types.CoinOutput
 	blockstakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
 	spentOutputs      map[types.OutputID]types.BlockHeight
 
@@ -123,7 +123,7 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		tpool: tpool,
 
 		keys:              make(map[types.UnlockHash]spendableKey),
-		siacoinOutputs:    make(map[types.SiacoinOutputID]types.SiacoinOutput),
+		coinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 		blockstakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 		spentOutputs:      make(map[types.OutputID]types.BlockHeight),
 

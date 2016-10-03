@@ -28,7 +28,7 @@ type transactionBuilder struct {
 	transaction types.Transaction
 
 	newParents            []int
-	siacoinInputs         []int
+	coinInputs            []int
 	blockstakeInputs      []int
 	transactionSignatures []int
 
@@ -82,29 +82,29 @@ func addSignatures(txn *types.Transaction, cf types.CoveredFields, uc types.Unlo
 	return newSigIndices, nil
 }
 
-// FundSiacoins will add a siacoin input of exactly 'amount' to the
+// FundCoins will add a siacoin input of exactly 'amount' to the
 // transaction. A parent transaction may be needed to achieve an input with the
-// correct value. The siacoin input will not be signed until 'Sign' is called
+// correct value. The coin input will not be signed until 'Sign' is called
 // on the transaction builder.
-func (tb *transactionBuilder) FundSiacoins(amount types.Currency) error {
+func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
 	// Collect a value-sorted set of siacoin outputs.
 	var so sortedOutputs
-	for scoid, sco := range tb.wallet.siacoinOutputs {
+	for scoid, sco := range tb.wallet.coinOutputs {
 		so.ids = append(so.ids, scoid)
 		so.outputs = append(so.outputs, sco)
 	}
 	// Add all of the unconfirmed outputs as well.
 	for _, upt := range tb.wallet.unconfirmedProcessedTransactions {
-		for i, sco := range upt.Transaction.SiacoinOutputs {
+		for i, sco := range upt.Transaction.CoinOutputs {
 			// Determine if the output belongs to the wallet.
 			_, exists := tb.wallet.keys[sco.UnlockHash]
 			if !exists {
 				continue
 			}
-			so.ids = append(so.ids, upt.Transaction.SiacoinOutputID(uint64(i)))
+			so.ids = append(so.ids, upt.Transaction.CoinOutputID(uint64(i)))
 			so.outputs = append(so.outputs, sco)
 		}
 	}
@@ -119,7 +119,7 @@ func (tb *transactionBuilder) FundSiacoins(amount types.Currency) error {
 	// are overspending.
 	var potentialFund types.Currency
 	parentTxn := types.Transaction{}
-	var spentScoids []types.SiacoinOutputID
+	var spentScoids []types.CoinOutputID
 	for i := range so.ids {
 		scoid := so.ids[i]
 		sco := so.outputs[i]
@@ -139,12 +139,12 @@ func (tb *transactionBuilder) FundSiacoins(amount types.Currency) error {
 			continue
 		}
 
-		// Add a siacoin input for this output.
-		sci := types.SiacoinInput{
+		// Add a coin input for this output.
+		sci := types.CoinInput{
 			ParentID:         scoid,
 			UnlockConditions: outputUnlockConditions,
 		}
-		parentTxn.SiacoinInputs = append(parentTxn.SiacoinInputs, sci)
+		parentTxn.CoinInputs = append(parentTxn.CoinInputs, sci)
 		spentScoids = append(spentScoids, scoid)
 
 		// Add the output to the total fund
@@ -167,11 +167,11 @@ func (tb *transactionBuilder) FundSiacoins(amount types.Currency) error {
 	if err != nil {
 		return err
 	}
-	exactOutput := types.SiacoinOutput{
+	exactOutput := types.CoinOutput{
 		Value:      amount,
 		UnlockHash: parentUnlockConditions.UnlockHash(),
 	}
-	parentTxn.SiacoinOutputs = append(parentTxn.SiacoinOutputs, exactOutput)
+	parentTxn.CoinOutputs = append(parentTxn.CoinOutputs, exactOutput)
 
 	// Create a refund output if needed.
 	if amount.Cmp(fund) != 0 {
@@ -179,15 +179,15 @@ func (tb *transactionBuilder) FundSiacoins(amount types.Currency) error {
 		if err != nil {
 			return err
 		}
-		refundOutput := types.SiacoinOutput{
+		refundOutput := types.CoinOutput{
 			Value:      fund.Sub(amount),
 			UnlockHash: refundUnlockConditions.UnlockHash(),
 		}
-		parentTxn.SiacoinOutputs = append(parentTxn.SiacoinOutputs, refundOutput)
+		parentTxn.CoinOutputs = append(parentTxn.CoinOutputs, refundOutput)
 	}
 
 	// Sign all of the inputs to the parent trancstion.
-	for _, sci := range parentTxn.SiacoinInputs {
+	for _, sci := range parentTxn.CoinInputs {
 		_, err := addSignatures(&parentTxn, types.FullCoveredFields, sci.UnlockConditions, crypto.Hash(sci.ParentID), tb.wallet.keys[sci.UnlockConditions.UnlockHash()])
 		if err != nil {
 			return err
@@ -195,17 +195,17 @@ func (tb *transactionBuilder) FundSiacoins(amount types.Currency) error {
 	}
 	// Mark the parent output as spent. Must be done after the transaction is
 	// finished because otherwise the txid and output id will change.
-	tb.wallet.spentOutputs[types.OutputID(parentTxn.SiacoinOutputID(0))] = tb.wallet.consensusSetHeight
+	tb.wallet.spentOutputs[types.OutputID(parentTxn.CoinOutputID(0))] = tb.wallet.consensusSetHeight
 
 	// Add the exact output.
-	newInput := types.SiacoinInput{
-		ParentID:         parentTxn.SiacoinOutputID(0),
+	newInput := types.CoinInput{
+		ParentID:         parentTxn.CoinOutputID(0),
 		UnlockConditions: parentUnlockConditions,
 	}
 	tb.newParents = append(tb.newParents, len(tb.parents))
 	tb.parents = append(tb.parents, parentTxn)
-	tb.siacoinInputs = append(tb.siacoinInputs, len(tb.transaction.SiacoinInputs))
-	tb.transaction.SiacoinInputs = append(tb.transaction.SiacoinInputs, newInput)
+	tb.coinInputs = append(tb.coinInputs, len(tb.transaction.CoinInputs))
+	tb.transaction.CoinInputs = append(tb.transaction.CoinInputs, newInput)
 
 	// Mark all outputs that were spent as spent.
 	for _, scoid := range spentScoids {
@@ -327,19 +327,19 @@ func (tb *transactionBuilder) AddMinerFee(fee types.Currency) uint64 {
 	return uint64(len(tb.transaction.MinerFees) - 1)
 }
 
-// AddSiacoinInput adds a siacoin input to the transaction, returning the index
-// of the siacoin input within the transaction. When 'Sign' gets called, this
+// AddCoinInput adds a siacoin input to the transaction, returning the index
+// of the coin input within the transaction. When 'Sign' gets called, this
 // input will be left unsigned.
-func (tb *transactionBuilder) AddSiacoinInput(input types.SiacoinInput) uint64 {
-	tb.transaction.SiacoinInputs = append(tb.transaction.SiacoinInputs, input)
-	return uint64(len(tb.transaction.SiacoinInputs) - 1)
+func (tb *transactionBuilder) AddCoinInput(input types.CoinInput) uint64 {
+	tb.transaction.CoinInputs = append(tb.transaction.CoinInputs, input)
+	return uint64(len(tb.transaction.CoinInputs) - 1)
 }
 
-// AddSiacoinOutput adds a siacoin output to the transaction, returning the
+// AddCoinOutput adds a siacoin output to the transaction, returning the
 // index of the siacoin output within the transaction.
-func (tb *transactionBuilder) AddSiacoinOutput(output types.SiacoinOutput) uint64 {
-	tb.transaction.SiacoinOutputs = append(tb.transaction.SiacoinOutputs, output)
-	return uint64(len(tb.transaction.SiacoinOutputs) - 1)
+func (tb *transactionBuilder) AddCoinOutput(output types.CoinOutput) uint64 {
+	tb.transaction.CoinOutputs = append(tb.transaction.CoinOutputs, output)
+	return uint64(len(tb.transaction.CoinOutputs) - 1)
 }
 
 // AddBlockStakeInput adds a siafund input to the transaction, returning the index
@@ -384,7 +384,7 @@ func (tb *transactionBuilder) Drop() {
 	// outputs to the list of available outputs.
 	txns := append(tb.parents, tb.transaction)
 	for _, txn := range txns {
-		for _, sci := range txn.SiacoinInputs {
+		for _, sci := range txn.CoinInputs {
 			delete(tb.wallet.spentOutputs, types.OutputID(sci.ParentID))
 		}
 	}
@@ -394,7 +394,7 @@ func (tb *transactionBuilder) Drop() {
 	tb.transaction = types.Transaction{}
 
 	tb.newParents = nil
-	tb.siacoinInputs = nil
+	tb.coinInputs = nil
 	tb.blockstakeInputs = nil
 	tb.transactionSignatures = nil
 }
@@ -425,11 +425,11 @@ func (tb *transactionBuilder) Sign(wholeTransaction bool) ([]types.Transaction, 
 		for i := range tb.transaction.MinerFees {
 			coveredFields.MinerFees = append(coveredFields.MinerFees, uint64(i))
 		}
-		for i := range tb.transaction.SiacoinInputs {
-			coveredFields.SiacoinInputs = append(coveredFields.SiacoinInputs, uint64(i))
+		for i := range tb.transaction.CoinInputs {
+			coveredFields.CoinInputs = append(coveredFields.CoinInputs, uint64(i))
 		}
-		for i := range tb.transaction.SiacoinOutputs {
-			coveredFields.SiacoinOutputs = append(coveredFields.SiacoinOutputs, uint64(i))
+		for i := range tb.transaction.CoinOutputs {
+			coveredFields.CoinOutputs = append(coveredFields.CoinOutputs, uint64(i))
 		}
 		for i := range tb.transaction.BlockStakeInputs {
 			coveredFields.BlockStakeInputs = append(coveredFields.BlockStakeInputs, uint64(i))
@@ -451,8 +451,8 @@ func (tb *transactionBuilder) Sign(wholeTransaction bool) ([]types.Transaction, 
 	// signature.
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
-	for _, inputIndex := range tb.siacoinInputs {
-		input := tb.transaction.SiacoinInputs[inputIndex]
+	for _, inputIndex := range tb.coinInputs {
+		input := tb.transaction.CoinInputs[inputIndex]
 		key := tb.wallet.keys[input.UnlockConditions.UnlockHash()]
 		newSigIndices, err := addSignatures(&tb.transaction, coveredFields, input.UnlockConditions, crypto.Hash(input.ParentID), key)
 		if err != nil {
@@ -487,8 +487,8 @@ func (tb *transactionBuilder) View() (types.Transaction, []types.Transaction) {
 
 // ViewAdded returns all of the siacoin inputs, siafund inputs, and parent
 // transactions that have been automatically added by the builder.
-func (tb *transactionBuilder) ViewAdded() (newParents, siacoinInputs, blockstakeInputs, transactionSignatures []int) {
-	return tb.newParents, tb.siacoinInputs, tb.blockstakeInputs, tb.transactionSignatures
+func (tb *transactionBuilder) ViewAdded() (newParents, coinInputs, blockstakeInputs, transactionSignatures []int) {
+	return tb.newParents, tb.coinInputs, tb.blockstakeInputs, tb.transactionSignatures
 }
 
 // RegisterTransaction takes a transaction and its parents and returns a

@@ -45,9 +45,9 @@ var (
 	// inconsistencies within the database have been detected.
 	Consistency = []byte("Consistency")
 
-	// SiacoinOutputs is a database bucket that contains all of the unspent
-	// siacoin outputs.
-	SiacoinOutputs = []byte("SiacoinOutputs")
+	// CoinOutputs is a database bucket that contains all of the unspent
+	// coin outputs.
+	CoinOutputs = []byte("CoinOutputs")
 
 	// SiafundOutputs is a database bucket that contains all of the unspent
 	// siafund outputs.
@@ -62,7 +62,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 		BlockMap,
 		BlockPath,
 		Consistency,
-		SiacoinOutputs,
+		CoinOutputs,
 		BlockStakeOutputs,
 	}
 	for _, bucket := range buckets {
@@ -86,14 +86,6 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 	for _, sfod := range cs.blockRoot.BlockStakeOutputDiffs {
 		commitBlockStakeOutputDiff(tx, sfod, modules.DiffApply)
 	}
-
-	// Add the miner payout from the genesis block to the delayed siacoin
-	// outputs - unspendable, as the unlock hash is blank.
-	createDSCOBucket(tx, types.MaturityDelay)
-	addDSCO(tx, types.MaturityDelay, cs.blockRoot.Block.MinerPayoutID(0), types.SiacoinOutput{
-		Value:      types.NewCurrency64(0),
-		UnlockHash: types.UnlockHash{},
-	})
 
 	// Add the genesis block to the block strucutres - checksum must be taken
 	// after pushing the genesis block into the path.
@@ -224,32 +216,32 @@ func popPath(tx *bolt.Tx) {
 	}
 }
 
-// isSiacoinOutput returns true if there is a siacoin output of that id in the
+// isCoinOutput returns true if there is a coin output of that id in the
 // database.
-func isSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID) bool {
-	bucket := tx.Bucket(SiacoinOutputs)
+func isCoinOutput(tx *bolt.Tx, id types.CoinOutputID) bool {
+	bucket := tx.Bucket(CoinOutputs)
 	sco := bucket.Get(id[:])
 	return sco != nil
 }
 
-// getSiacoinOutput fetches a siacoin output from the database. An error is
+// getCoinOutput fetches a coin output from the database. An error is
 // returned if the siacoin output does not exist.
-func getSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID) (types.SiacoinOutput, error) {
-	scoBytes := tx.Bucket(SiacoinOutputs).Get(id[:])
+func getCoinOutput(tx *bolt.Tx, id types.CoinOutputID) (types.CoinOutput, error) {
+	scoBytes := tx.Bucket(CoinOutputs).Get(id[:])
 	if scoBytes == nil {
-		return types.SiacoinOutput{}, errNilItem
+		return types.CoinOutput{}, errNilItem
 	}
-	var sco types.SiacoinOutput
+	var sco types.CoinOutput
 	err := encoding.Unmarshal(scoBytes, &sco)
 	if err != nil {
-		return types.SiacoinOutput{}, err
+		return types.CoinOutput{}, err
 	}
 	return sco, nil
 }
 
-// addSiacoinOutput adds a siacoin output to the database. An error is returned
-// if the siacoin output is already in the database.
-func addSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID, sco types.SiacoinOutput) {
+// addCoinOutput adds a coin output to the database. An error is returned
+// if the coin output is already in the database.
+func addCoinOutput(tx *bolt.Tx, id types.CoinOutputID, sco types.CoinOutput) {
 	// While this is not supposed to be allowed, there's a bug in the consensus
 	// code which means that earlier versions have accetped 0-value outputs
 	// onto the blockchain. A hardfork to remove 0-value outputs will fix this,
@@ -259,21 +251,21 @@ func addSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID, sco types.SiacoinOu
 			panic("discovered a zero value siacoin output")
 		}
 	*/
-	siacoinOutputs := tx.Bucket(SiacoinOutputs)
+	coinOutputs := tx.Bucket(CoinOutputs)
 	// Sanity check - should not be adding an item that exists.
-	if build.DEBUG && siacoinOutputs.Get(id[:]) != nil {
+	if build.DEBUG && coinOutputs.Get(id[:]) != nil {
 		panic("repeat siacoin output")
 	}
-	err := siacoinOutputs.Put(id[:], encoding.Marshal(sco))
+	err := coinOutputs.Put(id[:], encoding.Marshal(sco))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
 }
 
-// removeSiacoinOutput removes a siacoin output from the database. An error is
-// returned if the siacoin output is not in the database prior to removal.
-func removeSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID) {
-	scoBucket := tx.Bucket(SiacoinOutputs)
+// removeCoinOutput removes a coin output from the database. An error is
+// returned if the coin output is not in the database prior to removal.
+func removeCoinOutput(tx *bolt.Tx, id types.CoinOutputID) {
+	scoBucket := tx.Bucket(CoinOutputs)
 	// Sanity check - should not be removing an item that is not in the db.
 	if build.DEBUG && scoBucket.Get(id[:]) == nil {
 		panic("nil siacoin output")
@@ -318,83 +310,14 @@ func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.Blo
 	}
 }
 
-// removeBlockStakeOutput removes a siafund output from the database. An error is
-// returned if the siafund output is not in the database prior to removal.
+// removeBlockStakeOutput removes a blockstake output from the database. An error is
+// returned if the blockstake output is not in the database prior to removal.
 func removeBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
 	sfoBucket := tx.Bucket(BlockStakeOutputs)
 	if build.DEBUG && sfoBucket.Get(id[:]) == nil {
 		panic("nil blockstake output")
 	}
 	err := sfoBucket.Delete(id[:])
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-}
-
-// addDSCO adds a delayed siacoin output to the consnesus set.
-func addDSCO(tx *bolt.Tx, bh types.BlockHeight, id types.SiacoinOutputID, sco types.SiacoinOutput) {
-	// Sanity check - dsco should never have a value of zero.
-	// An error in the consensus code means sometimes there are 0-value dscos
-	// in the blockchain. A hardfork will fix this.
-	/*
-		if build.DEBUG && sco.Value.IsZero() {
-			panic("zero-value dsco being added")
-		}
-	*/
-	// Sanity check - output should not already be in the full set of outputs.
-	if build.DEBUG && tx.Bucket(SiacoinOutputs).Get(id[:]) != nil {
-		panic("dsco already in output set")
-	}
-	dscoBucketID := append(prefixDSCO, encoding.EncUint64(uint64(bh))...)
-	dscoBucket := tx.Bucket(dscoBucketID)
-	// Sanity check - should not be adding an item already in the db.
-	if build.DEBUG && dscoBucket.Get(id[:]) != nil {
-		panic(errRepeatInsert)
-	}
-	err := dscoBucket.Put(id[:], encoding.Marshal(sco))
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-}
-
-// removeDSCO removes a delayed siacoin output from the consensus set.
-func removeDSCO(tx *bolt.Tx, bh types.BlockHeight, id types.SiacoinOutputID) {
-	bucketID := append(prefixDSCO, encoding.Marshal(bh)...)
-	// Sanity check - should not remove an item not in the db.
-	dscoBucket := tx.Bucket(bucketID)
-	if build.DEBUG && dscoBucket.Get(id[:]) == nil {
-		panic("nil dsco")
-	}
-	err := dscoBucket.Delete(id[:])
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-}
-
-// createDSCOBucket creates a bucket for the delayed siacoin outputs at the
-// input height.
-func createDSCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
-	bucketID := append(prefixDSCO, encoding.Marshal(bh)...)
-	_, err := tx.CreateBucket(bucketID)
-	if build.DEBUG && err != nil {
-		panic(err)
-	}
-}
-
-// deleteDSCOBucket deletes the bucket that held a set of delayed siacoin
-// outputs.
-func deleteDSCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
-	// Delete the bucket.
-	bucketID := append(prefixDSCO, encoding.Marshal(bh)...)
-	bucket := tx.Bucket(bucketID)
-	if build.DEBUG && bucket == nil {
-		panic(errNilBucket)
-	}
-
-	// TODO: Check that the bucket is empty. Using Stats() does not work at the
-	// moment, as there is an error in the boltdb code.
-
-	err := tx.DeleteBucket(bucketID)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}

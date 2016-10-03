@@ -113,14 +113,14 @@ type (
 	//
 	// Transaction builders are not thread safe.
 	TransactionBuilder interface {
-		// FundSiacoins will add a siacoin input of exactly 'amount' to the
+		// Fundcoins will add a siacoin input of exactly 'amount' to the
 		// transaction. A parent transaction may be needed to achieve an input
 		// with the correct value. The siacoin input will not be signed until
 		// 'Sign' is called on the transaction builder. The expectation is that
 		// the transaction will be completed and broadcast within a few hours.
 		// Longer risks double-spends, as the wallet will assume that the
 		// transaction failed.
-		FundSiacoins(amount types.Currency) error
+		FundCoins(amount types.Currency) error
 
 		// FundBlockStakes will add a siafund input of exactly 'amount' to the
 		// transaction. A parent transaction may be needed to achieve an input
@@ -140,14 +140,14 @@ type (
 		// of the miner fee within the transaction.
 		AddMinerFee(fee types.Currency) uint64
 
-		// AddSiacoinInput adds a siacoin input to the transaction, returning
-		// the index of the siacoin input within the transaction. When 'Sign'
+		// AddCoinInput adds a coin input to the transaction, returning
+		// the index of the coin input within the transaction. When 'Sign'
 		// gets called, this input will be left unsigned.
-		AddSiacoinInput(types.SiacoinInput) uint64
+		AddCoinInput(types.CoinInput) uint64
 
-		// AddSiacoinOutput adds a siacoin output to the transaction, returning
-		// the index of the siacoin output within the transaction.
-		AddSiacoinOutput(types.SiacoinOutput) uint64
+		// AddCoinOutput adds a coin output to the transaction, returning
+		// the index of the coin output within the transaction.
+		AddCoinOutput(types.CoinOutput) uint64
 
 		// AddBlockStakeInput adds a blockstake input to the transaction, returning
 		// the index of the siafund input within the transaction. When 'Sign'
@@ -330,11 +330,11 @@ type (
 		// RegisterTransaction(types.Transaction{}, nil)
 		StartTransaction() TransactionBuilder
 
-		// SendSiacoins is a tool for sending siacoins from the wallet to an
+		// SendCoins is a tool for sending coins from the wallet to an
 		// address. Sending money usually results in multiple transactions. The
 		// transactions are automatically given to the transaction pool, and
 		// are also returned to the caller.
-		SendSiacoins(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
+		SendCoins(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
 
 		// SendBlockStakes is a tool for sending blockstakes from the wallet to an
 		// address. Sending money usually results in multiple transactions. The

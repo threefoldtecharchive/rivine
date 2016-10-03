@@ -28,11 +28,11 @@ type (
 	// then try to pick a Nonce that results in a block whose BlockID is below a
 	// given Target.
 	Block struct {
-		ParentID     BlockID         `json:"parentid"`
-		Nonce        BlockNonce      `json:"nonce"`
-		Timestamp    Timestamp       `json:"timestamp"`
-		MinerPayouts []SiacoinOutput `json:"minerpayouts"`
-		Transactions []Transaction   `json:"transactions"`
+		ParentID     BlockID       `json:"parentid"`
+		Nonce        BlockNonce    `json:"nonce"`
+		Timestamp    Timestamp     `json:"timestamp"`
+		MinerPayouts []CoinOutput  `json:"minerpayouts"`
+		Transactions []Transaction `json:"transactions"`
 	}
 
 	// A BlockHeader, when encoded, is an 80-byte constant size field
@@ -89,8 +89,8 @@ func (b Block) MerkleRoot() crypto.Hash {
 // MinerPayoutID returns the ID of the miner payout at the given index, which
 // is calculated by hashing the concatenation of the BlockID and the payout
 // index.
-func (b Block) MinerPayoutID(i uint64) SiacoinOutputID {
-	return SiacoinOutputID(crypto.HashAll(
+func (b Block) MinerPayoutID(i uint64) CoinOutputID {
+	return CoinOutputID(crypto.HashAll(
 		b.ID(),
 		i,
 	))

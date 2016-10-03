@@ -35,7 +35,7 @@ func consensusChecksum(tx *bolt.Tx) crypto.Hash {
 	// are sorted in byte-order, therefore this operation is deterministic.
 	consensusSetBuckets := []*bolt.Bucket{
 		tx.Bucket(BlockPath),
-		tx.Bucket(SiacoinOutputs),
+		tx.Bucket(CoinOutputs),
 		tx.Bucket(BlockStakeOutputs),
 	}
 	for i := range consensusSetBuckets {
@@ -73,14 +73,14 @@ func consensusChecksum(tx *bolt.Tx) crypto.Hash {
 	return tree.Root()
 }
 
-// checkSiacoinCount checks that the number of siacoins countable within the
-// consensus set equal the expected number of siacoins for the block height.
-func checkSiacoinCount(tx *bolt.Tx) {
+// checkCoinCount checks that the number of coins countable within the
+// consensus set equal the expected number of coins for the block height.
+func checkCoinCount(tx *bolt.Tx) {
 
 	// Add all of the siacoin outputs.
 	var scoSiacoins types.Currency
-	err := tx.Bucket(SiacoinOutputs).ForEach(func(_, scoBytes []byte) error {
-		var sco types.SiacoinOutput
+	err := tx.Bucket(CoinOutputs).ForEach(func(_, scoBytes []byte) error {
+		var sco types.CoinOutput
 		err := encoding.Unmarshal(scoBytes, &sco)
 		if err != nil {
 			manageErr(tx, err)
@@ -167,7 +167,7 @@ func (cs *ConsensusSet) checkConsistency(tx *bolt.Tx) {
 		return
 	}
 	cs.checkingConsistency = true
-	checkSiacoinCount(tx)
+	checkCoinCount(tx)
 	checkBlockStakeCount(tx)
 	if build.DEBUG {
 		cs.checkRevertApply(tx)

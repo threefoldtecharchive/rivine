@@ -19,9 +19,9 @@ type (
 		Encrypted bool `json:"encrypted"`
 		Unlocked  bool `json:"unlocked"`
 
-		ConfirmedSiacoinBalance     types.Currency `json:"confirmedsiacoinbalance"`
-		UnconfirmedOutgoingSiacoins types.Currency `json:"unconfirmedoutgoingsiacoins"`
-		UnconfirmedIncomingSiacoins types.Currency `json:"unconfirmedincomingsiacoins"`
+		ConfirmedCoinBalance     types.Currency `json:"confirmedcoinbalance"`
+		UnconfirmedOutgoingCoins types.Currency `json:"unconfirmedoutgoingcoins"`
+		UnconfirmedIncomingCoins types.Currency `json:"unconfirmedincomingcoins"`
 
 		BlockStakeBalance types.Currency `json:"blockstakebalance"`
 	}
@@ -44,9 +44,9 @@ type (
 		PrimarySeed string `json:"primaryseed"`
 	}
 
-	// WalletSiacoinsPOST contains the transaction sent in the POST call to
+	// WalletCoinsPOST contains the transaction sent in the POST call to
 	// /wallet/siafunds.
-	WalletSiacoinsPOST struct {
+	WalletCoinsPOST struct {
 		TransactionIDs []types.TransactionID `json:"transactionids"`
 	}
 
@@ -102,15 +102,15 @@ func encryptionKeys(seedStr string) (validKeys []crypto.TwofishKey) {
 
 // walletHander handles API calls to /wallet.
 func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	siacoinBal, blockstakeBal := api.wallet.ConfirmedBalance()
-	siacoinsOut, siacoinsIn := api.wallet.UnconfirmedBalance()
+	coinBal, blockstakeBal := api.wallet.ConfirmedBalance()
+	coinsOut, coinsIn := api.wallet.UnconfirmedBalance()
 	WriteJSON(w, WalletGET{
 		Encrypted: api.wallet.Encrypted(),
 		Unlocked:  api.wallet.Unlocked(),
 
-		ConfirmedSiacoinBalance:     siacoinBal,
-		UnconfirmedOutgoingSiacoins: siacoinsOut,
-		UnconfirmedIncomingSiacoins: siacoinsIn,
+		ConfirmedCoinBalance:     coinBal,
+		UnconfirmedOutgoingCoins: coinsOut,
+		UnconfirmedIncomingCoins: coinsIn,
 
 		BlockStakeBalance: blockstakeBal,
 	})
@@ -260,25 +260,25 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 func (api *API) walletSiacoinsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	amount, ok := scanAmount(req.FormValue("amount"))
 	if !ok {
-		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/siacoins"}, http.StatusBadRequest)
+		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/coins"}, http.StatusBadRequest)
 		return
 	}
 	dest, err := scanAddress(req.FormValue("destination"))
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/siacoins: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 
-	txns, err := api.wallet.SendSiacoins(amount, dest)
+	txns, err := api.wallet.SendCoins(amount, dest)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/siacoins: " + err.Error()}, http.StatusInternalServerError)
+		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
 	var txids []types.TransactionID
 	for _, txn := range txns {
 		txids = append(txids, txn.ID())
 	}
-	WriteJSON(w, WalletSiacoinsPOST{
+	WriteJSON(w, WalletCoinsPOST{
 		TransactionIDs: txids,
 	})
 }

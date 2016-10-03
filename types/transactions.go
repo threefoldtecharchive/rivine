@@ -48,7 +48,7 @@ type (
 	// Specifier. While all of these types are hashes, defining type aliases
 	// gives us type safety and makes the code more readable.
 	TransactionID      crypto.Hash
-	SiacoinOutputID    crypto.Hash
+	CoinOutputID       crypto.Hash
 	BlockStakeOutputID crypto.Hash
 	OutputID           crypto.Hash
 
@@ -61,8 +61,8 @@ type (
 	// but transactions cannot spend outputs that they create or otherwise be
 	// self-dependent.
 	Transaction struct {
-		SiacoinInputs         []SiacoinInput         `json:"siacoininputs"`
-		SiacoinOutputs        []SiacoinOutput        `json:"siacoinoutputs"`
+		CoinInputs            []CoinInput            `json:"coininputs"`
+		CoinOutputs           []CoinOutput           `json:"coinoutputs"`
 		BlockStakeInputs      []BlockStakeInput      `json:"blockstakeinputs"`
 		BlockStakeOutputs     []BlockStakeOutput     `json:"blockstakeoutputs"`
 		MinerFees             []Currency             `json:"minerfees"`
@@ -75,8 +75,8 @@ type (
 	// output that is getting consumed, and the UnlockConditions contain the rules
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
-	SiacoinInput struct {
-		ParentID         SiacoinOutputID  `json:"parentid"`
+	CoinInput struct {
+		ParentID         CoinOutputID     `json:"parentid"`
 		UnlockConditions UnlockConditions `json:"unlockconditions"`
 	}
 
@@ -84,7 +84,7 @@ type (
 	// atomically; that is, they must all be spent in the same transaction. The
 	// UnlockHash is the hash of the UnlockConditions that must be fulfilled
 	// in order to spend the output.
-	SiacoinOutput struct {
+	CoinOutput struct {
 		Value      Currency   `json:"value"`
 		UnlockHash UnlockHash `json:"unlockhash"`
 	}
@@ -113,8 +113,8 @@ type (
 // fields except for the signatures and taking the hash of the result.
 func (t Transaction) ID() TransactionID {
 	return TransactionID(crypto.HashAll(
-		t.SiacoinInputs,
-		t.SiacoinOutputs,
+		t.CoinInputs,
+		t.CoinOutputs,
 		t.BlockStakeInputs,
 		t.BlockStakeOutputs,
 		t.MinerFees,
@@ -126,11 +126,11 @@ func (t Transaction) ID() TransactionID {
 // which is calculated by hashing the concatenation of the SiacoinOutput
 // Specifier, all of the fields in the transaction (except the signatures),
 // and output index.
-func (t Transaction) SiacoinOutputID(i uint64) SiacoinOutputID {
-	return SiacoinOutputID(crypto.HashAll(
+func (t Transaction) CoinOutputID(i uint64) CoinOutputID {
+	return CoinOutputID(crypto.HashAll(
 		SpecifierSiacoinOutput,
-		t.SiacoinInputs,
-		t.SiacoinOutputs,
+		t.CoinInputs,
+		t.CoinOutputs,
 		t.BlockStakeInputs,
 		t.BlockStakeOutputs,
 		t.MinerFees,
@@ -146,8 +146,8 @@ func (t Transaction) SiacoinOutputID(i uint64) SiacoinOutputID {
 func (t Transaction) BlockStakeOutputID(i uint64) BlockStakeOutputID {
 	return BlockStakeOutputID(crypto.HashAll(
 		SpecifierBlockStakeOutput,
-		t.SiacoinInputs,
-		t.SiacoinOutputs,
+		t.CoinInputs,
+		t.CoinOutputs,
 		t.BlockStakeInputs,
 		t.BlockStakeOutputs,
 		t.MinerFees,
@@ -156,14 +156,11 @@ func (t Transaction) BlockStakeOutputID(i uint64) BlockStakeOutputID {
 	))
 }
 
-// SiacoinOutputSum returns the sum of all the siacoin outputs in the
-// transaction, which must match the sum of all the siacoin inputs. Siacoin
-// outputs created by storage proofs and siafund outputs are not considered, as
-// they were considered when the contract responsible for funding them was
-// created.
-func (t Transaction) SiacoinOutputSum() (sum Currency) {
+// CoinOutputSum returns the sum of all the coin outputs in the
+// transaction, which must match the sum of all the coin inputs.
+func (t Transaction) CoinOutputSum() (sum Currency) {
 	// Add the siacoin outputs.
-	for _, sco := range t.SiacoinOutputs {
+	for _, sco := range t.CoinOutputs {
 		sum = sum.Add(sco.Value)
 	}
 
@@ -253,17 +250,17 @@ func (oid *OutputID) UnmarshalJSON(b []byte) error {
 }
 
 // MarshalJSON marshales an id as a hex string.
-func (scoid SiacoinOutputID) MarshalJSON() ([]byte, error) {
+func (scoid CoinOutputID) MarshalJSON() ([]byte, error) {
 	return json.Marshal(scoid.String())
 }
 
 // String prints the id in hex.
-func (scoid SiacoinOutputID) String() string {
+func (scoid CoinOutputID) String() string {
 	return fmt.Sprintf("%x", scoid[:])
 }
 
 // UnmarshalJSON decodes the json hex string of the id.
-func (scoid *SiacoinOutputID) UnmarshalJSON(b []byte) error {
+func (scoid *CoinOutputID) UnmarshalJSON(b []byte) error {
 	if len(b) != crypto.HashSize*2+2 {
 		return crypto.ErrHashWrongLen
 	}

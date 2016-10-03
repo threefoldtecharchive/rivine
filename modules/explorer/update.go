@@ -51,7 +51,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			// Remove miner payouts
 			for j, payout := range block.MinerPayouts {
 				scoid := block.MinerPayoutID(uint64(j))
-				dbRemoveSiacoinOutputID(tx, scoid, tbid)
+				dbRemoveCoinOutputID(tx, scoid, tbid)
 				dbRemoveUnlockHash(tx, payout.UnlockHash, tbid)
 			}
 
@@ -60,15 +60,15 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				txid := txn.ID()
 				dbRemoveTransactionID(tx, txid)
 
-				for _, sci := range txn.SiacoinInputs {
-					dbRemoveSiacoinOutputID(tx, sci.ParentID, txid)
+				for _, sci := range txn.CoinInputs {
+					dbRemoveCoinOutputID(tx, sci.ParentID, txid)
 					dbRemoveUnlockHash(tx, sci.UnlockConditions.UnlockHash(), txid)
 				}
-				for k, sco := range txn.SiacoinOutputs {
-					scoid := txn.SiacoinOutputID(uint64(k))
-					dbRemoveSiacoinOutputID(tx, scoid, txid)
+				for k, sco := range txn.CoinOutputs {
+					scoid := txn.CoinOutputID(uint64(k))
+					dbRemoveCoinOutputID(tx, scoid, txid)
 					dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
-					dbRemoveSiacoinOutput(tx, scoid)
+					dbRemoveCoinOutput(tx, scoid)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
@@ -109,7 +109,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			// Catalog the new miner payouts.
 			for j, payout := range block.MinerPayouts {
 				scoid := block.MinerPayoutID(uint64(j))
-				dbAddSiacoinOutputID(tx, scoid, tbid)
+				dbAddCoinOutputID(tx, scoid, tbid)
 				dbAddUnlockHash(tx, payout.UnlockHash, tbid)
 			}
 
@@ -119,15 +119,15 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				txid := txn.ID()
 				dbAddTransactionID(tx, txid, blockheight)
 
-				for _, sci := range txn.SiacoinInputs {
-					dbAddSiacoinOutputID(tx, sci.ParentID, txid)
+				for _, sci := range txn.CoinInputs {
+					dbAddCoinOutputID(tx, sci.ParentID, txid)
 					dbAddUnlockHash(tx, sci.UnlockConditions.UnlockHash(), txid)
 				}
-				for j, sco := range txn.SiacoinOutputs {
-					scoid := txn.SiacoinOutputID(uint64(j))
-					dbAddSiacoinOutputID(tx, scoid, txid)
+				for j, sco := range txn.CoinOutputs {
+					scoid := txn.CoinOutputID(uint64(j))
+					dbAddCoinOutputID(tx, scoid, txid)
 					dbAddUnlockHash(tx, sco.UnlockHash, txid)
-					dbAddSiacoinOutput(tx, scoid, sco)
+					dbAddCoinOutput(tx, scoid, sco)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
@@ -230,22 +230,22 @@ func dbRemoveBlockTarget(tx *bolt.Tx, id types.BlockID, target types.Target) {
 }
 
 // Add/Remove siacoin output
-func dbAddSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID, output types.SiacoinOutput) {
-	mustPut(tx.Bucket(bucketSiacoinOutputs), id, output)
+func dbAddCoinOutput(tx *bolt.Tx, id types.CoinOutputID, output types.CoinOutput) {
+	mustPut(tx.Bucket(bucketCoinOutputs), id, output)
 }
-func dbRemoveSiacoinOutput(tx *bolt.Tx, id types.SiacoinOutputID) {
-	mustDelete(tx.Bucket(bucketSiacoinOutputs), id)
+func dbRemoveCoinOutput(tx *bolt.Tx, id types.CoinOutputID) {
+	mustDelete(tx.Bucket(bucketCoinOutputs), id)
 }
 
 // Add/Remove txid from siacoin output ID bucket
-func dbAddSiacoinOutputID(tx *bolt.Tx, id types.SiacoinOutputID, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketSiacoinOutputIDs).CreateBucketIfNotExists(encoding.Marshal(id))
+func dbAddCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
+	b, err := tx.Bucket(bucketCoinOutputIDs).CreateBucketIfNotExists(encoding.Marshal(id))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
-func dbRemoveSiacoinOutputID(tx *bolt.Tx, id types.SiacoinOutputID, txid types.TransactionID) {
+func dbRemoveCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
 	// TODO: delete bucket when it becomes empty
-	mustDelete(tx.Bucket(bucketSiacoinOutputIDs).Bucket(encoding.Marshal(id)), txid)
+	mustDelete(tx.Bucket(bucketCoinOutputIDs).Bucket(encoding.Marshal(id)), txid)
 }
 
 // Add/Remove blockstake output
@@ -343,8 +343,8 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 	bf.MinerPayoutCount += uint64(len(block.MinerPayouts))
 	bf.TransactionCount += uint64(len(block.Transactions))
 	for _, txn := range block.Transactions {
-		bf.SiacoinInputCount += uint64(len(txn.SiacoinInputs))
-		bf.SiacoinOutputCount += uint64(len(txn.SiacoinOutputs))
+		bf.CoinInputCount += uint64(len(txn.CoinInputs))
+		bf.CoinOutputCount += uint64(len(txn.CoinOutputs))
 		bf.BlockStakeInputCount += uint64(len(txn.BlockStakeInputs))
 		bf.BlockStakeOutputCount += uint64(len(txn.BlockStakeOutputs))
 		bf.MinerFeeCount += uint64(len(txn.MinerFees))

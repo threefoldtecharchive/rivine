@@ -82,22 +82,22 @@ func (e *Explorer) UnlockHash(uh types.UnlockHash) []types.TransactionID {
 	return ids
 }
 
-// SiacoinOutput returns the siacoin output associated with the specified ID.
-func (e *Explorer) SiacoinOutput(id types.SiacoinOutputID) (types.SiacoinOutput, bool) {
-	var sco types.SiacoinOutput
-	err := e.db.View(dbGetAndDecode(bucketSiacoinOutputs, id, &sco))
+// CoinOutput returns the coin output associated with the specified ID.
+func (e *Explorer) CoinOutput(id types.CoinOutputID) (types.CoinOutput, bool) {
+	var sco types.CoinOutput
+	err := e.db.View(dbGetAndDecode(bucketCoinOutputs, id, &sco))
 	if err != nil {
-		return types.SiacoinOutput{}, false
+		return types.CoinOutput{}, false
 	}
 	return sco, true
 }
 
-// SiacoinOutputID returns all of the transactions that contain the specified
-// siacoin output ID. An empty set indicates that the siacoin output ID does
+// CoinOutputID returns all of the transactions that contain the specified
+// coin output ID. An empty set indicates that the siacoin output ID does
 // not appear in the blockchain.
-func (e *Explorer) SiacoinOutputID(id types.SiacoinOutputID) []types.TransactionID {
+func (e *Explorer) CoinOutputID(id types.CoinOutputID) []types.TransactionID {
 	var ids []types.TransactionID
-	err := e.db.View(dbGetTransactionIDSet(bucketSiacoinOutputIDs, id, &ids))
+	err := e.db.View(dbGetTransactionIDSet(bucketCoinOutputIDs, id, &ids))
 	if err != nil {
 		ids = nil
 	}

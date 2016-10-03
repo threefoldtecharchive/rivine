@@ -11,38 +11,38 @@ import (
 	"github.com/NebulousLabs/bolt"
 )
 
-// applySiacoinInputs takes all of the siacoin inputs in a transaction and
+// applyCoinInputs takes all of the coin inputs in a transaction and
 // applies them to the state, updating the diffs in the processed block.
-func applySiacoinInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
+func applyCoinInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 	// Remove all siacoin inputs from the unspent siacoin outputs list.
-	for _, sci := range t.SiacoinInputs {
-		sco, err := getSiacoinOutput(tx, sci.ParentID)
+	for _, sci := range t.CoinInputs {
+		sco, err := getCoinOutput(tx, sci.ParentID)
 		if build.DEBUG && err != nil {
 			panic(err)
 		}
-		scod := modules.SiacoinOutputDiff{
-			Direction:     modules.DiffRevert,
-			ID:            sci.ParentID,
-			SiacoinOutput: sco,
+		scod := modules.CoinOutputDiff{
+			Direction:  modules.DiffRevert,
+			ID:         sci.ParentID,
+			CoinOutput: sco,
 		}
-		pb.SiacoinOutputDiffs = append(pb.SiacoinOutputDiffs, scod)
-		commitSiacoinOutputDiff(tx, scod, modules.DiffApply)
+		pb.CoinOutputDiffs = append(pb.CoinOutputDiffs, scod)
+		commitCoinOutputDiff(tx, scod, modules.DiffApply)
 	}
 }
 
-// applySiacoinOutputs takes all of the siacoin outputs in a transaction and
+// applyCoinOutputs takes all of the coin outputs in a transaction and
 // applies them to the state, updating the diffs in the processed block.
-func applySiacoinOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
+func applyCoinOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 	// Add all siacoin outputs to the unspent siacoin outputs list.
-	for i, sco := range t.SiacoinOutputs {
-		scoid := t.SiacoinOutputID(uint64(i))
-		scod := modules.SiacoinOutputDiff{
-			Direction:     modules.DiffApply,
-			ID:            scoid,
-			SiacoinOutput: sco,
+	for i, sco := range t.CoinOutputs {
+		scoid := t.CoinOutputID(uint64(i))
+		scod := modules.CoinOutputDiff{
+			Direction:  modules.DiffApply,
+			ID:         scoid,
+			CoinOutput: sco,
 		}
-		pb.SiacoinOutputDiffs = append(pb.SiacoinOutputDiffs, scod)
-		commitSiacoinOutputDiff(tx, scod, modules.DiffApply)
+		pb.CoinOutputDiffs = append(pb.CoinOutputDiffs, scod)
+		commitCoinOutputDiff(tx, scod, modules.DiffApply)
 	}
 }
 
@@ -86,8 +86,8 @@ func applyBlockStakeOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction
 // This produces a set of diffs, which are stored in the blockNode containing
 // the transaction. No verification is done by this function.
 func applyTransaction(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
-	applySiacoinInputs(tx, pb, t)
-	applySiacoinOutputs(tx, pb, t)
+	applyCoinInputs(tx, pb, t)
+	applyCoinOutputs(tx, pb, t)
 	applyBlockStakeInputs(tx, pb, t)
 	applyBlockStakeOutputs(tx, pb, t)
 }
