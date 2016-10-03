@@ -58,20 +58,17 @@ func init() {
 		FutureThreshold = 2 * 60                 // 2 minutes.
 		ExtremeFutureThreshold = 4 * 60          // 4 minutes.
 
-		GenesisBlockStakeAllocation = []BlockStakeOutput{
-			{
-				Value:      NewCurrency64(2000),
-				UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
-			},
-			{
-				Value:      NewCurrency64(7000),
-				UnlockHash: UnlockHash{209, 246, 228, 60, 248, 78, 242, 110, 9, 8, 227, 248, 225, 216, 163, 52, 142, 93, 47, 176, 103, 41, 137, 80, 212, 8, 132, 58, 241, 189, 2, 17},
-			},
-			{
-				Value:      NewCurrency64(1000),
-				UnlockHash: UnlockConditions{}.UnlockHash(),
-			},
+		GenesisBlockStakeAllocation = []BlockStakeOutput{}
+
+		bso := BlockStakeOutput{
+			Value:      NewCurrency64(1000000),
+			UnlockHash: UnlockHash{},
 		}
+		// Seed for this address:
+		// across knife thirsty puck itches hazard enmity fainted pebbles unzip echo queen rarest aphid bugs yanks okay abbey eskimos dove orange nouns august ailments inline rebel glass tyrant acumen
+		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
+
 	} else if build.Release == "testing" {
 		// 'testing' settings are for automatic testing, and create much faster
 		// environments than a human can interact with.
