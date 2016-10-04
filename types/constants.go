@@ -31,6 +31,7 @@ var (
 	SiacoinPrecision = NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
 
 	GenesisBlockStakeAllocation []BlockStakeOutput
+	GenesisCoinDistribution     []CoinOutput
 	GenesisBlock                Block
 
 	// The GenesisID is used in many places. Calculating it once saves lots of
@@ -41,6 +42,9 @@ var (
 // init checks which build constant is in place and initializes the variables
 // accordingly.
 func init() {
+	GenesisCoinDistribution = []CoinOutput{}
+	GenesisBlockStakeAllocation = []BlockStakeOutput{}
+
 	if build.Release == "dev" {
 		// 'dev' settings are for small developer testnets, usually on the same
 		// computer. Settings are slow enough that a small team of developers
@@ -58,16 +62,20 @@ func init() {
 		FutureThreshold = 2 * 60                 // 2 minutes.
 		ExtremeFutureThreshold = 4 * 60          // 4 minutes.
 
-		GenesisBlockStakeAllocation = []BlockStakeOutput{}
-
 		bso := BlockStakeOutput{
 			Value:      NewCurrency64(1000000),
+			UnlockHash: UnlockHash{},
+		}
+		co := CoinOutput{
+			Value:      NewCurrency64(1000),
 			UnlockHash: UnlockHash{},
 		}
 		// Seed for this address:
 		// across knife thirsty puck itches hazard enmity fainted pebbles unzip echo queen rarest aphid bugs yanks okay abbey eskimos dove orange nouns august ailments inline rebel glass tyrant acumen
 		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
 		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
+		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		GenesisCoinDistribution = append(GenesisCoinDistribution, co)
 
 	} else if build.Release == "testing" {
 		// 'testing' settings are for automatic testing, and create much faster
@@ -354,7 +362,10 @@ func init() {
 	GenesisBlock = Block{
 		Timestamp: GenesisTimestamp,
 		Transactions: []Transaction{
-			{BlockStakeOutputs: GenesisBlockStakeAllocation},
+			{
+				BlockStakeOutputs: GenesisBlockStakeAllocation,
+				CoinOutputs:       GenesisCoinDistribution,
+			},
 		},
 	}
 	// Calculate the genesis ID.

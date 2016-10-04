@@ -55,7 +55,7 @@ By default the wallet encryption / unlock password is the same as the generated 
 
 	walletLoadCmd = &cobra.Command{
 		Use:   "load",
-		Short: "Load a wallet seed, or siag keyset",
+		Short: "Load a wallet seed",
 		// Run field is not set, as the load command itself is not a valid command.
 		// A subcommand must be provided.
 	}
@@ -83,8 +83,8 @@ By default the wallet encryption / unlock password is the same as the generated 
 
 	walletSendCmd = &cobra.Command{
 		Use:   "send",
-		Short: "Send either siacoins or blockstakes to an address",
-		Long:  "Send either siacoins or blockstakes to an address",
+		Short: "Send either coins or blockstakes to an address",
+		Long:  "Send either coins or blockstakes to an address",
 		// Run field is not set, as the load command itself is not a valid command.
 		// A subcommand must be provided.
 	}
@@ -111,14 +111,14 @@ Run 'wallet send --help' to see a list of available units.`,
 	walletBalanceCmd = &cobra.Command{
 		Use:   "balance",
 		Short: "View wallet balance",
-		Long:  "View wallet balance, including confirmed and unconfirmed siacoins and blockstakes.",
+		Long:  "View wallet balance, including confirmed and unconfirmed coins and blockstakes.",
 		Run:   wrap(walletbalancecmd),
 	}
 
 	walletTransactionsCmd = &cobra.Command{
 		Use:   "transactions",
 		Short: "View transactions",
-		Long:  "View transactions related to addresses spendable by the wallet, providing a net flow of siacoins and blockstakes for each transaction",
+		Long:  "View transactions related to addresses spendable by the wallet, providing a net flow of coins and blockstakes for each transaction",
 		Run:   wrap(wallettransactionscmd),
 	}
 
@@ -292,7 +292,7 @@ func wallettransactionscmd() {
 		var outgoingSiacoins types.Currency
 		var outgoingBlockStakes types.Currency
 		for _, input := range txn.Inputs {
-			if input.FundType == types.SpecifierSiacoinInput && input.WalletAddress {
+			if input.FundType == types.SpecifierCoinInput && input.WalletAddress {
 				outgoingSiacoins = outgoingSiacoins.Add(input.Value)
 			}
 			if input.FundType == types.SpecifierBlockStakeInput && input.WalletAddress {
@@ -307,7 +307,7 @@ func wallettransactionscmd() {
 			if output.FundType == types.SpecifierMinerPayout {
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
 			}
-			if output.FundType == types.SpecifierSiacoinOutput && output.WalletAddress {
+			if output.FundType == types.SpecifierCoinOutput && output.WalletAddress {
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
 			}
 			if output.FundType == types.SpecifierBlockStakeOutput && output.WalletAddress {

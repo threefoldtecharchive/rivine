@@ -129,7 +129,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					relevant = true
 				}
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
-					FundType:       types.SpecifierSiacoinInput,
+					FundType:       types.SpecifierCoinInput,
 					WalletAddress:  exists,
 					RelatedAddress: sci.UnlockConditions.UnlockHash(),
 					Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
@@ -141,7 +141,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					relevant = true
 				}
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
-					FundType:       types.SpecifierSiacoinOutput,
+					FundType:       types.SpecifierCoinOutput,
 					MaturityHeight: w.consensusSetHeight,
 					WalletAddress:  exists,
 					RelatedAddress: sco.UnlockHash,
@@ -236,7 +236,7 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 				relevant = true
 			}
 			pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
-				FundType:       types.SpecifierSiacoinInput,
+				FundType:       types.SpecifierCoinInput,
 				WalletAddress:  exists,
 				RelatedAddress: sci.UnlockConditions.UnlockHash(),
 				Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
@@ -248,7 +248,7 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 				relevant = true
 			}
 			pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
-				FundType:       types.SpecifierSiacoinOutput,
+				FundType:       types.SpecifierCoinOutput,
 				MaturityHeight: types.BlockHeight(math.MaxUint64),
 				WalletAddress:  exists,
 				RelatedAddress: sco.UnlockHash,

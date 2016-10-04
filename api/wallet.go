@@ -257,7 +257,7 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 }
 
 // walletSiacoinsHandler handles API calls to /wallet/siacoins.
-func (api *API) walletSiacoinsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	amount, ok := scanAmount(req.FormValue("amount"))
 	if !ok {
 		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/coins"}, http.StatusBadRequest)

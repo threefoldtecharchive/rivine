@@ -36,12 +36,12 @@ func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoi
 
 	for _, upt := range w.unconfirmedProcessedTransactions {
 		for _, input := range upt.Inputs {
-			if input.FundType == types.SpecifierSiacoinInput && input.WalletAddress {
+			if input.FundType == types.SpecifierCoinInput && input.WalletAddress {
 				outgoingCoins = outgoingCoins.Add(input.Value)
 			}
 		}
 		for _, output := range upt.Outputs {
-			if output.FundType == types.SpecifierSiacoinOutput && output.WalletAddress {
+			if output.FundType == types.SpecifierCoinOutput && output.WalletAddress {
 				incomingCoins = incomingCoins.Add(output.Value)
 			}
 		}

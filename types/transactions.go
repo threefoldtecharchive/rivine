@@ -21,8 +21,8 @@ const (
 // Specifier for more details.
 var (
 	SpecifierMinerPayout      = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'p', 'a', 'y', 'o', 'u', 't'}
-	SpecifierSiacoinInput     = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'i', 'n', 'p', 'u', 't'}
-	SpecifierSiacoinOutput    = Specifier{'s', 'i', 'a', 'c', 'o', 'i', 'n', ' ', 'o', 'u', 't', 'p', 'u', 't'}
+	SpecifierCoinInput        = Specifier{'c', 'o', 'i', 'n', ' ', 'i', 'n', 'p', 'u', 't'}
+	SpecifierCoinOutput       = Specifier{'c', 'o', 'i', 'n', ' ', 'o', 'u', 't', 'p', 'u', 't'}
 	SpecifierBlockStakeInput  = Specifier{'b', 'l', 's', 't', 'a', 'k', 'e', ' ', 'i', 'n', 'p', 'u', 't'}
 	SpecifierBlockStakeOutput = Specifier{'b', 'l', 's', 't', 'a', 'k', 'e', ' ', 'o', 'u', 't', 'p', 'u', 't'}
 	SpecifierMinerFee         = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'f', 'e', 'e'}
@@ -128,7 +128,7 @@ func (t Transaction) ID() TransactionID {
 // and output index.
 func (t Transaction) CoinOutputID(i uint64) CoinOutputID {
 	return CoinOutputID(crypto.HashAll(
-		SpecifierSiacoinOutput,
+		SpecifierCoinOutput,
 		t.CoinInputs,
 		t.CoinOutputs,
 		t.BlockStakeInputs,
