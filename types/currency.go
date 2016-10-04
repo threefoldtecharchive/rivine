@@ -131,13 +131,6 @@ func (x Currency) MulRat(y *big.Rat) (c Currency) {
 	return
 }
 
-// MulTax returns a new Currency value c = x * 0.039, where 0.039 is a big.Rat.
-func (x Currency) MulTax() (c Currency) {
-	c.i.Mul(&x.i, big.NewInt(39))
-	c.i.Div(&c.i, big.NewInt(1000))
-	return c
-}
-
 // RoundDown returns the largest multiple of y <= x.
 func (x Currency) RoundDown(y Currency) (c Currency) {
 	diff := new(big.Int).Mod(&x.i, &y.i)

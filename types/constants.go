@@ -44,6 +44,8 @@ var (
 func init() {
 	GenesisCoinDistribution = []CoinOutput{}
 	GenesisBlockStakeAllocation = []BlockStakeOutput{}
+	oneCoinInHastings := new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)
+	oneCoin := NewCurrency(oneCoinInHastings)
 
 	if build.Release == "dev" {
 		// 'dev' settings are for small developer testnets, usually on the same
@@ -66,10 +68,11 @@ func init() {
 			Value:      NewCurrency64(1000000),
 			UnlockHash: UnlockHash{},
 		}
+
 		co := CoinOutput{
-			Value:      NewCurrency64(1000),
-			UnlockHash: UnlockHash{},
+			Value: oneCoin.Mul64(1000),
 		}
+
 		// Seed for this address:
 		// across knife thirsty puck itches hazard enmity fainted pebbles unzip echo queen rarest aphid bugs yanks okay abbey eskimos dove orange nouns august ailments inline rebel glass tyrant acumen
 		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
