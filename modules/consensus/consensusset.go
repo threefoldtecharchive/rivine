@@ -113,7 +113,7 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string) (*Consensus
 		persistDir: persistDir,
 	}
 
-	// Create the diffs for the genesis siafund outputs.
+	// Create the diffs for the genesis blockstake outputs.
 	for i, siafundOutput := range types.GenesisBlock.Transactions[0].BlockStakeOutputs {
 		sfid := types.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
 		sfod := modules.BlockStakeOutputDiff{
@@ -122,6 +122,16 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string) (*Consensus
 			BlockStakeOutput: siafundOutput,
 		}
 		cs.blockRoot.BlockStakeOutputDiffs = append(cs.blockRoot.BlockStakeOutputDiffs, sfod)
+	}
+	// Create the diffs for the genesis coin outputs.
+	for i, coinOutput := range types.GenesisBlock.Transactions[0].CoinOutputs {
+		sfid := types.GenesisBlock.Transactions[0].CoinOutputID(uint64(i))
+		cod := modules.CoinOutputDiff{
+			Direction:  modules.DiffApply,
+			ID:         sfid,
+			CoinOutput: coinOutput,
+		}
+		cs.blockRoot.CoinOutputDiffs = append(cs.blockRoot.CoinOutputDiffs, cod)
 	}
 
 	// Initialize the consensus persistence structures.

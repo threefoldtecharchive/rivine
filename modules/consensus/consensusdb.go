@@ -49,8 +49,8 @@ var (
 	// coin outputs.
 	CoinOutputs = []byte("CoinOutputs")
 
-	// SiafundOutputs is a database bucket that contains all of the unspent
-	// siafund outputs.
+	// BlockStakeOutputs is a database bucket that contains all of the unspent
+	// blockstake outputs.
 	BlockStakeOutputs = []byte("BlockStakeOutputs")
 )
 
@@ -80,9 +80,12 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 		return err
 	}
 
-	// Update the siafund output diffs map for the genesis block on disk. This
+	// Update the blockstake and coin output diffs map for the genesis block on disk. This
 	// needs to happen between the database being opened/initilized and the
 	// consensus set hash being calculated
+	for _, cod := range cs.blockRoot.CoinOutputDiffs {
+		commitCoinOutputDiff(tx, cod, modules.DiffApply)
+	}
 	for _, sfod := range cs.blockRoot.BlockStakeOutputDiffs {
 		commitBlockStakeOutputDiff(tx, sfod, modules.DiffApply)
 	}

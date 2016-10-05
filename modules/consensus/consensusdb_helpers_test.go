@@ -87,11 +87,11 @@ func (cs *ConsensusSet) dbGetBlockMap(id types.BlockID) (pb *processedBlock, err
 	return pb, err
 }
 
-// dbGetSiacoinOutput is a convenience function allowing getSiacoinOutput to be
+// dbGetCoinOutput is a convenience function allowing getCoinOutput to be
 // called without a bolt.Tx.
-func (cs *ConsensusSet) dbGetSiacoinOutput(id types.SiacoinOutputID) (sco types.SiacoinOutput, err error) {
+func (cs *ConsensusSet) dbGetCoinOutput(id types.CoinOutputID) (sco types.CoinOutput, err error) {
 	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		sco, err = getSiacoinOutput(tx, id)
+		sco, err = getCoinOutput(tx, id)
 		return nil
 	})
 	if dbErr != nil {
@@ -100,11 +100,11 @@ func (cs *ConsensusSet) dbGetSiacoinOutput(id types.SiacoinOutputID) (sco types.
 	return sco, err
 }
 
-// getArbSiacoinOutput is a convenience function fetching a single random
-// siacoin output from the database.
-func (cs *ConsensusSet) getArbSiacoinOutput() (scoid types.SiacoinOutputID, sco types.SiacoinOutput, err error) {
+// getArbCoinOutput is a convenience function fetching a single random
+// coin output from the database.
+func (cs *ConsensusSet) getArbCoinOutput() (scoid types.CoinOutputID, sco types.CoinOutput, err error) {
 	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		cursor := tx.Bucket(SiacoinOutputs).Cursor()
+		cursor := tx.Bucket(CoinOutputs).Cursor()
 		scoidBytes, scoBytes := cursor.First()
 		copy(scoid[:], scoidBytes)
 		return encoding.Unmarshal(scoBytes, &sco)
@@ -113,7 +113,7 @@ func (cs *ConsensusSet) getArbSiacoinOutput() (scoid types.SiacoinOutputID, sco 
 		panic(dbErr)
 	}
 	if err != nil {
-		return types.SiacoinOutputID{}, types.SiacoinOutput{}, err
+		return types.CoinOutputID{}, types.CoinOutput{}, err
 	}
 	return scoid, sco, nil
 }
@@ -141,32 +141,4 @@ func (cs *ConsensusSet) dbAddBlockStakeOutput(id types.BlockStakeOutputID, sfo t
 	if dbErr != nil {
 		panic(dbErr)
 	}
-}
-
-// dbGetDSCO is a convenience function allowing a delayed siacoin output to be
-// fetched without a bolt.Tx. An error is returned if the delayed output is not
-// found at the maturity height indicated by the input.
-func (cs *ConsensusSet) dbGetDSCO(height types.BlockHeight, id types.SiacoinOutputID) (dsco types.SiacoinOutput, err error) {
-	dbErr := cs.db.View(func(tx *bolt.Tx) error {
-		dscoBucketID := append(prefixDSCO, encoding.Marshal(height)...)
-		dscoBucket := tx.Bucket(dscoBucketID)
-		if dscoBucket == nil {
-			err = errNilItem
-			return nil
-		}
-		dscoBytes := dscoBucket.Get(id[:])
-		if dscoBytes == nil {
-			err = errNilItem
-			return nil
-		}
-		err = encoding.Unmarshal(dscoBytes, &dsco)
-		if err != nil {
-			panic(err)
-		}
-		return nil
-	})
-	if dbErr != nil {
-		panic(dbErr)
-	}
-	return dsco, err
 }

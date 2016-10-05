@@ -14,7 +14,7 @@ import (
 // applyCoinInputs takes all of the coin inputs in a transaction and
 // applies them to the state, updating the diffs in the processed block.
 func applyCoinInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
-	// Remove all siacoin inputs from the unspent siacoin outputs list.
+	// Remove all coin inputs from the unspent siacoin outputs list.
 	for _, sci := range t.CoinInputs {
 		sco, err := getCoinOutput(tx, sci.ParentID)
 		if build.DEBUG && err != nil {

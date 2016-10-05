@@ -118,8 +118,6 @@ func TestCommitNodeDiffs(t *testing.T) {
 	pb.FileContractDiffs = append(pb.FileContractDiffs, fcd1)
 	pb.SiafundOutputDiffs = append(pb.SiafundOutputDiffs, sfod0)
 	pb.SiafundOutputDiffs = append(pb.SiafundOutputDiffs, sfod1)
-	pb.DelayedSiacoinOutputDiffs = append(pb.DelayedSiacoinOutputDiffs, dscod)
-	pb.SiafundPoolDiffs = append(pb.SiafundPoolDiffs, sfpd)
 	_ = cst.cs.db.Update(func(tx *bolt.Tx) error {
 		createUpcomingDelayedOutputMaps(tx, pb, modules.DiffApply)
 		return nil
