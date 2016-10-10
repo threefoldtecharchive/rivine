@@ -76,9 +76,9 @@ independent components of Sia. This flag should only be used by developers or
 people who want to reduce overhead from unused modules. Modules are specified by
 their first letter. If the -M or --modules flag is not specified the default
 modules are run. The default modules are:
-	gateway, consensus set, transaction pool, wallet
+	gateway, consensus set, transaction pool, wallet, block creator
 This is equivalent to:
-	rivined -M cgtw
+	rivined -M cgtwb
 Below is a list of all the modules available.
 
 Gateway (g):
@@ -103,6 +103,12 @@ Wallet (w):
 	The wallet requires the consensus set and transaction pool.
 	Example:
 		siad -M gctw
+BlockCreator (b):
+	The block creator participates in the proof of block stake protocol
+	for creating new blocks. BlockStakes are required to participate.
+	The block creator requires the consensus set, transaction pool and wallet.
+	Example:
+		rivined -M gctwb
 Explorer (e):
 	The explorer provides statistics about the blockchain and can be
 	queried for information about specific transactions or other objects on
@@ -143,7 +149,7 @@ func main() {
 	root.Flags().BoolVarP(&globalConfig.Siad.NoBootstrap, "no-bootstrap", "", false, "disable bootstrapping on this run")
 	root.Flags().BoolVarP(&globalConfig.Siad.Profile, "profile", "", false, "enable profiling")
 	root.Flags().StringVarP(&globalConfig.Siad.RPCaddr, "rpc-addr", "", ":23112", "which port the gateway listens on")
-	root.Flags().StringVarP(&globalConfig.Siad.Modules, "modules", "M", "cgtw", "enabled modules, see 'rivined modules' for more info")
+	root.Flags().StringVarP(&globalConfig.Siad.Modules, "modules", "M", "cgtwb", "enabled modules, see 'rivined modules' for more info")
 	root.Flags().BoolVarP(&globalConfig.Siad.AuthenticateAPI, "authenticate-api", "", false, "enable API password protection")
 	root.Flags().BoolVarP(&globalConfig.Siad.AllowAPIBind, "disable-api-security", "", false, "allow rivined to listen on a non-localhost address (DANGEROUS)")
 

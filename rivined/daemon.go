@@ -13,6 +13,7 @@ import (
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/modules/blockcreator"
 	"github.com/rivine/rivine/modules/consensus"
 	"github.com/rivine/rivine/modules/explorer"
 	"github.com/rivine/rivine/modules/gateway"
@@ -63,7 +64,7 @@ func processNetAddr(addr string) string {
 // invalid module character.
 func processModules(modules string) (string, error) {
 	modules = strings.ToLower(modules)
-	validModules := "cgtwe"
+	validModules := "cgtweb"
 	invalidModules := modules
 	for _, m := range validModules {
 		invalidModules = strings.Replace(invalidModules, string(m), "", 1)
@@ -212,6 +213,22 @@ func startDaemon(config Config) (err error) {
 			}
 		}()
 
+	}
+	var b modules.BlockCreator
+	if strings.Contains(config.Siad.Modules, "b") {
+		i++
+		fmt.Printf("(%d/%d) Loading block creator...\n", i, len(config.Siad.Modules))
+		b, err = blockcreator.New(cs, tpool, w, filepath.Join(config.Siad.SiaDir, modules.BlockCreatorDir))
+		if err != nil {
+			return err
+		}
+		defer func() {
+			fmt.Println("Closing block creator...")
+			err := b.Close()
+			if err != nil {
+				fmt.Println("Error during block creator shutdown:", err)
+			}
+		}()
 	}
 
 	// Create the Sia API
