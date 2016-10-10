@@ -19,15 +19,15 @@ var (
 
 Units:
 The smallest unit of coins is the hasting. One coin is 10^24 hastings. Other supported units are:
-  p (pico,  10^-12 SC)
-  n (nano,  10^-9 SC)
-  u (micro, 10^-6 SC)
-  m (milli, 10^-3 SC)
+  p (pico,  10^-12)
+  n (nano,  10^-9 )
+  u (micro, 10^-6 )
+  m (milli, 10^-3 )
   C
-  K (kilo, 10^3 SC)
-  M (mega, 10^6 SC)
-  G (giga, 10^9 SC)
-  T (tera, 10^12 SC)`,
+  K (kilo,  10^3  )
+  M (mega,  10^6  )
+  G (giga,  10^9  )
+  T (tera,  10^12 )`,
 		Run: wrap(walletbalancecmd),
 	}
 
