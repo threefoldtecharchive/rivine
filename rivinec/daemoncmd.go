@@ -9,15 +9,15 @@ import (
 var (
 	stopCmd = &cobra.Command{
 		Use:   "stop",
-		Short: "Stop the Sia daemon",
-		Long:  "Stop the Sia daemon.",
+		Short: "Stop the rivine daemon",
+		Long:  "Stop the rivine daemon.",
 		Run:   wrap(stopcmd),
 	}
 
 	updateCmd = &cobra.Command{
 		Use:   "update",
-		Short: "Update Sia",
-		Long:  "Check for (and/or download) available updates for Sia.",
+		Short: "Update rivine",
+		Long:  "Check for (and/or download) available updates for rivine.",
 		Run:   wrap(updatecmd),
 	}
 
@@ -41,7 +41,7 @@ func stopcmd() {
 	if err != nil {
 		die("Could not stop daemon:", err)
 	}
-	fmt.Println("Sia daemon stopped.")
+	fmt.Println("rivine daemon stopped.")
 }
 
 func updatecmd() {
@@ -61,7 +61,7 @@ func updatecmd() {
 		fmt.Println("Could not apply update:", err)
 		return
 	}
-	fmt.Printf("Updated to version %s! Restart siad now.\n", update.Version)
+	fmt.Printf("Updated to version %s! Restart rivined now.\n", update.Version)
 }
 
 func updatecheckcmd() {
@@ -72,7 +72,7 @@ func updatecheckcmd() {
 		return
 	}
 	if update.Available {
-		fmt.Printf("A new release (v%s) is available! Run 'siac update' to install it.\n", update.Version)
+		fmt.Printf("A new release (v%s) is available! Run 'rivinec update' to install it.\n", update.Version)
 	} else {
 		fmt.Println("Up to date.")
 	}

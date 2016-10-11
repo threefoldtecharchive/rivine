@@ -102,7 +102,7 @@ Wallet (w):
 	The wallet stores and manages coins and blockstakes.
 	The wallet requires the consensus set and transaction pool.
 	Example:
-		siad -M gctw
+		rivined -M gctw
 Explorer (e):
 	The explorer provides statistics about the blockchain and can be
 	queried for information about specific transactions or other objects on

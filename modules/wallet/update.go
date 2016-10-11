@@ -256,6 +256,35 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			})
 			w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = sco.Value
 		}
+
+		for _, sfi := range txn.BlockStakeInputs {
+			_, exists := w.keys[sfi.UnlockConditions.UnlockHash()]
+			if exists {
+				relevant = true
+			}
+			sfiValue := w.historicOutputs[types.OutputID(sfi.ParentID)]
+			pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
+				FundType:       types.SpecifierBlockStakeInput,
+				WalletAddress:  exists,
+				RelatedAddress: sfi.UnlockConditions.UnlockHash(),
+				Value:          sfiValue,
+			})
+		}
+		for i, sfo := range txn.BlockStakeOutputs {
+			_, exists := w.keys[sfo.UnlockHash]
+			if exists {
+				relevant = true
+			}
+			pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
+				FundType:       types.SpecifierBlockStakeOutput,
+				MaturityHeight: w.consensusSetHeight,
+				WalletAddress:  exists,
+				RelatedAddress: sfo.UnlockHash,
+				Value:          sfo.Value,
+			})
+			w.historicOutputs[types.OutputID(txn.BlockStakeOutputID(uint64(i)))] = sfo.Value
+		}
+
 		for _, fee := range txn.MinerFees {
 			pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
 				FundType: types.SpecifierMinerFee,

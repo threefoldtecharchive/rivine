@@ -326,12 +326,9 @@ func wallettransactionscmd() {
 			fmt.Printf(" unconfirmed")
 		}
 		fmt.Printf("%67v%15.2f C", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
-		// For siafunds, need to avoid having a negative types.Currency.
-		if incomingBlockStakes.Cmp(outgoingBlockStakes) >= 0 {
-			fmt.Printf("%14v BS\n", incomingBlockStakes.Sub(outgoingBlockStakes))
-		} else {
-			fmt.Printf("-%14v BS\n", outgoingBlockStakes.Sub(incomingBlockStakes))
-		}
+		incomingBlockStakeBigInt := incomingBlockStakes.Big()
+		outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
+		fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
 	}
 }
 
