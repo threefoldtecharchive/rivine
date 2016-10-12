@@ -169,8 +169,8 @@ func (w *Wallet) Close() error {
 	return build.JoinErrors(errs, "; ")
 }
 
-// AllAddresses returns all addresses that the wallet is able to spend from,
-// including unseeded addresses. Addresses are returned sorted in byte-order.
+// AllAddresses returns all addresses that the wallet is able to spend from.
+// Addresses are returned sorted in byte-order.
 func (w *Wallet) AllAddresses() []types.UnlockHash {
 	w.mu.RLock()
 	defer w.mu.RUnlock()

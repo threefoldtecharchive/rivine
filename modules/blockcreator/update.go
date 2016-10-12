@@ -1,6 +1,7 @@
 package blockcreator
 
 import (
+	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
@@ -50,6 +51,22 @@ func (b *BlockCreator) ProcessConsensusChange(cc modules.ConsensusChange) {
 func (b *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransactions []types.Transaction, _ modules.ConsensusChange) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	// Edge case - if there are no transactions, set the block's transactions
+	// to nil and return.
+	if len(unconfirmedTransactions) == 0 {
+		b.unsolvedBlock.Transactions = nil
+		return
+	}
 
-	//TODO: modify the block we ware trying to create
+	// Add transactions to the block until the block size limit is reached.
+	// Transactions are assumed to be in a sensible order.
+	var i int
+	remainingSize := int(types.BlockSizeLimit - 5e3)
+	for i = range unconfirmedTransactions {
+		remainingSize -= len(encoding.Marshal(unconfirmedTransactions[i]))
+		if remainingSize < 0 {
+			break
+		}
+	}
+	b.unsolvedBlock.Transactions = unconfirmedTransactions[:i+1]
 }

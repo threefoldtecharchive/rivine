@@ -19,6 +19,8 @@ type BlockCreator struct {
 	tpool  modules.TransactionPool
 	wallet modules.Wallet
 
+	unsolvedBlock *types.Block
+
 	log        *persist.Logger
 	mu         sync.RWMutex
 	persist    persistence
@@ -82,6 +84,8 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 		tpool:  tpool,
 		wallet: w,
 
+		unsolvedBlock: &types.Block{},
+
 		persistDir: persistDir,
 	}
 
@@ -116,6 +120,9 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 	if err != nil {
 		return nil, errors.New("block creator could not save during startup: " + err.Error())
 	}
+
+	//Start the proof of block stake protocol
+	go b.SolveBlocks()
 
 	return b, nil
 }

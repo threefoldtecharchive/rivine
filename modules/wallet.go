@@ -65,18 +65,17 @@ type (
 		Value          types.Currency   `json:"value"`
 	}
 
-	// A ProcessedOutput is a siacoin output that appears in a transaction.
-	// Some outputs mature immediately, some are delayed, and some may never
-	// mature at all (in the event of storage proofs).
+	// A ProcessedOutput is a coin output that appears in a transaction.
+	// Some outputs mature immediately, some are delayed.
 	//
-	// Fund type can either be 'SiacoinOutput', 'SiafundOutput', 'ClaimOutput',
-	// 'MinerPayout', or 'MinerFee'. All outputs except the miner fee create
+	// Fund type can either be 'CoinOutput', 'BlockStakeOutput'
+	// or 'MinerFee'. All outputs except the miner fee create
 	// outputs accessible to an address. Miner fees are not spendable, and
 	// instead contribute to the block subsidy.
 	//
 	// MaturityHeight indicates at what block height the output becomes
-	// available. SiacoinInputs and SiafundInputs become available immediately.
-	// ClaimInputs and MinerPayouts become available after 144 confirmations.
+	// available. CoinInputs and BlockStakeInputs become available immediately.
+	// MinerPayouts become available after 144 confirmations.
 	ProcessedOutput struct {
 		FundType       types.Specifier   `json:"fundtype"`
 		MaturityHeight types.BlockHeight `json:"maturityheight"`
@@ -165,11 +164,11 @@ type (
 		// AddTransactionSignature adds a transaction signature to the
 		// transaction, returning the index of the signature within the
 		// transaction. The signature should already be valid, and shouldn't
-		// sign any of the inputs that were added by calling 'FundSiacoins' or
-		// 'FundSiafunds'.
+		// sign any of the inputs that were added by calling 'FundCoins' or
+		// 'FundBlockStakes'.
 		AddTransactionSignature(types.TransactionSignature) uint64
 
-		// Sign will sign any inputs added by 'FundSiacoins' or 'FundSiafunds'
+		// Sign will sign any inputs added by 'FundCoins' or 'FundBlockStakes'
 		// and return a transaction set that contains all parents prepended to
 		// the transaction. If more fields need to be added, a new transaction
 		// builder will need to be created.
