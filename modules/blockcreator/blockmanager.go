@@ -6,7 +6,7 @@ import (
 )
 
 // submitBlock accepts a block.
-func (m *BlockCreator) submitBlock() error {
+func (m *BlockCreator) submitBlock(blockToSubmit types.Block) error {
 	if err := m.tg.Add(); err != nil {
 		return err
 	}
@@ -14,23 +14,22 @@ func (m *BlockCreator) submitBlock() error {
 
 	// The first part needs to be wrapped in an anonymous function
 	// for lock safety.
-	b := types.Block{}
 	err := func() error {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 
 		// Block is going to be passed to external memory, but the memory pointed
 		// to by the transactions slice is still being modified - needs to be
-		// copied. Same with the memory being pointed to by the arb data slice.
-		txns := make([]types.Transaction, len(m.unsolvedBlock.Transactions))
-		copy(txns, m.unsolvedBlock.Transactions)
-		b.Transactions = txns
+		// copied.
+		txns := make([]types.Transaction, len(blockToSubmit.Transactions))
+		copy(txns, blockToSubmit.Transactions)
+		blockToSubmit.Transactions = txns
 
 		return nil
 	}()
 
 	// Give the block to the consensus set.
-	err = m.cs.AcceptBlock(b)
+	err = m.cs.AcceptBlock(blockToSubmit)
 
 	if err == modules.ErrNonExtendingBlock {
 		m.log.Println("Created a stale block - block appears valid but does not extend the blockchain")

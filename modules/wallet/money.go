@@ -27,6 +27,13 @@ func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalan
 	return
 }
 
+// UnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
+// address this wallet has an unlockhash for.
+func (w *Wallet) UnspentBlockStakeOutputs() map[types.BlockStakeOutputID]types.BlockStakeOutput {
+	//TODO: think about returning a copy
+	return w.blockstakeOutputs
+}
+
 // UnconfirmedBalance returns the number of outgoing and incoming coins in
 // the unconfirmed transaction set. Refund outputs are included in this
 // reporting.
