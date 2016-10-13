@@ -11,7 +11,7 @@ General
 protocol
 --------
 
-![POBSprotocoloverview](./POBSoverview.svg)
+![POBSprotocoloverview](https://rawgit.com/rivine/rivine/master/doc/POBSoverview.svg)
 
 
 Stakemodifier
@@ -50,4 +50,4 @@ address 0, that amount will not get lost but will be distributed over the BCNs.
 
 Difficulty
 ----------
-![POBSprotocoldifficulty](./POBSdifficulty.svg)
+![POBSprotocoldifficulty](https://rawgit.com/rivine/rivine/master/doc/POBSdifficulty.svg)
