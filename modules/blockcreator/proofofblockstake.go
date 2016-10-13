@@ -1,10 +1,10 @@
 package blockcreator
 
 import (
-	"encoding/json"
-	"fmt"
+	"math/big"
 	"time"
 
+	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/types"
 )
 
@@ -23,31 +23,44 @@ func (bc *BlockCreator) SolveBlocks() {
 		}
 
 		// TODO: where to put the lock exactly
-		unspentBlockStakeOutputs := bc.wallet.UnspentBlockStakeOutputs()
-		for outputID, ubso := range unspentBlockStakeOutputs {
-			ubsobytes, _ := json.Marshal(ubso)
-			fmt.Println("ROB-solving block for", outputID, string(ubsobytes))
-			// TODO: Take a copy here instead of in submitBlock?
-			// Solve the block.
-			// Try to solve a block for blocktimes of the next 10 seconds
-			now := time.Now().Unix()
-			for blocktime := now; blocktime < now+10; blocktime++ {
-
-				b := bc.solveBlock(outputID, blocktime)
-				if b != nil {
-					err := bc.submitBlock(*b)
-					if err != nil {
-						bc.log.Println("ERROR: An error occurred while submitting a solved block:", err)
-					}
-				}
+		// Try to solve a block for blocktimes of the next 10 seconds
+		now := time.Now().Unix()
+		b := bc.solveBlock(now, 10)
+		if b != nil {
+			err := bc.submitBlock(*b)
+			if err != nil {
+				bc.log.Println("ERROR: An error occurred while submitting a solved block:", err)
 			}
 		}
-
 		//sleep a while before recalculating
 		time.Sleep(8 * time.Second)
 	}
 }
 
-func (bc *BlockCreator) solveBlock(outputID types.BlockStakeOutputID, blocktime int64) (b *types.Block) {
+func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b *types.Block) {
+	//height := bc.persist.Height + 1
+	//TODO: properly calculate stakemodifier
+	stakemodifier := big.NewInt(0)
+	//TODO: sliding difficulty
+	difficulty := types.StartDifficulty
+	unspentBlockStakeOutputs := bc.wallet.UnspentBlockStakeOutputs()
+	//for outputID, ubso := range unspentBlockStakeOutputs {
+	for _, ubso := range unspentBlockStakeOutputs {
+		// TODO: look up the blockheight and transaction index of the unspent block stake output
+		k := 0
+		utxoindex := 0
+		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {
+			pobshash := crypto.HashAll(stakemodifier, k, utxoindex, blocktime)
+			pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
+			if pobshashvalue.Div(pobshashvalue, ubso.Value.Big()).Cmp(difficulty) == -1 {
+				// TODO: Take a copy of the unsolvedblock and it's transactions
+				// TODO: add blockcreator payouts
+				// TODO: use the unspent block stake output and send it to ourselves
+				return
+			}
+
+		}
+
+	}
 	return
 }

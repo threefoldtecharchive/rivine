@@ -68,8 +68,8 @@ func (x Currency) Add(y Currency) (c Currency) {
 
 // Big returns the value of c as a *big.Int. Importantly, it does not provide
 // access to the c's internal big.Int object, only a copy.
-func (c Currency) Big() *big.Int {
-	return new(big.Int).Set(&c.i)
+func (x Currency) Big() *big.Int {
+	return new(big.Int).Set(&x.i)
 }
 
 // Cmp compares two Currency values. The return value follows the convention

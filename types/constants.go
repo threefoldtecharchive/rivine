@@ -34,9 +34,12 @@ var (
 	GenesisCoinDistribution     []CoinOutput
 	GenesisBlock                Block
 
-	// The GenesisID is used in many places. Calculating it once saves lots of
+	// GenesisID is used in many places. Calculating it once saves lots of
 	// redundant computation.
 	GenesisID BlockID
+
+	// StartDifficulty is used in many places. Calculate it once.
+	StartDifficulty *big.Int
 )
 
 // init checks which build constant is in place and initializes the variables
@@ -373,4 +376,9 @@ func init() {
 	}
 	// Calculate the genesis ID.
 	GenesisID = GenesisBlock.ID()
+
+	//Calculate start difficulty
+	StartDifficulty = big.NewInt(0).Exp(big.NewInt(2), big.NewInt(256), nil)
+	StartDifficulty.Div(StartDifficulty, big.NewInt(int64(BlockFrequency)))
+	StartDifficulty.Div(StartDifficulty, BlockStakeCount.Big())
 }

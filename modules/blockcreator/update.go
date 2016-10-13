@@ -50,13 +50,13 @@ func (bc *BlockCreator) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 // ReceiveUpdatedUnconfirmedTransactions will replace the current unconfirmed
 // set of transactions with the input transactions.
-func (b *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransactions []types.Transaction, _ modules.ConsensusChange) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+func (bc *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransactions []types.Transaction, _ modules.ConsensusChange) {
+	bc.mu.Lock()
+	defer bc.mu.Unlock()
 	// Edge case - if there are no transactions, set the block's transactions
 	// to nil and return.
 	if len(unconfirmedTransactions) == 0 {
-		b.unsolvedBlock.Transactions = nil
+		bc.unsolvedBlock.Transactions = nil
 		return
 	}
 
@@ -70,5 +70,5 @@ func (b *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransact
 			break
 		}
 	}
-	b.unsolvedBlock.Transactions = unconfirmedTransactions[:i+1]
+	bc.unsolvedBlock.Transactions = unconfirmedTransactions[:i+1]
 }
