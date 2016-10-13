@@ -41,6 +41,7 @@ func (bc *BlockCreator) ProcessConsensusChange(cc modules.ConsensusChange) {
 	bc.unsolvedBlock.ParentID = cc.AppliedBlocks[len(cc.AppliedBlocks)-1].ID()
 
 	bc.persist.RecentChange = cc.ID
+	bc.persist.ParentID = bc.unsolvedBlock.ParentID
 	err := bc.save()
 	if err != nil {
 		bc.log.Println(err)

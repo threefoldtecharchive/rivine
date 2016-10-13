@@ -1,6 +1,8 @@
 package blockcreator
 
 import (
+	"encoding/json"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -27,6 +29,9 @@ func (bc *BlockCreator) SolveBlocks() {
 		now := time.Now().Unix()
 		b := bc.solveBlock(now, 10)
 		if b != nil {
+			bjson, _ := json.Marshal(b)
+			fmt.Println("Solved block:", string(bjson))
+
 			err := bc.submitBlock(*b)
 			if err != nil {
 				bc.log.Println("ERROR: An error occurred while submitting a solved block:", err)
@@ -53,10 +58,21 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 			pobshash := crypto.HashAll(stakemodifier, k, utxoindex, blocktime)
 			pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
 			if pobshashvalue.Div(pobshashvalue, ubso.Value.Big()).Cmp(difficulty) == -1 {
-				// TODO: Take a copy of the unsolvedblock and it's transactions
+				blockToSubmit := types.Block{
+					ParentID:  bc.unsolvedBlock.ParentID,
+					Timestamp: types.Timestamp(blocktime),
+				}
+				// Block is going to be passed to external memory, but the memory pointed
+				// to by the transactions slice is still being modified - needs to be
+				// copied.
+				txns := make([]types.Transaction, len(bc.unsolvedBlock.Transactions))
+				copy(txns, bc.unsolvedBlock.Transactions)
+				blockToSubmit.Transactions = txns
+
 				// TODO: add blockcreator payouts
 				// TODO: use the unspent block stake output and send it to ourselves
-				return
+				return &blockToSubmit
+
 			}
 
 		}

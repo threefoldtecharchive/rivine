@@ -45,7 +45,7 @@ func (b *BlockCreator) startupRescan() error {
 		b.log.Println("Performing a block creator rescan.")
 		b.persist.RecentChange = modules.ConsensusChangeBeginning
 		b.persist.Height = 0
-		b.persist.Target = types.Target{}
+		b.persist.ParentID = types.BlockID{}
 		return b.save()
 	}()
 	if err != nil {
@@ -93,6 +93,8 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 	if err != nil {
 		return nil, errors.New("block creator persistence startup failed: " + err.Error())
 	}
+
+	b.unsolvedBlock.ParentID = b.persist.ParentID
 
 	err = b.cs.ConsensusSetSubscribe(b, b.persist.RecentChange)
 	if err == modules.ErrInvalidConsensusChangeID {

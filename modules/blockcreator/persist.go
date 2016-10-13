@@ -26,8 +26,7 @@ type (
 	persistence struct {
 		RecentChange modules.ConsensusChangeID
 		Height       types.BlockHeight
-		Target       types.Target
-		Address      types.UnlockHash
+		ParentID     types.BlockID
 	}
 )
 
