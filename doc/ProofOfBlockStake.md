@@ -13,6 +13,7 @@ protocol
 
 ![POBSprotocoloverview](https://rawgit.com/rivine/rivine/master/doc/POBSoverview.svg)
 
+The hashfunction used is 32-byte BLAKE2b hash. To compare the hash with the difficulty it is interpreted as a big-endian unsigned integer.
 
 Stakemodifier
 -------------
