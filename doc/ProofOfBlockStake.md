@@ -11,7 +11,7 @@ General
 protocol
 --------
 
-![POBSprotocoloverview](./POBSoverview.png)
+![POBSprotocoloverview](./POBSoverview.svg)
 
 
 Stakemodifier
@@ -50,9 +50,4 @@ address 0, that amount will not get lost but will be distributed over the BCNs.
 
 Difficulty
 ----------
-The difficulty is adapted every block and calculated from the last X minted blocks.
-
-2^256/1000000*600 is the start difficulty.
-Difficulty = Start Difficulty * (600 * X)/MeasureTime(X)
-
-where MeasureTime(X) is the time in seconds between Block N-1 and Block N-(1+X)
+![POBSprotocoldifficulty](./POBSdifficulty.svg)
