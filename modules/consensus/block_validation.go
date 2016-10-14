@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"bytes"
 	"errors"
 
 	"github.com/rivine/rivine/encoding"
@@ -49,8 +48,8 @@ func checkMinerPayouts(b types.Block, height types.BlockHeight) bool {
 
 // checkTarget returns true if the block's ID meets the given target.
 func checkTarget(b types.Block, target types.Target) bool {
-	blockHash := b.ID()
-	return bytes.Compare(target[:], blockHash[:]) >= 0
+	// TODO: validate pobs target
+	return true
 }
 
 // ValidateBlock validates a block against a minimum timestamp, a block target,

@@ -78,7 +78,6 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 	}
 
 	// Assemble the block creator.
-	// TODO:  The wallet is likely not unlocked yet so we need a way to monitor the wallet for usable BlockStake UTXO's
 	b := &BlockCreator{
 		cs:     cs,
 		tpool:  tpool,

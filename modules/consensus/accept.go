@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"bytes"
 	"errors"
 	"time"
 
@@ -63,12 +62,6 @@ func (cs *ConsensusSet) validateHeaderAndBlock(tx dbTx, b types.Block) error {
 	return cs.blockValidator.ValidateBlock(b, minTimestamp, parent.ChildTarget, parent.Height+1)
 }
 
-// checkHeaderTarget returns true if the header's ID meets the given target.
-func checkHeaderTarget(h types.BlockHeader, target types.Target) bool {
-	blockHash := h.ID()
-	return bytes.Compare(target[:], blockHash[:]) >= 0
-}
-
 // validateHeader does some early, low computation verification on the header
 // to determine if the block should be downloaded. Callers should not assume
 // that validation will happen in a particular order.
@@ -100,11 +93,6 @@ func (cs *ConsensusSet) validateHeader(tx dbTx, h types.BlockHeader) error {
 	err := cs.marshaler.Unmarshal(parentBytes, &parent)
 	if err != nil {
 		return err
-	}
-
-	// Check that the target of the new block is sufficient.
-	if !checkHeaderTarget(h, parent.ChildTarget) {
-		return modules.ErrBlockUnsolved
 	}
 
 	// TODO: check if the block is a non extending block once headers-first
