@@ -14,8 +14,15 @@ import (
 
 var BLOCKDELAY = 2000 //to calculate the stakemodifier
 var PERIOD = 60       //period time in seconds on average between two blocks
+var DIFF_REFRESH = 50
+var DIFF_STRENGTH = 500
 
 type hash [32]byte
+
+type blockchainitem struct {
+	blockhash hash
+	timestamp int64
+}
 
 type UTXO struct {
 	blockHeight uint32
@@ -35,11 +42,10 @@ type BSParameters struct {
 func main() {
 	//test the functions
 	var bsparameters BSParameters
-	hashlist := CalcGenesisBlocks()
-	bsparameters.UpdateStakeModifier(hashlist)
 
 	timestamp := time.Now().Unix()
-
+	blockchain := CalcGenesisBlocks(timestamp)
+	bsparameters.UpdateStakeModifier(blockchain)
 	const NUMOFBCN = 20
 
 	var Wallets [NUMOFBCN]wallet
@@ -59,14 +65,19 @@ func main() {
 		}
 	}
 	fmt.Println("TotalBS", TotalBS)
-	bsparameters.UpdateDifficulty(PERIOD, TotalBS)
+	StartDifficulty := *new(big.Int).Div(new(big.Int).Div(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(int64(PERIOD))), big.NewInt(int64(TotalBS)))
+	bsparameters.difficulty = StartDifficulty
 
 	counter := 0
 	blockhigh := 0
 
-	for i := 0; i < (3600 * 24); i++ {
+	for i := 0; i < (3600 * 24 * 30); i++ {
 		blockfound := false
-		for j := 0; j < NUMOFBCN; j++ {
+		numofbcns := NUMOFBCN
+		if i > (60000) {
+			numofbcns -= 5
+		}
+		for j := 0; j < numofbcns; j++ {
 			winner := Wallets[j].CheckWinner(timestamp+int64(i), bsparameters)
 			if winner >= 0 {
 				//fmt.Println("BCN", j, "won with UTXO :", winner)
@@ -77,30 +88,42 @@ func main() {
 			}
 		}
 		if blockfound {
+			var buffer bytes.Buffer
+			buffer.WriteString("random" + strconv.Itoa(i))
+			blockchain = append(blockchain, blockchainitem{sha256.Sum256(buffer.Bytes()), timestamp + int64(i)})
+			bsparameters.UpdateStakeModifier(blockchain)
 			//fmt.Println("block found in second: ", i)
 			counter++
+			if counter > DIFF_STRENGTH && counter%DIFF_REFRESH == 0 {
+				bsparameters.UpdateDifficulty(&StartDifficulty, PERIOD, DIFF_STRENGTH, blockchain)
+				fmt.Println(counter, ",", i/PERIOD)
+			}
 		}
 	}
 	fmt.Println("num of blocks found", counter, "not unique", blockhigh)
 }
 
-//calculate the stakemodifier out of the hashlist. automatically takes the last block as reference.
-func (b *BSParameters) UpdateStakeModifier(hashlist []hash) {
-	if len(hashlist) < (BLOCKDELAY + 255) {
-		panic("hashlist is not long enough")
+//calculate the stakemodifier out of the blockchain. automatically takes the last block as reference.
+func (b *BSParameters) UpdateStakeModifier(blockchain []blockchainitem) {
+	if len(blockchain) < (BLOCKDELAY + 255) {
+		panic("blockchain is not long enough")
 	}
-	j := len(hashlist) - BLOCKDELAY
+	j := len(blockchain) - BLOCKDELAY
 	for i := 0; i < 256; i++ {
 		if i%8 == 0 {
 			b.stakemodifier[i/8] = 0
 		}
-		b.stakemodifier[i/8] += hashlist[j-i][i/8] & (1 << (uint)(i%8))
+		b.stakemodifier[i/8] += blockchain[j-i].blockhash[i/8] & (1 << (uint)(i%8))
 	}
 }
-
-func (b *BSParameters) UpdateDifficulty(period int, totalbs uint64 /*blockchain interval*/) {
-	b.difficulty = *new(big.Int).Div(new(big.Int).Div(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(int64(period))), big.NewInt(int64(totalbs)))
-
+func (b *BSParameters) UpdateDifficulty(StartDifficulty *big.Int, period int, diffstrenght int, blockchain []blockchainitem) {
+	if len(blockchain) < (diffstrenght) {
+		panic("blockchain is not long enough")
+	}
+	diff := blockchain[len(blockchain)-1].timestamp - blockchain[len(blockchain)-diffstrenght-1].timestamp
+	//fmt.Println(diff)
+	b.difficulty = *new(big.Int).Div(new(big.Int).Mul(StartDifficulty, big.NewInt(diff)), new(big.Int).Mul(big.NewInt(int64(period)), big.NewInt(int64(diffstrenght))))
+	fmt.Println(float64(diff) / float64(period) / float64(diffstrenght))
 }
 
 //checks if this wallet has a winner for this timestamp
@@ -142,12 +165,12 @@ func BlockCreation(stakemodifier hash, blocknumber uint32, indexutxo uint32, tim
 }
 
 //calculates the hashes of the blocks before the genesis block in a deterministic way.
-func CalcGenesisBlocks() []hash {
-	var hashlist []hash
+func CalcGenesisBlocks(timestamp int64) []blockchainitem {
+	var blockchain []blockchainitem
 	for block := -(BLOCKDELAY + 255); block < 1; block++ {
 		var buffer bytes.Buffer
 		buffer.WriteString("genesis" + strconv.Itoa(block))
-		hashlist = append(hashlist, sha256.Sum256(buffer.Bytes()))
+		blockchain = append(blockchain, blockchainitem{sha256.Sum256(buffer.Bytes()), timestamp})
 	}
-	return hashlist
+	return blockchain
 }
