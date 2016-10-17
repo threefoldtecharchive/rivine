@@ -115,7 +115,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 			w.processedTransactions = append(w.processedTransactions, minerPT)
 			w.processedTransactionMap[minerPT.TransactionID] = &w.processedTransactions[len(w.processedTransactions)-1]
 		}
-		for _, txn := range block.Transactions {
+		for ti, txn := range block.Transactions {
 			relevant := false
 			pt := modules.ProcessedTransaction{
 				Transaction:           txn,
@@ -174,7 +174,17 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					RelatedAddress: sfo.UnlockHash,
 					Value:          sfo.Value,
 				})
-				w.historicOutputs[types.OutputID(txn.BlockStakeOutputID(uint64(i)))] = sfo.Value
+				bsoid := txn.BlockStakeOutputID(uint64(i))
+				_, exists = w.blockstakeOutputs[bsoid]
+				if exists {
+					w.unspentblockstakeoutputs[bsoid] = types.UnspentBlockStakeOutput{
+						BlockHeight:      w.consensusSetHeight,
+						TransactionIndex: uint64(ti),
+						OutputIndex:      uint64(i),
+						Value:            sfo.Value,
+					}
+				}
+				w.historicOutputs[types.OutputID(bsoid)] = sfo.Value
 			}
 			for _, fee := range txn.MinerFees {
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{

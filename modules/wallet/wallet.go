@@ -70,11 +70,12 @@ type Wallet struct {
 	//
 	// coinOutputs, blockstakeOutputs, and spentOutputs are kept so that they
 	// can be scanned when trying to fund transactions.
-	seeds             []modules.Seed
-	keys              map[types.UnlockHash]spendableKey
-	coinOutputs       map[types.CoinOutputID]types.CoinOutput
-	blockstakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
-	spentOutputs      map[types.OutputID]types.BlockHeight
+	seeds                    []modules.Seed
+	keys                     map[types.UnlockHash]spendableKey
+	coinOutputs              map[types.CoinOutputID]types.CoinOutput
+	blockstakeOutputs        map[types.BlockStakeOutputID]types.BlockStakeOutput
+	unspentblockstakeoutputs map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput
+	spentOutputs             map[types.OutputID]types.BlockHeight
 
 	// The following fields are kept to track transaction history.
 	// processedTransactions are stored in chronological order, and have a map for
@@ -122,10 +123,11 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		cs:    cs,
 		tpool: tpool,
 
-		keys:              make(map[types.UnlockHash]spendableKey),
-		coinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
-		blockstakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
-		spentOutputs:      make(map[types.OutputID]types.BlockHeight),
+		keys:                     make(map[types.UnlockHash]spendableKey),
+		coinOutputs:              make(map[types.CoinOutputID]types.CoinOutput),
+		blockstakeOutputs:        make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+		spentOutputs:             make(map[types.OutputID]types.BlockHeight),
+		unspentblockstakeoutputs: make(map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput),
 
 		processedTransactionMap: make(map[types.TransactionID]*modules.ProcessedTransaction),
 
@@ -181,4 +183,16 @@ func (w *Wallet) AllAddresses() []types.UnlockHash {
 	}
 	sort.Sort(addrs)
 	return addrs
+}
+
+// GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
+// address this wallet has an unlockhash for.
+func (w *Wallet) GetUnspentBlockStakeOutputs() (unspent []types.UnspentBlockStakeOutput) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	unspent = make([]types.UnspentBlockStakeOutput, 0, len(w.blockstakeOutputs))
+	for usbsoid := range w.blockstakeOutputs {
+		unspent = append(unspent, w.unspentblockstakeoutputs[usbsoid])
+	}
+	return
 }

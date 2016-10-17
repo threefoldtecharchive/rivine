@@ -48,14 +48,11 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 	stakemodifier := big.NewInt(0)
 	//TODO: sliding difficulty
 	difficulty := types.StartDifficulty
-	unspentBlockStakeOutputs := bc.wallet.UnspentBlockStakeOutputs()
-	//for outputID, ubso := range unspentBlockStakeOutputs {
+	unspentBlockStakeOutputs := bc.wallet.GetUnspentBlockStakeOutputs()
 	for _, ubso := range unspentBlockStakeOutputs {
 		// TODO: look up the blockheight and transaction index of the unspent block stake output
-		k := 0
-		utxoindex := 0
 		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {
-			pobshash := crypto.HashAll(stakemodifier, k, utxoindex, blocktime)
+			pobshash := crypto.HashAll(stakemodifier, ubso.BlockHeight, ubso.TransactionIndex, ubso.OutputIndex, blocktime)
 			pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
 			if pobshashvalue.Div(pobshashvalue, ubso.Value.Big()).Cmp(difficulty) == -1 {
 				blockToSubmit := types.Block{

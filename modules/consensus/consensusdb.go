@@ -298,7 +298,7 @@ func getBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) (types.BlockS
 // if the blockstake output is already in the database.
 func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.BlockStakeOutput) {
 	blockstakeOutputs := tx.Bucket(BlockStakeOutputs)
-	// Sanity check - should not be adding a siafund output with a value of
+	// Sanity check - should not be adding a blockstake output with a value of
 	// zero.
 	if build.DEBUG && sfo.Value.IsZero() {
 		panic("zero value blockstake being added")

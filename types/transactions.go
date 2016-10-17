@@ -80,7 +80,7 @@ type (
 		UnlockConditions UnlockConditions `json:"unlockconditions"`
 	}
 
-	// A SiacoinOutput holds a volume of siacoins. Outputs must be spent
+	// A CoinOutput holds a volume of siacoins. Outputs must be spent
 	// atomically; that is, they must all be spent in the same transaction. The
 	// UnlockHash is the hash of the UnlockConditions that must be fulfilled
 	// in order to spend the output.
@@ -106,6 +106,15 @@ type (
 	BlockStakeOutput struct {
 		Value      Currency   `json:"value"`
 		UnlockHash UnlockHash `json:"unlockhash"`
+	}
+
+	// UnspentBlockStakeOutput gives the block height, the transaction index, the output index and the value to uniquely identify a blockstake output.
+	// These indexes and the value are required for the POBS protocol.
+	UnspentBlockStakeOutput struct {
+		BlockHeight      BlockHeight
+		TransactionIndex uint64
+		OutputIndex      uint64
+		Value            Currency
 	}
 )
 

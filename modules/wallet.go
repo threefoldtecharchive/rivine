@@ -292,9 +292,9 @@ type (
 		// refund transactions.
 		ConfirmedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
 
-		// UnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
+		// GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 		// address this wallet has an unlockhash for.
-		UnspentBlockStakeOutputs() map[types.BlockStakeOutputID]types.BlockStakeOutput
+		GetUnspentBlockStakeOutputs() []types.UnspentBlockStakeOutput
 
 		// UnconfirmedBalance returns the unconfirmed balance of the wallet.
 		// Outgoing funds and incoming funds are reported separately. Refund
