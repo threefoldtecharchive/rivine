@@ -53,14 +53,14 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 		// Try all timestamps for the next 10 seconds
 		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {
 			// Calculate the hash for the given unspent output and timestamp
-			pobshash := crypto.HashAll(stakemodifier, ubso.BlockHeight, ubso.TransactionIndex, ubso.OutputIndex, blocktime)
+			pobshash := crypto.HashAll(stakemodifier, ubso.Indexes.BlockHeight, ubso.Indexes.TransactionIndex, ubso.Indexes.OutputIndex, blocktime)
 			// Check if it meets the difficulty
 			pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
 			if pobshashvalue.Div(pobshashvalue, ubso.Value.Big()).Cmp(difficulty) == -1 {
 				blockToSubmit := types.Block{
 					ParentID:   bc.unsolvedBlock.ParentID,
 					Timestamp:  types.Timestamp(blocktime),
-					POBSOutput: ubso,
+					POBSOutput: ubso.Indexes,
 				}
 				// Block is going to be passed to external memory, but the memory pointed
 				// to by the transactions slice is still being modified - needs to be

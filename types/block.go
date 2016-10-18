@@ -15,8 +15,8 @@ import (
 
 const (
 	// BlockHeaderSize is the size, in bytes, of a block header.
-	// 32 (ParentID) + 8 (Nonce) + 8 (Timestamp) + 32 (MerkleRoot)
-	BlockHeaderSize = 80
+	// 32 (ParentID) + 8 (Timestamp) + 24 (8 BlockHeight + 8 TransactionIndex + 8 OutputIndex) +  32 (MerkleRoot)
+	BlockHeaderSize = 104
 )
 
 type (
@@ -24,23 +24,23 @@ type (
 	// previous block. Blocks reference the ID of the previous block (their
 	// "parent"), creating the linked-list commonly known as the blockchain. Their
 	// primary function is to bundle together transactions on the network. Blocks
-	// are created by "miners," who collect transactions from other nodes, and
+	// are created by "blockcreators," who collect transactions from other nodes, and
 	// then try to pick a Nonce that results in a block whose BlockID is below a
 	// given Target.
 	Block struct {
 		ParentID     BlockID                 `json:"parentid"`
-		POBSOutput   UnspentBlockStakeOutput `json:"pobs"`
+		POBSOutput   BlockStakeOutputIndexes `json:"pobsindexes"`
 		Timestamp    Timestamp               `json:"timestamp"`
 		MinerPayouts []CoinOutput            `json:"minerpayouts"`
 		Transactions []Transaction           `json:"transactions"`
 	}
 
-	// A BlockHeader, when encoded, is an 80-byte constant size field
+	// A BlockHeader, when encoded, is an 107-byte constant size field
 	// containing enough information to do headers-first block downloading.
 	// Hashing the header results in the block ID.
 	BlockHeader struct {
 		ParentID   BlockID                 `json:"parentid"`
-		POBSOutput UnspentBlockStakeOutput `json:"pobs"`
+		POBSOutput BlockStakeOutputIndexes `json:"pobsindexes"`
 		Timestamp  Timestamp               `json:"timestamp"`
 		MerkleRoot crypto.Hash             `json:"merkleroot"`
 	}

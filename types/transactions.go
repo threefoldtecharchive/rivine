@@ -108,13 +108,19 @@ type (
 		UnlockHash UnlockHash `json:"unlockhash"`
 	}
 
-	// UnspentBlockStakeOutput gives the block height, the transaction index, the output index and the value to uniquely identify a blockstake output.
-	// These indexes and the value are required for the POBS protocol.
+	// UnspentBlockStakeOutput groups the BlockStakeOutputID, the block height, the transaction index, the output index and the value
 	UnspentBlockStakeOutput struct {
+		BlockStakeOutputID BlockStakeOutputID
+		Indexes            BlockStakeOutputIndexes
+		Value              Currency
+	}
+
+	// BlockStakeOutputIndexes groups the the block height, the transaction index and the output index to uniquely identify a blockstake output.
+	// These indexes and the value are required for the POBS protocol.
+	BlockStakeOutputIndexes struct {
 		BlockHeight      BlockHeight
 		TransactionIndex uint64
 		OutputIndex      uint64
-		Value            Currency
 	}
 )
 
