@@ -90,14 +90,14 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 
 	// Spend too many siacoins.
 	tooManyCoins := types.SiacoinPrecision.Mul64(1e12)
-	_, err = wt.wallet.SendSiacoins(tooManyCoins, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(tooManyCoins, types.UnlockHash{})
 	if err != modules.ErrLowBalance {
 		t.Error("low balance err not returned after attempting to send too many coins")
 	}
 
 	// Spend a reasonable amount of siacoins.
 	reasonableCoins := types.SiacoinPrecision.Mul64(100e3)
-	_, err = wt.wallet.SendSiacoins(reasonableCoins, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(reasonableCoins, types.UnlockHash{})
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
@@ -118,11 +118,11 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 
 	// Spend more than half of the coins twice.
 	halfPlus := types.SiacoinPrecision.Mul64(200e3)
-	_, err = wt.wallet.SendSiacoins(halfPlus, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{})
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
-	_, err = wt.wallet.SendSiacoins(halfPlus, types.UnlockHash{1})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{1})
 	if err != modules.ErrIncompleteTransactions {
 		t.Error("wallet appears to be reusing outputs when building transactions: ", err)
 	}
@@ -141,12 +141,12 @@ func TestIntegrationSpendUnconfirmed(t *testing.T) {
 
 	// Spend the only output.
 	halfPlus := types.SiacoinPrecision.Mul64(200e3)
-	_, err = wt.wallet.SendSiacoins(halfPlus, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{})
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
 	someMore := types.SiacoinPrecision.Mul64(75e3)
-	_, err = wt.wallet.SendSiacoins(someMore, types.UnlockHash{1})
+	_, err = wt.wallet.SendCoins(someMore, types.UnlockHash{1})
 	if err != nil {
 		t.Error("wallet appears to be struggling to spend unconfirmed outputs")
 	}
@@ -159,8 +159,8 @@ func TestIntegrationSortedOutputsSorting(t *testing.T) {
 		t.SkipNow()
 	}
 	so := sortedOutputs{
-		ids: []types.SiacoinOutputID{{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}},
-		outputs: []types.SiacoinOutput{
+		ids: []types.CoinOutputID{{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}},
+		outputs: []types.CoinOutput{
 			{Value: types.NewCurrency64(2)},
 			{Value: types.NewCurrency64(3)},
 			{Value: types.NewCurrency64(4)},
@@ -173,7 +173,7 @@ func TestIntegrationSortedOutputsSorting(t *testing.T) {
 	}
 	sort.Sort(so)
 
-	expectedIDSorting := []types.SiacoinOutputID{{5}, {6}, {0}, {1}, {2}, {7}, {4}, {3}}
+	expectedIDSorting := []types.CoinOutputID{{5}, {6}, {0}, {1}, {2}, {7}, {4}, {3}}
 	for i := uint64(0); i < 8; i++ {
 		if so.ids[i] != expectedIDSorting[i] {
 			t.Error("an id is out of place: ", i)

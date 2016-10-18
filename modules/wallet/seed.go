@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	seedFilePrefix = "Sia Wallet Encrypted Backup Seed - "
+	seedFilePrefix = "Rivine Wallet Encrypted Backup Seed - "
 	seedFileSuffix = ".seed"
 )
 
