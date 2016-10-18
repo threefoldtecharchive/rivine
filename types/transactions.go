@@ -131,8 +131,8 @@ func (t Transaction) ID() TransactionID {
 	))
 }
 
-// SiacoinOutputID returns the ID of a siacoin output at the given index,
-// which is calculated by hashing the concatenation of the SiacoinOutput
+// CoinOutputID returns the ID of a coin output at the given index,
+// which is calculated by hashing the concatenation of the CoinOutput
 // Specifier, all of the fields in the transaction (except the signatures),
 // and output index.
 func (t Transaction) CoinOutputID(i uint64) CoinOutputID {

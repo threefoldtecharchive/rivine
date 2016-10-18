@@ -28,26 +28,25 @@ type (
 	// then try to pick a Nonce that results in a block whose BlockID is below a
 	// given Target.
 	Block struct {
-		ParentID     BlockID       `json:"parentid"`
-		Nonce        BlockNonce    `json:"nonce"`
-		Timestamp    Timestamp     `json:"timestamp"`
-		MinerPayouts []CoinOutput  `json:"minerpayouts"`
-		Transactions []Transaction `json:"transactions"`
+		ParentID     BlockID                 `json:"parentid"`
+		POBSOutput   UnspentBlockStakeOutput `json:"pobs"`
+		Timestamp    Timestamp               `json:"timestamp"`
+		MinerPayouts []CoinOutput            `json:"minerpayouts"`
+		Transactions []Transaction           `json:"transactions"`
 	}
 
 	// A BlockHeader, when encoded, is an 80-byte constant size field
 	// containing enough information to do headers-first block downloading.
 	// Hashing the header results in the block ID.
 	BlockHeader struct {
-		ParentID   BlockID     `json:"parentid"`
-		Nonce      BlockNonce  `json:"nonce"`
-		Timestamp  Timestamp   `json:"timestamp"`
-		MerkleRoot crypto.Hash `json:"merkleroot"`
+		ParentID   BlockID                 `json:"parentid"`
+		POBSOutput UnspentBlockStakeOutput `json:"pobs"`
+		Timestamp  Timestamp               `json:"timestamp"`
+		MerkleRoot crypto.Hash             `json:"merkleroot"`
 	}
 
 	BlockHeight uint64
 	BlockID     crypto.Hash
-	BlockNonce  [8]byte
 )
 
 // ID returns the ID of a Block, which is calculated by hashing the header.
@@ -59,7 +58,7 @@ func (h BlockHeader) ID() BlockID {
 func (b Block) Header() BlockHeader {
 	return BlockHeader{
 		ParentID:   b.ParentID,
-		Nonce:      b.Nonce,
+		POBSOutput: b.POBSOutput,
 		Timestamp:  b.Timestamp,
 		MerkleRoot: b.MerkleRoot(),
 	}
@@ -99,19 +98,17 @@ func (b Block) MinerPayoutID(i uint64) CoinOutputID {
 // MarshalSia implements the encoding.SiaMarshaler interface.
 func (b Block) MarshalSia(w io.Writer) error {
 	w.Write(b.ParentID[:])
-	w.Write(b.Nonce[:])
 	w.Write(encoding.EncUint64(uint64(b.Timestamp)))
-	return encoding.NewEncoder(w).EncodeAll(b.MinerPayouts, b.Transactions)
+	return encoding.NewEncoder(w).EncodeAll(b.POBSOutput, b.MinerPayouts, b.Transactions)
 }
 
 // UnmarshalSia implements the encoding.SiaUnmarshaler interface.
 func (b *Block) UnmarshalSia(r io.Reader) error {
 	io.ReadFull(r, b.ParentID[:])
-	io.ReadFull(r, b.Nonce[:])
 	tsBytes := make([]byte, 8)
 	io.ReadFull(r, tsBytes)
 	b.Timestamp = Timestamp(encoding.DecUint64(tsBytes))
-	return encoding.NewDecoder(r).DecodeAll(&b.MinerPayouts, &b.Transactions)
+	return encoding.NewDecoder(r).DecodeAll(&b.POBSOutput, &b.MinerPayouts, &b.Transactions)
 }
 
 // MarshalJSON marshales a block id as a hex string.

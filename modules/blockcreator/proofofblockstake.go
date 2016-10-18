@@ -2,7 +2,6 @@ package blockcreator
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -30,7 +29,7 @@ func (bc *BlockCreator) SolveBlocks() {
 		b := bc.solveBlock(now, 10)
 		if b != nil {
 			bjson, _ := json.Marshal(b)
-			fmt.Println("Solved block:", string(bjson))
+			bc.log.Debugln("Solved block:", string(bjson))
 
 			err := bc.submitBlock(*b)
 			if err != nil {
@@ -48,16 +47,20 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 	stakemodifier := big.NewInt(0)
 	//TODO: sliding difficulty
 	difficulty := types.StartDifficulty
+	// Try all unspent blockstake outputs
 	unspentBlockStakeOutputs := bc.wallet.GetUnspentBlockStakeOutputs()
 	for _, ubso := range unspentBlockStakeOutputs {
-		// TODO: look up the blockheight and transaction index of the unspent block stake output
+		// Try all timestamps for the next 10 seconds
 		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {
+			// Calculate the hash for the given unspent output and timestamp
 			pobshash := crypto.HashAll(stakemodifier, ubso.BlockHeight, ubso.TransactionIndex, ubso.OutputIndex, blocktime)
+			// Check if it meets the difficulty
 			pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
 			if pobshashvalue.Div(pobshashvalue, ubso.Value.Big()).Cmp(difficulty) == -1 {
 				blockToSubmit := types.Block{
-					ParentID:  bc.unsolvedBlock.ParentID,
-					Timestamp: types.Timestamp(blocktime),
+					ParentID:   bc.unsolvedBlock.ParentID,
+					Timestamp:  types.Timestamp(blocktime),
+					POBSOutput: ubso,
 				}
 				// Block is going to be passed to external memory, but the memory pointed
 				// to by the transactions slice is still being modified - needs to be
