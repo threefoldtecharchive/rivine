@@ -50,7 +50,7 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 	// Try all unspent blockstake outputs
 	unspentBlockStakeOutputs := bc.wallet.GetUnspentBlockStakeOutputs()
 	for _, ubso := range unspentBlockStakeOutputs {
-		// Try all timestamps for the next 10 seconds
+		// Try all timestamps for this timerange
 		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {
 			// Calculate the hash for the given unspent output and timestamp
 			pobshash := crypto.HashAll(stakemodifier, ubso.Indexes.BlockHeight, ubso.Indexes.TransactionIndex, ubso.Indexes.OutputIndex, blocktime)
