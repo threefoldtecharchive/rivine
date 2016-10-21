@@ -48,6 +48,11 @@ value from the 3 fixed transaction from address 1.
 If somebody makes a transaction error or does a test and send an amount to
 address 0, that amount will not get lost but will be distributed over the BCNs.
 
+### Maturity of collected transaction fees
+
+Coins received through the collection of transaction fees during block creation can't be spent until the block has 144 confirmations. Transactions that try to spend a block creation fee output before this will be rejected.
+
+The reason for this is that sometimes the block chain forks, blocks that were valid become invalid, and the block creation reward in those blocks is lost. That's just an unavoidable part of how blockchains works, and it can sometimes happen even when there is no one attacking the network. If there was no maturation time, then whenever a fork happened, everyone who received coins that were collected on an unlucky fork (possibly through many intermediaries) would have their coins disappear, even without any sort of double-spend or other attack. On long forks, thousands of people could find coins disappearing from their wallets, even though there is no one actually attacking them and they had no reason to be suspicious of the money they were receiving. For example, without a maturation time, a block creator might deposit 25 coins into an EWallet, and if I withdraw money from a completely unrelated account on the same EWallet, my withdrawn money might just disappear if there is a fork and I'm unlucky enough to withdraw coins that have been "tainted" by the block creator's now-invalid coins. Due to the way this sort of taint tends to "infect" transactions, far more than 25 coins per block would be affected. Each invalidated block could cause transactions collectively worth hundreds of coins to be reversed. The maturation time makes it impossible for anyone to lose coins by accident like this as long as a fork doesn't last longer than 144 blocks.
 
 Difficulty
 ----------
