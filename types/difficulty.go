@@ -15,7 +15,10 @@ import (
 )
 
 type (
-	// A Difficulty represents a number in #BSs.
+	// A Difficulty represents a number in number of blockstake times time in seconds
+	// Normally the difficulty is the number of active blockstake times the
+	// BlockFrequency. ex. If the number of active blockstake grows, the
+	// difficulty will also increase to maintain the same BlockFrequency.
 	Difficulty struct {
 		i big.Int
 	}

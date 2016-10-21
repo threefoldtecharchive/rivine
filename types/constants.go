@@ -56,9 +56,13 @@ func init() {
 		// can coordinate their actions over a the developer testnets, but fast
 		// enough that there isn't much time wasted on waiting for things to
 		// happen.
-		BlockFrequency = 12                      // 12 seconds: slow enough for developers to see ~each block, fast enough that blocks don't waste time.
-		MaturityDelay = 10                       // 60 seconds before a delayed output matures.
-		GenesisTimestamp = Timestamp(1424139000) // Change as necessary.
+		BlockFrequency = 12 // 12 seconds: slow enough for developers to see ~each block, fast enough that blocks don't waste time.
+		MaturityDelay = 10  // 60 seconds before a delayed output matures.
+
+		// Change as necessary. If not changed, the first few difficulty addaptions
+		// will be wrong, but after some new difficulty calculations the error will
+		// fade out.
+		GenesisTimestamp = Timestamp(1424139000)
 
 		TargetWindow = 20                        // Difficulty is adjusted based on prior 20 blocks.
 		MaxAdjustmentUp = big.NewRat(120, 100)   // Difficulty adjusts quickly.
@@ -81,11 +85,6 @@ func init() {
 		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
 		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
 		GenesisCoinDistribution = append(GenesisCoinDistribution, co)
-
-		//Calculate start difficulty
-		StartDifficulty = NewDifficulty(big.NewInt(0).Mul(big.NewInt(int64(BlockFrequency)), BlockStakeCount.Big()))
-
-		RootTarget = NewTarget(StartDifficulty)
 
 	} else if build.Release == "testing" {
 		// 'testing' settings are for automatic testing, and create much faster
@@ -367,6 +366,10 @@ func init() {
 			},
 		}
 	}
+
+	//Calculate start difficulty
+	StartDifficulty = NewDifficulty(big.NewInt(0).Mul(big.NewInt(int64(BlockFrequency)), BlockStakeCount.Big()))
+	RootTarget = NewTarget(StartDifficulty)
 
 	// Create the genesis block.
 	GenesisBlock = Block{
