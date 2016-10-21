@@ -15,8 +15,8 @@ type (
 	// were at a specific block.
 	BlockFacts struct {
 		BlockID           types.BlockID     `json:"blockid"`
-		Difficulty        types.Currency    `json:"difficulty"`
-		EstimatedHashrate types.Currency    `json:"estimatedhashrate"`
+		Difficulty        types.Difficulty  `json:"difficulty"`
+		EstimatedHashrate types.Difficulty  `json:"estimatedhashrate"`
 		Height            types.BlockHeight `json:"height"`
 		MaturityTimestamp types.Timestamp   `json:"maturitytimestamp"`
 		Target            types.Target      `json:"target"`

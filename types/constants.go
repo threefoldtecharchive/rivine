@@ -39,7 +39,7 @@ var (
 	GenesisID BlockID
 
 	// StartDifficulty is used in many places. Calculate it once.
-	StartDifficulty *big.Int
+	StartDifficulty Difficulty
 )
 
 // init checks which build constant is in place and initializes the variables
@@ -59,7 +59,6 @@ func init() {
 		BlockFrequency = 12                      // 12 seconds: slow enough for developers to see ~each block, fast enough that blocks don't waste time.
 		MaturityDelay = 10                       // 60 seconds before a delayed output matures.
 		GenesisTimestamp = Timestamp(1424139000) // Change as necessary.
-		RootTarget = Target{0, 0, 10}            // Standard developer CPUs will be able to mine blocks with the race library activated.
 
 		TargetWindow = 20                        // Difficulty is adjusted based on prior 20 blocks.
 		MaxAdjustmentUp = big.NewRat(120, 100)   // Difficulty adjusts quickly.
@@ -82,6 +81,11 @@ func init() {
 		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
 		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
 		GenesisCoinDistribution = append(GenesisCoinDistribution, co)
+
+		//Calculate start difficulty
+		StartDifficulty = NewDifficulty(big.NewInt(0).Mul(big.NewInt(int64(BlockFrequency)), BlockStakeCount.Big()))
+
+		RootTarget = NewTarget(StartDifficulty)
 
 	} else if build.Release == "testing" {
 		// 'testing' settings are for automatic testing, and create much faster
@@ -377,8 +381,4 @@ func init() {
 	// Calculate the genesis ID.
 	GenesisID = GenesisBlock.ID()
 
-	//Calculate start difficulty
-	StartDifficulty = big.NewInt(0).Exp(big.NewInt(2), big.NewInt(256), nil)
-	StartDifficulty.Div(StartDifficulty, big.NewInt(int64(BlockFrequency)))
-	StartDifficulty.Div(StartDifficulty, BlockStakeCount.Big())
 }

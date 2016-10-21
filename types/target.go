@@ -43,11 +43,16 @@ func (x Target) Cmp(y Target) int {
 }
 
 // Difficulty returns the difficulty associated with a given target.
-func (t Target) Difficulty() Currency {
+func (t Target) Difficulty() Difficulty {
 	if t == (Target{}) {
-		return NewCurrency(RootDepth.Int())
+		return NewDifficulty(RootDepth.Int())
 	}
-	return NewCurrency(new(big.Int).Div(RootDepth.Int(), t.Int()))
+	return NewDifficulty(new(big.Int).Div(RootDepth.Int(), t.Int()))
+}
+
+// NewTarget makes a new target from a given difficulty
+func NewTarget(difficulty Difficulty) Target {
+	return IntToTarget(new(big.Int).Div(RootDepth.Int(), difficulty.Big()))
 }
 
 // Int converts a Target to a big.Int.

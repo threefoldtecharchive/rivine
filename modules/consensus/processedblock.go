@@ -64,9 +64,10 @@ func (cs *ConsensusSet) targetAdjustmentBase(blockMap *bolt.Bucket, pb *processe
 	current := pb.Block.ID()
 	for windowSize = 0; windowSize < types.TargetWindow && parent != (types.BlockID{}); windowSize++ {
 		current = parent
-		copy(parent[:], blockMap.Get(parent[:])[:32])
+		parentID, _ := pb.Block.UnmarshalBlockHeadersParentIDAndTS(blockMap.Get(parent[:]))
+		parent = parentID
 	}
-	timestamp := types.Timestamp(encoding.DecUint64(blockMap.Get(current[:])[40:48]))
+	_, timestamp := pb.Block.UnmarshalBlockHeadersParentIDAndTS(blockMap.Get(current[:]))
 
 	// The target of a child is determined by the amount of time that has
 	// passed between the generation of its immediate parent and its

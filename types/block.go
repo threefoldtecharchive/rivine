@@ -16,7 +16,7 @@ import (
 const (
 	// BlockHeaderSize is the size, in bytes, of a block header.
 	// 32 (ParentID) + 8 (Timestamp) + 24 (8 BlockHeight + 8 TransactionIndex + 8 OutputIndex) +  32 (MerkleRoot)
-	BlockHeaderSize = 104
+	BlockHeaderSize = 96
 )
 
 type (
@@ -25,23 +25,23 @@ type (
 	// "parent"), creating the linked-list commonly known as the blockchain. Their
 	// primary function is to bundle together transactions on the network. Blocks
 	// are created by "blockcreators," who collect transactions from other nodes, and
-	// then try to pick a Nonce that results in a block whose BlockID is below a
-	// given Target.
+	// then use there BlockStake and some other parameters to come below a given
+	// target.
 	Block struct {
 		ParentID     BlockID                 `json:"parentid"`
-		POBSOutput   BlockStakeOutputIndexes `json:"pobsindexes"`
 		Timestamp    Timestamp               `json:"timestamp"`
+		POBSOutput   BlockStakeOutputIndexes `json:"pobsindexes"`
 		MinerPayouts []CoinOutput            `json:"minerpayouts"`
 		Transactions []Transaction           `json:"transactions"`
 	}
 
-	// A BlockHeader, when encoded, is an 107-byte constant size field
+	// A BlockHeader, when encoded, is an 96-byte constant size field
 	// containing enough information to do headers-first block downloading.
 	// Hashing the header results in the block ID.
 	BlockHeader struct {
 		ParentID   BlockID                 `json:"parentid"`
-		POBSOutput BlockStakeOutputIndexes `json:"pobsindexes"`
 		Timestamp  Timestamp               `json:"timestamp"`
+		POBSOutput BlockStakeOutputIndexes `json:"pobsindexes"`
 		MerkleRoot crypto.Hash             `json:"merkleroot"`
 	}
 
@@ -58,8 +58,8 @@ func (h BlockHeader) ID() BlockID {
 func (b Block) Header() BlockHeader {
 	return BlockHeader{
 		ParentID:   b.ParentID,
-		POBSOutput: b.POBSOutput,
 		Timestamp:  b.Timestamp,
+		POBSOutput: b.POBSOutput,
 		MerkleRoot: b.MerkleRoot(),
 	}
 }
@@ -109,6 +109,14 @@ func (b *Block) UnmarshalSia(r io.Reader) error {
 	io.ReadFull(r, tsBytes)
 	b.Timestamp = Timestamp(encoding.DecUint64(tsBytes))
 	return encoding.NewDecoder(r).DecodeAll(&b.POBSOutput, &b.MinerPayouts, &b.Transactions)
+}
+
+// UnmarshalBlockHeadersParentIDAndTS
+// The MerkleRoot is not unmarshalled from the header because
+func (b *Block) UnmarshalBlockHeadersParentIDAndTS(raw []byte) (BlockID, Timestamp) {
+	var ParentID BlockID
+	copy(ParentID[:], raw[:32])
+	return ParentID, Timestamp(encoding.DecUint64(raw[32:40]))
 }
 
 // MarshalJSON marshales a block id as a hex string.

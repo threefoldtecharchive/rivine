@@ -319,7 +319,7 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 	bf.MaturityTimestamp = maturityTimestamp
 
 	// calculate hashrate by averaging last 'hashrateEstimationBlocks' blocks
-	var estimatedHashrate types.Currency
+	var estimatedHashrate types.Difficulty
 	if bf.Height > hashrateEstimationBlocks {
 		var totalDifficulty = bf.Target
 		var oldestTimestamp types.Timestamp
