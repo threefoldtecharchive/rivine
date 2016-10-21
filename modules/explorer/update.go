@@ -362,6 +362,12 @@ func dbAddGenesisBlock(tx *bolt.Tx) {
 	dbAddBlockID(tx, id, 0)
 	txid := types.GenesisBlock.Transactions[0].ID()
 	dbAddTransactionID(tx, txid, 0)
+	for i, sco := range types.GenesisCoinDistribution {
+		scoid := types.GenesisBlock.Transactions[0].CoinOutputID(uint64(i))
+		dbAddCoinOutputID(tx, scoid, txid)
+		dbAddUnlockHash(tx, sco.UnlockHash, txid)
+		dbAddCoinOutput(tx, scoid, sco)
+	}
 	for i, sfo := range types.GenesisBlockStakeAllocation {
 		sfoid := types.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
 		dbAddBlockStakeOutputID(tx, sfoid, txid)
@@ -377,6 +383,7 @@ func dbAddGenesisBlock(tx *bolt.Tx) {
 			TotalCoins:            types.NewCurrency64(0), //TODO rivine
 			TransactionCount:      1,
 			BlockStakeOutputCount: uint64(len(types.GenesisBlockStakeAllocation)),
+			CoinOutputCount:       uint64(len(types.GenesisCoinDistribution)),
 		},
 		Timestamp: types.GenesisBlock.Timestamp,
 	})
