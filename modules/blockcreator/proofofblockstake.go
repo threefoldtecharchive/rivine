@@ -26,7 +26,7 @@ func (bc *BlockCreator) SolveBlocks() {
 		// TODO: where to put the lock exactly
 		// Try to solve a block for blocktimes of the next 10 seconds
 		now := time.Now().Unix()
-		b := bc.solveBlock(now, 1)
+		b := bc.solveBlock(now, 10)
 		if b != nil {
 			bjson, _ := json.Marshal(b)
 			bc.log.Debugln("Solved block:", string(bjson))
@@ -37,7 +37,7 @@ func (bc *BlockCreator) SolveBlocks() {
 			}
 		}
 		//sleep a while before recalculating
-		time.Sleep(1 * time.Second)
+		time.Sleep(8 * time.Second)
 	}
 }
 
