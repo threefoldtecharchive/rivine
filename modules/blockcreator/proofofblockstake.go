@@ -72,9 +72,13 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 				txns := make([]types.Transaction, len(bc.unsolvedBlock.Transactions))
 				copy(txns, bc.unsolvedBlock.Transactions)
 				blockToSubmit.Transactions = txns
-
-				// TODO: add blockcreator payouts
+				// Collect the transaction fees
+				collectedMinerFees := blockToSubmit.CalculateSubsidy()
+				if collectedMinerFees.Cmp(types.ZeroCurrency) != 0 {
+					blockToSubmit.MinerPayouts = []types.CoinOutput{{Value: collectedMinerFees, UnlockHash: ubso.UnlockHash}}
+				}
 				// TODO: use the unspent block stake output and send it to ourselves
+
 				return &blockToSubmit
 
 			}

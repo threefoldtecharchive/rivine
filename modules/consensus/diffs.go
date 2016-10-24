@@ -6,6 +6,7 @@ import (
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 
 	"github.com/NebulousLabs/bolt"
 )
@@ -65,6 +66,15 @@ func commitBlockStakeOutputDiff(tx *bolt.Tx, sfod modules.BlockStakeOutputDiff, 
 	}
 }
 
+// commitDelayedCoinOutputDiff applies or reverts a delayedCoinOutputDiff.
+func commitDelayedCoinOutputDiff(tx *bolt.Tx, dscod modules.DelayedCoinOutputDiff, dir modules.DiffDirection) {
+	if dscod.Direction == dir {
+		addDCO(tx, dscod.MaturityHeight, dscod.ID, dscod.CoinOutput)
+	} else {
+		removeDCO(tx, dscod.MaturityHeight, dscod.ID)
+	}
+}
+
 // commitNodeDiffs commits all of the diffs in a block node.
 func commitNodeDiffs(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirection) {
 	if dir == modules.DiffApply {
@@ -117,6 +127,11 @@ func generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) error {
 		panic(errInvalidSuccessor)
 	}
 
+	// Create the bucket to hold all of the delayed siacoin outputs created by
+	// transactions this block. Needs to happen before any transactions are
+	// applied.
+	createDCOBucket(tx, pb.Height+types.MaturityDelay)
+
 	// Validate and apply each transaction in the block. They cannot be
 	// validated all at once because some transactions may not be valid until
 	// previous transactions have been applied.
@@ -127,6 +142,12 @@ func generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) error {
 		}
 		applyTransaction(tx, pb, txn)
 	}
+
+	// After all of the transactions have been applied, 'maintenance' is
+	// applied on the block. This includes adding any outputs that have reached
+	// maturity, applying any contracts with missed storage proofs, and adding
+	// the miner payouts to the list of delayed outputs.
+	applyMaintenance(tx, pb)
 
 	// DiffsGenerated are only set to true after the block has been fully
 	// validated and integrated. This is required to prevent later blocks from

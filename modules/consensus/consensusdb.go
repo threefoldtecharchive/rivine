@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	prefixDSCO = []byte("dsco_")
+	prefixDCO  = []byte("dco_")
 	prefixFCEX = []byte("fcex_")
 
 	// BlockHeight is a bucket that stores the current block height.
@@ -321,6 +321,70 @@ func removeBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
 		panic("nil blockstake output")
 	}
 	err := sfoBucket.Delete(id[:])
+	if build.DEBUG && err != nil {
+		panic(err)
+	}
+}
+
+// addDCO adds a delayed coin output to the consensus set.
+func addDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID, sco types.CoinOutput) {
+	// Sanity check - dco should never have a value of zero.
+	if build.DEBUG && sco.Value.IsZero() {
+		panic("zero-value dco being added")
+	}
+	// Sanity check - output should not already be in the full set of outputs.
+	if build.DEBUG && tx.Bucket(CoinOutputs).Get(id[:]) != nil {
+		panic("dco already in output set")
+	}
+	dscoBucketID := append(prefixDCO, encoding.EncUint64(uint64(bh))...)
+	dscoBucket := tx.Bucket(dscoBucketID)
+	// Sanity check - should not be adding an item already in the db.
+	if build.DEBUG && dscoBucket.Get(id[:]) != nil {
+		panic(errRepeatInsert)
+	}
+	err := dscoBucket.Put(id[:], encoding.Marshal(sco))
+	if build.DEBUG && err != nil {
+		panic(err)
+	}
+}
+
+// removeDCO removes a delayed siacoin output from the consensus set.
+func removeDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID) {
+	bucketID := append(prefixDCO, encoding.Marshal(bh)...)
+	// Sanity check - should not remove an item not in the db.
+	dscoBucket := tx.Bucket(bucketID)
+	if build.DEBUG && dscoBucket.Get(id[:]) == nil {
+		panic("nil dco")
+	}
+	err := dscoBucket.Delete(id[:])
+	if build.DEBUG && err != nil {
+		panic(err)
+	}
+}
+
+// createDCOBucket creates a bucket for the delayed coin outputs at the
+// input height.
+func createDCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
+	bucketID := append(prefixDCO, encoding.Marshal(bh)...)
+	_, err := tx.CreateBucket(bucketID)
+	if build.DEBUG && err != nil {
+		panic(err)
+	}
+}
+
+// deleteDCOBucket deletes the bucket that held a set of delayed coin outputs.
+func deleteDCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
+	// Delete the bucket.
+	bucketID := append(prefixDCO, encoding.Marshal(bh)...)
+	bucket := tx.Bucket(bucketID)
+	if build.DEBUG && bucket == nil {
+		panic(errNilBucket)
+	}
+
+	// TODO: Check that the bucket is empty. Using Stats() does not work at the
+	// moment, as there is an error in the boltdb code.
+
+	err := tx.DeleteBucket(bucketID)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}

@@ -19,7 +19,7 @@ var (
 )
 
 // transactionBuilder allows transactions to be manually constructed, including
-// the ability to fund transactions with siacoins and siafunds from the wallet.
+// the ability to fund transactions with siacoins and blockstakes from the wallet.
 type transactionBuilder struct {
 	// 'signed' indicates that at least one transaction signature has been
 	// added to the wallet, meaning that future calls to 'Sign' will fail.

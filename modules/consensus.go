@@ -128,6 +128,16 @@ type (
 		BlockStakeOutput types.BlockStakeOutput
 	}
 
+	// A DelayedCoinOutputDiff indicates the introduction of a coin output
+	// that cannot be spent until after maturing for 144 blocks. When the output
+	// has matured, a CoinOutputDiff will be provided.
+	DelayedCoinOutputDiff struct {
+		Direction      DiffDirection
+		ID             types.CoinOutputID
+		CoinOutput     types.CoinOutput
+		MaturityHeight types.BlockHeight
+	}
+
 	// A ConsensusSet accepts blocks and builds an understanding of network
 	// consensus.
 	ConsensusSet interface {

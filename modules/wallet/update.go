@@ -184,7 +184,8 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 							TransactionIndex: uint64(ti),
 							OutputIndex:      uint64(i),
 						},
-						Value: sfo.Value,
+						Value:      sfo.Value,
+						UnlockHash: sfo.UnlockHash,
 					}
 				}
 				w.historicOutputs[types.OutputID(bsoid)] = sfo.Value

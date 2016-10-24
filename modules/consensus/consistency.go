@@ -50,12 +50,12 @@ func consensusChecksum(tx *bolt.Tx) crypto.Hash {
 	}
 
 	// Iterate through all the buckets looking for buckets prefixed with
-	// prefixDSCO or prefixFCEX. Buckets are presented in byte-sorted order by
+	// prefixDCO or prefixFCEX. Buckets are presented in byte-sorted order by
 	// name.
 	err := tx.ForEach(func(name []byte, b *bolt.Bucket) error {
-		// If the bucket is not a delayed siacoin output bucket or a file
+		// If the bucket is not a delayed coin output bucket or a file
 		// contract expiration bucket, skip.
-		if !bytes.HasPrefix(name, prefixDSCO) && !bytes.HasPrefix(name, prefixFCEX) {
+		if !bytes.HasPrefix(name, prefixDCO) && !bytes.HasPrefix(name, prefixFCEX) {
 			return nil
 		}
 

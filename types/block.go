@@ -64,6 +64,17 @@ func (b Block) Header() BlockHeader {
 	}
 }
 
+// CalculateSubsidy determines the block subsidy as the sum of the minerfees.
+func (b Block) CalculateSubsidy() Currency {
+	subsidy := NewCurrency64(0)
+	for _, txn := range b.Transactions {
+		for _, fee := range txn.MinerFees {
+			subsidy = subsidy.Add(fee)
+		}
+	}
+	return subsidy
+}
+
 // ID returns the ID of a Block, which is calculated by hashing the
 // concatenation of the block's parent's ID, nonce, and the result of the
 // b.MerkleRoot(). It is equivalent to calling block.Header().ID()
