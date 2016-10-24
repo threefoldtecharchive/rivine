@@ -40,15 +40,23 @@ func NewBlockValidator() stdBlockValidator {
 	}
 }
 
-// checkMinerPayouts checks a block creator payouts
-func checkMinerPayouts(b types.Block, height types.BlockHeight) bool {
-	//TODO rivine
-	return true
+// checkMinerPayouts checks a block creator payouts to the block's subsidy and
+// returns true if they are equal.
+func checkMinerPayouts(b types.Block) bool {
+	// Add up the payouts and check that all values are legal.
+	var payoutSum types.Currency
+	for _, payout := range b.MinerPayouts {
+		if payout.Value.IsZero() {
+			return false
+		}
+		payoutSum = payoutSum.Add(payout.Value)
+	}
+	return b.CalculateSubsidy().Cmp(payoutSum) == 0
 }
 
 // checkTarget returns true if the block's ID meets the given target.
 func checkTarget(b types.Block, target types.Target) bool {
-	// TODO: validate pobs target
+	// TODO rivine: validate pobs target
 	return true
 }
 
@@ -80,7 +88,7 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	}
 
 	// Verify that the miner payouts are valid.
-	if !checkMinerPayouts(b, height) {
+	if !checkMinerPayouts(b) {
 		return errBadMinerPayouts
 	}
 
