@@ -172,7 +172,8 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 	// TransactionPool API Calls
 	if api.tpool != nil {
 		// TODO: re-enable this route once the transaction pool API has been finalized
-		//router.GET("/transactionpool/transactions", api.transactionpoolTransactionsHandler)
+		router.GET("/transactionpool/transactions", api.transactionpoolTransactionsHandler)
+		router.POST("/transactionpool/transactions", RequirePassword(api.transactionpoolPostTransactionHandler, requiredPassword))
 	}
 
 	// Wallet API Calls
