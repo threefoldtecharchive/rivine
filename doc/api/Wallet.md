@@ -12,9 +12,9 @@ in production.
 Overview
 --------
 
-The wallet stores and manages siacoins and siafunds. The wallet's API endpoints
+The wallet stores and manages coins and blockstakes. The wallet's API endpoints
 expose methods for creating and loading wallets, locking and unlocking, sending
-siacoins and siafunds, and getting the wallet's balance.
+coins and blockstakes, and getting the wallet's balance.
 
 You must create a wallet before you can use the wallet's API endpoints. You can
 create a wallet with the `/wallet/init` endpoint. Wallets are always encrypted
@@ -38,7 +38,7 @@ Index
 | [/wallet/seed](#walletseed-post)                                | POST      |
 | [/wallet/seeds](#walletseeds-get)                               | GET       |
 | [/wallet/siacoins](#walletsiacoins-post)                        | POST      |
-| [/wallet/blockstakes](#walletblockstakes-post)                        | POST      |
+| [/wallet/blockstakes](#walletblockstakes-post)                  | POST      |
 | [/wallet/siagkey](#walletsiagkey-post)                          | POST      |
 | [/wallet/transaction/___:id___](#wallettransactionid-get)       | GET       |
 | [/wallet/transactions](#wallettransactions-get)                 | GET       |

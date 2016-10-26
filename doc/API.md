@@ -225,6 +225,75 @@ disconnects the gateway from a peer. The peer remains in the node list.
 standard success or error response. See
 [#standard-responses](#standard-responses).
 
+TransactionPool
+---------------
+
+| Route                                                           | HTTP verb |
+| --------------------------------------------------------------- | --------- |
+| [/transactionpool/transactions](#transactions-post)             | POST      |
+
+
+#### /transactionpool/transactions [POST]
+
+Provide an externally constructed and signed transaction to the transactionpool.
+
+###### JSON BODY
+
+```javascript
+{
+  "coininputs": [
+    {
+      "parentid": "13b157d7e1bb8452c385acc39aa2e0f4d3dc982aa6ca2802dc43a2535b02bfb9",
+      "unlockconditions": {
+        "timelock": 0,
+        "publickeys": [
+          {
+            "algorithm": "ed25519",
+            "key": "gunn3wmyVZZqza4PwTdhPlZ0ttiEONuu1V+Q0OAdccU="
+          }
+        ],
+        "signaturesrequired": 1
+      }
+    }
+  ],
+  "coinoutputs": [
+    {
+      "value": "120000000000000000000000000",
+      "unlockhash": "354a92fda2ee24cd8bb6d588aa4c670325a1c226cab4b13a4b62fac154656ee5398532e42c9e"
+    }
+  ],
+  "blockstakeinputs": null,
+  "blockstakeoutputs": null,
+  "minerfees": [
+    "10000000000000000000000000"
+  ],
+  "arbitrarydata": null,
+  "transactionsignatures": [
+    {
+      "parentid": "13b157d7e1bb8452c385acc39aa2e0f4d3dc982aa6ca2802dc43a2535b02bfb9",
+      "publickeyindex": 0,
+      "timelock": 0,
+      "coveredfields": {
+        "wholetransaction": true,
+        "coininputs": null,
+        "coinoutputs": null,
+        "blockstakeinputs": null,
+        "blockstakeoutputs": null,
+        "minerfees": null,
+        "arbitrarydata": null,
+        "transactionsignatures": null
+      },
+      "signature": "1/zzGCdDzII2kv2y3+9Roq5p9sxokgiikXT4HdEkw3cbq9SMnXLRiYJfp2FcXSg1Hqk3OsJcAREgBxgg9fBQBg=="
+    }
+  ]
+}
+```
+
+###### Response
+standard success or error response. See
+[#standard-responses](#standard-responses).
+
+
 Wallet
 ------
 
@@ -269,22 +338,6 @@ locked or unlocked.
   "siacoinclaimbalance": "9001", // hastings, big int
 }
 ```
-
-#### /wallet/033x [POST]
-
-loads a v0.3.3.x wallet into the current wallet, harvesting all of the secret
-keys. All spendable addresses in the loaded wallet will become spendable from
-the current wallet.
-
-###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters)
-```
-source
-encryptionpassword
-```
-
-###### Response
-standard success or error response. See
-[#standard-responses](#standard-responses).
 
 #### /wallet/address [GET]
 

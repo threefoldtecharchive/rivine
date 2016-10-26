@@ -1,15 +1,15 @@
 Developer Environment
 =====================
 
-Sia is written in Go. To build and test Sia, you are going to need a working go
+Rivine is written in Go. To build and test Rivine, you are going to need a working go
 environment, including having both $GOROOT/bin and $GOPATH/bin in your $PATH.
 For most Linux distributions, Go will be in the package manager, though it may
-be an old version that is incompatible with Sia. Once you have a working Go
+be an old version that is incompatible with Rivine. Once you have a working Go
 environment, you are set to build the project. If you plan on cross compiling
-Sia, you may need to install Go from source. You can find information on that
+Rivine, you may need to install Go from source. You can find information on that
 [here](http://golang.org/doc/install/source).
 
-Sia has has a development build, an automated testing build, and a release
+Rivine has a development build, an automated testing build, and a release
 build. The release build is the only one that can synchronize to the full
 network. To get the release build, it is usually sufficient to run `go get -u
 github.com/rivine/rivine/...`. This will download Sia and its dependencies
@@ -22,7 +22,7 @@ $GOPATH/src/github.com/rivine/rivine. To build the release binary, run
 build the developer binary (which has a different genesis block, faster block
 times, and a few other tweaks), just run `make`.
 
-If you intend to contribute to Sia, you should start by forking the project on
+If you intend to contribute to Rivine, you should start by forking the project on
 GitHub, and then adding your fork as a "remote" in the Sia git repository via
 `git remote add [fork name] [fork url]`. Now you can develop by pulling changes
 from `origin`, pushing your modifications to `[fork name]`, and then making a
@@ -76,25 +76,6 @@ The goal of the codebase is to be accessible to newbies. Anything more advanced
 than what you would expect to remember from an 'Intro to Data Structures' class
 should have an explanation about what the concept it is and why it was picked
 over other potential choices.
-
-Code that exists purely to be compatible with previous versions of the
-software should be tagged with a 'COMPATvX.X.X' comment. Examples below.
-
-```go
-// Find and sort the outputs.
-outputs := getOutputs()
-// TODO: actually sort the outputs.
-```
-
-```go
-// Disallow unknown agents.
-//
-// COMPATv0.4.0: allow a blank agent to preserve compatibility with
-// 'siac' v0.4.0, which did not set an agent.
-if agent != "SiaAgent" && agent != "" {
-	return errors.New("unrecognized agent!")
-}
-```
 
 Naming
 ------
