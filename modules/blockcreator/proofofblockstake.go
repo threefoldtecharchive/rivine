@@ -45,7 +45,7 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 	//height := bc.persist.Height + 1
 	//TODO: properly calculate stakemodifier
 	stakemodifier := big.NewInt(0)
-	//TODO: sliding difficulty
+
 	cbid := bc.cs.CurrentBlock().ID()
 	target, _ := bc.cs.ChildTarget(cbid)
 

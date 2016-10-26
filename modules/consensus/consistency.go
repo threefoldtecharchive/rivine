@@ -92,7 +92,7 @@ func checkCoinCount(tx *bolt.Tx) {
 		manageErr(tx, err)
 	}
 
-	expectedSiacoins := types.NewCurrency64(0) //TODO rivine
+	expectedSiacoins := types.GenesisCoinCount
 	totalSiacoins := scoSiacoins
 	if totalSiacoins.Cmp(expectedSiacoins) != 0 {
 		diagnostics := fmt.Sprintf("Wrong number of coins: %v\n", scoSiacoins)
@@ -121,7 +121,7 @@ func checkBlockStakeCount(tx *bolt.Tx) {
 	if err != nil {
 		manageErr(tx, err)
 	}
-	if total.Cmp(types.BlockStakeCount) != 0 {
+	if total.Cmp(types.GenesisBlockStakeCount) != 0 {
 		manageErr(tx, errors.New("wrong number if blockstakes in the consensus set"))
 	}
 }

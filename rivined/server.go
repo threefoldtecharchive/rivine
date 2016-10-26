@@ -268,7 +268,7 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 		TargetWindow:          types.TargetWindow,
 		MedianTimestampWindow: types.MedianTimestampWindow,
 		FutureThreshold:       types.FutureThreshold,
-		BlockStakeCount:       types.BlockStakeCount,
+		BlockStakeCount:       types.GenesisBlockStakeCount,
 		MaturityDelay:         types.MaturityDelay,
 
 		RootTarget: types.RootTarget,
