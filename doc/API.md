@@ -24,7 +24,7 @@ curl -A "Rivine-Agent" "localhost:23110/wallet/transactions?startheight=1&endhei
 
 Example POST curl call:
 ```
-curl -A "Rivine-Agent" --data "amount=123&destination=abcd" "localhost:23110/wallet/siacoins"
+curl -A "Rivine-Agent" --data "amount=123&destination=abcd" "localhost:23110/wallet/coins"
 ```
 
 Standard responses
@@ -308,8 +308,8 @@ Wallet
 | [/wallet/lock](#walletlock-post)                                | POST      |
 | [/wallet/seed](#walletseed-post)                                | POST      |
 | [/wallet/seeds](#walletseeds-get)                               | GET       |
-| [/wallet/siacoins](#walletsiacoins-post)                        | POST      |
-| [/wallet/siafunds](#walletsiafunds-post)                        | POST      |
+| [/wallet/coins](#walletcoins-post)                              | POST      |
+| [/wallet/blockstakes](#walletblockstakes-post)                  | POST      |
 | [/wallet/siagkey](#walletsiagkey-post)                          | POST      |
 | [/wallet/transaction/___:id___](#wallettransactionid-get)       | GET       |
 | [/wallet/transactions](#wallettransactions-get)                 | GET       |
@@ -443,7 +443,7 @@ dictionary
 }
 ```
 
-#### /wallet/siacoins [POST]
+#### /wallet/coins [POST]
 
 sends siacoins to an address. The outputs are arbitrarily selected from
 addresses in the wallet.
@@ -465,7 +465,7 @@ destination // address
 }
 ```
 
-#### /wallet/siafunds [POST]
+#### /wallet/blockstakes [POST]
 
 sends siafunds to an address. The outputs are arbitrarily selected from
 addresses in the wallet. Any siacoins available in the siafunds being sent (as

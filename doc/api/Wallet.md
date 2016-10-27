@@ -37,7 +37,7 @@ Index
 | [/wallet/lock](#walletlock-post)                                | POST      |
 | [/wallet/seed](#walletseed-post)                                | POST      |
 | [/wallet/seeds](#walletseeds-get)                               | GET       |
-| [/wallet/siacoins](#walletsiacoins-post)                        | POST      |
+| [/wallet/coins](#walletcoins-post)                              | POST      |
 | [/wallet/blockstakes](#walletblockstakes-post)                  | POST      |
 | [/wallet/siagkey](#walletsiagkey-post)                          | POST      |
 | [/wallet/transaction/___:id___](#wallettransactionid-get)       | GET       |
@@ -65,24 +65,24 @@ locked or unlocked.
   // become unavailable when the wallet is locked.
   "unlocked": true,
 
-  // Number of siacoins, in hastings, available to the wallet as of the most
+  // Number of coins, in hastings, available to the wallet as of the most
   // recent block in the blockchain.
-  "confirmedsiacoinbalance": "123456", // hastings, big int
+  "confirmedcoinbalance": "123456", // hastings, big int
 
-  // Number of siacoins, in hastings, that are leaving the wallet according
+  // Number of coins, in hastings, that are leaving the wallet according
   // to the set of unconfirmed transactions. Often this number appears
   // inflated, because outputs are frequently larger than the number of coins
   // being sent, and there is a refund. These coins are counted as outgoing,
   // and the refund is counted as incoming. The difference in balance can be
-  // calculated using 'unconfirmedincomingsiacoins' - 'unconfirmedoutgoingsiacoins'
-  "unconfirmedoutgoingsiacoins": "0", // hastings, big int
+  // calculated using 'unconfirmedincomingcoins' - 'unconfirmedoutgoingcoins'
+  "unconfirmedoutgoingcoins": "0", // hastings, big int
 
-  // Number of siacoins, in hastings, are entering the wallet according to
+  // Number of coins, in hastings, are entering the wallet according to
   // the set of unconfirmed transactions. This number is often inflated by
-  // outgoing siacoins, because outputs are frequently larger than the amount
+  // outgoing coins, because outputs are frequently larger than the amount
   // being sent. The refund will be included in the unconfirmed incoming
-  // siacoins balance.
-  "unconfirmedincomingsiacoins": "789", // hastings, big int
+  // coins balance.
+  "unconfirmedincomingcoins": "789", // hastings, big int
 
   // Number of blockstakes available to the wallet as of the most recent block
   // in the blockchain.
@@ -235,9 +235,9 @@ dictionary
 }
 ```
 
-#### /wallet/siacoins [POST]
+#### /wallet/coins [POST]
 
-Function: Send siacoins to an address. The outputs are arbitrarily selected
+Function: Send coins to an address. The outputs are arbitrarily selected
 from addresses in the wallet.
 
 ###### Query String Parameters
