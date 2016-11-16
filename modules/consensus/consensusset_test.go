@@ -74,7 +74,7 @@ func (cst *consensusSetTester) addSiafunds() {
 
 	// Check that the blockstakes made it to the wallet.
 	_, blockstakeBalance := cst.wallet.ConfirmedBalance()
-	if blockstakeBalance.Cmp64(1e3) != 0 {
+	if !blockstakeBalance.Equals64(1e3) {
 		panic("wallet does not have the blockstakes")
 	}
 }

@@ -100,7 +100,7 @@ func checkCoinCount(tx *bolt.Tx, bh types.BlockHeight) {
 
 	expectedcoins := types.GenesisCoinCount.Add(types.BlockCreatorFee.Mul64(uint64(bh - delay)))
 	totalcoins := scocoins
-	if totalcoins.Cmp(expectedcoins) != 0 {
+	if !totalcoins.Equals(expectedcoins) {
 		diagnostics := fmt.Sprintf("Wrong number of coins: %v\n", scocoins)
 		if totalcoins.Cmp(expectedcoins) < 0 {
 			diagnostics += fmt.Sprintf("total: %v\nexpected: %v\n expected is bigger: %v", totalcoins, expectedcoins, expectedcoins.Sub(totalcoins))
@@ -127,7 +127,7 @@ func checkBlockStakeCount(tx *bolt.Tx) {
 	if err != nil {
 		manageErr(tx, err)
 	}
-	if total.Cmp(types.GenesisBlockStakeCount) != 0 {
+	if !total.Equals(types.GenesisBlockStakeCount) {
 		manageErr(tx, errors.New("wrong number if blockstakes in the consensus set"))
 	}
 }

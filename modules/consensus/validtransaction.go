@@ -43,7 +43,7 @@ func validCoins(tx *bolt.Tx, t types.Transaction) error {
 
 		inputSum = inputSum.Add(sco.Value)
 	}
-	if inputSum.Cmp(t.CoinOutputSum()) != 0 {
+	if !inputSum.Equals(t.CoinOutputSum()) {
 		return errSiacoinInputOutputMismatch
 	}
 	return nil
@@ -71,7 +71,7 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 	for _, sfo := range t.BlockStakeOutputs {
 		blockstakeOutputSum = blockstakeOutputSum.Add(sfo.Value)
 	}
-	if blockstakeOutputSum.Cmp(blockstakeInputSum) != 0 {
+	if !blockstakeOutputSum.Equals(blockstakeInputSum) {
 		return errBlockStakeInputOutputMismatch
 	}
 	return

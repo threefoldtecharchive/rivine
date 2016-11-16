@@ -57,7 +57,7 @@ func checkMinerPayouts(b types.Block) bool {
 		}
 		payoutSum = payoutSum.Add(payout.Value)
 	}
-	return b.CalculateSubsidy().Cmp(payoutSum) == 0
+	return b.CalculateSubsidy().Equals(payoutSum)
 }
 
 // checkTarget returns true if the block's ID meets the given target.

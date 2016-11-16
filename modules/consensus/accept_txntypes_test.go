@@ -124,7 +124,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 	if err != nil {
 // 		panic(err)
 // 	}
-// 	if sco.Value.Cmp(txnValue) != 0 {
+// 	if !sco.Value.Equals(txnValue) {
 // 		panic("output added with wrong value")
 // 	}
 // 	if sco.UnlockHash != destAddr {

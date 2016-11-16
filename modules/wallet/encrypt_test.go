@@ -190,6 +190,7 @@ func TestIntegrationBlankEncryption(t *testing.T) {
 // TestLock checks that lock correctly wipes keys when locking the wallet,
 // while still being able to track the balance of the wallet.
 func TestLock(t *testing.T) {
+<<<<<<< HEAD
 	//TODO: fix test
 	// if testing.Short() {
 	// 	t.SkipNow()
@@ -217,7 +218,7 @@ func TestLock(t *testing.T) {
 	// }
 	// // Compare to the original balance.
 	// siacoinBalance2, _, _ := wt.wallet.ConfirmedBalance()
-	// if siacoinBalance2.Cmp(siacoinBalance) != 0 {
+	// if !siacoinBalance2.Equals(siacoinBalance) {
 	// 	t.Error("siacoin balance reporting changed upon closing the wallet")
 	// }
 	// // Check that the keys and seeds were wiped.
@@ -247,4 +248,62 @@ func TestLock(t *testing.T) {
 	// if siacoinBalance3.Cmp(siacoinBalance2) <= 0 {
 	// 	t.Error("balance should increase after a block was mined")
 	// }
+=======
+	if testing.Short() {
+		t.SkipNow()
+	}
+	wt, err := createWalletTester("TestLock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	// Grab a block for work - miner will not supply blocks after the wallet
+	// has been locked, and the test needs to mine a block after locking the
+	// wallet to verify  that the balance reporting of a locked wallet is
+	// correct.
+	block, target, err := wt.miner.BlockForWork()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Lock the wallet.
+	siacoinBalance, _, _ := wt.wallet.ConfirmedBalance()
+	err = wt.wallet.Lock()
+	if err != nil {
+		t.Error(err)
+	}
+	// Compare to the original balance.
+	siacoinBalance2, _, _ := wt.wallet.ConfirmedBalance()
+	if !siacoinBalance2.Equals(siacoinBalance) {
+		t.Error("siacoin balance reporting changed upon closing the wallet")
+	}
+	// Check that the keys and seeds were wiped.
+	wipedKey := make([]byte, crypto.SecretKeySize)
+	for _, key := range wt.wallet.keys {
+		for i := range key.SecretKeys {
+			if !bytes.Equal(wipedKey, key.SecretKeys[i][:]) {
+				t.Error("Key was not wiped after closing the wallet")
+			}
+		}
+	}
+	if len(wt.wallet.seeds) != 0 {
+		t.Error("seeds not wiped from wallet")
+	}
+	if !bytes.Equal(wipedKey[:crypto.EntropySize], wt.wallet.primarySeed[:]) {
+		t.Error("primary seed not wiped from memory")
+	}
+
+	// Solve the block generated earlier and add it to the consensus set, this
+	// should boost the balance of the wallet.
+	solvedBlock, _ := wt.miner.SolveBlock(block, target)
+	err = wt.cs.AcceptBlock(solvedBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	siacoinBalance3, _, _ := wt.wallet.ConfirmedBalance()
+	if siacoinBalance3.Cmp(siacoinBalance2) <= 0 {
+		t.Error("balance should increase after a block was mined")
+	}
+>>>>>>> 0bd6dcf7... add Equals and Equals64
 }

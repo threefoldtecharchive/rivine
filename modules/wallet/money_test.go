@@ -24,13 +24,13 @@ func TestSendSiacoins(t *testing.T) {
 	// // should be 0.
 	// confirmedBal, _, _ := wt.wallet.ConfirmedBalance()
 	// unconfirmedOut, unconfirmedIn := wt.wallet.UnconfirmedBalance()
-	// if confirmedBal.Cmp(types.CalculateCoinbase(1)) != 0 {
+	// if !confirmedBal.Equals(types.CalculateCoinbase(1)) {
 	// 	t.Error("unexpected confirmed balance")
 	// }
-	// if unconfirmedOut.Cmp(types.ZeroCurrency) != 0 {
+	// if !unconfirmedOut.Equals(types.ZeroCurrency) {
 	// 	t.Error("unconfirmed balance should be 0")
 	// }
-	// if unconfirmedIn.Cmp(types.ZeroCurrency) != 0 {
+	// if !unconfirmedIn.Equals(types.ZeroCurrency) {
 	// 	t.Error("unconfirmed balance should be 0")
 	// }
 	//
@@ -178,7 +178,7 @@ func TestIntegrationSortedOutputsSorting(t *testing.T) {
 		if so.ids[i] != expectedIDSorting[i] {
 			t.Error("an id is out of place: ", i)
 		}
-		if so.outputs[i].Value.Cmp64(i) != 0 {
+		if !so.outputs[i].Value.Equals64(i) {
 			t.Error("a value is out of place: ", i)
 		}
 	}
