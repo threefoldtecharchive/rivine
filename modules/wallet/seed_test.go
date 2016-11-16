@@ -8,7 +8,6 @@ import (
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
 )
 
 // TestPrimarySeed checks that the correct seed is returned when calling
@@ -123,7 +122,7 @@ func TestLoadSeed(t *testing.T) {
 	}
 	// Balance of wallet should be 0.
 	siacoinBal, _ := w.ConfirmedBalance()
-	if siacoinBal.Cmp(types.NewCurrency64(0)) != 0 {
+	if siacoinBal.Cmp64(0) != 0 {
 		t.Error("fresh wallet should not have a balance")
 	}
 	err = w.LoadSeed(crypto.TwofishKey(crypto.HashObject(newSeed)), seed)
@@ -156,7 +155,7 @@ func TestLoadSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 	siacoinBal2, _ := w2.ConfirmedBalance()
-	if siacoinBal2.Cmp(types.NewCurrency64(0)) <= 0 {
+	if siacoinBal2.Cmp64(0) <= 0 {
 		t.Error("wallet failed to load a seed with money in it")
 	}
 	allSeeds, err = w2.AllSeeds()

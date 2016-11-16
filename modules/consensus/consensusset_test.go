@@ -38,6 +38,7 @@ func randAddress() types.UnlockHash {
 	return uh
 }
 
+//TODO: rename to blockstakes and fix
 // addSiafunds makes a transaction that moves some testing genesis siafunds
 // into the wallet.
 func (cst *consensusSetTester) addSiafunds() {
@@ -71,10 +72,10 @@ func (cst *consensusSetTester) addSiafunds() {
 	// 	panic(err)
 	// }
 
-	// Check that the siafunds made it to the wallet.
+	// Check that the blockstakes made it to the wallet.
 	_, blockstakeBalance := cst.wallet.ConfirmedBalance()
-	if blockstakeBalance.Cmp(types.NewCurrency64(1e3)) != 0 {
-		panic("wallet does not have the siafunds")
+	if blockstakeBalance.Cmp64(1e3) != 0 {
+		panic("wallet does not have the blockstakes")
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 // unlocking are all happening in the correct order and returning the correct
 // errors.
 // func postEncryptionTesting(m modules.TestMiner, w *Wallet, masterKey crypto.TwofishKey) {
+//TODO: fix test
 // 	if !w.Encrypted() {
 // 		panic("wallet is not encrypted when starting postEncryptionTesting")
 // 	}
@@ -42,7 +43,7 @@ import (
 // 		}
 // 	}
 // 	siacoinBal, _, _ := w.ConfirmedBalance()
-// 	if siacoinBal.Cmp(types.NewCurrency64(0)) <= 0 {
+// 	if siacoinBal.Cmp64(0) <= 0 {
 // 		panic("wallet balance reported as 0 after maturing some mined blocks")
 // 	}
 // 	err = w.Unlock(masterKey)
