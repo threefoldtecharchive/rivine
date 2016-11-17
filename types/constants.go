@@ -27,6 +27,8 @@ var (
 	FutureThreshold        Timestamp
 	ExtremeFutureThreshold Timestamp
 
+	StakeModifierDelay BlockHeight
+
 	SiacoinPrecision = NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
 
 	GenesisBlockStakeAllocation = []BlockStakeOutput{}
@@ -69,6 +71,7 @@ func init() {
 		MaxAdjustmentDown = big.NewRat(100, 120) // Difficulty adjusts quickly.
 		FutureThreshold = 2 * 60                 // 2 minutes.
 		ExtremeFutureThreshold = 4 * 60          // 4 minutes.
+		StakeModifierDelay = 2000                // Number of blocks to take in history to calculate the stakemodifier
 
 		bso := BlockStakeOutput{
 			Value:      NewCurrency64(1000000),
@@ -103,6 +106,7 @@ func init() {
 		MaxAdjustmentDown = big.NewRat(9999, 10000)
 		FutureThreshold = 3        // 3 seconds
 		ExtremeFutureThreshold = 6 // 6 seconds
+		StakeModifierDelay = 20
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
@@ -174,6 +178,11 @@ func init() {
 		// vector.
 		FutureThreshold = 3 * 60 * 60        // 3 hours.
 		ExtremeFutureThreshold = 5 * 60 * 60 // 5 hours.
+
+		// The stakemodifier is calculated from blocks in history. The stakemodifier
+		// is calculated as: For x = 0 to 255
+		// bit x of Stake Modifier = bit x of h(block N-(StakeModifierDelay+x))
+		StakeModifierDelay = 2000
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
