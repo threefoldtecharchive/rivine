@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/rivine/rivine/crypto"
@@ -52,5 +53,30 @@ func TestTransactionCoinOutputSum(t *testing.T) {
 	}
 	if txn.CoinOutputSum().Cmp(NewCurrency64(650021)) != 0 {
 		t.Error("wrong coin output sum was calculated, got:", txn.CoinOutputSum())
+	}
+}
+
+// TestSpecifierMarshaling tests the marshaling methods of the specifier
+// type.
+func TestSpecifierMarshaling(t *testing.T) {
+	s1 := SpecifierClaimOutput
+	b, err := json.Marshal(s1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var s2 Specifier
+	err = json.Unmarshal(b, &s2)
+	if err != nil {
+		t.Fatal(err)
+	} else if s2 != s1 {
+		t.Fatal("mismatch:", s1, s2)
+	}
+
+	// invalid json
+	x := 3
+	b, _ = json.Marshal(x)
+	err = json.Unmarshal(b, &s2)
+	if err == nil {
+		t.Fatal("Unmarshal should have failed")
 	}
 }
