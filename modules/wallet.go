@@ -149,7 +149,7 @@ type (
 		AddCoinOutput(types.CoinOutput) uint64
 
 		// AddBlockStakeInput adds a blockstake input to the transaction, returning
-		// the index of the siafund input within the transaction. When 'Sign'
+		// the index of the blockstake input within the transaction. When 'Sign'
 		// is called, this input will be left unsigned.
 		AddBlockStakeInput(types.BlockStakeInput) uint64
 

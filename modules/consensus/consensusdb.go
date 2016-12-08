@@ -279,7 +279,7 @@ func removeCoinOutput(tx *bolt.Tx, id types.CoinOutputID) {
 	}
 }
 
-// getBlockStakeOutput fetches a siafund output from the database. An error is
+// getBlockStakeOutput fetches a blockstake output from the database. An error is
 // returned if the blockstake output does not exist.
 func getBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) (types.BlockStakeOutput, error) {
 	sfoBytes := tx.Bucket(BlockStakeOutputs).Get(id[:])
@@ -294,7 +294,7 @@ func getBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) (types.BlockS
 	return sfo, nil
 }
 
-// addBlockStakeOutput adds a siafund output to the database. An error is returned
+// addBlockStakeOutput adds a blockstake output to the database. An error is returned
 // if the blockstake output is already in the database.
 func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.BlockStakeOutput) {
 	blockstakeOutputs := tx.Bucket(BlockStakeOutputs)

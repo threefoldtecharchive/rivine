@@ -72,7 +72,7 @@ type (
 		// input id.
 		BlockStakeOutput(types.BlockStakeOutputID) (types.BlockStakeOutput, bool)
 
-		// SiafundOutputID returns all of the transaction ids associated with
+		// BlockStakeOutputID returns all of the transaction ids associated with
 		// the provided blockstake output id.
 		BlockStakeOutputID(types.BlockStakeOutputID) []types.TransactionID
 

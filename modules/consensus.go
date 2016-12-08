@@ -35,7 +35,7 @@ var (
 	// database.
 	ErrBlockKnown = errors.New("block already present in database")
 
-	// ErrBlockUnsolved indicates that a block did not meet the required POW
+	// ErrBlockUnsolved indicates that a block did not meet the required POS
 	// target.
 	ErrBlockUnsolved = errors.New("block does not meet target")
 

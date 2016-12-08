@@ -116,7 +116,7 @@ type (
 		UnlockHash         UnlockHash
 	}
 
-	// BlockStakeOutputIndexes groups the the block height, the transaction index and the output index to uniquely identify a blockstake output.
+	// BlockStakeOutputIndexes groups the block height, the transaction index and the output index to uniquely identify a blockstake output.
 	// These indexes and the value are required for the POBS protocol.
 	BlockStakeOutputIndexes struct {
 		BlockHeight      BlockHeight

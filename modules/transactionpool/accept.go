@@ -243,7 +243,7 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	// If no transactions remain, return a dublicate error.
+	// If no transactions remain, return a duplicate error.
 	if len(ts) == 0 {
 		return modules.ErrDuplicateTransactionSet
 	}

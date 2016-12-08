@@ -126,7 +126,7 @@ type (
 // UnlockConditions object. The leaves of this tree are formed by taking the
 // hash of the timelock, the hash of the public keys (one leaf each), and the
 // hash of the number of signatures. The keys are put in the middle because
-// Timelock and SignaturesRequired are both low entropy fields; they can be
+// Timelock and SignaturesRequired are both low entropy fields; they can bee
 // protected by having random public keys next to them.
 func (uc UnlockConditions) UnlockHash() UnlockHash {
 	tree := crypto.NewTree()

@@ -120,6 +120,7 @@ Explorer (e):
 
 // main establishes a set of commands and flags using the cobra package.
 func main() {
+
 	root := &cobra.Command{
 		Use:   os.Args[0],
 		Short: "Rivine Daemon v" + build.Version,
