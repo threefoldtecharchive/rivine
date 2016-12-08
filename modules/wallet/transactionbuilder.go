@@ -37,7 +37,7 @@ type transactionBuilder struct {
 
 // addSignatures will sign a transaction using a spendable key, with support
 // for multisig spendable keys. Because of the restricted input, the function
-// is compatible with both siacoin inputs and siafund inputs.
+// is compatible with both coin inputs and blockstake inputs.
 func addSignatures(txn *types.Transaction, cf types.CoveredFields, uc types.UnlockConditions, parentID crypto.Hash, spendKey spendableKey) (newSigIndices []int, err error) {
 	// Try to find the matching secret key for each public key - some public
 	// keys may not have a match. Some secret keys may be used multiple times,
@@ -83,8 +83,7 @@ func addSignatures(txn *types.Transaction, cf types.CoveredFields, uc types.Unlo
 }
 
 // FundCoins will add a siacoin input of exactly 'amount' to the
-// transaction. A parent transaction may be needed to achieve an input with the
-// correct value. The coin input will not be signed until 'Sign' is called
+// transaction. The coin input will not be signed until 'Sign' is called
 // on the transaction builder.
 func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	tb.wallet.mu.Lock()
@@ -110,15 +109,14 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	}
 	sort.Sort(sort.Reverse(so))
 
-	// Create and fund a parent transaction that will add the correct amount of
-	// siacoins to the transaction.
+	// Create a transaction that will add the correct amount of siacoins to the
+	// transaction.
 	var fund types.Currency
 	// potentialFund tracks the balance of the wallet including outputs that
 	// have been spent in other unconfirmed transactions recently. This is to
 	// provide the user with a more useful error message in the event that they
 	// are overspending.
 	var potentialFund types.Currency
-	parentTxn := types.Transaction{}
 	var spentScoids []types.CoinOutputID
 	for i := range so.ids {
 		scoid := so.ids[i]
@@ -144,7 +142,10 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 			ParentID:         scoid,
 			UnlockConditions: outputUnlockConditions,
 		}
-		parentTxn.CoinInputs = append(parentTxn.CoinInputs, sci)
+
+		tb.coinInputs = append(tb.coinInputs, len(tb.transaction.CoinInputs))
+		tb.transaction.CoinInputs = append(tb.transaction.CoinInputs, sci)
+
 		spentScoids = append(spentScoids, scoid)
 
 		// Add the output to the total fund
@@ -161,18 +162,6 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 		return modules.ErrLowBalance
 	}
 
-	// Create and add the output that will be used to fund the standard
-	// transaction.
-	parentUnlockConditions, err := tb.wallet.nextPrimarySeedAddress()
-	if err != nil {
-		return err
-	}
-	exactOutput := types.CoinOutput{
-		Value:      amount,
-		UnlockHash: parentUnlockConditions.UnlockHash(),
-	}
-	parentTxn.CoinOutputs = append(parentTxn.CoinOutputs, exactOutput)
-
 	// Create a refund output if needed.
 	if amount.Cmp(fund) != 0 {
 		refundUnlockConditions, err := tb.wallet.nextPrimarySeedAddress()
@@ -183,29 +172,8 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 			Value:      fund.Sub(amount),
 			UnlockHash: refundUnlockConditions.UnlockHash(),
 		}
-		parentTxn.CoinOutputs = append(parentTxn.CoinOutputs, refundOutput)
+		tb.transaction.CoinOutputs = append(tb.transaction.CoinOutputs, refundOutput)
 	}
-
-	// Sign all of the inputs to the parent trancstion.
-	for _, sci := range parentTxn.CoinInputs {
-		_, err := addSignatures(&parentTxn, types.FullCoveredFields, sci.UnlockConditions, crypto.Hash(sci.ParentID), tb.wallet.keys[sci.UnlockConditions.UnlockHash()])
-		if err != nil {
-			return err
-		}
-	}
-	// Mark the parent output as spent. Must be done after the transaction is
-	// finished because otherwise the txid and output id will change.
-	tb.wallet.spentOutputs[types.OutputID(parentTxn.CoinOutputID(0))] = tb.wallet.consensusSetHeight
-
-	// Add the exact output.
-	newInput := types.CoinInput{
-		ParentID:         parentTxn.CoinOutputID(0),
-		UnlockConditions: parentUnlockConditions,
-	}
-	tb.newParents = append(tb.newParents, len(tb.parents))
-	tb.parents = append(tb.parents, parentTxn)
-	tb.coinInputs = append(tb.coinInputs, len(tb.transaction.CoinInputs))
-	tb.transaction.CoinInputs = append(tb.transaction.CoinInputs, newInput)
 
 	// Mark all outputs that were spent as spent.
 	for _, scoid := range spentScoids {
@@ -215,18 +183,16 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 }
 
 // FundBlockStakes will add a blockstake input of exaclty 'amount' to the
-// transaction. A parent transaction may be needed to achieve an input with the
-// correct value. The blockstake input will not be signed until 'Sign' is called
+// transaction. The blockstake input will not be signed until 'Sign' is called
 // on the transaction builder.
 func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
-	// Create and fund a parent transaction that will add the correct amount of
-	// siafunds to the transaction.
+	// Create a transaction that will add the correct amount of siafunds to the
+	// transaction.
 	var fund types.Currency
 	var potentialFund types.Currency
-	parentTxn := types.Transaction{}
 	var spentSfoids []types.BlockStakeOutputID
 	for sfoid, sfo := range tb.wallet.blockstakeOutputs {
 		// Check that this output has not recently been spent by the wallet.
@@ -249,7 +215,9 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 			ParentID:         sfoid,
 			UnlockConditions: outputUnlockConditions,
 		}
-		parentTxn.BlockStakeInputs = append(parentTxn.BlockStakeInputs, sfi)
+		tb.blockstakeInputs = append(tb.blockstakeInputs, len(tb.transaction.BlockStakeInputs))
+		tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, sfi)
+
 		spentSfoids = append(spentSfoids, sfoid)
 
 		// Add the output to the total fund
@@ -266,18 +234,6 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 		return modules.ErrLowBalance
 	}
 
-	// Create and add the output that will be used to fund the standard
-	// transaction.
-	parentUnlockConditions, err := tb.wallet.nextPrimarySeedAddress()
-	if err != nil {
-		return err
-	}
-	exactOutput := types.BlockStakeOutput{
-		Value:      amount,
-		UnlockHash: parentUnlockConditions.UnlockHash(),
-	}
-	parentTxn.BlockStakeOutputs = append(parentTxn.BlockStakeOutputs, exactOutput)
-
 	// Create a refund output if needed.
 	if amount.Cmp(fund) != 0 {
 		refundUnlockConditions, err := tb.wallet.nextPrimarySeedAddress()
@@ -288,25 +244,8 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 			Value:      fund.Sub(amount),
 			UnlockHash: refundUnlockConditions.UnlockHash(),
 		}
-		parentTxn.BlockStakeOutputs = append(parentTxn.BlockStakeOutputs, refundOutput)
+		tb.transaction.BlockStakeOutputs = append(tb.transaction.BlockStakeOutputs, refundOutput)
 	}
-
-	// Sign all of the inputs to the parent trancstion.
-	for _, sfi := range parentTxn.BlockStakeInputs {
-		_, err := addSignatures(&parentTxn, types.FullCoveredFields, sfi.UnlockConditions, crypto.Hash(sfi.ParentID), tb.wallet.keys[sfi.UnlockConditions.UnlockHash()])
-		if err != nil {
-			return err
-		}
-	}
-
-	newInput := types.BlockStakeInput{
-		ParentID:         parentTxn.BlockStakeOutputID(0),
-		UnlockConditions: parentUnlockConditions,
-	}
-	tb.newParents = append(tb.newParents, len(tb.parents))
-	tb.parents = append(tb.parents, parentTxn)
-	tb.blockstakeInputs = append(tb.blockstakeInputs, len(tb.transaction.BlockStakeInputs))
-	tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, newInput)
 
 	// Mark all outputs that were spent as spent.
 	for _, sfoid := range spentSfoids {
@@ -342,8 +281,8 @@ func (tb *transactionBuilder) AddCoinOutput(output types.CoinOutput) uint64 {
 	return uint64(len(tb.transaction.CoinOutputs) - 1)
 }
 
-// AddBlockStakeInput adds a siafund input to the transaction, returning the index
-// of the siafund input within the transaction. When 'Sign' is called, this
+// AddBlockStakeInput adds a blockstake input to the transaction, returning the index
+// of the blockstake input within the transaction. When 'Sign' is called, this
 // input will be left unsigned.
 func (tb *transactionBuilder) AddBlockStakeInput(input types.BlockStakeInput) uint64 {
 	tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, input)
