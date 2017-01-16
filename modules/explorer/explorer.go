@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	// hashrateEstimationBlocks is the number of blocks that are used to
-	// estimate the current hashrate.
-	hashrateEstimationBlocks = 200 // 33 hours
+	// ActiveBSEstimationBlocks is the number of blocks that are used to
+	// estimate the active block stake used to generate blocks.
+	ActiveBSEstimationBlocks = 200
 )
 
 var (

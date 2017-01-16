@@ -16,7 +16,7 @@ type (
 	BlockFacts struct {
 		BlockID           types.BlockID     `json:"blockid"`
 		Difficulty        types.Difficulty  `json:"difficulty"`
-		EstimatedHashrate types.Difficulty  `json:"estimatedhashrate"`
+		EstimatedActiveBS types.Difficulty  `json:"estimatedactivebs"`
 		Height            types.BlockHeight `json:"height"`
 		MaturityTimestamp types.Timestamp   `json:"maturitytimestamp"`
 		Target            types.Target      `json:"target"`
