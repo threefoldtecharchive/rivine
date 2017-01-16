@@ -64,7 +64,7 @@ func (bc *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransac
 	// Add transactions to the block until the block size limit is reached.
 	// Transactions are assumed to be in a sensible order.
 	var i int
-	remainingSize := int(types.BlockSizeLimit - 5e3)
+	remainingSize := int(types.BlockSizeLimit - 5e3) //check this 5k for the first extra
 	for i = range unconfirmedTransactions {
 		remainingSize -= len(encoding.Marshal(unconfirmedTransactions[i]))
 		if remainingSize < 0 {

@@ -3,7 +3,7 @@ Standard Transaction Rules
 
 Some transactions will not be accepted by miners unless they appear in a block.
 This is equivalent to the 'IsStandard' function in Bitcoin. This file dictates
-the rules for standard Sia transactions.
+the rules for standard transactions.
 
 Transaction Size
 ----------------

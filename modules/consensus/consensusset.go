@@ -250,7 +250,6 @@ func (cs *ConsensusSet) CurrentBlock() (block types.Block) {
 	defer cs.tg.Done()
 	cs.mu.RLock()
 	defer cs.mu.RUnlock()
-
 	_ = cs.db.View(func(tx *bolt.Tx) error {
 		pb := currentProcessedBlock(tx)
 		block = pb.Block

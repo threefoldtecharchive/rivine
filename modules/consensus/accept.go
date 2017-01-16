@@ -140,7 +140,6 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 		}
 		currentNode := currentProcessedBlock(tx)
 		newNode := cs.newChild(tx, pb, b)
-
 		// modules.ErrNonExtendingBlock should be returned if the block does
 		// not extend the current blockchain, however the changes from newChild
 		// should be committed (which means 'nil' must be returned). A flag is
@@ -206,7 +205,6 @@ func (cs *ConsensusSet) managedAcceptBlock(b types.Block) error {
 		if inconsistencyDetected(tx) {
 			return errInconsistentSet
 		}
-
 		// Do some relatively inexpensive checks to validate the header and block.
 		// Validation generally occurs in the order of least expensive validation
 		// first.
@@ -246,7 +244,6 @@ func (cs *ConsensusSet) managedAcceptBlock(b types.Block) error {
 		cs.mu.Unlock()
 		return err
 	}
-
 	// Try adding the block to the block tree. This call will perform
 	// verification on the block before adding the block to the block tree. An
 	// error is returned if verification fails or if the block does not extend
@@ -260,7 +257,6 @@ func (cs *ConsensusSet) managedAcceptBlock(b types.Block) error {
 	if build.DEBUG && len(changeEntry.AppliedBlocks) == 0 && len(changeEntry.RevertedBlocks) != 0 {
 		panic("appliedBlocks and revertedBlocks are mismatched!")
 	}
-
 	// Updates complete, demote the lock.
 	cs.mu.Demote()
 	defer cs.mu.DemotedUnlock()
