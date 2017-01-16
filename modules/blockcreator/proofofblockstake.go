@@ -29,7 +29,7 @@ func (bc *BlockCreator) SolveBlocks() {
 		// TODO: where to put the lock exactly
 		// Try to solve a block for blocktimes of the next 10 seconds
 		now := time.Now().Unix()
-		b := bc.solveBlock(now, 10)
+		b := bc.solveBlock(uint64(now), 10)
 		if b != nil {
 			bjson, _ := json.Marshal(b)
 			bc.log.Debugln("Solved block:", string(bjson))
@@ -83,18 +83,29 @@ func (bc *BlockCreator) CalculateStakeModifier() *big.Int {
 	return stakemodifier
 }
 
-func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b *types.Block) {
+func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) (b *types.Block) {
 
 	stakemodifier := bc.CalculateStakeModifier()
-
 	cbid := bc.cs.CurrentBlock().ID()
 	target, _ := bc.cs.ChildTarget(cbid)
 
 	// Try all unspent blockstake outputs
 	unspentBlockStakeOutputs := bc.wallet.GetUnspentBlockStakeOutputs()
 	for _, ubso := range unspentBlockStakeOutputs {
+		BlockStakeAge := types.Timestamp(0)
+		// Filter all unspent block stakes for aging. If the index of the unspent
+		// block stake output is not the first transaction with the first index,
+		// then block stake can only be used to solve blocks after its aging is
+		// older than types.BlockStakeAging (more than 1 day)
+		if ubso.Indexes.TransactionIndex != 0 || ubso.Indexes.OutputIndex != 0 {
+			blockatheigh, _ := bc.cs.BlockAtHeight(ubso.Indexes.BlockHeight)
+			BlockStakeAge = blockatheigh.Header().Timestamp + types.Timestamp(types.BlockStakeAging)
+		}
 		// Try all timestamps for this timerange
 		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {
+			if BlockStakeAge > types.Timestamp(blocktime) {
+				continue
+			}
 			// Calculate the hash for the given unspent output and timestamp
 			pobshash := crypto.HashAll(stakemodifier.Bytes(), ubso.Indexes.BlockHeight, ubso.Indexes.TransactionIndex, ubso.Indexes.OutputIndex, blocktime)
 			// Check if it meets the difficulty
@@ -107,6 +118,7 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 					Timestamp:  types.Timestamp(blocktime),
 					POBSOutput: ubso.Indexes,
 				}
+
 				// Block is going to be passed to external memory, but the memory pointed
 				// to by the transactions slice is still being modified - needs to be
 				// copied.
@@ -118,14 +130,10 @@ func (bc *BlockCreator) solveBlock(startTime int64, secondsInTheFuture int64) (b
 				if collectedMinerFees.Cmp(types.ZeroCurrency) != 0 {
 					blockToSubmit.MinerPayouts = []types.CoinOutput{{Value: collectedMinerFees, UnlockHash: ubso.UnlockHash}}
 				}
-				// TODO: use the unspent block stake output and send it to ourselves
 
 				return &blockToSubmit
-
 			}
-
 		}
-
 	}
 	return
 }

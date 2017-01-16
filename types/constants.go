@@ -29,6 +29,8 @@ var (
 
 	StakeModifierDelay BlockHeight
 
+	BlockStakeAging uint64
+
 	SiacoinPrecision = NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
 
 	GenesisBlockStakeAllocation = []BlockStakeOutput{}
@@ -73,6 +75,8 @@ func init() {
 		ExtremeFutureThreshold = 4 * 60          // 4 minutes.
 		StakeModifierDelay = 2000                // Number of blocks to take in history to calculate the stakemodifier
 
+		BlockStakeAging = uint64(1 << 10) // Block stake aging if unspent block stake is not at index 0
+
 		bso := BlockStakeOutput{
 			Value:      NewCurrency64(1000000),
 			UnlockHash: UnlockHash{},
@@ -107,6 +111,8 @@ func init() {
 		FutureThreshold = 3        // 3 seconds
 		ExtremeFutureThreshold = 6 // 6 seconds
 		StakeModifierDelay = 20
+
+		BlockStakeAging = uint64(1 << 10)
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
@@ -183,6 +189,11 @@ func init() {
 		// is calculated as: For x = 0 to 255
 		// bit x of Stake Modifier = bit x of h(block N-(StakeModifierDelay+x))
 		StakeModifierDelay = 2000
+
+		// Blockstakeaging is the number of seconds to wait before blockstake can be
+		// used to solve blocks. But only when the block stake output is not the
+		// first transaction with the first index. (2^16s < 1 day < 2^17s)
+		BlockStakeAging = uint64(1 << 17)
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
