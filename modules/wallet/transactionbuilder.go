@@ -289,6 +289,37 @@ func (tb *transactionBuilder) AddBlockStakeInput(input types.BlockStakeInput) ui
 	return uint64(len(tb.transaction.BlockStakeInputs) - 1)
 }
 
+// SpendBlockStake will link the unspent block stake to the transaction as an input.
+// In contrast with FundBlockStakes, this function will not loop over all unspent
+// block stake output. the ubsoid is an argument. The blockstake input will not be
+// signed until 'Sign' is called on the transaction builder.
+func (tb *transactionBuilder) SpendBlockStake(ubsoid types.BlockStakeOutputID) error {
+	tb.wallet.mu.Lock()
+	defer tb.wallet.mu.Unlock()
+
+	ubso, ok := tb.wallet.unspentblockstakeoutputs[ubsoid]
+	if !ok {
+		return modules.ErrIncompleteTransactions //TODO: not right error
+	}
+
+	// Check that this output has no Timelock
+	outputUnlockConditions := tb.wallet.keys[ubso.UnlockHash].UnlockConditions
+	if tb.wallet.consensusSetHeight < outputUnlockConditions.Timelock {
+		return modules.ErrIncompleteTransactions //TODO: not right error
+	}
+
+	bsi := types.BlockStakeInput{
+		ParentID:         ubsoid,
+		UnlockConditions: outputUnlockConditions,
+	}
+	tb.blockstakeInputs = append(tb.blockstakeInputs, len(tb.transaction.BlockStakeInputs))
+	tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, bsi)
+
+	// Mark output as spent.
+	tb.wallet.spentOutputs[types.OutputID(ubsoid)] = tb.wallet.consensusSetHeight
+	return nil
+}
+
 // AddBlockStakeOutput adds a blockstake output to the transaction, returning the
 // index of the blockstake output within the transaction.
 func (tb *transactionBuilder) AddBlockStakeOutput(output types.BlockStakeOutput) uint64 {

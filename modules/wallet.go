@@ -132,6 +132,12 @@ type (
 		// failed.
 		FundBlockStakes(amount types.Currency) error
 
+		// SpendBlockStake will link the unspent block stake to the transaction as an input.
+		// In contrast with FundBlockStakes, this function will not loop over all unspent
+		// block stake output. the ubsoid is an argument. The blockstake input will not be
+		// signed until 'Sign' is called on the transaction builder.
+		SpendBlockStake(ubsoid types.BlockStakeOutputID) error
+
 		// AddParents adds a set of parents to the transaction.
 		AddParents([]types.Transaction)
 

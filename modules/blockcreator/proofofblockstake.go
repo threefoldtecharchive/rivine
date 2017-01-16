@@ -119,6 +119,8 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 					POBSOutput: ubso.Indexes,
 				}
 
+				bc.RespentBlockStake(ubso)
+
 				// Block is going to be passed to external memory, but the memory pointed
 				// to by the transactions slice is still being modified - needs to be
 				// copied.
@@ -135,5 +137,48 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 			}
 		}
 	}
+	return
+}
+
+// RespentBlockStake will spent the unspent block stake output which is needed
+// for the POBS algorithm. The transaction created will be the first transaction
+// in the block to avoid the BlockStakeAging for later use of this block stake.
+func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) {
+
+	// There is a special case: When the unspent block stake output is allready
+	// used in another transaction in this unsolved block, this extra transaction
+	// is obsolete
+	for _, ubstr := range bc.unsolvedBlock.Transactions {
+		for _, ubstrinput := range ubstr.BlockStakeInputs {
+			if ubstrinput.ParentID == ubso.BlockStakeOutputID {
+				return
+			}
+		}
+	}
+
+	//otherwise the blockstake is not yet spent in this block, spent it now
+	t := bc.wallet.StartTransaction()
+	t.SpendBlockStake(ubso.BlockStakeOutputID) // link the input of this transaction
+	// to the used BlockStake output
+
+	bso := types.BlockStakeOutput{
+		Value:      ubso.Value,      //use the same amount of BlockStake
+		UnlockHash: ubso.UnlockHash, //use the same unlockhash.
+	}
+	ind := t.AddBlockStakeOutput(bso)
+	if ind != 0 {
+		// should not happen //TODO: not right error
+	}
+	txnSet, err := t.Sign(true)
+	if err != nil {
+		// should not happen //TODO: not right error
+	}
+	//Only one transaction is generated for this.
+	if len(txnSet) > 1 {
+		// should not happen //TODO: not right error
+	}
+	//add this transaction in front of the list of unsolved block transactions
+	bc.unsolvedBlock.Transactions = append(txnSet, bc.unsolvedBlock.Transactions...)
+
 	return
 }
