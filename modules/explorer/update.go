@@ -318,15 +318,15 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 	}
 	bf.MaturityTimestamp = maturityTimestamp
 
-	// calculate hashrate by averaging last 'hashrateEstimationBlocks' blocks
-	var estimatedHashrate types.Difficulty
-	if bf.Height > hashrateEstimationBlocks {
+	// calculate hashrate by averaging last 'ActiveBSEstimationBlocks' blocks
+	var EstimatedActiveBS types.Difficulty
+	if bf.Height > ActiveBSEstimationBlocks {
 		var totalDifficulty = bf.Target
 		var oldestTimestamp types.Timestamp
-		for i := types.BlockHeight(1); i < hashrateEstimationBlocks; i++ {
+		for i := types.BlockHeight(1); i < ActiveBSEstimationBlocks; i++ {
 			b, exists := cs.BlockAtHeight(bf.Height - i)
 			if !exists {
-				panic(fmt.Sprint("ConsensusSet is missing block at height", bf.Height-hashrateEstimationBlocks))
+				panic(fmt.Sprint("ConsensusSet is missing block at height", bf.Height-i))
 			}
 			target, exists := cs.ChildTarget(b.ParentID)
 			if !exists {
@@ -336,9 +336,9 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 			oldestTimestamp = b.Timestamp
 		}
 		secondsPassed := bf.Timestamp - oldestTimestamp
-		estimatedHashrate = totalDifficulty.Difficulty().Div64(uint64(secondsPassed))
+		EstimatedActiveBS = totalDifficulty.Difficulty().Div64(uint64(secondsPassed))
 	}
-	bf.EstimatedHashrate = estimatedHashrate
+	bf.EstimatedActiveBS = EstimatedActiveBS
 
 	bf.MinerPayoutCount += uint64(len(block.MinerPayouts))
 	bf.TransactionCount += uint64(len(block.Transactions))
