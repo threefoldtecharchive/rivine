@@ -155,11 +155,6 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		return err
 	}
 
-	// Attempt to ping the supplied address. If successful, we will add
-	// the address is a local address, mark the peer as a local peer.
-	// remoteAddr to our node list after accepting the peer.
-	pingSucceeded := g.pingNode(remoteAddr) == nil
-
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -179,11 +174,12 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		},
 		sess: newSmuxServer(conn),
 	})
-	if pingSucceeded {
-		g.addNode(remoteAddr)
-		return g.save()
-	}
-	return nil
+	// Add remoteAddr to the node list. The peer may have provided an
+	// unreachable address, but if so, it will eventually be filtered out by
+	// permanentNodePurger. The alternative is to ping remoteAddr immediately,
+	// which feels more susceptible to DOS attacks.
+	g.addNode(remoteAddr)
+	return g.save()
 }
 
 // acceptPeer makes room for the peer if necessary by kicking out existing
