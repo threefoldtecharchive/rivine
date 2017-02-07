@@ -239,6 +239,17 @@ func walletsendblockstakescmd(amount, dest string) {
 	fmt.Printf("Sent %s blockstakes to %s\n", amount, dest)
 }
 
+// walletaddresscmd fetches a new address from the wallet that will be able to
+// receive coins.
+func walletblockstakestatcmd() {
+	addr := new(api.WalletBlockStakeStatsGET)
+	err := getAPI("/wallet/blockstakestats", addr)
+	if err != nil {
+		die("Could not gen blockstake info:", err)
+	}
+	fmt.Printf("Here should come the blockstake stat info\n") //TODO rivine
+}
+
 // walletbalancecmd retrieves and displays information about the wallet.
 func walletbalancecmd() {
 	status := new(api.WalletGET)

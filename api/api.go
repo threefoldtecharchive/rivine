@@ -179,6 +179,7 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 	// Wallet API Calls
 	if api.wallet != nil {
 		router.GET("/wallet", api.walletHandler)
+		router.GET("/wallet/blockstakestats", RequirePassword(api.walletBlockStakeStats, requiredPassword))
 		router.GET("/wallet/address", RequirePassword(api.walletAddressHandler, requiredPassword))
 		router.GET("/wallet/addresses", api.walletAddressesHandler)
 		router.GET("/wallet/backup", RequirePassword(api.walletBackupHandler, requiredPassword))

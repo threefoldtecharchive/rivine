@@ -26,6 +26,18 @@ type (
 		BlockStakeBalance types.Currency `json:"blockstakebalance"`
 	}
 
+	// WalletBlockStakeStatsGET contains blockstake statistical info of the wallet.
+	WalletBlockStakeStatsGET struct {
+		TotalActiveBlockStake   int     `json:"totalactiveblockstake"`
+		BlockStakeState         []int32 `json:"blockstakestate"`
+		BlockStakeNumOf         []int32 `json:"blockstakenumof"`
+		BlockStakeAge           []int32 `json:"blockstakeage"`
+		BlockStakeBlockCreation []int32 `json:"blockstakeblockcreation"`
+		BlockStakeFee           []int32 `json:"blockstakefee"`
+		BlockStakeBCLastWeek    []int32 `json:"blockstakebclastweek"`
+		BlockStakeBCLastWeekt   []int32 `json:"blockstakebclastweekt"`
+	}
+
 	// WalletAddressGET contains an address returned by a GET call to
 	// /wallet/address.
 	WalletAddressGET struct {
@@ -113,6 +125,30 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 		UnconfirmedIncomingCoins: coinsIn,
 
 		BlockStakeBalance: blockstakeBal,
+	})
+}
+
+// walletHander handles API calls to /wallet.
+func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+
+	tabs := 250000
+	bss := []int32{1, 1, 0, 1, 0}
+	bsn := []int32{1000, 100000, 4000, 6000, 111000}
+	bsa := []int32{300, 300, 2, 500, 0}
+	bsbc := []int32{32, 409, 0, 44, 485}
+	bsf := []int32{1112, 103244, 0, 2343, 106699}
+	bsbclw := []int32{3, 56, 0, 5, 64}
+	bsbclwt := []int32{3, 55, 0, 8, 66}
+
+	WriteJSON(w, WalletBlockStakeStatsGET{
+		TotalActiveBlockStake:   tabs,
+		BlockStakeState:         bss,
+		BlockStakeNumOf:         bsn,
+		BlockStakeAge:           bsa,
+		BlockStakeBlockCreation: bsbc,
+		BlockStakeFee:           bsf,
+		BlockStakeBCLastWeek:    bsbclw,
+		BlockStakeBCLastWeekt:   bsbclwt,
 	})
 }
 
