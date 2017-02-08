@@ -155,10 +155,6 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		return err
 	}
 
-	// Attempt to ping the supplied address. If successful, we will add
-	// remoteAddr to our node list after accepting the peer.
-	pingSucceeded := g.pingNode(remoteAddr) == nil
-
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -178,10 +174,19 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		},
 		sess: newSmuxServer(conn),
 	})
-	if pingSucceeded {
-		g.addNode(remoteAddr)
-		return g.save()
-	}
+
+	// Attempt to ping the supplied address. If successful, we will add
+	// remoteAddr to our node list after accepting the peer.
+	go func() {
+		err := g.pingNode(remoteAddr)
+		if err == nil {
+			g.mu.Lock()
+			g.addNode(remoteAddr)
+			g.save()
+			g.mu.Unlock()
+		}
+	}()
+
 	return nil
 }
 
