@@ -2,6 +2,7 @@ package modules
 
 import (
 	"errors"
+	"math/big"
 
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/types"
@@ -191,6 +192,9 @@ type (
 		// a required piece of information for the miner, who could otherwise be at
 		// risk of mining invalid blocks.
 		MinimumValidChildTimestamp(types.BlockID) (types.Timestamp, bool)
+
+		// CalculateStakeModifier calculates the stakemodifier from the blockchain.
+		CalculateStakeModifier(height types.BlockHeight) *big.Int
 
 		// TryTransactionSet checks whether the transaction set would be valid if
 		// it were added in the next block. A consensus change is returned

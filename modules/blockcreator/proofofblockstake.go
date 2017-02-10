@@ -1,11 +1,8 @@
 package blockcreator
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"math/big"
-	"strconv"
 	"time"
 
 	"github.com/rivine/rivine/crypto"
@@ -44,48 +41,9 @@ func (bc *BlockCreator) SolveBlocks() {
 	}
 }
 
-// CalculateStakeModifier calculates the stakemodifier from the blockchain.
-func (bc *BlockCreator) CalculateStakeModifier() *big.Int {
-	//TODO: check if a new Stakemodifier needs to be calculated. The stakemodifier
-	// only change when a new block is created
-
-	// make a signed version of the current height because sub genesis block is
-	// possible here.
-	signedHeight := int64(bc.persist.Height) + 1
-	signedHeight -= int64(types.StakeModifierDelay)
-
-	mask := big.NewInt(1)
-	BlockIDHash := big.NewInt(0)
-	stakemodifier := big.NewInt(0)
-	var buffer bytes.Buffer
-
-	// now signedHeight points to the first block to use for the stakemodifier
-	// calculation, we count down 256 blocks and use 1 bit of each blocks ID to
-	// calculate the stakemodifier
-	for i := 0; i < 256; i++ {
-		if signedHeight >= 0 {
-			// If the genesis block is not yet reached use the ID of the current block
-			BlockID, _ := bc.cs.BlockAtHeight(types.BlockHeight(signedHeight))
-			hashof := BlockID.ID()
-			BlockIDHash = big.NewInt(0).SetBytes(hashof[:])
-		} else {
-			// if the counter goes sub genesis block , calculate a predefined hash
-			// from the sub genesis distance.
-			buffer.WriteString("genesis" + strconv.FormatInt(signedHeight, 10))
-			hashof := sha256.Sum256(buffer.Bytes())
-			BlockIDHash = big.NewInt(0).SetBytes(hashof[:])
-		}
-
-		stakemodifier.Or(stakemodifier, big.NewInt(0).And(BlockIDHash, mask))
-		mask.Mul(mask, big.NewInt(2)) //shift 1 bit to left (more close to msb)
-		signedHeight--
-	}
-	return stakemodifier
-}
-
 func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) (b *types.Block) {
 
-	stakemodifier := bc.CalculateStakeModifier()
+	stakemodifier := bc.cs.CalculateStakeModifier(bc.persist.Height + 1)
 	cbid := bc.cs.CurrentBlock().ID()
 	target, _ := bc.cs.ChildTarget(cbid)
 
@@ -110,8 +68,9 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 			pobshash := crypto.HashAll(stakemodifier.Bytes(), ubso.Indexes.BlockHeight, ubso.Indexes.TransactionIndex, ubso.Indexes.OutputIndex, blocktime)
 			// Check if it meets the difficulty
 			pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
+			pobshashvalue.Div(pobshashvalue, ubso.Value.Big()) //TODO rivine : this div can be mul on the other side of the compare
 
-			if pobshashvalue.Div(pobshashvalue, ubso.Value.Big()).Cmp(target.Int()) == -1 {
+			if pobshashvalue.Cmp(target.Int()) == -1 {
 				bc.log.Debugln("\nSolved block with target", target)
 				blockToSubmit := types.Block{
 					ParentID:   bc.unsolvedBlock.ParentID,
