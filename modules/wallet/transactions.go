@@ -104,6 +104,42 @@ func (w *Wallet) Transactions(startHeight, endHeight types.BlockHeight) (pts []m
 	return pts, nil
 }
 
+// BlockStakeStats returns the blockstake statistical information of this wallet
+func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	//BCcountLastWeek := 0
+	//BCfeeLastWeek := types.NewCurrency64(0)
+
+	BlockHeightCounter := w.cs.Height()
+
+	for i := 0; i < 1000; i++ {
+
+		block, _ := w.cs.BlockAtHeight(BlockHeightCounter)
+		ind := block.POBSOutput
+		blockOld, _ := w.cs.BlockAtHeight(ind.BlockHeight)
+		bso := blockOld.Transactions[ind.TransactionIndex].BlockStakeOutputs[ind.OutputIndex]
+
+		relevant := false
+
+		_, exists := w.keys[bso.UnlockHash]
+		if exists {
+			relevant = true
+		}
+
+		if relevant {
+			BCcountLast1000++
+			//fmt.Println(block.CalculateSubsidy())
+			BCfeeLast1000 = BCfeeLast1000.Add(block.CalculateSubsidy())
+		}
+		//fmt.Println(BCfeeLastWeek)
+		BlockHeightCounter--
+	}
+
+	return BCcountLast1000, BCfeeLast1000
+}
+
 // UnconfirmedTransactions returns the set of unconfirmed transactions that are
 // relevant to the wallet.
 func (w *Wallet) UnconfirmedTransactions() []modules.ProcessedTransaction {

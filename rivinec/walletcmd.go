@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"math/big"
+	"os"
+	"text/tabwriter"
 
 	"github.com/bgentry/speakeasy"
 	"github.com/spf13/cobra"
@@ -29,6 +31,13 @@ The smallest unit of coins is the hasting. One coin is 10^24 hastings. Other sup
   G (giga,  10^9  )
   T (tera,  10^12 )`,
 		Run: wrap(walletbalancecmd),
+	}
+
+	walletBlockStakeStatCmd = &cobra.Command{
+		Use:   "blockstakestat",
+		Short: "Get the stats of the blockstake",
+		Long:  "Gives all the statistical info of the blockstake.",
+		Run:   wrap(walletblockstakestatcmd),
 	}
 
 	walletAddressCmd = &cobra.Command{
@@ -239,15 +248,30 @@ func walletsendblockstakescmd(amount, dest string) {
 	fmt.Printf("Sent %s blockstakes to %s\n", amount, dest)
 }
 
-// walletaddresscmd fetches a new address from the wallet that will be able to
-// receive coins.
+// walletblockstakestatcmd gives all statistical info of blockstake
 func walletblockstakestatcmd() {
-	addr := new(api.WalletBlockStakeStatsGET)
-	err := getAPI("/wallet/blockstakestats", addr)
+	bsstat := new(api.WalletBlockStakeStatsGET)
+	err := getAPI("/wallet/blockstakestats", bsstat)
 	if err != nil {
 		die("Could not gen blockstake info:", err)
 	}
-	fmt.Printf("Here should come the blockstake stat info\n") //TODO rivine
+	fmt.Printf("BlockStake stats:\n")
+	fmt.Printf("Total active Blockstake is %v\n", bsstat.TotalActiveBlockStake)
+	fmt.Printf("This account has %v Blockstake\n", bsstat.TotalBlockStake)
+	fmt.Printf("In last %v of last 1000 Blocks created (theoretically %v)\n", bsstat.TotalBCLast1000, bsstat.TotalBCLast1000t)
+	fmt.Printf("containing %v fee \n", currencyUnits(bsstat.TotalFeeLast1000))
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.AlignRight|tabwriter.Debug)
+	fmt.Fprintln(w, "state\t#BlockStake\tUTXO hash\t")
+
+	for i, BSstate := range bsstat.BlockStakeState {
+		state := "active"
+		if BSstate == 0 {
+			state = "not active"
+		}
+		fmt.Fprintf(w, "%v\t%v\t%v\t\n", state, bsstat.BlockStakeNumOf[i], bsstat.BlockStakeUTXOAddress[i])
+	}
+	w.Flush()
 }
 
 // walletbalancecmd retrieves and displays information about the wallet.

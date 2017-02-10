@@ -28,14 +28,14 @@ type (
 
 	// WalletBlockStakeStatsGET contains blockstake statistical info of the wallet.
 	WalletBlockStakeStatsGET struct {
-		TotalActiveBlockStake   int     `json:"totalactiveblockstake"`
-		BlockStakeState         []int32 `json:"blockstakestate"`
-		BlockStakeNumOf         []int32 `json:"blockstakenumof"`
-		BlockStakeAge           []int32 `json:"blockstakeage"`
-		BlockStakeBlockCreation []int32 `json:"blockstakeblockcreation"`
-		BlockStakeFee           []int32 `json:"blockstakefee"`
-		BlockStakeBCLastWeek    []int32 `json:"blockstakebclastweek"`
-		BlockStakeBCLastWeekt   []int32 `json:"blockstakebclastweekt"`
+		TotalActiveBlockStake types.Currency             `json:"totalactiveblockstake"`
+		TotalBlockStake       types.Currency             `json:"totalblockstake"`
+		TotalFeeLast1000      types.Currency             `json:"totalfeelast1000"`
+		TotalBCLast1000       uint64                     `json:"totalbclast1000"`
+		TotalBCLast1000t      uint64                     `json:"totalbclast1000t"`
+		BlockStakeState       []uint64                   `json:"blockstakestate"`
+		BlockStakeNumOf       []types.Currency           `json:"blockstakenumof"`
+		BlockStakeUTXOAddress []types.BlockStakeOutputID `json:"blockstakeutxoaddress"`
 	}
 
 	// WalletAddressGET contains an address returned by a GET call to
@@ -131,24 +131,35 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 // walletHander handles API calls to /wallet.
 func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 
-	tabs := 250000
-	bss := []int32{1, 1, 0, 1, 0}
-	bsn := []int32{1000, 100000, 4000, 6000, 111000}
-	bsa := []int32{300, 300, 2, 500, 0}
-	bsbc := []int32{32, 409, 0, 44, 485}
-	bsf := []int32{1112, 103244, 0, 2343, 106699}
-	bsbclw := []int32{3, 56, 0, 5, 64}
-	bsbclwt := []int32{3, 55, 0, 8, 66}
+	count := len(api.wallet.GetUnspentBlockStakeOutputs())
+	bss := make([]uint64, count)
+	bsn := make([]types.Currency, count)
+	bsutxoa := make([]types.BlockStakeOutputID, count)
+	tabs := types.NewCurrency64(1000000) //TODO rivine change this to estimated num of BS
+	tbs := types.NewCurrency64(0)
+
+	num := 0
+	tbclt, bsf := api.wallet.BlockStakeStats()
+
+	for _, ubso := range api.wallet.GetUnspentBlockStakeOutputs() {
+		bss[num] = 1
+		bsn[num] = ubso.Value
+		tbs = tbs.Add(bsn[num])
+		bsutxoa[num] = ubso.BlockStakeOutputID
+		num++
+	}
+
+	tbcltt, _ := tabs.Mul64(1000).Div(tbs).Uint64()
 
 	WriteJSON(w, WalletBlockStakeStatsGET{
-		TotalActiveBlockStake:   tabs,
-		BlockStakeState:         bss,
-		BlockStakeNumOf:         bsn,
-		BlockStakeAge:           bsa,
-		BlockStakeBlockCreation: bsbc,
-		BlockStakeFee:           bsf,
-		BlockStakeBCLastWeek:    bsbclw,
-		BlockStakeBCLastWeekt:   bsbclwt,
+		TotalActiveBlockStake: tabs,
+		TotalBlockStake:       tbs,
+		TotalFeeLast1000:      bsf,
+		TotalBCLast1000:       tbclt,
+		TotalBCLast1000t:      tbcltt,
+		BlockStakeState:       bss,
+		BlockStakeNumOf:       bsn,
+		BlockStakeUTXOAddress: bsutxoa,
 	})
 }
 

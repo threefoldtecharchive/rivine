@@ -350,6 +350,9 @@ type (
 		// transactions are automatically given to the transaction pool, and
 		// are also returned to the caller.
 		SendBlockStakes(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
+
+		// BlockStakeStats returns the blockstake statistical information of this wallet
+		BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency)
 	}
 )
 
