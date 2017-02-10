@@ -31,6 +31,8 @@ var (
 
 	BlockStakeAging uint64
 
+	BlockCreatorFee Currency
+
 	SiacoinPrecision = NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
 
 	GenesisBlockStakeAllocation = []BlockStakeOutput{}
@@ -77,6 +79,8 @@ func init() {
 
 		BlockStakeAging = uint64(1 << 10) // Block stake aging if unspent block stake is not at index 0
 
+		BlockCreatorFee = NewCurrency64(100)
+
 		bso := BlockStakeOutput{
 			Value:      NewCurrency64(1000000),
 			UnlockHash: UnlockHash{},
@@ -113,6 +117,8 @@ func init() {
 		StakeModifierDelay = 20
 
 		BlockStakeAging = uint64(1 << 10)
+
+		BlockCreatorFee = NewCurrency64(100)
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
@@ -194,6 +200,10 @@ func init() {
 		// used to solve blocks. But only when the block stake output is not the
 		// first transaction with the first index. (2^16s < 1 day < 2^17s)
 		BlockStakeAging = uint64(1 << 17)
+
+		// BlockCreatorFee is the asset you get when creating a block on top of the
+		// other fee.
+		BlockCreatorFee = NewCurrency64(100)
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{

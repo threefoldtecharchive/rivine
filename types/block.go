@@ -72,6 +72,7 @@ func (b Block) CalculateSubsidy() Currency {
 			subsidy = subsidy.Add(fee)
 		}
 	}
+	subsidy = subsidy.Add(BlockCreatorFee)
 	return subsidy
 }
 
