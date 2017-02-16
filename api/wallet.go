@@ -32,6 +32,7 @@ type (
 		TotalBlockStake       types.Currency             `json:"totalblockstake"`
 		TotalFeeLast1000      types.Currency             `json:"totalfeelast1000"`
 		TotalBCLast1000       uint64                     `json:"totalbclast1000"`
+		BlockCount            uint64                     `json:"blockcount"`
 		TotalBCLast1000t      uint64                     `json:"totalbclast1000t"`
 		BlockStakeState       []uint64                   `json:"blockstakestate"`
 		BlockStakeNumOf       []types.Currency           `json:"blockstakenumof"`
@@ -139,7 +140,7 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 	tbs := types.NewCurrency64(0)
 
 	num := 0
-	tbclt, bsf := api.wallet.BlockStakeStats()
+	tbclt, bsf, bc := api.wallet.BlockStakeStats()
 
 	for _, ubso := range api.wallet.GetUnspentBlockStakeOutputs() {
 		bss[num] = 1
@@ -149,13 +150,14 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 		num++
 	}
 
-	tbcltt, _ := tabs.Mul64(1000).Div(tbs).Uint64()
+	tbcltt, _ := tabs.Mul64(bc).Div(tbs).Uint64()
 
 	WriteJSON(w, WalletBlockStakeStatsGET{
 		TotalActiveBlockStake: tabs,
 		TotalBlockStake:       tbs,
 		TotalFeeLast1000:      bsf,
 		TotalBCLast1000:       tbclt,
+		BlockCount:            bc,
 		TotalBCLast1000t:      tbcltt,
 		BlockStakeState:       bss,
 		BlockStakeNumOf:       bsn,

@@ -258,7 +258,7 @@ func walletblockstakestatcmd() {
 	fmt.Printf("BlockStake stats:\n")
 	fmt.Printf("Total active Blockstake is %v\n", bsstat.TotalActiveBlockStake)
 	fmt.Printf("This account has %v Blockstake\n", bsstat.TotalBlockStake)
-	fmt.Printf("In last %v of last 1000 Blocks created (theoretically %v)\n", bsstat.TotalBCLast1000, bsstat.TotalBCLast1000t)
+	fmt.Printf("%v of last %v Blocks created (theoretically %v)\n", bsstat.TotalBCLast1000, bsstat.BlockCount, bsstat.TotalBCLast1000t)
 	fmt.Printf("containing %v fee \n", currencyUnits(bsstat.TotalFeeLast1000))
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.AlignRight|tabwriter.Debug)

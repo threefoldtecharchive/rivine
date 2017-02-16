@@ -351,8 +351,10 @@ type (
 		// are also returned to the caller.
 		SendBlockStakes(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
 
-		// BlockStakeStats returns the blockstake statistical information of this wallet
-		BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency)
+		// BlockStakeStats returns the blockstake statistical information of
+		// this wallet of the last 1000 blocks. If the blockcount is less than
+		// 1000 blocks, BlockCount will be the number available.
+		BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency, BlockCount uint64)
 	}
 )
 
