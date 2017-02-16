@@ -4,10 +4,10 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
-	"github.com/sia/Sia/crypto"
 )
 
 var (
