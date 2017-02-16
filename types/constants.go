@@ -79,7 +79,7 @@ func init() {
 
 		BlockStakeAging = uint64(1 << 10) // Block stake aging if unspent block stake is not at index 0
 
-		BlockCreatorFee = NewCurrency64(100)
+		BlockCreatorFee = oneCoin.Mul64(100)
 
 		bso := BlockStakeOutput{
 			Value:      NewCurrency64(1000000),
@@ -118,7 +118,7 @@ func init() {
 
 		BlockStakeAging = uint64(1 << 10)
 
-		BlockCreatorFee = NewCurrency64(100)
+		BlockCreatorFee = oneCoin.Mul64(100)
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
@@ -203,7 +203,7 @@ func init() {
 
 		// BlockCreatorFee is the asset you get when creating a block on top of the
 		// other fee.
-		BlockCreatorFee = NewCurrency64(100)
+		BlockCreatorFee = oneCoin.Mul64(100)
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
