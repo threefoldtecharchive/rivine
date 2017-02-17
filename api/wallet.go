@@ -132,6 +132,10 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 // walletHander handles API calls to /wallet.
 func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 
+	if !api.wallet.Unlocked() {
+		WriteError(w, Error{"error after call to /wallet/blockstakestat: wallet must be unlocked before it can be used"}, http.StatusBadRequest)
+		return
+	}
 	count := len(api.wallet.GetUnspentBlockStakeOutputs())
 	bss := make([]uint64, count)
 	bsn := make([]types.Currency, count)
@@ -150,7 +154,10 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 		num++
 	}
 
-	tbcltt, _ := tabs.Mul64(bc).Div(tbs).Uint64()
+	tbcltt := uint64(0)
+	if !tbs.IsZero() {
+		tbcltt, _ = tabs.Mul64(bc).Div(tbs).Uint64()
+	}
 
 	WriteJSON(w, WalletBlockStakeStatsGET{
 		TotalActiveBlockStake: tabs,
@@ -305,7 +312,7 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 	})
 }
 
-// walletSiacoinsHandler handles API calls to /wallet/siacoins.
+// walletSiacoinsHandler handles API calls to /wallet/coins.
 func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	amount, ok := scanAmount(req.FormValue("amount"))
 	if !ok {
@@ -332,7 +339,7 @@ func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ h
 	})
 }
 
-// walletSiafundsHandler handles API calls to /wallet/siafunds.
+// walletSiafundsHandler handles API calls to /wallet/blockstake.
 func (api *API) walletBlockStakesHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	amount, ok := scanAmount(req.FormValue("amount"))
 	if !ok {
