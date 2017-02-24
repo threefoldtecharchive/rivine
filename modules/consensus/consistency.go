@@ -75,31 +75,37 @@ func consensusChecksum(tx *bolt.Tx) crypto.Hash {
 
 // checkCoinCount checks that the number of coins countable within the
 // consensus set equal the expected number of coins for the block height.
-func checkCoinCount(tx *bolt.Tx) {
+func checkCoinCount(tx *bolt.Tx, bh types.BlockHeight) {
 
 	// Add all of the siacoin outputs.
-	var scoSiacoins types.Currency
+	var scocoins types.Currency
 	err := tx.Bucket(CoinOutputs).ForEach(func(_, scoBytes []byte) error {
 		var sco types.CoinOutput
 		err := encoding.Unmarshal(scoBytes, &sco)
 		if err != nil {
 			manageErr(tx, err)
 		}
-		scoSiacoins = scoSiacoins.Add(sco.Value)
+		scocoins = scocoins.Add(sco.Value)
 		return nil
 	})
 	if err != nil {
 		manageErr(tx, err)
 	}
 
-	expectedSiacoins := types.GenesisCoinCount
-	totalSiacoins := scoSiacoins
-	if totalSiacoins.Cmp(expectedSiacoins) != 0 {
-		diagnostics := fmt.Sprintf("Wrong number of coins: %v\n", scoSiacoins)
-		if totalSiacoins.Cmp(expectedSiacoins) < 0 {
-			diagnostics += fmt.Sprintf("total: %v\nexpected: %v\n expected is bigger: %v", totalSiacoins, expectedSiacoins, expectedSiacoins.Sub(totalSiacoins))
+	//special check if maturity is bigger than the current block height
+	delay := types.MaturityDelay - 1
+	if bh < types.MaturityDelay {
+		delay = bh
+	}
+
+	expectedcoins := types.GenesisCoinCount.Add(types.BlockCreatorFee.Mul64(uint64(bh - delay)))
+	totalcoins := scocoins
+	if totalcoins.Cmp(expectedcoins) != 0 {
+		diagnostics := fmt.Sprintf("Wrong number of coins: %v\n", scocoins)
+		if totalcoins.Cmp(expectedcoins) < 0 {
+			diagnostics += fmt.Sprintf("total: %v\nexpected: %v\n expected is bigger: %v", totalcoins, expectedcoins, expectedcoins.Sub(totalcoins))
 		} else {
-			diagnostics += fmt.Sprintf("total: %v\nexpected: %v\n expected is bigger: %v", totalSiacoins, expectedSiacoins, totalSiacoins.Sub(expectedSiacoins))
+			diagnostics += fmt.Sprintf("total: %v\nexpected: %v\n expected is smaler: %v", totalcoins, expectedcoins, totalcoins.Sub(expectedcoins))
 		}
 		manageErr(tx, errors.New(diagnostics))
 	}
@@ -167,7 +173,7 @@ func (cs *ConsensusSet) checkConsistency(tx *bolt.Tx) {
 		return
 	}
 	cs.checkingConsistency = true
-	checkCoinCount(tx)
+	checkCoinCount(tx, cs.Height())
 	checkBlockStakeCount(tx)
 	if build.DEBUG {
 		cs.checkRevertApply(tx)
