@@ -206,6 +206,20 @@ func (cs *ConsensusSet) BlockAtHeight(height types.BlockHeight) (block types.Blo
 	return block, exists
 }
 
+// BlockHeightOfBlock returns the blockheight given a block.
+func (cs *ConsensusSet) BlockHeightOfBlock(block types.Block) (height types.BlockHeight, exists bool) {
+	_ = cs.db.View(func(tx *bolt.Tx) error {
+		pb, err := getBlockMap(tx, block.ID())
+		if err != nil {
+			return err
+		}
+		height = pb.Height
+		exists = true
+		return nil
+	})
+	return height, exists
+}
+
 // ChildTarget returns the target for the child of a block.
 func (cs *ConsensusSet) ChildTarget(id types.BlockID) (target types.Target, exists bool) {
 	// A call to a closed database can cause undefined behavior.

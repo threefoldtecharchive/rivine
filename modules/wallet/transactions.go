@@ -131,12 +131,13 @@ func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.
 			BCfeeLast1000 = BCfeeLast1000.Add(block.CalculateSubsidy())
 		}
 		if BlockHeightCounter == 0 {
+			BlockCount++
 			break
 		}
 		BlockHeightCounter--
 	}
 
-	return BCcountLast1000, BCfeeLast1000, BlockCount + 1
+	return BCcountLast1000, BCfeeLast1000, BlockCount
 }
 
 // UnconfirmedTransactions returns the set of unconfirmed transactions that are

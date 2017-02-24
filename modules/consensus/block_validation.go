@@ -91,7 +91,7 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	//In what block (transaction) is unspent block stake generated for this POBS
 	ubsu := b.POBSOutput
 
-	blockatheight, exist := bv.cs.BlockAtHeight(ubsu.BlockHeight - 1)
+	blockatheight, exist := bv.cs.BlockAtHeight(ubsu.BlockHeight)
 	if !exist {
 		return errPOBSBlockIndexDoesNotExist
 	}

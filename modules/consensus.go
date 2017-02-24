@@ -154,6 +154,10 @@ type (
 		// bool to indicate whether that block exists.
 		BlockAtHeight(types.BlockHeight) (types.Block, bool)
 
+		// BlockHeightOfBlock returns the blockheight of a given block, with a
+		// bool to indicate whether that block exists.
+		BlockHeightOfBlock(types.Block) (types.BlockHeight, bool)
+
 		// ChildTarget returns the target required to extend the current heaviest
 		// fork. This function is typically used by miners looking to extend the
 		// heaviest fork.

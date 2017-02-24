@@ -115,6 +115,12 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 			w.processedTransactions = append(w.processedTransactions, minerPT)
 			w.processedTransactionMap[minerPT.TransactionID] = &w.processedTransactions[len(w.processedTransactions)-1]
 		}
+
+		blockheight, blockexists := w.cs.BlockHeightOfBlock(block)
+		if !blockexists {
+			panic("Block wherer ubs is used to respent, does not yet exist as processedblock")
+		}
+
 		for ti, txn := range block.Transactions {
 			relevant := false
 			pt := modules.ProcessedTransaction{
@@ -180,7 +186,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					w.unspentblockstakeoutputs[bsoid] = types.UnspentBlockStakeOutput{
 						BlockStakeOutputID: bsoid,
 						Indexes: types.BlockStakeOutputIndexes{
-							BlockHeight:      w.consensusSetHeight,
+							BlockHeight:      blockheight,
 							TransactionIndex: uint64(ti),
 							OutputIndex:      uint64(i),
 						},
