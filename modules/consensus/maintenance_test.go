@@ -5,10 +5,10 @@ TODO: fix tests
 import (
 	"testing"
 
-	"github.com/NebulousLabs/bolt"
+	"github.com/coreos/bbolt"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // TestApplyMinerPayouts probes the applyMinerPayouts method of the consensus
@@ -17,7 +17,7 @@ func TestApplyMinerPayouts(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	cst, err := createConsensusSetTester("TestApplyMinerPayouts")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestApplyMaturedSiacoinOutputs(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	cst, err := createConsensusSetTester("TestApplyMaturedSiacoinOutputs")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestApplyMissedStorageProof(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	cst, err := createConsensusSetTester("TestApplyMissedStorageProof")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestApplyFileContractMaintenance(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	cst, err := createConsensusSetTester("TestApplyMissedStorageProof")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

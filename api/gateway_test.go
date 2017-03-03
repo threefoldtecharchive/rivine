@@ -13,7 +13,8 @@ func TestGatewayStatus(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	st, err := createServerTester("TestGatewayStatus")
+	t.Parallel()
+	st, err := createServerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,12 +32,14 @@ func TestGatewayPeerConnect(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	st, err := createServerTester("TestGatewayPeerConnect1")
+	t.Parallel()
+	st, err := createServerTester(t.Name() + "1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer st.server.Close()
-	peer, err := gateway.New("localhost:0", false, build.TempDir("api", "TestGatewayPeerConnect2", "gateway"))
+
+	peer, err := gateway.New("localhost:0", false, build.TempDir("api", t.Name()+"2", "gateway"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,12 +64,14 @@ func TestGatewayPeerDisconnect(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	st, err := createServerTester("TestGatewayPeerDisconnect1")
+	t.Parallel()
+	st, err := createServerTester(t.Name() + "1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer st.server.Close()
-	peer, err := gateway.New("localhost:0", false, build.TempDir("api", "TestGatewayPeerDisconnect2", "gateway"))
+
+	peer, err := gateway.New("localhost:0", false, build.TempDir("api", t.Name()+"2", "gateway"))
 	if err != nil {
 		t.Fatal(err)
 	}

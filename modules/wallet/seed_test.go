@@ -17,7 +17,7 @@ func TestPrimarySeed(t *testing.T) {
 		t.SkipNow()
 	}
 	// Start with a blank wallet tester.
-	wt, err := createBlankWalletTester("TestPrimarySeed")
+	wt, err := createBlankWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,8 @@ func TestLoadSeed(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	wt, err := createWalletTester("TestLoadSeed")
+	t.Parallel()
+	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("AllSeeds returned the wrong seed")
 	}
 
-	dir := filepath.Join(build.TempDir(modules.WalletDir, "TestLoadSeed - 0"), modules.WalletDir)
+	dir := filepath.Join(build.TempDir(modules.WalletDir, t.Name()+"1"), modules.WalletDir)
 	w, err := New(wt.cs, wt.tpool, dir)
 	if err != nil {
 		t.Fatal(err)

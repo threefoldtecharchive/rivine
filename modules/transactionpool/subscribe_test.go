@@ -29,7 +29,7 @@ func TestSubscription(t *testing.T) {
 		t.Skip()
 	}
 
-	tpt, err := createTpoolTester("TestUnsubscribe")
+	tpt, err := createTpoolTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

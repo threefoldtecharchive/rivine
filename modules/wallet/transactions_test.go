@@ -6,7 +6,7 @@ package wallet
 // 	if testing.Short() {
 // 		t.SkipNow()
 // 	}
-// 	wt, err := createWalletTester("TestIntegrationTransactions")
+// 	wt, err := createWalletTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
@@ -87,7 +87,7 @@ package wallet
 // 	if testing.Short() {
 // 		t.SkipNow()
 // 	}
-// 	wt, err := createWalletTester("TestTransactionHistory")
+// 	wt, err := createWalletTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}

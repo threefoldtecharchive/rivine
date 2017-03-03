@@ -3,8 +3,8 @@ package explorer
 import (
 	"testing"
 
-	"github.com/NebulousLabs/Sia/modules"
-	"github.com/NebulousLabs/Sia/types"
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 func (et *explorerTester) currentFacts() (facts modules.BlockFacts, exists bool) {
@@ -24,7 +24,7 @@ func TestIntegrationExplorerFileContractMetrics(t *testing.T) {
 		t.Skip()
 	}
 
-	et, err := createExplorerTester("TestIntegrationExporerFileContractMetrics")
+	et, err := createExplorerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -14,7 +14,7 @@ package consensus
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	cst, err := createConsensusSetTester("TestBacktrackToCurrentPath")
+// 	cst, err := createConsensusSetTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
@@ -67,7 +67,7 @@ package consensus
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	cst, err := createConsensusSetTester("TestRevertToNode")
+// 	cst, err := createConsensusSetTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
