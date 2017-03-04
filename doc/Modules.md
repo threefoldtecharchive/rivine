@@ -32,4 +32,6 @@ parent module has not yet received (desynchronization).
 
 #### Module Update Flow
 
+```
 consensus -> ((transaction pool -> wallet))
+```
