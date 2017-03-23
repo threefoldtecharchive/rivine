@@ -29,10 +29,7 @@ import "testing"
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
-// 	key, err := crypto.GenerateTwofishKey()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+// 	key := crypto.GenerateTwofishKey()
 // 	_, err = w.Encrypt(key)
 // 	if err != nil {
 // 		t.Fatal(err)

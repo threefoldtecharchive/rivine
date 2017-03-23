@@ -319,10 +319,7 @@ func blankServerTester(name string) (*serverTester, error) {
 
 	// Create the server tester with key.
 	testdir := build.TempDir("api", name)
-	key, err := crypto.GenerateTwofishKey()
-	if err != nil {
-		return nil, err
-	}
+	key := crypto.GenerateTwofishKey()
 	st, err := assembleServerTester(key, testdir)
 	if err != nil {
 		return nil, err
@@ -342,10 +339,7 @@ func createServerTester(name string) (*serverTester, error) {
 	// Create the testing directory.
 	testdir := build.TempDir("api", name)
 
-	key, err := crypto.GenerateTwofishKey()
-	if err != nil {
-		return nil, err
-	}
+	key := crypto.GenerateTwofishKey()
 	st, err := assembleServerTester(key, testdir)
 	if err != nil {
 		return nil, err
@@ -376,10 +370,7 @@ func createAuthenticatedServerTester(name string, password string) (*serverTeste
 	// Create the testing directory.
 	testdir := build.TempDir("authenticated-api", name)
 
-	key, err := crypto.GenerateTwofishKey()
-	if err != nil {
-		return nil, err
-	}
+	key := crypto.GenerateTwofishKey()
 	st, err := assembleAuthenticatedServerTester(password, key, testdir)
 	if err != nil {
 		return nil, err
