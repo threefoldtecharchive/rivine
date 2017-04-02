@@ -151,11 +151,12 @@ func (uc UnlockConditions) UnlockHash() UnlockHash {
 
 // SigHash returns the hash of the fields in a transaction covered by a given
 // signature. See CoveredFields for more details.
-func (t Transaction) SigHash(i int) crypto.Hash {
+func (t Transaction) SigHash(i int) (hash crypto.Hash) {
 	cf := t.TransactionSignatures[i].CoveredFields
-	var signedData []byte
+	h := crypto.NewHash()
+	enc := encoding.NewEncoder(h)
 	if cf.WholeTransaction {
-		signedData = encoding.MarshalAll(
+		enc.EncodeAll(
 			t.CoinInputs,
 			t.CoinOutputs,
 			t.BlockStakeInputs,
@@ -168,30 +169,31 @@ func (t Transaction) SigHash(i int) crypto.Hash {
 		)
 	} else {
 		for _, input := range cf.CoinInputs {
-			signedData = append(signedData, encoding.Marshal(t.CoinInputs[input])...)
+			enc.Encode(t.CoinInputs[input])
 		}
 		for _, output := range cf.CoinOutputs {
-			signedData = append(signedData, encoding.Marshal(t.CoinOutputs[output])...)
+			enc.Encode(t.CoinOutputs[output])
 		}
 		for _, blockstakeInput := range cf.BlockStakeInputs {
-			signedData = append(signedData, encoding.Marshal(t.BlockStakeInputs[blockstakeInput])...)
+			enc.Encode(t.BlockStakeInputs[blockstakeInput])
 		}
 		for _, blockstakeOutput := range cf.BlockStakeOutputs {
-			signedData = append(signedData, encoding.Marshal(t.BlockStakeOutputs[blockstakeOutput])...)
+			enc.Encode(t.BlockStakeOutputs[blockstakeOutput])
 		}
 		for _, minerFee := range cf.MinerFees {
-			signedData = append(signedData, encoding.Marshal(t.MinerFees[minerFee])...)
+			enc.Encode(t.MinerFees[minerFee])
 		}
 		for _, arbData := range cf.ArbitraryData {
-			signedData = append(signedData, encoding.Marshal(t.ArbitraryData[arbData])...)
+			enc.Encode(t.ArbitraryData[arbData])
 		}
 	}
 
 	for _, sig := range cf.TransactionSignatures {
-		signedData = append(signedData, encoding.Marshal(t.TransactionSignatures[sig])...)
+		enc.Encode(t.TransactionSignatures[sig])
 	}
 
-	return crypto.HashBytes(signedData)
+	h.Sum(hash[:0])
+	return
 }
 
 // sortedUnique checks that 'elems' is sorted, contains no repeats, and that no
