@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NebulousLabs/fastrand"
 	"github.com/NebulousLabs/muxado"
 	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
 )
 
@@ -32,9 +32,10 @@ func TestAddPeer(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
-	g := newTestingGateway("TestAddPeer", t)
+	t.Parallel()
+	g := newTestingGateway(t)
 	defer g.Close()
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.addPeer(&peer{
@@ -54,11 +55,12 @@ func TestRandomOutboundPeer(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
-	g := newTestingGateway("TestRandomInboundPeer", t)
+	t.Parallel()
+	g := newTestingGateway(t)
 	defer g.Close()
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
 	_, err := g.randomOutboundPeer()
 	if err != errNoPeers {
 		t.Fatal("expected errNoPeers, got", err)
@@ -85,8 +87,8 @@ func TestListen(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
-	g := newTestingGateway("TestListen", t)
+	t.Parallel()
+	g := newTestingGateway(t)
 	defer g.Close()
 
 	// compliant connect with old version
@@ -95,7 +97,7 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr := modules.NetAddress(conn.LocalAddr().String())
-	ack, err := connectVersionHandshake(conn, "0.0.0.1")
+	ack, err := connectVersionHandshake(conn, "0.0")
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
@@ -200,8 +202,9 @@ func TestConnect(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
+	t.Parallel()
 	// create bootstrap peer
-	bootstrap := newTestingGateway("TestConnect1", t)
+	bootstrap := newNamedTestingGateway(t, "1")
 	defer bootstrap.Close()
 
 	// give it a node
@@ -210,7 +213,7 @@ func TestConnect(t *testing.T) {
 	bootstrap.mu.Unlock()
 
 	// create peer who will connect to bootstrap
-	g := newTestingGateway("TestConnect2", t)
+	g := newNamedTestingGateway(t, "2")
 	defer g.Close()
 
 	// first simulate a "bad" connect, where bootstrap won't share its nodes
@@ -298,7 +301,8 @@ func TestUnitAcceptableVersion(t *testing.T) {
 			t.Errorf("acceptableVersion returned %q for version %q, but expected invalidVersionError", err, v)
 		}
 	}
-	insufficientVersions := []string{
+	// rivine version is so low, that this is not an issue for now
+	/*insufficientVersions := []string{
 		// random small versions
 		"0",
 		"00",
@@ -322,7 +326,7 @@ func TestUnitAcceptableVersion(t *testing.T) {
 		if _, ok := err.(insufficientVersionError); err == nil || !ok {
 			t.Errorf("acceptableVersion returned %q for version %q, but expected insufficientVersionError", err, v)
 		}
-	}
+	}*/
 	validVersions := []string{
 		minAcceptableVersion,
 		"0.4.0",
@@ -353,10 +357,11 @@ func TestConnectRejectsInvalidAddrs(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	g := newTestingGateway("TestConnectRejectsInvalidAddrs", t)
+	t.Parallel()
+	g := newNamedTestingGateway(t, "1")
 	defer g.Close()
 
-	g2 := newTestingGateway("TestConnectRejectsInvalidAddrs2", t)
+	g2 := newNamedTestingGateway(t, "2")
 	defer g2.Close()
 
 	_, g2Port, err := net.SplitHostPort(string(g2.Address()))
@@ -408,7 +413,7 @@ func TestConnectRejectsVersions(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	g := newTestingGateway("TestConnectRejectsVersions", t)
+	g := newTestingGateway(t)
 	defer g.Close()
 	// Setup a listener that mocks Gateway.acceptConn, but sends the
 	// version sent over mockVersionChan instead of build.Version.
@@ -443,7 +448,7 @@ func TestConnectRejectsVersions(t *testing.T) {
 			invalidVersion: true,
 			msg:            "Connect should fail when the remote peer's version is utf8 gibberish",
 		},
-		// Test that Connect fails when the remote peer's version is < 0.0.1 (0).
+		// Test that Connect fails when the remote peer's version is < 0.4.0 (0).
 		{
 			version:             "0",
 			insufficientVersion: true,
@@ -523,7 +528,8 @@ func TestAcceptConnRejectsVersions(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	g := newTestingGateway("TestAcceptConnRejectsVersions", t)
+	t.Parallel()
+	g := newTestingGateway(t)
 	defer g.Close()
 
 	tests := []struct {
@@ -617,8 +623,8 @@ func TestDisconnect(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
-	g := newTestingGateway("TestDisconnect", t)
+	t.Parallel()
+	g := newTestingGateway(t)
 	defer g.Close()
 
 	if err := g.Disconnect("bar.com:123"); err == nil {
@@ -661,12 +667,11 @@ func TestPeerManager(t *testing.T) {
 		t.SkipNow()
 	}
 	t.Parallel()
-
-	g1 := newTestingGateway("TestPeerManager1", t)
+	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 
 	// create a valid node to connect to
-	g2 := newTestingGateway("TestPeerManager2", t)
+	g2 := newNamedTestingGateway(t, "2")
 	defer g2.Close()
 
 	// g1's node list should only contain g2
@@ -700,8 +705,7 @@ func TestOverloadedBootstrap(t *testing.T) {
 	// first node.
 	var gs []*Gateway
 	for i := 0; i < fullyConnectedThreshold*2; i++ {
-		gname := "TestOverloadedBootstrap" + strconv.Itoa(i)
-		gs = append(gs, newTestingGateway(gname, t))
+		gs = append(gs, newNamedTestingGateway(t, strconv.Itoa(i)))
 		// Connect this gateway to the first gateway.
 		if i == 0 {
 			continue
@@ -758,12 +762,7 @@ func TestOverloadedBootstrap(t *testing.T) {
 	// below the well connected threshold, but there are still enough nodes on
 	// the network that no partitions should occur.
 	var newGS []*Gateway
-	perm, err := crypto.Perm(len(gs))
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Reorder the gateways.
-	for _, i := range perm {
+	for _, i := range fastrand.Perm(len(gs)) {
 		newGS = append(newGS, gs[i])
 	}
 	cutSize := len(newGS) / 4
@@ -809,7 +808,7 @@ func TestOverloadedBootstrap(t *testing.T) {
 
 	// Close all remaining gateways.
 	for _, g := range gs {
-		err = g.Close()
+		err := g.Close()
 		if err != nil {
 			t.Error(err)
 		}
