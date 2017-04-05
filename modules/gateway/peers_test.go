@@ -98,14 +98,14 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal("dial failed:", err)
 	}
+	var gID gatewayID
+	fastrand.Read(gID[:])
 	addr := modules.NetAddress(conn.LocalAddr().String())
-	ack, err := connectVersionHandshake(conn, "0.0")
+	ack, err := connectHandshake(conn, build.NewVersion(0, 0, 0), gID, true)
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
-	if ack != "" {
-		t.Fatal("gateway should have rejected old version")
-	}
+
 	for i := 0; i < 10; i++ {
 		g.mu.RLock()
 		_, ok := g.peers[addr]
@@ -125,11 +125,11 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = connectVersionHandshake(conn, build.Version)
+	ack, err = connectHandshake(conn, build.Version, gID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ack != build.Version {
+	if ack.Compare(build.Version) != 0 {
 		t.Fatal("gateway should have given ack")
 	}
 	err = connectPortHandshake(conn, "0")
@@ -155,24 +155,12 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = connectVersionHandshake(conn, build.Version)
+	ack, err = connectHandshake(conn, build.Version, gID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ack != build.Version {
+	if ack.Compare(build.Version) != 0 {
 		t.Fatal("gateway should have given ack")
-	}
-
-	if build.VersionCmp(build.Version, sessionHandshakeUpgradeVersion) >= 0 {
-		// generate fake ID
-		var gID gatewayID
-		fastrand.Read(gID[:])
-		wantConnect := true
-		// continue handshake protocol, this time exchanging the session header
-		err = connectSessionHandshake(conn, gID, wantConnect)
-		if err != nil {
-			t.Fatal(err)
-		}
 	}
 
 	err = connectPortHandshake(conn, addr.Port())
@@ -269,103 +257,6 @@ func TestConnect(t *testing.T) {
 	g.mu.RUnlock()
 }
 
-// TestUnitAcceptableVersion tests that the acceptableVersion func returns an
-// error for unacceptable versions.
-func TestUnitAcceptableVersion(t *testing.T) {
-	invalidVersions := []string{
-		// ascii gibberish
-		"foobar",
-		"foobar.0",
-		"foobar.9",
-		"0.foobar",
-		"9.foobar",
-		"foobar.0.0",
-		"foobar.9.9",
-		"0.foobar.0",
-		"9.foobar.9",
-		"0.0.foobar",
-		"9.9.foobar",
-		// utf-8 gibberish
-		"世界",
-		"世界.0",
-		"世界.9",
-		"0.世界",
-		"9.世界",
-		"世界.0.0",
-		"世界.9.9",
-		"0.世界.0",
-		"9.世界.9",
-		"0.0.世界",
-		"9.9.世界",
-		// missing numbers
-		".",
-		"..",
-		"...",
-		"0.",
-		".1",
-		"2..",
-		".3.",
-		"..4",
-		"5.6.",
-		".7.8",
-		".9.0.",
-	}
-	for _, v := range invalidVersions {
-		err := acceptableVersion(v)
-		if _, ok := err.(invalidVersionError); err == nil || !ok {
-			t.Errorf("acceptableVersion returned %q for version %q, but expected invalidVersionError", err, v)
-		}
-	}
-	// rivine version is so low, that this is not an issue for now
-	/*insufficientVersions := []string{
-		// random small versions
-		"0",
-		"00",
-		"0000000000",
-		"0.0",
-		"0000000000.0",
-		"0.0000000000",
-		"0.0.0.0.0.0.0.0",
-		"0.0.9",
-		"0.0.999",
-		"0.0.99999999999",
-		"0.1.2",
-		"0.1.2.3.4.5.6.7.8.9",
-		// pre-hardfork versions
-		"0.3.3",
-		"0.3.9.9.9.9.9.9.9.9.9.9",
-		"0.3.9999999999",
-	}
-	for _, v := range insufficientVersions {
-		err := acceptableVersion(v)
-		if _, ok := err.(insufficientVersionError); err == nil || !ok {
-			t.Errorf("acceptableVersion returned %q for version %q, but expected insufficientVersionError", err, v)
-		}
-	}*/
-	validVersions := []string{
-		minAcceptableVersion,
-		"0.4.0",
-		"0.6.0",
-		"0.6.1",
-		"0.9",
-		"0.999",
-		"0.9999999999",
-		"1",
-		"1.0",
-		"1.0.0",
-		"9",
-		"9.0",
-		"9.0.0",
-		"9.9.9",
-	}
-	for _, v := range validVersions {
-		err := acceptableVersion(v)
-		if err != nil {
-			t.Errorf("acceptableVersion returned %q for version %q, but expected nil", err, v)
-		}
-	}
-}
-
 // TestConnectRejectsInvalidAddrs tests that Connect only connects to valid IP
 // addresses.
 func TestConnectRejectsInvalidAddrs(t *testing.T) {
@@ -439,85 +330,37 @@ func TestConnectRejectsVersions(t *testing.T) {
 	defer listener.Close()
 
 	tests := []struct {
-		version             string
-		errWant             error
-		localErrWant        error
-		invalidVersion      bool
-		insufficientVersion bool
-		msg                 string
-		// version required for this test
+		version         build.ProtocolVersion
+		errWant         error
+		localErrWant    error
+		msg             string
 		versionRequired string
-		// 1.2.0 sessionHeader extension to handshake protocol
-		genesisID types.BlockID
-		uniqueID  gatewayID
+		genesisID       types.BlockID
+		uniqueID        gatewayID
 	}{
-		// Test that Connect fails when the remote peer's version is "reject".
+		// Test that Connect fails when the remote peer's version is < 0.0.1 (0).
 		{
-			version: "reject",
-			errWant: errPeerRejectedConn,
-			msg:     "Connect should fail when the remote peer rejects the connection",
+			version: build.NewVersion(0, 0, 0),
+			errWant: insufficientVersionError("0.0.0"),
+			msg:     "Connect should fail when the remote peer's version is 0.0.0",
 		},
-		// Test that Connect fails when the remote peer's version is ascii gibberish.
+		// Test that Connect /could/ succeed when the remote peer's version is >= 0.1.0.
 		{
-			version:        "foobar",
-			invalidVersion: true,
-			msg:            "Connect should fail when the remote peer's version is ascii gibberish",
-		},
-		// Test that Connect fails when the remote peer's version is utf8 gibberish.
-		{
-			version:        "世界",
-			invalidVersion: true,
-			msg:            "Connect should fail when the remote peer's version is utf8 gibberish",
-		},
-		// Test that Connect fails when the remote peer's version is < 0.4.0 (0).
-		{
-			version:             "0",
-			insufficientVersion: true,
-			msg:                 "Connect should fail when the remote peer's version is 0",
+			version:   build.Version,
+			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
+			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
+			genesisID: types.GenesisID,
 		},
 		{
-			version:             "0.0.0",
-			insufficientVersion: true,
-			msg:                 "Connect should fail when the remote peer's version is 0.0.0",
-		},
-		{
-			version:             "0000.0000.0000",
-			insufficientVersion: true,
-			msg:                 "Connect should fail when the remote peer's version is 0000.0000.0000",
-		},
-		// Test that Connect succeeds when the remote peer's version is 0.4.0.
-		{
-			version: "0.4.0",
-			msg:     "Connect should succeed when the remote peer's version is 0.4.0",
-		},
-		// Test that Connect succeeds when the remote peer's version is > 0.4.0.
-		{
-			version: "0.9.0",
-			msg:     "Connect should succeed when the remote peer's version is 0.9.0",
-		},
-		// Test that Connect /could/ succeed when the remote peer's version is >= 1.2.0.
-		{
-			version:         sessionHandshakeUpgradeVersion,
-			msg:             "Connect should succeed when the remote peer's version is 1.2.0 and sessionHeader checks out",
-			uniqueID:        func() (id gatewayID) { fastrand.Read(id[:]); return }(),
-			genesisID:       types.GenesisID,
-			versionRequired: sessionHandshakeUpgradeVersion,
-		},
-		{
-			version:         sessionHandshakeUpgradeVersion,
-			msg:             "Connect should not succeed when peer is connecting to itself",
-			uniqueID:        g.id,
-			genesisID:       types.GenesisID,
-			errWant:         errOurAddress,
-			localErrWant:    errOurAddress,
-			versionRequired: sessionHandshakeUpgradeVersion,
+			version:      build.Version,
+			msg:          "Connect should not succeed when peer is connecting to itself",
+			uniqueID:     g.id,
+			genesisID:    types.GenesisID,
+			errWant:      errOurAddress,
+			localErrWant: errOurAddress,
 		},
 	}
 	for testIndex, tt := range tests {
-		if tt.versionRequired != "" && build.VersionCmp(build.Version, tt.versionRequired) < 0 {
-			continue // skip, as we do not meed the required version
-		}
-
 		doneChan := make(chan struct{})
 		go func() {
 			defer close(doneChan)
@@ -525,139 +368,20 @@ func TestConnectRejectsVersions(t *testing.T) {
 			if err != nil {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
 			}
-			remoteVersion, err := acceptConnVersionHandshake(conn, tt.version)
-			if err != nil {
+			remoteVersion, err := acceptConnHandshake(conn, tt.version, tt.uniqueID)
+			if err != tt.localErrWant {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
-			}
-			if remoteVersion != build.Version {
-				panic(fmt.Sprintf("test #%d failed: remoteVersion != build.Version", testIndex))
-			}
-			if !build.IsVersion(tt.version) || build.VersionCmp(tt.version, sessionHandshakeUpgradeVersion) < 0 {
-				return // in case test version is gibrish or < 1.2.0
-			}
-
-			if build.VersionCmp(remoteVersion, sessionHandshakeUpgradeVersion) >= 0 &&
-				build.VersionCmp(build.Version, sessionHandshakeUpgradeVersion) >= 0 {
-				if err := acceptConnSessionHandshake(conn, tt.uniqueID); err != tt.localErrWant {
-					panic(fmt.Sprintf("test #%d failed: %v != %v", testIndex, tt.localErrWant, err))
-				}
+			} else if err == nil && build.Version.Compare(remoteVersion) != 0 {
+				panic(fmt.Sprintf("test #%d failed: %q != %q",
+					testIndex, build.Version.String(), remoteVersion.String()))
 			}
 		}()
 		err = g.Connect(modules.NetAddress(listener.Addr().String()))
-		switch {
-		case tt.invalidVersion:
-			// Check that the error is the expected type.
-			if _, ok := err.(invalidVersionError); !ok {
-				t.Fatalf("expected Connect to error with invalidVersionError: %s", tt.msg)
-			}
-		case tt.insufficientVersion:
-			// Check that the error is the expected type.
-			if _, ok := err.(insufficientVersionError); !ok {
-				t.Fatalf("expected Connect to error with insufficientVersionError: %s", tt.msg)
-			}
-		default:
-			// Check that the error is the expected error.
-			if err != tt.errWant {
-				t.Fatalf("expected Connect to error with '%v', but got '%v': %s", tt.errWant, err, tt.msg)
-			}
+		if err != tt.errWant {
+			t.Fatalf("expected Connect to error with '%v', but got '%v': %s", tt.errWant, err, tt.msg)
 		}
 		<-doneChan
 		g.Disconnect(modules.NetAddress(listener.Addr().String()))
-	}
-}
-
-// TestAcceptConnRejectsVersions tests that Gateway.acceptConn only accepts
-// peers with sufficient and valid versions.
-func TestAcceptConnRejectsVersions(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	t.Parallel()
-	g := newTestingGateway(t)
-	defer g.Close()
-
-	tests := []struct {
-		remoteVersion       string
-		versionResponseWant string
-		errWant             error
-		msg                 string
-	}{
-		// Test that acceptConn fails when the remote peer's version is "reject".
-		{
-			remoteVersion:       "reject",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is \"reject\"",
-		},
-		// Test that acceptConn fails when the remote peer's version is ascii gibberish.
-		{
-			remoteVersion:       "foobar",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is ascii gibberish",
-		},
-		// Test that acceptConn fails when the remote peer's version is utf8 gibberish.
-		{
-			remoteVersion:       "世界",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is utf8 gibberish",
-		},
-		// Test that acceptConn fails when the remote peer's version is < 0.4.0 (0).
-		{
-			remoteVersion:       "0",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is 0",
-		},
-		{
-			remoteVersion:       "0.0.0",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is 0.0.0",
-		},
-		{
-			remoteVersion:       "0000.0000.0000",
-			versionResponseWant: "",
-			errWant:             errPeerRejectedConn,
-			msg:                 "acceptConn shouldn't accept a remote peer whose version is 0000.000.000",
-		},
-		// Test that acceptConn succeeds when the remote peer's version is 0.4.0.
-		{
-			remoteVersion:       "0.4.0",
-			versionResponseWant: build.Version,
-			msg:                 "acceptConn should accept a remote peer whose version is 0.4.0",
-		},
-		// Test that acceptConn succeeds when the remote peer's version is > 0.4.0.
-		{
-			remoteVersion:       "9",
-			versionResponseWant: build.Version,
-			msg:                 "acceptConn should accept a remote peer whose version is 9",
-		},
-		{
-			remoteVersion:       "9.9.9",
-			versionResponseWant: build.Version,
-			msg:                 "acceptConn should accept a remote peer whose version is 9.9.9",
-		},
-		{
-			remoteVersion:       "9999.9999.9999",
-			versionResponseWant: build.Version,
-			msg:                 "acceptConn should accept a remote peer whose version is 9999.9999.9999",
-		},
-	}
-	for _, tt := range tests {
-		conn, err := net.DialTimeout("tcp", string(g.Address()), dialTimeout)
-		if err != nil {
-			t.Fatal(err)
-		}
-		remoteVersion, err := connectVersionHandshake(conn, tt.remoteVersion)
-		if err != tt.errWant {
-			t.Fatal(err)
-		}
-		if remoteVersion != tt.versionResponseWant {
-			t.Fatal(tt.msg)
-		}
-		conn.Close()
 	}
 }
 

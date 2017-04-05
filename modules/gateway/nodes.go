@@ -44,23 +44,9 @@ func (g *Gateway) pingNode(addr modules.NetAddress) (err error) {
 	}
 	defer conn.Close()
 
-	// Read the node's version.
-	remoteVersion, err := connectVersionHandshake(conn, build.Version)
-	if err != nil {
-		return
-	}
-
-	if build.VersionCmp(remoteVersion, sessionHandshakeUpgradeVersion) < 0 {
-		return // for older versions, this is where pinging ends
-	}
-
-	// if both peers are >= 1.2.0,
-	// we'll also guarantee that the connection is between 2 different peers,
-	// and the peers are on the same network
-	wantConnect := false
-	// we're pinging, so we don't care if other side wants to connect or not
-	err = connectSessionHandshake(conn, g.id, wantConnect)
-	return
+	wantConn := false
+	_, err = connectHandshake(conn, build.Version, g.id, wantConn)
+	return err
 }
 
 // removeNode will remove a node from the gateway.

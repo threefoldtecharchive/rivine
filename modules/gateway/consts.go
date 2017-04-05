@@ -7,15 +7,6 @@ import (
 )
 
 const (
-	// handshakeUpgradeVersion is the version where the gateway handshake RPC
-	// was altered to include additional information transfer.
-	handshakeUpgradeVersion = "0.0.1"
-
-	// sessionHandshakeUpgradeVersion is the version where the gateway handshake RPC
-	// was altered to include the ID of the genesis block, the gateway's unique ID,
-	// and whether a connection is desired.
-	sessionHandshakeUpgradeVersion = "1.2.0"
-
 	// maxLocalOutbound is currently set to 3, meaning the gateway will not
 	// consider a local node to be an outbound peer if the gateway already has
 	// 3 outbound peers. Three is currently needed to handle situations where
@@ -25,17 +16,16 @@ const (
 	// connect to itself, this number can be reduced.
 	maxLocalOutboundPeers = 3
 
-	// minAcceptableVersion is the version below which the gateway will refuse to
-	// connect to peers and reject connection attempts
-	minAcceptableVersion = "0.0.1"
-
-	// EncodedSessionHeaderLength is the length of a session header encoded
+	// EncodedVersionHeaderLength is the length of a session header encoded
 	// with the encode package.
-	// sizeof(BlockID) + sizeof(gatewayID) + sizeof(bool) == 32 + 8 + 1 = 41
-	EncodedSessionHeaderLength = 41
+	EncodedVersionHeaderLength = 57
 )
 
 var (
+	// minAcceptableVersion is the version below which the gateway will refuse to
+	// connect to peers and reject connection attempts
+	minAcceptableVersion = build.NewVersion(0, 0, 1)
+
 	// fastNodePurgeDelay defines the amount of time that is waited between each
 	// iteration of the purge loop when the gateway has enough nodes to be
 	// needing to purge quickly.
