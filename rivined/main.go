@@ -59,13 +59,13 @@ func die(args ...interface{}) {
 func versionCmd(*cobra.Command, []string) {
 	switch build.Release {
 	case "dev":
-		fmt.Println("Rivine Daemon v" + build.Version + "-dev")
+		fmt.Println("Rivine Daemon v" + build.Version.String() + "-dev")
 	case "standard":
-		fmt.Println("Rivine Daemon v" + build.Version)
+		fmt.Println("Rivine Daemon v" + build.Version.String())
 	case "testing":
-		fmt.Println("Rivine Daemon v" + build.Version + "-testing")
+		fmt.Println("Rivine Daemon v" + build.Version.String() + "-testing")
 	default:
-		fmt.Println("Rivine Daemon v" + build.Version + "-???")
+		fmt.Println("Rivine Daemon v" + build.Version.String() + "-???")
 	}
 }
 
@@ -123,8 +123,8 @@ func main() {
 
 	root := &cobra.Command{
 		Use:   os.Args[0],
-		Short: "Rivine Daemon v" + build.Version,
-		Long:  "Rivine Daemon v" + build.Version,
+		Short: "Rivine Daemon v" + build.Version.String(),
+		Long:  "Rivine Daemon v" + build.Version.String(),
 		Run:   startDaemonCmd,
 	}
 

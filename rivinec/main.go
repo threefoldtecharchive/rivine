@@ -217,14 +217,14 @@ func die(args ...interface{}) {
 }
 
 func version() {
-	println("Rivine Client v" + build.Version)
+	println("Rivine Client v" + build.Version.String())
 }
 
 func main() {
 	root := &cobra.Command{
 		Use:   os.Args[0],
-		Short: "Rivine Client v" + build.Version,
-		Long:  "Rivine Client v" + build.Version,
+		Short: "Rivine Client v" + build.Version.String(),
+		Long:  "Rivine Client v" + build.Version.String(),
 		Run:   wrap(consensuscmd),
 	}
 

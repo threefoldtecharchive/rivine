@@ -38,10 +38,10 @@ var (
 type (
 	// Peer contains all the info necessary to Broadcast to a peer.
 	Peer struct {
-		Inbound    bool       `json:"inbound"`
-		Local      bool       `json:"local"`
-		NetAddress NetAddress `json:"netaddress"`
-		Version    string     `json:"version"`
+		Inbound    bool                  `json:"inbound"`
+		Local      bool                  `json:"local"`
+		NetAddress NetAddress            `json:"netaddress"`
+		Version    build.ProtocolVersion `json:"version"`
 	}
 
 	// A PeerConn is the connection type used when communicating with peers during

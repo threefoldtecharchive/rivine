@@ -8,9 +8,10 @@ dependencies:
 	# Consensus Dependencies
 	go get -u github.com/NebulousLabs/demotemutex
 	go get -u github.com/NebulousLabs/ed25519
+	go get -u github.com/NebulousLabs/fastrand
 	go get -u github.com/NebulousLabs/merkletree
 	go get -u github.com/NebulousLabs/bolt
-	go get -u github.com/dchest/blake2b
+	go get -u golang.org/x/crypto/blake2b
 	# Module + Daemon Dependencies
 	go get -u github.com/NebulousLabs/entropy-mnemonics
 	go get -u github.com/NebulousLabs/go-upnp
@@ -25,15 +26,11 @@ dependencies:
 	# Developer Dependencies
 	go install -race std
 	go get -u github.com/golang/lint/golint
-	go get -u github.com/laher/goxc
 
 # pkgs changes which packages the makefile calls operate on. run changes which
 # tests are run during testing.
 run = Test
-pkgs = ./api ./build ./compatibility ./crypto ./encoding ./modules ./modules/consensus \
-       ./modules/explorer ./modules/gateway ./modules/host ./modules/host/storagemanager \
-       ./modules/renter ./modules/renter/contractor ./modules/renter/hostdb ./modules/renter/proto \
-       ./modules/miner ./modules/wallet ./modules/transactionpool ./persist ./siac ./siad ./sync ./types
+pkgs = ./build ./modules/gateway ./rivined ./rivinec
 
 # fmt calls go fmt on all packages.
 fmt:
@@ -45,7 +42,7 @@ vet: release-std
 	go vet $(pkgs)
 
 # will always run on some packages for a while.
-lintpkgs = ./modules ./modules/gateway ./modules/host ./modules/renter/hostdb ./modules/renter/contractor ./persist
+lintpkgs = ./modules ./modules/gateway ./persist
 lint:
 	@for package in $(lintpkgs); do                           \
 		golint -min_confidence=1.0 $$package                  \
@@ -80,7 +77,7 @@ test:
 	go test -short -tags='debug testing' -timeout=5s $(pkgs) -run=$(run)
 test-v:
 	go test -race -v -short -tags='debug testing' -timeout=15s $(pkgs) -run=$(run)
-test-long: clean fmt vet lint
+test-long: fmt vet lint
 	go test -v -race -tags='testing debug' -timeout=500s $(pkgs) -run=$(run)
 bench: clean fmt
 	go test -tags='testing' -timeout=500s -run=XXX -bench=. $(pkgs)

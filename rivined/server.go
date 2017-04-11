@@ -230,10 +230,14 @@ func (srv *Server) daemonUpdateHandlerGET(w http.ResponseWriter, _ *http.Request
 		api.WriteError(w, api.Error{Message: "Failed to fetch latest release: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
-	latestVersion := release.TagName[1:] // delete leading 'v'
+	latestVersion, err := build.VersionFromString(release.TagName[1:]) // delete leading 'v'
+	if err != nil {
+		api.WriteError(w, api.Error{Message: "Failed to parse latest release: " + err.Error()}, http.StatusInternalServerError)
+		return
+	}
 	api.WriteJSON(w, UpdateInfo{
-		Available: build.VersionCmp(latestVersion, build.Version) > 0,
-		Version:   latestVersion,
+		Available: latestVersion.Compare(build.Version) > 0,
+		Version:   latestVersion.String(),
 	})
 }
 
@@ -285,7 +289,7 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 
 // daemonVersionHandler handles the API call that requests the daemon's version.
 func (srv *Server) daemonVersionHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	api.WriteJSON(w, DaemonVersion{Version: build.Version})
+	api.WriteJSON(w, DaemonVersion{Version: build.Version.String()})
 }
 
 // daemonStopHandler handles the API call to stop the daemon cleanly.

@@ -6,11 +6,12 @@ import (
 	"net"
 	"time"
 
+	"github.com/NebulousLabs/fastrand"
 	"github.com/NebulousLabs/muxado"
 	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 var (
@@ -26,17 +27,23 @@ func (s insufficientVersionError) Error() string {
 	return "unacceptable version: " + string(s)
 }
 
-// invalidVersionError indicates a peer's version is not a valid version number.
-type invalidVersionError string
-
-// Error implements the error interface for invalidVersionError.
-func (s invalidVersionError) Error() string {
-	return "invalid version: " + string(s)
-}
-
 type peer struct {
 	modules.Peer
 	sess muxado.Session
+}
+
+// versionHeader is sent as the initial exchange between peers.
+// It ensures that peers take eachothers protocol version into account.
+// It also prevents peers on different blockchains from connecting to each other,
+// and prevents the gateway from connecting to itself.
+// The receiving peer can set WantConn to false to refuse the connection,
+// and the initiating peer van can set WantConn to false
+// if they merely want to confirm that a node is online.
+type versionHeader struct {
+	Version   build.ProtocolVersion
+	GenesisID types.BlockID
+	UniqueID  gatewayID
+	WantConn  bool
 }
 
 func (p *peer) open() (modules.PeerConn, error) {
@@ -77,11 +84,7 @@ func (g *Gateway) randomOutboundPeer() (modules.NetAddress, error) {
 	}
 
 	// Of the remaining options, select one at random.
-	r, err := crypto.RandIntn(len(addrs))
-	if err != nil {
-		g.log.Severe("Random number generation failure:", err)
-	}
-	return addrs[r], nil
+	return addrs[fastrand.Intn(len(addrs))], nil
 }
 
 // permanentListen handles incoming connection requests. If the connection is
@@ -123,14 +126,14 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	addr := modules.NetAddress(conn.RemoteAddr().String())
 	g.log.Debugf("INFO: %v wants to connect", addr)
 
-	remoteVersion, err := acceptConnVersionHandshake(conn, build.Version)
+	remoteVersion, err := acceptConnHandshake(conn, build.Version, g.id)
 	if err != nil {
 		g.log.Debugf("INFO: %v wanted to connect but version handshake failed: %v", addr, err)
 		conn.Close()
 		return
 	}
 
-	err = g.managedAcceptConnNewPeer(conn, remoteVersion)
+	err = g.managedAcceptConnPeer(conn, remoteVersion)
 	if err != nil {
 		g.log.Debugf("INFO: %v wanted to connect, but failed: %v", addr, err)
 		conn.Close()
@@ -142,23 +145,15 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	g.log.Debugf("INFO: accepted connection from new peer %v (v%v)", addr, remoteVersion)
 }
 
-// managedAcceptConnNewPeer accepts connection requests from peers >= v1.0.0.
+// managedAcceptConnPeer accepts connection requests from peers.
 // The requesting peer is added as a node and a peer. The peer is only added if
 // a nil error is returned.
-func (g *Gateway) managedAcceptConnNewPeer(conn net.Conn, remoteVersion string) error {
+func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.ProtocolVersion) error {
 	// Learn the peer's dialback address. Peers older than v1.0.0 will only be
 	// able to be discovered by newer peers via the ShareNodes RPC.
 	remoteAddr, err := acceptConnPortHandshake(conn)
 	if err != nil {
 		return err
-	}
-
-	// Attempt to add the peer to the node list. If the add is successful and
-	// the address is a local address, mark the peer as a local peer.
-	local := false
-	err = g.managedAddUntrustedNode(remoteAddr)
-	if err != nil && remoteAddr.IsLocal() {
-		local = true
 	}
 
 	g.mu.Lock()
@@ -171,13 +166,29 @@ func (g *Gateway) managedAcceptConnNewPeer(conn net.Conn, remoteVersion string) 
 	// Accept the peer.
 	g.acceptPeer(&peer{
 		Peer: modules.Peer{
-			Inbound:    true,
-			Local:      local,
+			Inbound: true,
+			// NOTE: local may be true even if the supplied remoteAddr is not
+			// actually reachable.
+			Local:      remoteAddr.IsLocal(),
 			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
 		sess: muxado.Server(conn),
 	})
+
+	// Attempt to ping the supplied address. If successful, and a connection is wanted,
+	// we will add remoteAddr to our node list after accepting the peer. We do this in a
+	// goroutine so that we can start communicating with the peer immediately.
+	go func() {
+		err := g.pingNode(remoteAddr)
+		if err == nil {
+			g.mu.Lock()
+			g.addNode(remoteAddr)
+			g.save()
+			g.mu.Unlock()
+		}
+	}()
+
 	return nil
 }
 
@@ -213,11 +224,8 @@ func (g *Gateway) acceptPeer(p *peer) {
 	}
 
 	// Of the remaining options, select one at random.
-	r, err := crypto.RandIntn(len(addrs))
-	if err != nil {
-		g.log.Severe("random number generation failure:", err)
-	}
-	kick := addrs[r]
+	kick := addrs[fastrand.Intn(len(addrs))]
+
 	g.peers[kick].sess.Close()
 	delete(g.peers, kick)
 	g.log.Printf("INFO: disconnected from %v to make room for %v\n", kick, p.NetAddress)
@@ -263,105 +271,111 @@ func connectPortHandshake(conn net.Conn, port string) error {
 	return nil
 }
 
-// acceptableVersion returns an error if the version is unacceptable.
-func acceptableVersion(version string) error {
-	if !build.IsVersion(version) {
-		return invalidVersionError(version)
+// acceptableVersionHeader returns an error if the version header is unacceptable.
+func acceptableVersionHeader(ours, theirs versionHeader) error {
+	if theirs.Version.Compare(minAcceptableVersion) < 0 {
+		return insufficientVersionError(theirs.Version.String())
+	} else if theirs.GenesisID != ours.GenesisID {
+		return errPeerGenesisID
+	} else if theirs.UniqueID == ours.UniqueID {
+		return errOurAddress
 	}
-	if build.VersionCmp(version, minAcceptableVersion) < 0 {
-		return insufficientVersionError(version)
-	}
+
 	return nil
 }
 
-// connectVersionHandshake performs the version handshake and should be called
+// connectHandshake performs the version handshake and should be called
 // on the side making the connection request. The remote version is only
 // returned if err == nil.
-func connectVersionHandshake(conn net.Conn, version string) (remoteVersion string, err error) {
-	// Send our version.
-	if err := encoding.WriteObject(conn, version); err != nil {
-		return "", fmt.Errorf("failed to write version: %v", err)
+func connectHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID, wantConn bool) (remoteVersion build.ProtocolVersion, err error) {
+	ours := versionHeader{
+		Version:   version,
+		GenesisID: types.GenesisID,
+		UniqueID:  uniqueID,
+		WantConn:  wantConn,
 	}
+
+	// Send our version header.
+	if err = encoding.WriteObject(conn, ours); err != nil {
+		err = fmt.Errorf("failed to write version header: %v", err)
+		return
+	}
+
+	var theirs versionHeader
 	// Read remote version.
-	if err := encoding.ReadObject(conn, &remoteVersion, build.MaxEncodedVersionLength); err != nil {
-		return "", fmt.Errorf("failed to read remote version: %v", err)
+	if err = encoding.ReadObject(conn, &theirs, EncodedVersionHeaderLength); err != nil {
+		err = fmt.Errorf("failed to read remote version header: %v", err)
+		return
 	}
-	// Check that their version is acceptable.
-	if remoteVersion == "reject" {
-		return "", errPeerRejectedConn
+
+	// validate if their header checks out against ours
+	if err = acceptableVersionHeader(ours, theirs); err != nil {
+		return
 	}
-	if err := acceptableVersion(remoteVersion); err != nil {
-		return "", err
+
+	// checks if they want a connection or not
+	if !theirs.WantConn {
+		err = errPeerRejectedConn
+		return
 	}
-	return remoteVersion, nil
+
+	// all good, pass on the remote version to the caller
+	remoteVersion = theirs.Version
+	return
 }
 
-// acceptConnVersionHandshake performs the version handshake and should be
+// acceptConnHandshake performs the version header handshake and should be
 // called on the side accepting a connection request. The remote version is
 // only returned if err == nil.
-func acceptConnVersionHandshake(conn net.Conn, version string) (remoteVersion string, err error) {
+func acceptConnHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID) (remoteVersion build.ProtocolVersion, err error) {
+	var theirs versionHeader
 	// Read remote version.
-	if err := encoding.ReadObject(conn, &remoteVersion, build.MaxEncodedVersionLength); err != nil {
-		return "", fmt.Errorf("failed to read remote version: %v", err)
+	if err = encoding.ReadObject(conn, &theirs, EncodedVersionHeaderLength); err != nil {
+		err = fmt.Errorf("failed to read remote version header: %v", err)
+		return
 	}
-	// Check that their version is acceptable.
-	if err := acceptableVersion(remoteVersion); err != nil {
-		if err := encoding.WriteObject(conn, "reject"); err != nil {
-			return "", fmt.Errorf("failed to write reject: %v", err)
-		}
-		return "", err
+
+	ours := versionHeader{
+		Version:   version,
+		GenesisID: types.GenesisID,
+		UniqueID:  uniqueID,
+		WantConn:  true,
 	}
-	// Send our version.
-	if err := encoding.WriteObject(conn, version); err != nil {
-		return "", fmt.Errorf("failed to write version: %v", err)
+
+	// validate if their header checks out against ours
+	err = acceptableVersionHeader(ours, theirs)
+	ours.WantConn = err == nil
+
+	if err := encoding.WriteObject(conn, ours); err != nil {
+		return remoteVersion, fmt.Errorf("failed to write version header: %v", err)
 	}
-	return remoteVersion, nil
+
+	// if err was non-nil because of validation, return now
+	if err != nil {
+		return
+	}
+
+	// checks if they want a connection or not
+	if !theirs.WantConn {
+		err = errPeerRejectedConn
+		return
+	}
+
+	// all good, pass on the remote version to the caller
+	remoteVersion = theirs.Version
+	return
 }
 
-// managedConnectOldPeer connects to peers < v1.0.0. The peer is added as a
+// managedConnectPeer connects to peers. The peer is added as a
 // node and a peer. The peer is only added if a nil error is returned.
-func (g *Gateway) managedConnectOldPeer(conn net.Conn, remoteVersion string, remoteAddr modules.NetAddress) error {
-	// Attempt to add the peer to the node list. If the add is successful and
-	// the address is a local address, mark the peer as a local peer.
-	local := false
-	err := g.managedAddUntrustedNode(remoteAddr)
-	if err != nil && remoteAddr.IsLocal() {
-		local = true
-	}
-
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	g.addPeer(&peer{
-		Peer: modules.Peer{
-			Inbound:    false,
-			Local:      local,
-			NetAddress: remoteAddr,
-			Version:    remoteVersion,
-		},
-		sess: muxado.Client(conn),
-	})
-	return nil
-}
-
-// managedConnectNewPeer connects to peers >= v1.0.0. The peer is added as a
-// node and a peer. The peer is only added if a nil error is returned.
-func (g *Gateway) managedConnectNewPeer(conn net.Conn, remoteVersion string, remoteAddr modules.NetAddress) error {
+func (g *Gateway) managedConnectPeer(conn net.Conn, remoteVersion build.ProtocolVersion, remoteAddr modules.NetAddress) error {
 	g.mu.RLock()
 	port := g.port
 	g.mu.RUnlock()
-	// Send our dialable address to the peer so they can dial us back should we
-	// disconnect.
-	err := connectPortHandshake(conn, port)
-	if err != nil {
+	// Send our dialable address to the peer
+	// so they can dial us back should we disconnect.
+	if err := connectPortHandshake(conn, port); err != nil {
 		return err
-	}
-
-	// Attempt to add the peer to the node list. If the add is successful and
-	// the address is a local address, mark the peer as a local peer.
-	local := false
-	err = g.managedAddUntrustedNode(remoteAddr)
-	if err != nil && remoteAddr.IsLocal() {
-		local = true
 	}
 
 	g.mu.Lock()
@@ -369,13 +383,18 @@ func (g *Gateway) managedConnectNewPeer(conn net.Conn, remoteVersion string, rem
 	g.addPeer(&peer{
 		Peer: modules.Peer{
 			Inbound:    false,
-			Local:      local,
+			Local:      remoteAddr.IsLocal(),
 			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
 		sess: muxado.Client(conn),
 	})
-	return nil
+	// Add the peer to the node list. We can ignore the error: addNode
+	// validates the address and checks for duplicates, but we don't care
+	// about duplicates and we have already validated the address by
+	// connecting to it.
+	g.addNode(remoteAddr)
+	return g.save()
 }
 
 // managedConnect establishes a persistent connection to a peer, and adds it to
@@ -408,13 +427,13 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 	}
 
 	// Perform peer initialization.
-	remoteVersion, err := connectVersionHandshake(conn, build.Version)
+	remoteVersion, err := connectHandshake(conn, build.Version, g.id, true)
 	if err != nil {
 		conn.Close()
 		return err
 	}
 
-	err = g.managedConnectNewPeer(conn, remoteVersion, addr)
+	err = g.managedConnectPeer(conn, remoteVersion, addr)
 	if err != nil {
 		conn.Close()
 		return err
