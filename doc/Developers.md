@@ -7,7 +7,8 @@ For most Linux distributions, Go will be in the package manager, though it may
 be an old version that is incompatible with Rivine. Once you have a working Go
 environment, you are set to build the project. If you plan on cross compiling
 Rivine, you may need to install Go from source. You can find information on that
-[here](http://golang.org/doc/install/source).
+[here](http://golang.org/doc/install/source). If staticly linked dependencies are OK,
+you can simply use an official Go distribution (1.5 or above) to crosscompile.
 
 Rivine has a development build, an automated testing build, and a release
 build. The release build is the only one that can synchronize to the full
