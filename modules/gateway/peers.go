@@ -183,7 +183,6 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		if err == nil {
 			g.mu.Lock()
 			g.addNode(remoteAddr)
-			g.save()
 			g.mu.Unlock()
 		}
 	}()
@@ -393,7 +392,12 @@ func (g *Gateway) managedConnectPeer(conn net.Conn, remoteVersion build.Protocol
 	// about duplicates and we have already validated the address by
 	// connecting to it.
 	g.addNode(remoteAddr)
-	return g.save()
+	// We want to persist the outbound peers.
+	err := g.saveSync()
+	if err != nil {
+		g.log.Println("ERROR: Unable to save new outbound peer to gateway:", err)
+	}
+	return nil
 }
 
 // managedConnect establishes a persistent connection to a peer, and adds it to

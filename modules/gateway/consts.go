@@ -19,6 +19,9 @@ const (
 	// EncodedVersionHeaderLength is the length of a session header encoded
 	// with the encode package.
 	EncodedVersionHeaderLength = 57
+
+	// saveFrequency defines how often the gateway saves its persistence.
+	saveFrequency = time.Minute * 2
 )
 
 var (
