@@ -561,7 +561,7 @@ func TestRPCRatelimit(t *testing.T) {
 	g2.RegisterRPC("recv", func(conn modules.PeerConn) error {
 		_, err := conn.Write([]byte("hi"))
 		if err != nil {
-			t.Log("recv error:", err)
+			return err
 		}
 		atomic.AddUint64(&atomicCalls, 1)
 		return nil
@@ -599,12 +599,16 @@ func TestRPCRatelimit(t *testing.T) {
 	start := time.Now()
 	var wg sync.WaitGroup
 	overlapVolume := time.Duration(3)
-	callVolume := int(overlapVolume*(rpcStdDeadline/peerRPCDelay)) * 4 / 3
+	targetDuration := rpcStdDeadline * 7 / 3
+	maxCallsForDuration := targetDuration / peerRPCDelay
+	callVolume := int(overlapVolume * maxCallsForDuration)
 	for i := 0; i < callVolume; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := g1.RPC(g2.Address(), "recv", func(conn modules.PeerConn) error {
+			// Call an RPC on our peer. Error is ignored, as many are expected
+			// and indicate that the test is working.
+			_ = g1.RPC(g2.Address(), "recv", func(conn modules.PeerConn) error {
 				buf := make([]byte, 2)
 				_, err := conn.Read(buf)
 				if err != nil {
@@ -615,9 +619,6 @@ func TestRPCRatelimit(t *testing.T) {
 				}
 				return nil
 			})
-			if err != nil {
-				t.Log(err)
-			}
 		}()
 		// Sleep for a little bit so that the connections are coming all in a
 		// row instead of all at once. But sleep for little enough time that the
@@ -632,5 +633,7 @@ func TestRPCRatelimit(t *testing.T) {
 	if elapsed < expected {
 		t.Error("ratelimit does not seem to be effective", expected, elapsed)
 	}
-	t.Log(atomicCalls)
+	if atomic.LoadUint64(&atomicCalls) > uint64((targetDuration+rpcStdDeadline)/peerRPCDelay) {
+		t.Error("The number of sucessful calls exceeds the number allowed by the ratelimit")
+	}
 }
