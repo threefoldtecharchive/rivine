@@ -84,13 +84,6 @@ import (
 	// peers of the same IP address, it should favor kicking peers of the same ip
 	// address range.
 	//
-	// TODO: Currently the gateway does not save a list of its outbound
-	// connections. When it restarts, it will have a full nodelist (which may be
-	// primarily attacker nodes) and it will be connecting primarily to nodes in
-	// the nodelist. Instead, it should start by trying to connect to peers that
-	// have previously been outbound peers, as it is less likely that those have
-	// been manipulated.
-	//
 	// TODO: There is no public key exhcange,
 	// so communications cannot be effectively encrypted or authenticated.
 	// The nodes must have some way to share keys.
@@ -148,7 +141,7 @@ type Gateway struct {
 	// and would block any threads.Flush() calls. So a second threadgroup is
 	// added which handles clean-shutdown for the peers, without blocking
 	// threads.Flush() calls.
-	nodes  map[modules.NetAddress]struct{}
+	nodes  map[modules.NetAddress]*node
 	peers  map[modules.NetAddress]*peer
 	peerTG siasync.ThreadGroup
 
@@ -209,8 +202,8 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 		handlers: make(map[rpcID]modules.RPCFunc),
 		initRPCs: make(map[string]modules.RPCFunc),
 
+		nodes: make(map[modules.NetAddress]*node),
 		peers: make(map[modules.NetAddress]*peer),
-		nodes: make(map[modules.NetAddress]struct{}),
 
 		persistDir: persistDir,
 
@@ -284,6 +277,8 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 			if err != nil && err != errNodeExists {
 				g.log.Printf("WARN: failed to add the bootstrap node '%v': %v", addr, err)
 			}
+			// All bootstrap nodes should be prioritized.
+			g.prioritizeNode(addr)
 		}
 	}
 
