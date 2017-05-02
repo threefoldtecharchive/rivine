@@ -13,15 +13,14 @@ principles.
 Cryptographic Algorithms
 ------------------------
 
-Sia uses cryptographic hashing and cryptographic signing, each of which has
+Rivine uses cryptographic hashing and cryptographic signing, each of which has
 many potentially secure algorithms that can be used. We acknowledge our
 inexperience, and that we have chosen these algorithms not because of our own
 confidence in their properties, but because other people seem confident in
 their properties.
 
-For hashing, our primary goal is to use an algorithm that cannot be merge mined
-with Bitcoin, even partially. A secondary goal is hashing speed on consumer
-hardware, including phones and other low power devices.
+For hashing, our primary goal is hashing speed on consumer hardware, including
+phones and other low power devices.
 
 For signing, our primary goal is verification speed. A secondary goal is an
 algorithm that supports HD keys. A tertiary goal is an algorithm that supports
