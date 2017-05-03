@@ -277,8 +277,6 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 			if err != nil && err != errNodeExists {
 				g.log.Printf("WARN: failed to add the bootstrap node '%v': %v", addr, err)
 			}
-			// All bootstrap nodes should be prioritized.
-			g.prioritizeNode(addr)
 		}
 	}
 
