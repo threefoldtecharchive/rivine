@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 var (
@@ -134,4 +135,18 @@ func ExtractTarGz(filename, dir string) error {
 			}
 		}
 	}
+}
+
+// Retry will retry a function multiple times until it returns 'nil'. It will
+// sleep the specified duration between tries. If success is not achieved in the
+// specified number of attempts, the final error is returned.
+func Retry(tries int, durationBetweenAttempts time.Duration, fn func() error) (err error) {
+	for i := 0; i < tries-1; i++ {
+		err = fn()
+		if err == nil {
+			return nil
+		}
+		time.Sleep(durationBetweenAttempts)
+	}
+	return fn()
 }
