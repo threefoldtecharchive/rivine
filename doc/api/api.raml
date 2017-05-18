@@ -1,0 +1,688 @@
+#%RAML 1.0
+title: "Rivine"
+description: "Rivine API"
+version: 0.0.1
+protocols: [HTTP, HTTPS]
+mediaType: application/json
+documentation:
+  - title: Units
+    content: |
+      Unless otherwise specified, all parameters should be specified in their smallest possible unit.
+      For example, size should always be specified in bytes and Coins should be specified in hastings.
+      JSON values returned by the API will also use the smallest possible unit, unless otherwise specified.
+      If a numbers is returned as a string in JSON, it should be treated as an arbitrary-precision number (bignum),
+      and it should be parsed with your language's corresponding bignum library.
+      Currency values are the most common example where this is necessary.
+  - title: Standard responses
+    content: |
+      Success:
+        The standard response indicating the request was successfully processed is HTTP status code 204 No Content.
+        If the request was successfully processed and the server responded with JSON the HTTP status code is 200 OK.
+        Specific endpoints may specify other 2xx status codes on success.
+      Error:
+        The standard error response indicating the request failed for any reason,
+        is a 4xx or 5xx HTTP status code with an error JSON object describing the error.
+  - title: Wallet
+    content: |
+      The wallet stores and manages coins and blockstakes.
+      The wallet's API endpoints expose methods for creating and loading wallets, locking and unlocking,
+      sending coins and blockstakes, and getting the wallet's balance.
+      You must create a wallet before you can use the wallet's API endpoints.
+      You can create a wallet with the /wallet/init endpoint.
+      Wallets are always encrypted on disk. Calls to some wallet API endpoints will fail until the wallet is unlocked.
+      The wallet can be unlocked with the /wallet/unlock endpoint. Once the wallet is unlocked calls to the API endpoints will
+      succeed until the wallet is locked again with /wallet/lock, or Siad is restarted.
+      The host and renter require the miner to be unlocked.
+
+securitySchemes:
+  basic:
+    description: |
+      API authentication can be enabled with the --authenticate-api rivined flag.
+      Authentication is HTTP Basic Authentication as described in RFC 2617, however, the username is the empty string.
+      The flag does not enforce authentication on all API endpoints.
+      Only endpoints that expose sensitive information or modify state require authentication.
+    type: Basic Authentication
+
+types:
+  Constants:
+    properties:
+      genesistimestamp:
+        type: integer
+        description: Unix time
+      blocksizelimit:
+        type: integer
+      blockfrequency:
+        type: integer
+        description: seconds per block
+      targetwindow:
+        type: integer
+        description: blocks
+      mediantimestampwindow:
+        type: integer
+        description: blocks
+      futurethreshold:
+        type: integer
+        description: seconds
+      siafundcount:
+        type: string
+      siafundportion:
+        type: string
+      maturitydelay:
+        type: integer
+        description: blocks
+      initialcoinbase:
+        type: integer
+      minimumcoinbase:
+        type: integer
+      roottarget:
+        type: array
+        items: integer
+      rootdepth:
+        type: array
+        items: integer
+      maxadjustmentup:
+        type: string
+      maxadjustmentdown:
+        type: string
+      siacoinprecision:
+        type: string
+    example:
+      genesistimestamp: 1257894000
+      blocksizelimit: 2000000
+      blockfrequency: 600
+      targetwindow: 1000
+      mediantimestampwindow: 11
+      futurethreshold: 10800
+      siafundcount: "10000"
+      siafundportion: "39/1000"
+      maturitydelay: 144
+      initialcoinbase: 300000
+      minimumcoinbase: 30000
+      roottarget: [0,0,0,0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+      rootdepth:  [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+      maxadjustmentup:   "5/2"
+      maxadjustmentdown: "2/5"
+      siacoinprecision: "1000000000000000000000000"
+
+  Version:
+    properties:
+      version: string
+    example:
+      version: "1.0.0"
+
+  Consensus:
+    properties:
+      synced: boolean
+      height: integer
+      currentblock: string
+      target: integer[]
+    example:
+      synced: true
+      height: 62248
+      currentblock: "00000000000008a84884ba827bdc868a17ba9c14011de33ff763bd95779a9cf1"
+      target: [0,0,0,0,0,0,11,48,125,79,116,89,136,74,42,27,5,14,10,31,23,53,226,238,202,219,5,204,38,32,59,165]
+
+  Peer:
+    properties:
+      netaddress: string
+      version: string
+      inbound: boolean
+
+  Gateway:
+    properties:
+      netaddress: string
+      peers: Peer[]
+
+  TransactionExternal:
+    properties:
+      coininputs:
+        type: array
+        items:
+          properties:
+            parentid: string
+            unlockconditions:
+              properties:
+                timelock: integer
+                publickeys:
+                  type: array
+                  items:
+                    properties:
+                      algorithm: string
+                      key: string
+            signaturesrequired: integer
+      coinoutputs:
+        type: array
+        items:
+          properties:
+            value: string
+            unlockhash: string
+      blockstakeinputs?: string
+      blockstakeoutputs?: string
+      minerfees:
+        type: string[]
+      arbitrarydata?: string
+      transactionsignatures:
+        type: array
+        items:
+          properties:
+            parentid: string
+            publickeyindex: integer
+            timelock: integer
+            coveredfields:
+              properties:
+                wholetransaction: boolean
+                coininputs?: string
+                coinoutputs?: string
+                blockstakeinputs?: string
+                blockstakeoutputs?: string
+                minerfees?: string
+                arbitrarydata?: string
+                transactionsignatures?: string
+            signature: string
+    example:
+      coininputs:
+        - parentid: 13b157d7e1bb8452c385acc39aa2e0f4d3dc982aa6ca2802dc43a2535b02bfb9
+          signaturesrequired: 1
+          unlockconditions:
+            timelock: 0
+            publickeys:
+            - algorithm: ed25519
+              key: gunn3wmyVZZqza4PwTdhPlZ0ttiEONuu1V+Q0OAdccU=
+      coinoutputs:
+      - value: '120000000000000000000000000'
+        unlockhash: 354a92fda2ee24cd8bb6d588aa4c670325a1c226cab4b13a4b62fac154656ee5398532e42c9e
+      blockstakeinputs:
+      blockstakeoutputs:
+      minerfees:
+      - '10000000000000000000000000'
+      arbitrarydata:
+      transactionsignatures:
+        - parentid: 13b157d7e1bb8452c385acc39aa2e0f4d3dc982aa6ca2802dc43a2535b02bfb9
+          publickeyindex: 0
+          timelock: 0
+          coveredfields:
+            wholetransaction: true
+            coininputs:
+            coinoutputs:
+            blockstakeinputs:
+            blockstakeoutputs:
+            minerfees:
+            arbitrarydata:
+            transactionsignatures:
+          signature: 1/zzGCdDzII2kv2y3+9Roq5p9sxokgiikXT4HdEkw3cbq9SMnXLRiYJfp2FcXSg1Hqk3OsJcAREgBxgg9fBQBg==
+
+  Wallet:
+    properties:
+      encrypted:
+        type: boolean
+        description: |
+          Indicates whether the wallet has been encrypted or not. If the wallet
+          has not been encrypted, then no data has been generated at all, and the
+          first time the wallet is unlocked, the password given will be used as
+          the password for encrypting all of the data. 'encrypted' will only be
+          set to false if the wallet has never been unlocked before (the unlocked
+          wallet is still encryped - but the encryption key is in memory).
+      unlocked:
+        type: boolean
+        description: |
+          indicates whether the wallet is currently locked or unlocked. Some calls
+          become unavailable when the wallet is locked.
+
+      confirmedcoinbalance:
+        type: integer
+        description: |
+          Number of coins, in hastings, available to the wallet as of the most
+          recent block in the blockchain.
+
+      unconfirmedoutgoingcoins:
+        type: integer
+        description: |
+          Number of coins, in hastings, that are leaving the wallet according
+          to the set of unconfirmed transactions. Often this number appears
+          inflated, because outputs are frequently larger than the number of coins
+          being sent, and there is a refund. These coins are counted as outgoing,
+          and the refund is counted as incoming. The difference in balance can be
+          calculated using 'unconfirmedincomingcoins' - 'unconfirmedoutgoingcoins'
+
+      unconfirmedincomingcoins:
+        type: integer
+        description: |
+          Number of coins, in hastings, are entering the wallet according to
+          the set of unconfirmed transactions. This number is often inflated by
+          outgoing coins, because outputs are frequently larger than the amount
+          being sent. The refund will be included in the unconfirmed incoming
+          coins balance.
+
+      blockstakebalance:
+        type: integer
+        description: |
+          Number of blockstakes available to the wallet as of the most recent block
+          in the blockchain.
+  Address:
+    properties:
+      address:
+        type: string
+
+  Addresses:
+    properties:
+      addresses:
+        type: array
+        items: string
+
+  Seed:
+    properties:
+      primaryseed:
+        type: string
+        description: |
+            Seed that is actively being used to generate new addresses for the wallet.
+      addressesremaining:
+        type: integer
+        description: |
+          Number of addresses that remain in the primary seed until exhaustion has
+          been reached. Once exhaustion has been reached, new addresses will
+          continue to be generated but they will be more difficult to recover in the
+          event of a lost wallet file or encryption password.
+      allseeds:
+        description: |
+          Array of all seeds that the wallet references when scanning the blockchain
+          for outputs. The wallet is able to spend any output generated by any of
+          the seeds, however only the primary seed is being used to generate new
+          addresses.
+        type: array
+        items: string
+
+  Transaction:
+    properties:
+      transaction:
+        properties:
+          transaction:
+            type: object
+          transactionid:
+            type: string
+            description: |
+              ID of the transaction from which the wallet transaction was derived.
+          confirmationheight:
+            type: integer
+            description: |
+              Block height at which the transaction was confirmed. If the transaction
+              is unconfirmed the height will be the max value of an unsigned 64-bit
+              integer.
+          confirmationtimestamp:
+            type: integer
+            description: |
+              Time, in unix time, at which a transaction was confirmed. If the
+              transaction is unconfirmed the timestamp will be the max value of an
+              unsigned 64-bit integer.
+      inputs:
+        type: array
+        items:
+          properties:
+            fundtype:
+              type: string
+              description: |
+                Type of fund represented by the input. Possible values are
+                'siacoin input' and 'siafund input'.
+            walletaddress:
+              type: boolean
+              description: |
+                true if the address is owned by the wallet.
+            relatedaddress:
+              type: string
+              description: |
+                Address that is affected. For inputs (outgoing money), the related
+                address is usually not important because the wallet arbitrarily
+                selects which addresses will fund a transaction.
+            value:
+              type: integer
+              description: |
+                Amount of funds that have been moved in the input.
+      outputs:
+        type: array
+        items:
+          properties:
+            fundtype:
+              type: string
+              description: |
+                Type of fund is represented by the output. Possible values are
+                'siacoin output', 'siafund output', 'claim output', and 'miner
+                payout'. Siacoin outputs and claim outputs both relate to siacoins.
+                Siafund outputs relate to siafunds. Miner payouts point to siacoins
+                that have been spent on a miner payout. Because the destination of
+                the miner payout is determined by the block and not the transaction,
+                the data 'maturityheight', 'walletaddress', and 'relatedaddress' are
+                left blank.
+            maturityheight:
+              type: integer
+              description: |
+                Block height the output becomes available to be spent. Siacoin
+                outputs and siafund outputs mature immediately - their maturity
+                height will always be the confirmation height of the transaction.
+                Claim outputs cannot be spent until they have had 144 confirmations,
+                thus the maturity height of a claim output will always be 144 larger
+                than the confirmation height of the transaction.
+            walletaddress:
+              type: boolean
+              description: |
+                true if the address is owned by the wallet.
+            relatedaddress:
+              type: string
+              description: |
+                Address that is affected. For outputs (incoming money), the related
+                address field can be used to determine who has sent money to the wallet.
+            value:
+              type: integer
+              description: |
+                Amount of funds that have been moved in the output
+
+/daemon:
+  /constants:
+    get:
+      description: |
+        Returns the set of constants in use.
+      responses:
+        200:
+          description: |
+            Succesfully retrieved resource
+  /stop:
+    get:
+      description: |
+        Cleanly shuts down the daemon. May take a few seconds.
+      responses:
+        200:
+          description: |
+            Succesfully stopped
+  /version:
+    get:
+      description: |
+        Returns the version of the Sia daemon currently running.
+      responses:
+        200:
+          body:
+            type: Version
+/consensus:
+  get:
+    description: |
+      Returns information about the consensus set, such as the current block height.
+    responses:
+      200:
+        description: |
+          Succesfully retrieved consensus
+        body:
+          type: Consensus
+/gateway:
+  get:
+    description: |
+      Returns information about the gateway, including the list of connected peers.
+    responses:
+      200:
+        description: |
+          Succesfully retrieved gateway
+        body: Gateway
+  /connect/{netaddr}:
+    uriParameters:
+      netaddr:
+        type: string
+    post:
+      description: |
+        connects the gateway to a peer. The peer is added to the node list if it is not already present.
+        The node list is the list of all nodes the gateway knows about, but is not necessarily connected to.
+      responses:
+        200:
+          description: |
+            Succesfully connected
+  /disconnect/{netaddr}:
+    post:
+      description: |
+        Disconnects the gateway from a peer. The peer remains in the node list.
+      responses:
+        200:
+          description: |
+            Succesfully disconnected
+/transactionpool/transactions:
+  post:
+    description: |
+      Provide an externally constructed and signed transaction to the transactionpool.
+    body:
+      application/json: TransactionExternal
+    responses:
+      200:
+        description: |
+          Succesfully created transaction
+/wallet:
+  get:
+    description: |
+      Returns basic information about the wallet, such as whether the wallet is locked or unlocked.
+    responses:
+      200:
+        description: |
+          Succesfully retrieved wallet info
+        body:
+          type: Wallet
+  /address:
+    get:
+      description: |
+        Gets a new address from the wallet generated by the primary seed. An error will be returned if the wallet is locked.
+      responses:
+        200:
+          body:
+            type: Address
+  /addresses:
+    get:
+      description: |
+        Fetches the list of addresses from the wallet.
+      responses:
+        200:
+          body:
+            type: Addresses
+  /backup:
+    get:
+      queryParameters:
+        destination:
+          description: path to the location on disk where the backup file will be saved.
+          type: string
+          required: true
+      description: |
+        creates a backup of the wallet settings file. Though this can easily be done manually, the settings file is often in an unknown or difficult to find location.
+        The /wallet/backup call can spare users the trouble of needing to find their wallet file. The destination file is overwritten if it already exists.
+      responses:
+        200:
+  /init:
+    post:
+      description: |
+        initializes the wallet. After the wallet has been initialized once, it does not need to be initialized again, and future calls to /wallet/init will return an error.
+        The encryption password is provided by the api call. If the password is blank, then the password will be set to the same as the seed.
+      queryParameters:
+        encryptionpassword:
+          type: string
+          description: |
+            Password that will be used to encrypt the wallet. All subsequent calls
+            should use this password. If left blank, the seed that gets returned will
+            also be the encryption password.
+          required: false
+        dictionary:
+          type: string
+          description: |
+            Name of the dictionary that should be used when encoding the seed. 'english'
+            is the most common choice when picking a dictionary.
+          required: false
+      responses:
+        200:
+          body:
+            properties:
+              primaryseed:
+                type: string
+                description: |
+                  Wallet seed used to generate addresses that the wallet is able to spend.
+  /seed:
+    post:
+      description: |
+        Gives the wallet a seed to track when looking for incoming transactions.
+        The wallet will be able to spend outputs related to addresses created by the seed.
+        The seed is added as an auxiliary seed, and does not replace the primary seed.
+        Only the primary seed will be used for generating new addresses.
+      queryParameters:
+        encryptionpassword:
+          type: string
+          description: |
+            Key used to encrypt the new seed when it is saved to disk.
+          required: true
+        dictionary:
+          type: string
+          description: |
+            Name of the dictionary that should be used when encoding the seed. 'english'
+            is the most common choice when picking a dictionary.
+          required: false
+        seed:
+          description: |
+            Dictionary-encoded phrase that corresponds to the seed being added to the wallet.
+          type: string
+          required: true
+      responses:
+        200:
+    get:
+      description: |
+        Returns a list of seeds in use by the wallet.
+        The primary seed is the only seed that gets used to generate new addresses.
+        This call is unavailable when the wallet is locked.
+        A seed is an encoded version of a 128 bit random seed. The output is 15 words chosen from a small dictionary as indicated by the input. The most common choice for the dictionary is going to be 'english'. The underlying seed is the same no matter what dictionary is used for the encoding. The encoding also contains a small checksum of the seed, to help catch simple mistakes when copying. The library entropy-mnemonics is used when encoding.
+      queryParameters:
+        dictionary:
+          type: string
+          description: |
+            Name of the dictionary that should be used when encoding the seed. 'english'
+            is the most common choice when picking a dictionary.
+          required: false
+      responses:
+        200:
+          body: Seed
+  /coin:
+    post:
+      description: |
+        Function: Send coins to an address. The outputs are arbitrarily selected from addresses in the wallet.
+      queryParameters:
+        amount:
+          type: integer
+          description: |
+            // Number of hastings being sent. A hasting is the smallest unit in rivine. There
+            // are 10^24 hastings in a rivine.
+          required: true
+        destination:
+          type: string
+          description: |
+            Address that is receiving the coins.
+          required: true
+      body:
+        application/json: !!null
+      responses:
+        200:
+          body:
+            properties:
+              transactionid:
+                description: |
+                  Array of IDs of the transactions that were created when sending the coins.
+                  The last transaction contains the output headed to the 'destination'.
+                  Transaction IDs are 64 character long hex strings.
+                type: array
+                items: string
+  /blockstakes:
+    post:
+      description: |
+        Sends blockstakes to an address. The outputs are arbitrarily selected from addresses in the wallet.
+      queryParameters:
+        amount:
+          type: integer
+          description: |
+            // Number of hastings being sent. A hasting is the smallest unit in rivine. There
+            // are 10^24 hastings in a rivine.
+          required: true
+        destination:
+          type: string
+          description: |
+            Address that is receiving the coins.
+          required: true
+      responses:
+        200:
+          body:
+            properties:
+              transactionid:
+                description: |
+                  Array of IDs of the transactions that were created when sending the coins.
+                  The last transaction contains the output headed to the 'destination'.
+                  Transaction IDs are 64 character long hex strings.
+                type: array
+                items: string
+  /lock:
+    post:
+      description: |
+        locks the wallet, wiping all secret keys. After being locked, the keys are encrypted.
+        Queries for the seed, to send siafunds, and related queries become unavailable.
+        Queries concerning transaction history and balance are still available.
+      body:
+        application/json: !!null
+      responses:
+        200:
+  /unlock:
+    post:
+      description: |
+        unlocks the wallet. The wallet is capable of knowing whether the correct password was provided.
+      queryParameters:
+        encryptionpassword:
+          type: string
+          description: |
+            Key used to encrypt the new seed when it is saved to disk.
+          required: true
+      responses:
+        200:
+  /transaction/{id}:
+    get:
+      description: |
+        Gets the transaction associated with a specific transaction id.
+      responses:
+        200:
+          body:
+            type: Transaction
+  /transactions:
+    get:
+      description: |
+        Returns a list of transactions related to the wallet.
+      queryParameters:
+        startheight:
+          type: integer
+          description: |
+            Height of the block where transaction history should begin.
+        endheight:
+          type: integer
+          description: |
+            Height of of the block where the transaction history should end. If
+            'endheight' is greater than the current height, all transactions up to and
+            including the most recent block will be provided.
+      responses:
+        200:
+          body:
+            properties:
+              confirmedtransactions:
+                type: Transaction[]
+                description: |
+                  All of the confirmed transactions appearing between height 'startheight'
+                  and height 'endheight' (inclusive).
+              unconfirmedtransactions:
+                  type: Transaction[]
+                  description: |
+                     All of the unconfirmed transactions.
+    /{addr}:
+      get:
+        description: |
+          Returns all of the transactions related to a specific address.
+        queryParameters:
+          addr:
+            type: string
+            description: |
+              Unlock hash (i.e. wallet address) whose transactions are being requested.
+        responses:
+          200:
+            body:
+              properties:
+                transactions:
+                  type: Transaction[]
+                  description: |
+                    Array of processed transactions that relate to the supplied address.
