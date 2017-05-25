@@ -9,7 +9,7 @@ Usage
 -----
 
 This release comes with 2 binaries, rivined and rivinec. rivined is a background
-service, or "daemon," that runs the Sia protocol, and rivinec is a client that is
+service, or "daemon," that runs the Rivine protocol, and rivinec is a client that is
 used to interact with rivined. rivined exposes an HTTP API on 'localhost:23110' which
 can be used to interact with the daemon. Documentation on the API can be found in doc/API.md.
 
@@ -49,7 +49,7 @@ Troubleshooting
 
 - I can't connect to more than 8 peers.
 
-  Once Sia has connected to 8 peers, it will stop trying to form new
+  Once Rivine has connected to 8 peers, it will stop trying to form new
   connections, but it will still accept incoming connection requests (up to 128
   total peers). However, if you are behind a firewall, you will not be able to
   accept incoming connections. You must configure your firewall to allow Rivine
