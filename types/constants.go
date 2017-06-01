@@ -33,7 +33,7 @@ var (
 
 	BlockCreatorFee Currency
 
-	SiacoinPrecision = NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
+	OneCoin = NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
 
 	GenesisBlockStakeAllocation = []BlockStakeOutput{}
 	GenesisBlockStakeCount      Currency
@@ -53,8 +53,6 @@ var (
 // init checks which build constant is in place and initializes the variables
 // accordingly.
 func init() {
-	oneCoinInHastings := new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)
-	oneCoin := NewCurrency(oneCoinInHastings)
 
 	if build.Release == "dev" {
 		// 'dev' settings are for small developer testnets, usually on the same
@@ -63,7 +61,7 @@ func init() {
 		// enough that there isn't much time wasted on waiting for things to
 		// happen.
 		BlockFrequency = 12 // 12 seconds: slow enough for developers to see ~each block, fast enough that blocks don't waste time.
-		MaturityDelay = 10  // 60 seconds before a delayed output matures.
+		MaturityDelay = 10  // 120 seconds before a delayed output matures.
 
 		// Change as necessary. If not changed, the first few difficulty addaptions
 		// will be wrong, but after some new difficulty calculations the error will
@@ -79,7 +77,7 @@ func init() {
 
 		BlockStakeAging = uint64(1 << 10) // Block stake aging if unspent block stake is not at index 0
 
-		BlockCreatorFee = oneCoin.Mul64(100)
+		BlockCreatorFee = OneCoin.Mul64(100)
 
 		bso := BlockStakeOutput{
 			Value:      NewCurrency64(1000000),
@@ -87,7 +85,7 @@ func init() {
 		}
 
 		co := CoinOutput{
-			Value: oneCoin.Mul64(1000),
+			Value: OneCoin.Mul64(1000),
 		}
 
 		// Seed for this address:
@@ -118,7 +116,7 @@ func init() {
 
 		BlockStakeAging = uint64(1 << 10)
 
-		BlockCreatorFee = oneCoin.Mul64(100)
+		BlockCreatorFee = OneCoin.Mul64(100)
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
@@ -154,10 +152,8 @@ func init() {
 		// spending and stops a small set of long-range mining attacks.
 		MaturityDelay = 144
 
-		// The genesis timestamp is set to June 6th, because that is when the
-		// 100-block developer premine started. The trailing zeroes are a
-		// bonus, and make the timestamp easier to memorize.
-		GenesisTimestamp = Timestamp(1433600000) // June 6th, 2015 @ 2:13pm UTC.
+		// The genesis timestamp is set to June 1st, 2017
+		GenesisTimestamp = Timestamp(1496322000) // June 2nd, 2017 @ 1:00pm UTC.
 
 		// The RootTarget was set such that the developers could reasonable
 		// premine 100 blocks in a day. It was known to the developrs at launch
@@ -203,14 +199,21 @@ func init() {
 
 		// BlockCreatorFee is the asset you get when creating a block on top of the
 		// other fee.
-		BlockCreatorFee = oneCoin.Mul64(100)
+		BlockCreatorFee = OneCoin.Mul64(10)
 
-		GenesisBlockStakeAllocation = []BlockStakeOutput{
-			{
-				Value:      NewCurrency64(2),
-				UnlockHash: UnlockHash{4, 57, 229, 188, 127, 20, 204, 245, 211, 167, 232, 130, 208, 64, 146, 62, 69, 98, 81, 102, 221, 7, 123, 100, 70, 107, 199, 113, 121, 26, 198, 252},
-			},
+		bso := BlockStakeOutput{
+			Value:      NewCurrency64(1000000),
+			UnlockHash: UnlockHash{},
 		}
+
+		co := CoinOutput{
+			Value: OneCoin.Mul64(100 * 1000 * 1000),
+		}
+
+		bso.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
+		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
+		co.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
+		GenesisCoinDistribution = append(GenesisCoinDistribution, co)
 	}
 
 	// Create the genesis block.

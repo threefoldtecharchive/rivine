@@ -73,8 +73,8 @@ returns the set of constants in use.
   // Smallest allowed ratio between the old difficulty and the new difficulty.
   "maxadjustmentdown": "2/5",
 
-  // Number of Hastings in one siacoin.
-  "siacoinprecision": "1000000000000000000000000" // hastings per siacoin
+  // Number of Hastings in one coin.
+  "onecoin": "1000000000000000000000000" // hastings per coin
 }
 ```
 

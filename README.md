@@ -1,9 +1,26 @@
-Rivine 0.0.1
-============
+Rivine
+======
 
 [![Build Status](https://travis-ci.org/rivine/rivine.svg?branch=master)](https://travis-ci.org/rivine/rivine)
 [![GoDoc](https://godoc.org/github.com/rivine/rivine?status.svg)](https://godoc.org/github.com/rivine/rivine)
 [![Go Report Card](https://goreportcard.com/badge/github.com/rivine/rivine)](https://goreportcard.com/report/github.com/rivine/rivine)
+
+Blockchain technology for creating custom chains.
+
+[Whitepaper](doc/whitepaper.md)
+
+Public chain
+------------
+
+While rivine provides the technology to create custom chains, a public chain is available for
+demo/testing purposes. Rivine by default connects to this public chain.
+
+Parameters:
+* 1 000 000 blockstakes
+* 100 000 000 coins created in the genesis block
+* 10 minute block time
+* 1 coin transaction fee
+* a block reward of 10 coins
 
 Usage
 -----
@@ -21,8 +38,7 @@ command prompt may appear to freeze; this means rivined is waiting for requests.
 Windows users may see a warning from the Windows Firewall; be sure to check
 both boxes ("Private networks" and "Public networks") and click "Allow
 access." You can now run `rivinec` in a separate command prompt to interact with
-rivined. From here, you can send money, mine blocks, upload and download
-files, and advertise yourself as a host.
+rivined.
 
 Building From Source
 --------------------
@@ -63,7 +79,7 @@ Troubleshooting
 
 Version Information
 -------------------
-
+* 0.1    Initial launch of a public chain
 
 Version History
 ---------------

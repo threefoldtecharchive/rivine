@@ -201,7 +201,7 @@ func TestConcurrentBuilders(t *testing.T) {
 	// builder2 := wt.wallet.StartTransaction()
 	// // Fund each builder with a siacoin output that is smaller than all of the
 	// // outputs that the wallet should currently have.
-	// funding := types.NewCurrency64(10e3).Mul(types.SiacoinPrecision)
+	// funding := types.NewCurrency64(10e3).Mul(types.OneCoin)
 	// err = builder1.FundSiacoins(funding)
 	// if err != nil {
 	// 	t.Fatal(err)
@@ -218,10 +218,10 @@ func TestConcurrentBuilders(t *testing.T) {
 	// }
 	//
 	// // Spend the transaction funds on miner fees and the void output.
-	// builder1.AddMinerFee(types.NewCurrency64(25).Mul(types.SiacoinPrecision))
-	// builder2.AddMinerFee(types.NewCurrency64(25).Mul(types.SiacoinPrecision))
+	// builder1.AddMinerFee(types.NewCurrency64(25).Mul(types.OneCoin))
+	// builder2.AddMinerFee(types.NewCurrency64(25).Mul(types.OneCoin))
 	// // Send the money to the void.
-	// output := types.SiacoinOutput{Value: types.NewCurrency64(9975).Mul(types.SiacoinPrecision)}
+	// output := types.SiacoinOutput{Value: types.NewCurrency64(9975).Mul(types.OneCoin)}
 	// builder1.AddSiacoinOutput(output)
 	// builder2.AddSiacoinOutput(output)
 	//
@@ -323,7 +323,7 @@ func TestConcurrentBuilders(t *testing.T) {
 // 	builder1 := wt.wallet.StartTransaction()
 // 	builder2 := wt.wallet.StartTransaction()
 // 	// Fund each builder with a siacoin output.
-// 	funding := types.NewCurrency64(10e3).Mul(types.SiacoinPrecision)
+// 	funding := types.NewCurrency64(10e3).Mul(types.OneCoin)
 // 	err = builder1.FundSiacoins(funding)
 // 	if err != nil {
 // 		t.Fatal(err)
@@ -341,9 +341,9 @@ func TestConcurrentBuilders(t *testing.T) {
 // 	}
 //
 // 	// Spend the transaction funds on miner fees and the void output.
-// 	builder1.AddMinerFee(types.NewCurrency64(25).Mul(types.SiacoinPrecision))
+// 	builder1.AddMinerFee(types.NewCurrency64(25).Mul(types.OneCoin))
 // 	// Send the money to the void.
-// 	output = types.SiacoinOutput{Value: types.NewCurrency64(9975).Mul(types.SiacoinPrecision)}
+// 	output = types.SiacoinOutput{Value: types.NewCurrency64(9975).Mul(types.OneCoin)}
 // 	builder1.AddSiacoinOutput(output)
 //
 // 	// Sign the transaction and submit it.
@@ -406,7 +406,7 @@ func TestConcurrentBuilders(t *testing.T) {
 //
 // 	// Create several builders in parallel.
 // 	var wg sync.WaitGroup
-// 	funding := types.NewCurrency64(10e3).Mul(types.SiacoinPrecision)
+// 	funding := types.NewCurrency64(10e3).Mul(types.OneCoin)
 // 	for i := 0; i < outputsDesired; i++ {
 // 		wg.Add(1)
 // 		go func() {
@@ -418,8 +418,8 @@ func TestConcurrentBuilders(t *testing.T) {
 // 			}
 //
 // 			// Spend the transaction funds on miner fees and the void output.
-// 			builder.AddMinerFee(types.NewCurrency64(25).Mul(types.SiacoinPrecision))
-// 			output := types.SiacoinOutput{Value: types.NewCurrency64(9975).Mul(types.SiacoinPrecision)}
+// 			builder.AddMinerFee(types.NewCurrency64(25).Mul(types.OneCoin))
+// 			output := types.SiacoinOutput{Value: types.NewCurrency64(9975).Mul(types.OneCoin)}
 // 			builder.AddSiacoinOutput(output)
 // 			// Sign the transactions and verify that both are valid.
 // 			tset, err := builder.Sign(true)

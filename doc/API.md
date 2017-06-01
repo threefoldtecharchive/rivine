@@ -122,7 +122,7 @@ returns the set of constants in use.
   "maxadjustmentup":   "5/2",
   "maxadjustmentdown": "2/5",
 
-  "siacoinprecision": "1000000000000000000000000" // hastings per siacoin
+  "onecoin": "1000000000000000000000000" // hastings per siacoin
 }
 ```
 
