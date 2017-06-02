@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/rivine/rivine",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v74",
+	"GodepVersion": "v79",
 	"Packages": [
 		"./..."
 	],
@@ -22,6 +22,10 @@
 		{
 			"ImportPath": "github.com/NebulousLabs/entropy-mnemonics",
 			"Rev": "6afa27f8f200f600ad9d02b80329052598f2d965"
+		},
+		{
+			"ImportPath": "github.com/NebulousLabs/fastrand",
+			"Rev": "5a1a312dd2ce7d5f1383e1d36ad197739f161bd3"
 		},
 		{
 			"ImportPath": "github.com/NebulousLabs/go-upnp",
@@ -117,8 +121,12 @@
 			"Rev": "367864438f1b1a3c7db4da06a2f55b144e6784e0"
 		},
 		{
+			"ImportPath": "golang.org/x/crypto/blake2b",
+			"Rev": "5a033cc77e57eca05bdb50522851d29e03569cbe"
+		},
+		{
 			"ImportPath": "golang.org/x/crypto/twofish",
-			"Rev": "911fafb28f4ee7c7bd483539a6c96190bbbccc3f"
+			"Rev": "5a033cc77e57eca05bdb50522851d29e03569cbe"
 		},
 		{
 			"ImportPath": "golang.org/x/net/html",
