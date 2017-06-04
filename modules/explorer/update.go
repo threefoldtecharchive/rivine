@@ -221,11 +221,9 @@ func mustPutSet(bucket *bolt.Bucket, key interface{}) {
 func mustDelete(bucket *bolt.Bucket, key interface{}) {
 	assertNil(bucket.Delete(encoding.Marshal(key)))
 }
-func deleteEmptyNestedBucket(parent *bolt.Bucket, key []byte) {
-	k, _ := parent.Bucket(key).Cursor().First()
-	if k == nil {
-		parent.DeleteBucket(key)
-	}
+func bucketIsEmpty(bucket *bolt.Bucket) bool {
+	k, _ := bucket.Cursor().First()
+	return k == nil
 }
 
 // These functions panic on error. The panic will be caught by
@@ -271,8 +269,11 @@ func dbAddCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.Transactio
 }
 
 func dbRemoveCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
-	mustDelete(tx.Bucket(bucketCoinOutputIDs).Bucket(encoding.Marshal(id)), txid)
-	deleteEmptyNestedBucket(tx.Bucket(bucketCoinOutputIDs), encoding.Marshal(id))
+	bucket := tx.Bucket(bucketCoinOutputIDs).Bucket(encoding.Marshal(id))
+	mustDelete(bucket, txid)
+	if bucketIsEmpty(bucket) {
+		tx.Bucket(bucketCoinOutputIDs).DeleteBucket(encoding.Marshal(id))
+	}
 }
 
 // Add/Remove blockstake output
@@ -291,8 +292,11 @@ func dbAddBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid type
 }
 
 func dbRemoveBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
-	mustDelete(tx.Bucket(bucketBlockStakeOutputIDs).Bucket(encoding.Marshal(id)), txid)
-	deleteEmptyNestedBucket(tx.Bucket(bucketBlockStakeOutputIDs), encoding.Marshal(id))
+	bucket := tx.Bucket(bucketBlockStakeOutputIDs).Bucket(encoding.Marshal(id))
+	mustDelete(bucket, txid)
+	if bucketIsEmpty(bucket) {
+		tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(encoding.Marshal(id))
+	}
 }
 
 // Add/Remove transaction ID
@@ -310,8 +314,11 @@ func dbAddUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID)
 	mustPutSet(b, txid)
 }
 func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
-	mustDelete(tx.Bucket(bucketUnlockHashes).Bucket(encoding.Marshal(uh)), txid)
-	deleteEmptyNestedBucket(tx.Bucket(bucketUnlockHashes), encoding.Marshal(uh))
+	bucket := tx.Bucket(bucketUnlockHashes).Bucket(encoding.Marshal(uh))
+	mustDelete(bucket, txid)
+	if bucketIsEmpty(bucket) {
+		tx.Bucket(bucketUnlockHashes).DeleteBucket(encoding.Marshal(uh))
+	}
 }
 
 func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Block) blockFacts {
