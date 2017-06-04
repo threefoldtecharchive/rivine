@@ -153,7 +153,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			scoid := scod.ID
 			sco := scod.CoinOutput
 
-			if scod.Direction == true {
+			if scod.Direction == modules.DiffApply {
 				dbAddCoinOutput(tx, scoid, sco)
 			}
 		}
@@ -163,7 +163,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			sfoid := sfod.ID
 			sfo := sfod.BlockStakeOutput
 
-			if sfod.Direction == true {
+			if sfod.Direction == modules.DiffApply {
 				dbAddBlockStakeOutput(tx, sfoid, sfo)
 			}
 		}
