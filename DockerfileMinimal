@@ -1,7 +1,7 @@
 FROM scratch
 
-COPY ./dist/rivined /rivined
-COPY ./dist/rivinec /rivinec
+COPY ./dist/linux/rivined /rivined
+COPY ./dist/linux/rivinec /rivinec
 
 EXPOSE 23112
 
