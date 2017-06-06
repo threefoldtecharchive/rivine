@@ -44,7 +44,7 @@ func TestCalculateFee(t *testing.T) {
 	}
 	// Try a non-empty transaction.
 	txnSet = []types.Transaction{{
-		SiacoinOutputs: []types.SiacoinOutput{{
+		CoinOutputs: []types.CoinOutput{{
 			Value: types.NewCurrency64(253e9),
 		}},
 	}}
