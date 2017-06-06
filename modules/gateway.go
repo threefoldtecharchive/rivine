@@ -26,6 +26,7 @@ var (
 		case "standard":
 			return []NetAddress{
 				"136.243.144.132:23112",
+				"[2a01:4f8:171:1303::2]:23112",
 				"bootstrap2.rivine.io:23112",
 				"bootstrap3.rivine.io:23112",
 			}
