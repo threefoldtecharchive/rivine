@@ -25,7 +25,7 @@ var (
 			return nil
 		case "standard":
 			return []NetAddress{
-				"bootstrap1.rivine.io:23112",
+				"136.243.144.132:23112",
 				"bootstrap2.rivine.io:23112",
 				"bootstrap3.rivine.io:23112",
 			}
