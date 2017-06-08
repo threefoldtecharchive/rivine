@@ -1,7 +1,9 @@
 FROM scratch
 
-COPY ./dist/linux/rivined /rivined
-COPY ./dist/linux/rivinec /rivinec
+ARG binaries_location=dist/linux
+
+COPY $binaries_location/rivined /rivined
+COPY $binaries_location/rivinec /rivinec
 
 EXPOSE 23112
 
