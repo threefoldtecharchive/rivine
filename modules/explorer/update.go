@@ -148,23 +148,17 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			}
 		}
 
-		// Update stats for according to CoinOutputDiffs
+		// Update stats according to CoinOutputDiffs
 		for _, scod := range cc.CoinOutputDiffs {
-			scoid := scod.ID
-			sco := scod.CoinOutput
-
 			if scod.Direction == modules.DiffApply {
-				dbAddCoinOutput(tx, scoid, sco)
+				dbAddCoinOutput(tx, scod.ID, scod.CoinOutput)
 			}
 		}
 
-		// Update stats for according to BlockStakeOutputDiffs
+		// Update stats according to BlockStakeOutputDiffs
 		for _, sfod := range cc.BlockStakeOutputDiffs {
-			sfoid := sfod.ID
-			sfo := sfod.BlockStakeOutput
-
 			if sfod.Direction == modules.DiffApply {
-				dbAddBlockStakeOutput(tx, sfoid, sfo)
+				dbAddBlockStakeOutput(tx, sfod.ID, sfod.BlockStakeOutput)
 			}
 		}
 
