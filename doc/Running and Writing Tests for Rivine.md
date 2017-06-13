@@ -1,56 +1,51 @@
-# Running and Writing Tests for Sia
-Improving test coverage is a great way to start contributing to Sia.  
+# Running and Writing Tests for Rivine
+Improving test coverage is a great way to start contributing to Rivine.  
 
-This guide focuses on how to write tests.  To learn about making pull requests
-to submit the code you've written, see
-[doc/Guide to Contributing to Sia.md][guide].  You should also read
-[doc/Developers.md][developers] to learn about Sia code conventions and quality
+This guide focuses on how to write tests. You should also read
+[Developers.md][developers] to learn about Rivine code conventions and quality
 standards.
 
 
 #### Table of Contents
-* [Running tests for Sia](#existing)
+* [Running tests for Rivine](#existing)
   * [Updating code before testing](#update)
   * [Testing the entire build](#entire)
   * [Testing a particular package](#particular)
-* [Writing new tests for Sia](#write)
+* [Writing new tests for Rivine](#write)
   * [A few guidelines](#naming)
   * [Basic test format](#basic)
   * [Table-driven tests](#table)
 * [Questions?](#questions)
 
 <a name="existing"/>
-## Running tests for Sia
+## Running tests for Rivine
 Go's comprehensive [test package][pkg/testing] makes testing straightforward,
 particularly when you use the bundled tools included in the
-[Sia makefile][makefile], including `make test`, `make cover`, `make bench`,
+[Rivine makefile][../makefile], including `make test`, `make cover`, `make bench`,
 and their variants.
 
 <a name="update"/>
 ### Updating code before testing
 If you just want to run existing tests on the codebase as is, you just need to
-pull the latest version of the original repo to your master branch.  (If that 
-sentence didn't make sense, go read
-[doc/Guide to Contributing to Sia.md][guide].)
+pull the latest version of the original repo to your master branch.
 
 ```bash
 # Make sure you are in the right directory.
-$ cd $GOPATH/src/github.com/<your Github username>/Sia
+$ cd $GOPATH/src/github.com/<your Github username>/rivine
 # Also make sure you're working with the right branch.
 $ git checkout master
-# Pull latest changes from origin, the original Sia repo. 
+# Pull latest changes from origin, the original Rivine repo.
 $ git pull origin master
 # Update your fork of the repo, which should be set up as a remote.
 $ git push <remote>  master
 ```
 
 If you want to run tests on the new code you've added, first make sure the rest
-of the code is up to date. New code should be on its own branch (again, see
-[doc/Guide to Contributing to Sia.md][guide]).
+of the code is up to date. New code should be on its own branch.
 
 ```bash
 # Make sure you are in the right directory.
-$ cd $GOPATH/src/github.com/<your Github username>/Sia
+$ cd $GOPATH/src/github.com/<your Github username>/rivine
 # Checkout the branch you made the changes on.
 $ git checkout <branch name>
 # Stash any tracked but uncommitted changes.
@@ -69,8 +64,7 @@ $ git rebase master --ignore-date
 # Restore the changes you stashed earlier.
 $ git stash pop
 ```
-When you call `rebase`, you may run into some merge conflicts.  Luke Champine's
-['How to into git and GitHub'][luke] has more details (and many useful tricks).
+When you call `rebase`, you may run into some merge conflicts.  
 
 Once the branch you want to test is up to date, you're ready to run some tests.
 
@@ -80,13 +74,13 @@ The `make test` command runs all tests (functions starting with `Test` in
 `_test.go` files) for each package, setting off a panic for any test that runs
 longer than 5s.  For verbose output, run `make test-v` (which panics after 15s
 instead of 5s).  Finally, `make test-long` has verbose output, only panics when
-a test takes 5 minutes, and also cleans up your code using `gofmt` and `golint`. 
+a test takes 5 minutes, and also cleans up your code using `gofmt` and `golint`.
 **You should run** `make test-long` **before each pull request.**
 
 Run `make cover` to run all tests for each package and generate color-coded
 .html visualizations of test coverage by function for each source file.  Open
-`cover/<module>.html` in a browser to inspect a module's test coverage. For 
-example, here's part of the html file generated for the persist package: 
+`cover/<module>.html` in a browser to inspect a module's test coverage. For
+example, here's part of the html file generated for the persist package:
 
 ![Screenshot](assets/covertool.png)
 
@@ -95,7 +89,7 @@ benchmarks (functions starting with `Benchmark` in `_test.go` files).
 
 <a name="particular"/>
 ### Testing a particular package or function
-To run tests for just a certain package, run `make test pkgs=./<package>`. To run 
+To run tests for just a certain package, run `make test pkgs=./<package>`. To run
 a certain test function, run `make test pkgs=./<package> run=<function>`. The same
 goes for `make test-long`, `make cover` and `make bench`.
 
@@ -103,7 +97,6 @@ For example, running `test-long` on the package persist produces this output:
 
 ```bash
 $ make test-long pkgs=./persist
-rm -rf release doc/whitepaper.aux doc/whitepaper.log doc/whitepaper.pdf
 gofmt -s -l -w ./persist
 go install ./persist
 go vet ./persist
@@ -129,10 +122,10 @@ go test -v -race -tags='testing debug' -timeout=300s ./persist -run=Test
 PASS
 ok  	github.com/rivine/rivine/persist	1.485s
 $
-``` 
+```
 
 <a name="write"/>
-## Writing new tests for Sia
+## Writing new tests for Rivine
 When you run `make cover`, you'll notice that many files have pretty low
 coverage.  We're working on fixing that, but we could use your help.
 
@@ -143,7 +136,7 @@ coverage.  We're working on fixing that, but we could use your help.
 * A test function name should start with `Test` and clearly convey what is
     being tested.
 * You should declare function-specific variables and constants locally (inside
-    the test function) instead of globally (outside the test function).  [That 
+    the test function) instead of globally (outside the test function).  [That
 	holds in general][global], not just for tests.
 * As always, code should adhere to the standards and conventions laid out in
     [doc/Developers.md][developers].
@@ -170,7 +163,7 @@ func TestFoo(t *testing.T) {
 	}
 
 	// Try a bad input; should return an error.
-	// NOTE: Always prefer to compare to a specific error, rather than 
+	// NOTE: Always prefer to compare to a specific error, rather than
 	// err == nil
 	err = Foo.Bar(0)
 	if err != errDivideByZero {
@@ -183,8 +176,8 @@ func TestFoo(t *testing.T) {
 <a name="table"/>
 ### Table-driven tests in Go
 If you're looking to test a bunch of inputs, write a [table-driven test][table]
-with a slice of anonymous structs. For example, see `TestParseFileSize` in 
-[siac/parse_test.go][parse_test]:
+with a slice of anonymous structs. For example, see `TestParseFileSize` in
+[Rivinec/parse_test.go][parse_test]:
 
 ```go
 func TestParseFilesize(t *testing.T) {
@@ -215,7 +208,7 @@ func TestParseFilesize(t *testing.T) {
 		{"1.234KB", "1234", nil},
 		{"1.2345KB", "1234", nil},
 	}
-	// Loop through the table of test cases to make sure ParseFileSize returns 
+	// Loop through the table of test cases to make sure ParseFileSize returns
 	// the expected output and error for each.
 	for _, test := range tests {
 		res, err := parseFilesize(test.in)
@@ -228,29 +221,20 @@ func TestParseFilesize(t *testing.T) {
 <a name="questions"/>
 ## Questions?
 Read these if you haven't already:
-* [doc/Guide to Contributing to Sia.md][guide]: getting started with Go, Sia,
-    and git
-* [doc/Developers.md][developers]: conventions and quality standards for Sia
+* [doc/Developers.md][developers]: conventions and quality standards for Rivine
     code
 
 Some other useful resources, some of which have been linked to already:
 * [Golang.org page on the go testing package][pkg/testing]
 * [Writing Table-Driven Tests in Go][table]
 * [How to Write Benchmarks in Go][cheney-benchmarks]
-* [How to into git and GitHub][luke]: an essential introduction to git
-
-And feel free to ask questions on the [#dev channel][slack] on the Sia Slack. 
-Odds are, someone else is wondering the same thing.
 
 [pkg/testing]: https://golang.org/pkg/testing/
 [makefile]: https://github.com/rivine/rivine/blob/master/Makefile
-[luke]: https://gist.github.com/lukechampine/6418449
-[guide]: https://github.com/rivine/rivine/blob/master/doc/Guide%20to%20Contributing%20to%20Sia.md
 [developers]: https://github.com/rivine/rivine/blob/master/doc/Developers.md
 [table]: http://dave.cheney.net/2013/06/09/writing-table-driven-tests-in-go
 [boltdb_test.go]: https://github.com/rivine/rivine/blob/master/persist/boltdb_test.go
 [cheney-benchmarks]: http://dave.cheney.net/2013/06/30/how-to-write-benchmarks-in-go
 [pkg/testing]: https://golang.org/pkg/testing/
-[slack]: https://siatalk.slack.com/messages/dev/
-[parse_test]: https://github.com/rivine/rivine/blob/master/siac/parse_test.go
+[parse_test]: https://github.com/rivine/rivine/blob/master/Rivinec/parse_test.go
 [global]: http://c2.com/cgi/wiki?GlobalVariablesAreBad
