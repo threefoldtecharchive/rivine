@@ -15,9 +15,10 @@ protocol
 
 The hash function used is a 32-byte BLAKE2b hash. To compare the hash with the difficulty it is interpreted as a big-endian unsigned integer.
 
-Stakemodifier
--------------
 
+Maturity of Blockstakes
+-----------------------
+In the proof of blockstake protocol, the used blockstakes are resend to the blockcreator in the very first transaction of the block. If someone sends blockstakes to someone else, these blockstakes need to mature for 144 blocks in order to become eligible for participation in the proof of blockstake protocol. 
 
 Transaction fees
 ----------------
