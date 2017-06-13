@@ -18,7 +18,15 @@ The hash function used is a 32-byte BLAKE2b hash. To compare the hash with the d
 
 Maturity of Blockstakes
 -----------------------
-In the proof of blockstake protocol, the used blockstakes are resend to the blockcreator in the very first transaction of the block. If someone sends blockstakes to someone else, these blockstakes need to mature for 144 blocks in order to become eligible for participation in the proof of blockstake protocol. 
+In the proof of blockstake protocol, the used blockstakes are resend to the blockcreator in the very first transaction of the block. If someone sends blockstakes to someone else, these blockstakes need to mature for 256 blocks in order to become eligible for participation in the proof of blockstake protocol. 
+
+This prevents the following attacks:
+- For used blockstakes, this is always index 0, this prevents mining.
+
+- When an adversary mints a block, a fake transaction of BlockStake he also owns can be put it in the transaction list and this way influence the index of this BlockStakes UTXO. This way the BlockCreation equation can be influenced.
+
+- Another way is to put a BlockStake transaction in the network at a specific time and hope it will be in a specific block that will be minted by an honest minter. This way K in the blockcreation equation can be influenced.
+
 
 Transaction fees
 ----------------
