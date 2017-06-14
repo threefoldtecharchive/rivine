@@ -7,8 +7,8 @@ import (
 	"strconv"
 )
 
-// VersionFromString attempts to create a version based on a given string
-func VersionFromString(raw string) (ver ProtocolVersion, err error) {
+// Parse attempts to create a version based on a given string
+func Parse(raw string) (ver ProtocolVersion, err error) {
 	parts := versionReg.FindStringSubmatch(raw)
 	if len(parts) != 5 {
 		err = InvalidVersionError(raw)
@@ -23,6 +23,16 @@ func VersionFromString(raw string) (ver ProtocolVersion, err error) {
 
 	ver = NewPrereleaseVersion(uint8(major), uint8(minor), uint8(patch), parts[4])
 	return
+}
+
+// MustParse creates a version based on a given string,
+// panics in case the given string is invalid
+func MustParse(raw string) ProtocolVersion {
+	version, err := Parse(raw)
+	if err != nil {
+		panic(err)
+	}
+	return version
 }
 
 // NewVersion creates a new protocol version
@@ -107,7 +117,7 @@ func (pv *ProtocolVersion) UnmarshalJSON(b []byte) error {
 		return InvalidVersionError(string(b))
 	}
 
-	result, err := VersionFromString(raw)
+	result, err := Parse(raw)
 	if err != nil {
 		return err
 	}
@@ -122,11 +132,17 @@ var (
 )
 
 var (
+	// rawVersion used to generate rivine's protocol version
+	rawVersion = "v0.1.0"
 	// Version is the current version of rivined.
-	Version = NewVersion(0, 1, 0)
+	Version ProtocolVersion
 )
 
-const versionRe = `^(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:-(.+?))?$`
+const versionRe = `^v?(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:-(.+?))?$`
 
 // contains the regexp for all valid versions
 var versionReg = regexp.MustCompile(versionRe)
+
+func init() {
+	Version = MustParse(rawVersion)
+}

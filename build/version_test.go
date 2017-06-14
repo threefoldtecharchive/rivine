@@ -45,7 +45,7 @@ func TestVersionStringReflection(t *testing.T) {
 
 	for index, testCase := range testCases {
 		// pass 1
-		version, err := VersionFromString(testCase.in)
+		version, err := Parse(testCase.in)
 		if err != nil {
 			t.Errorf("test %d (pass 1) failed: %v", index, err)
 			continue
@@ -56,7 +56,7 @@ func TestVersionStringReflection(t *testing.T) {
 			continue
 		}
 		// pass 2
-		version2, err := VersionFromString(testCase.in)
+		version2, err := Parse("v" + testCase.in)
 		if err != nil {
 			t.Errorf("test %d (pass 2) failed: %v", index, err)
 			continue
@@ -99,19 +99,19 @@ func TestVersionJSONReflection(t *testing.T) {
 }
 
 func TestInvalidStringVersionRange(t *testing.T) {
-	if _, err := VersionFromString("256"); err == nil {
+	if _, err := Parse("256"); err == nil {
 		t.Fatal("expected `256` to be out of range")
 	}
-	if _, err := VersionFromString("1.256"); err == nil {
+	if _, err := Parse("1.256"); err == nil {
 		t.Fatal("expected `1.256` to be out of range")
 	}
-	if _, err := VersionFromString("1.1.256"); err == nil {
+	if _, err := Parse("1.1.256"); err == nil {
 		t.Fatal("expected `1.1.256` to be out of range")
 	}
-	if _, err := VersionFromString("1.256.256"); err == nil {
+	if _, err := Parse("1.256.256"); err == nil {
 		t.Fatal("expected `1.256.256` to be out of range")
 	}
-	if _, err := VersionFromString("256.256.256"); err == nil {
+	if _, err := Parse("256.256.256"); err == nil {
 		t.Fatal("expected `256.256.256` to be out of range")
 	}
 }
@@ -121,7 +121,7 @@ func TestValidStringVersionRange(t *testing.T) {
 		for minor := 0; minor <= 255; minor += 15 {
 			for patch := 0; patch <= 255; patch++ {
 				raw := fmt.Sprintf("%d.%d.%d", major, minor, patch)
-				version, err := VersionFromString(raw)
+				version, err := Parse(raw)
 				if err != nil {
 					t.Errorf("test %q failed: %v", raw, err)
 					continue

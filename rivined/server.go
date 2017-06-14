@@ -208,7 +208,7 @@ func (srv *Server) daemonUpdateHandlerGET(w http.ResponseWriter, _ *http.Request
 		api.WriteError(w, api.Error{Message: "Failed to fetch latest release: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
-	latestVersion, err := build.VersionFromString(release.TagName[1:]) // delete leading 'v'
+	latestVersion, err := build.Parse(release.TagName)
 	if err != nil {
 		api.WriteError(w, api.Error{Message: "Failed to parse latest release: " + err.Error()}, http.StatusInternalServerError)
 		return
