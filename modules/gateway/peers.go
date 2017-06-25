@@ -493,7 +493,10 @@ func (g *Gateway) Disconnect(addr modules.NetAddress) error {
 	}
 	p.sess.Close()
 	g.mu.Lock()
+	// Peer is removed from the peer list as wellas the node list, to prevent
+	// the node from being re-connected while looking for a replacement peer.
 	delete(g.peers, addr)
+	delete(g.nodes, addr)
 	g.mu.Unlock()
 	if err := p.sess.Close(); err != nil {
 		return err
