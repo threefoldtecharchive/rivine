@@ -137,11 +137,12 @@ func ExtractTarGz(filename, dir string) error {
 	}
 }
 
-// Retry will retry a function multiple times until it returns 'nil'. It will
-// sleep the specified duration between tries. If success is not achieved in the
-// specified number of attempts, the final error is returned.
+// Retry will call 'fn' 'tries' times, waiting 'durationBetweenAttempts'
+// between each attempt, returning 'nil' the first time that 'fn' returns nil.
+// If 'nil' is never returned, then the final error returned by 'fn' is
+// returned.
 func Retry(tries int, durationBetweenAttempts time.Duration, fn func() error) (err error) {
-	for i := 0; i < tries-1; i++ {
+	for i := 1; i < tries; i++ {
 		err = fn()
 		if err == nil {
 			return nil
