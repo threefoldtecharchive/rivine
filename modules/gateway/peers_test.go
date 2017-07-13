@@ -695,13 +695,11 @@ func TestPeerManagerPriority(t *testing.T) {
 
 	// Connect g1 to g2. This will cause g2 to be saved as an outbound peer in
 	// g1's node list.
-	fmt.Println("(g1)", g1.Address(), "connects to (g2)", g2.Address())
 	if err := g1.Connect(g2.Address()); err != nil {
 		t.Fatal(err)
 	}
 	// Connect g3 to g1. This will cause g3 to be added to g1's node list, but
 	// not as an outbound peer.
-	fmt.Println("(g3)", g3.Address(), "connects to (g1)", g1.Address())
 	if err := g3.Connect(g1.Address()); err != nil {
 		t.Fatal(err)
 	}
@@ -740,8 +738,8 @@ func TestPeerManagerPriority(t *testing.T) {
 	}
 
 	// Disconnect everyone.
-	g1.Disconnect(g2.Address())
-	g1.Disconnect(g3.Address())
+	g2.Disconnect(g1.Address())
+	g3.Disconnect(g1.Address())
 
 	// Shutdown g1.
 	err := g1.Close()
