@@ -350,12 +350,6 @@ func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeade
 		err = fmt.Errorf("invalid remote address: %v", err)
 		return
 	}
-	// Check that claimed NetAddress matches remoteAddr
-	connHost, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
-	claimedHost, _, _ := net.SplitHostPort(string(remoteAddress))
-	if connHost != claimedHost {
-		err = fmt.Errorf("claimed hostname (%v) does not match conn.RemoteAddr (%v)", claimedHost, connHost)
-	}
 	return
 }
 
