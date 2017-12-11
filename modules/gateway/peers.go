@@ -134,6 +134,13 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	addr := modules.NetAddress(conn.RemoteAddr().String())
 	g.log.Debugf("INFO: %v wants to connect", addr)
 
+	g.mu.Lock()
+	if g.myAddr.IsAllZeros() {
+		host, _, _ := net.SplitHostPort(conn.LocalAddr().String())
+		g.myAddr = modules.NetAddress(net.JoinHostPort(host, g.myAddr.Port()))
+	}
+	g.mu.Unlock()
+
 	remoteInfo, err := g.acceptConnHandshake(conn, build.Version, g.id)
 	if err != nil {
 		g.log.Debugf("INFO: %v wanted to connect but handshake failed: %v", addr, err)
@@ -523,6 +530,13 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 	if err != nil {
 		return err
 	}
+
+	g.mu.Lock()
+	if g.myAddr.IsAllZeros() {
+		host, _, _ := net.SplitHostPort(conn.LocalAddr().String())
+		g.myAddr = modules.NetAddress(net.JoinHostPort(host, g.myAddr.Port()))
+	}
+	g.mu.Unlock()
 
 	// Perform peer initialization.
 	remoteInfo, err := g.connectHandshake(conn, build.Version, g.id, gaddr, true)
