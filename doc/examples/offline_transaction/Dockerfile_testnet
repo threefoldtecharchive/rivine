@@ -8,4 +8,5 @@ WORKDIR /go/src/github.com/rivine/rivine
 EXPOSE 23110 23112
 
 RUN go install -v -tags 'debug dev profile' ./... 
-ENTRYPOINT rivined --no-bootstrap
+ENTRYPOINT ["rivined"]
+CMD ["--no-bootstrap"]

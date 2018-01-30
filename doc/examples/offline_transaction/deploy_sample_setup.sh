@@ -39,15 +39,16 @@ echo "$testpass" | docker exec -i r1 rivinec wallet unlock
 # Start a gateway daemon, without wallet or blockcreator modules
 
 # Funny story: if we specify `--entrypoint "rivined ..." with all the required arguments, the `rivined` process will spawn as the init process
-# in the docker (PID 1). Which seems to prevent it from binding ports, thus doing anything usefull... Whoever would have known. By specifying 
-# rivined like this allong with all of the needed arguments, the docker actually spawn with a `/bin/sh` as init process, which in turn
-# spawn the rivined process. Anyway
-echo "$testpass" | docker run -d -i --name r3 rivine_testnet rivined --disable-api-security --authenticate-api --no-bootstrap -M cgt
+# in the docker (PID 1). Which seems to prevent it from binding ports, thus doing anything usefull... Whoever would have known.
+# This also applies to the way it is currently specified, so i guess this should be fixed at some point 
+# docker run -d -i --name r3 rivine_testnet --disable-api-security --authenticate-api --no-bootstrap -M cgte << EOF
+# $testpass
+# EOF
 
 # Connect the gateway to the network
-docker exec r3 rivinec gateway connect "$r1_addr:23112"
+# docker exec r3 rivinec gateway connect "$r1_addr:23112"
 
 # So now we have a docker with a gateway running which accepts commands from non-localhost addresses.
 # Echo the gateway ip for good measure
-echo "gateway ip:"
-echo $(docker inspect -f "{{ .NetworkSettings.IPAddress }}" r3)
+# echo "gateway ip:"
+# echo $(docker inspect -f "{{ .NetworkSettings.IPAddress }}" r3)
