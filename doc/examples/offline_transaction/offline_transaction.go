@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -28,6 +29,8 @@ const (
 	unlockHashType = "unlockhash"
 	// minerPayoutMaturityWindow is the amount of blocks that need to pass before a miner payout can be spend
 	minerPayoutMaturityWindow = 144
+	// gatewayPass is the password with which the gateway is protected
+	gatewayPass = "test123"
 )
 
 var (
@@ -194,20 +197,11 @@ func (w *MyWallet) signTxn(txn *types.Transaction) error {
 
 // CommitTxn sends a transaction to a gateway node
 func CommitTxn(txn *types.Transaction) error {
-	endpoint := "/transactionpool/transactions"
 	bodyBuff := bytes.NewBuffer(nil)
 	if err := json.NewEncoder(bodyBuff).Encode(txn); err != nil {
 		return err
 	}
-
-	req, err := http.NewRequest("POST", explorerAddr+endpoint, bodyBuff)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("User-Agent", "Rivine-Agent")
-	cl := http.Client{}
-	resp, err := cl.Do(req)
+	resp, err := RivineRequest("POST", "/transactionpool/transactions", bodyBuff)
 	if err != nil {
 		return err
 	}
@@ -315,14 +309,7 @@ func (w *MyWallet) SyncWallet() error {
 
 // CheckAddress performs a http call to an explorer to check if an address has (an) (unspent) output(s)
 func CheckAddress(addr types.UnlockHash) (*api.ExplorerHashGET, error) {
-	endpoint := "/explorer/hashes/"
-	req, err := http.NewRequest("GET", explorerAddr+endpoint+addr.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "Rivine-Agent")
-	cl := http.Client{}
-	resp, err := cl.Do(req)
+	resp, err := RivineRequest("GET", "/explorer/hashes/"+addr.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -336,14 +323,7 @@ func CheckAddress(addr types.UnlockHash) (*api.ExplorerHashGET, error) {
 
 // GetCurrentChainHeight gets the current height of the blockchain
 func GetCurrentChainHeight() (types.BlockHeight, error) {
-	endpoint := "/consensus"
-	req, err := http.NewRequest("GET", explorerAddr+endpoint, nil)
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("User-Agent", "Rivine-Agent")
-	cl := http.Client{}
-	resp, err := cl.Do(req)
+	resp, err := RivineRequest("GET", "/consensus", nil)
 	if err != nil {
 		return 0, err
 	}
@@ -353,6 +333,18 @@ func GetCurrentChainHeight() (types.BlockHeight, error) {
 	body := &api.ConsensusGET{}
 	err = json.NewDecoder(resp.Body).Decode(body)
 	return body.Height, err
+}
+
+// RivineRequest executes a request to a rivined http api
+func RivineRequest(method string, endpoint string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, explorerAddr+endpoint, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "Rivine-Agent")
+	req.SetBasicAuth("", gatewayPass)
+	cl := http.Client{}
+	return cl.Do(req)
 }
 
 // spendableKey is a set of secret keys plus the corresponding unlock
