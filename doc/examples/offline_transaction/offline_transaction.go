@@ -74,14 +74,12 @@ func main() {
 		panic(err)
 	}
 
-	for _, a := range txn.CoinInputs {
-		fmt.Println(a)
-	}
-
 	// Send the transaction to the gateway
 	if err = CommitTxn(txn); err != nil {
 		panic(err)
 	}
+
+	fmt.Println("Transaction successfull")
 
 }
 
@@ -100,8 +98,6 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 
 	// The total funds we will be spending in this transaction
 	requiredFunds := amount.Add(minerfee)
-
-	fmt.Println(walletFunds)
 
 	// Verify that we actually have enough funds available in the wallet to complete the transaction
 	if walletFunds.Cmp(requiredFunds) == -1 {
@@ -130,11 +126,10 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 	// Set the inputs
 	txn.CoinInputs = inputs
 
-	for i, inp := range inputs {
+	for _, inp := range inputs {
 		if _, exists := w.keys[w.unspentCoinOutputs[inp.ParentID].UnlockHash]; !exists {
-			panic("Tryinng to spend unexisting output")
+			panic("Trying to spend unexisting output")
 		}
-		fmt.Println("Input ", i, ": ", inp.ParentID.String())
 	}
 	// Add our first output
 	txn.CoinOutputs = append(txn.CoinOutputs, types.CoinOutput{Value: amount, UnlockHash: addressTo})
@@ -173,8 +168,6 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 	if err := w.signTxn(txn); err != nil {
 		panic(err)
 	}
-	fmt.Println(txn)
-
 	return txn, nil
 }
 
@@ -190,7 +183,6 @@ func (w *MyWallet) signTxn(txn *types.Transaction) error {
 		if err != nil {
 			return err
 		}
-		// txn.TransactionSignatures = append(txn.TransactionSignatures, newSigIndices...)
 	}
 	return nil
 }
@@ -285,11 +277,6 @@ func (w *MyWallet) SyncWallet() error {
 			for _, txn := range resp.Transactions {
 				for i, utxo := range txn.RawTransaction.CoinOutputs {
 					if utxo.UnlockHash == addr {
-						fmt.Println("Found txn output with value ", utxo.Value)
-						fmt.Println("Block ", txn.Height)
-						for _, c := range txn.CoinOutputIDs {
-							fmt.Println("Adding ", c.String())
-						}
 						w.unspentCoinOutputs[txn.CoinOutputIDs[i]] = utxo
 					}
 				}
