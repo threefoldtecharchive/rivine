@@ -270,7 +270,7 @@ func (w *MyWallet) SyncWallet() error {
 			for _, block := range resp.Blocks {
 				// Collect the miner fees
 				// But only those that have matured already
-				if block.Height+minerPayoutMaturityWindow < height {
+				if block.Height+minerPayoutMaturityWindow >= height {
 					fmt.Println("Ignoring miner payout that hasn't matured yet")
 					continue
 				}
