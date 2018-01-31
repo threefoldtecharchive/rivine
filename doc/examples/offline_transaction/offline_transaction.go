@@ -169,7 +169,7 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 	// Add the miner fee to the transaction
 	txn.MinerFees = []types.Currency{minerfee}
 
-	// SIGN THE DAMN THING
+	// sign transaction
 	if err := w.signTxn(txn); err != nil {
 		panic(err)
 	}
@@ -240,11 +240,12 @@ func NewWallet(seed modules.Seed) *MyWallet {
 // SyncWallet syncs the wallet with the chain
 func (w *MyWallet) SyncWallet() error {
 	wg := sync.WaitGroup{}
+	// TODO: Enable this once miner transactions can be spent
 	// First get the current block height
-	height, err := GetCurrentChainHeight()
-	if err != nil {
-		return err
-	}
+	// height, err := GetCurrentChainHeight()
+	// if err != nil {
+	// 	return err
+	// }
 	for address := range w.keys {
 		wg.Add(1)
 		go func(addr types.UnlockHash) {
@@ -260,25 +261,25 @@ func (w *MyWallet) SyncWallet() error {
 				panic("Address is not recognized as an unlock hash")
 			}
 			// We scann the blocks here for the miner fees, and the transactions for actual transations
-			// TODO: FIGURE OUT WHY THIS DOES NOT WORK
-			for _, block := range resp.Blocks {
-				// Collect the miner fees
-				// But only those that have matured already
-				if block.Height+minerPayoutMaturityWindow >= height {
-					fmt.Println("Ignoring miner payout that hasn't matured yet")
-					continue
-				}
-				for i, minerPayout := range block.RawBlock.MinerPayouts {
-					if minerPayout.UnlockHash == addr {
-						fmt.Println("Found miner output with value ", minerPayout.Value)
-						fmt.Println("Block: ", block.Height)
-						for _, c := range block.MinerPayoutIDs {
-							fmt.Println("Adding miner payout id", c.String())
-						}
-						w.unspentCoinOutputs[block.MinerPayoutIDs[i]] = minerPayout
-					}
-				}
-			}
+			// TODO: Enable this once miner transactions can be spent
+			// for _, block := range resp.Blocks {
+			// 	// Collect the miner fees
+			// 	// But only those that have matured already
+			// 	if block.Height+minerPayoutMaturityWindow >= height {
+			// 		fmt.Println("Ignoring miner payout that hasn't matured yet")
+			// 		continue
+			// 	}
+			// 	for i, minerPayout := range block.RawBlock.MinerPayouts {
+			// 		if minerPayout.UnlockHash == addr {
+			// 			fmt.Println("Found miner output with value ", minerPayout.Value)
+			// 			fmt.Println("Block: ", block.Height)
+			// 			for _, c := range block.MinerPayoutIDs {
+			// 				fmt.Println("Adding miner payout id", c.String())
+			// 			}
+			// 			w.unspentCoinOutputs[block.MinerPayoutIDs[i]] = minerPayout
+			// 		}
+			// 	}
+			// }
 
 			// Collect the transaction outputs
 			for _, txn := range resp.Transactions {
