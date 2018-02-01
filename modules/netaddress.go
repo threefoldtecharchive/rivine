@@ -168,3 +168,21 @@ func (na NetAddress) IsStdValid() error {
 
 	return nil
 }
+
+// TryDNSResolution tries to perform dns resolution on a NetAddress, converting a host to an associated ip address.
+// If an error occurs, or no IP is found for the host, the NetAddress remains unchanged
+func (na *NetAddress) TryDNSResolution() error {
+	// If its not a valid ip address try to look it up
+	IPs, err := net.LookupIP(na.Host())
+	if err != nil {
+		// Report errors, don't modify the NetAddress
+		return err
+	}
+	if len(IPs) < 1 {
+		// If there are no IP's, don't do anything
+		return nil
+	}
+	// If nothing went wrong and we found an IP, change the value of the NetAddress
+	*na = NetAddress(IPs[0].String() + ":" + na.Port())
+	return nil
+}

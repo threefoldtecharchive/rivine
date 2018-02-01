@@ -404,6 +404,12 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 	g.mu.RLock()
 	gaddr := g.myAddr
 	g.mu.RUnlock()
+	g.log.Debugln("Try to resolve DNS: ", addr)
+	if err := addr.TryDNSResolution(); err != nil {
+		// If DNS resolution failed for some reason, we might still have a valid ip address to begin with.
+		// Still, log the error so we can get some info
+		g.log.Debugln("DNS Resolution of %s failed: %s", addr, err)
+	}
 	if addr == gaddr {
 		return errors.New("can't connect to our own address")
 	}
@@ -481,6 +487,12 @@ func (g *Gateway) Disconnect(addr modules.NetAddress) error {
 		return err
 	}
 	defer g.threads.Done()
+
+	// I don't feel like this is particularly usefull here, but I suppose its nice to have nonetheless
+	if err := addr.TryDNSResolution(); err != nil {
+		// Log error so it could be debugged
+		g.log.Debugln("DNS Resolution of %s failed: %s", addr, err)
+	}
 
 	g.mu.RLock()
 	p, exists := g.peers[addr]
