@@ -1,7 +1,5 @@
 #! /usr/bin/env bash
 
-set -e
-
 testpass="test123"
 genesisoutputseed="across knife thirsty puck itches hazard enmity fainted pebbles unzip echo queen rarest aphid bugs yanks okay abbey eskimos dove orange nouns august ailments inline rebel glass tyrant acumen"
 network_name="rivnet"
