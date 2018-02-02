@@ -23,9 +23,6 @@ docker build -t rivine_testnet ../../../. -f ./Dockerfile_testnet
 docker run -d --name r1 --net=$network_name rivine_testnet
 docker run -d --name r2 --net=$network_name rivine_testnet
 
-r1_addr=$(docker inspect -f "{{ .NetworkSettings.IPAddress }}" r1)
-r2_addr=$(docker inspect -f "{{ .NetworkSettings.IPAddress }}" r2)
-
 # Connect the dockers
 docker exec r1 rivinec gateway connect "r2:23112"
  
