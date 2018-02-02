@@ -30,10 +30,10 @@ func BenchmarkStandaloneValid(b *testing.B) {
 			},
 			SignaturesRequired: 1,
 		}
-		txn.SiacoinInputs = append(txn.SiacoinInputs, SiacoinInput{
+		txn.CoinInputs = append(txn.CoinInputs, CoinInput{
 			UnlockConditions: uc,
 		})
-		copy(txn.SiacoinInputs[i].ParentID[:], encoding.Marshal(i))
+		copy(txn.CoinInputs[i].ParentID[:], encoding.Marshal(i))
 		txn.TransactionSignatures = append(txn.TransactionSignatures, TransactionSignature{
 			CoveredFields: CoveredFields{WholeTransaction: true},
 		})

@@ -10,11 +10,11 @@ import (
 func TestIDs(t *testing.T) {
 	// Create every type of ID using empty fields.
 	txn := Transaction{
-		SiacoinOutputs:    []SiacoinOutput{{}},
+		CoinOutputs:       []CoinOutput{{}},
 		BlockStakeOutputs: []BlockStakeOutput{{}},
 	}
 	tid := txn.ID()
-	scoid := txn.SiacoinOutputID(0)
+	scoid := txn.CoinOutputID(0)
 	sfoid := txn.BlockStakeOutputID(0)
 
 	// Put all of the ids into a slice.
@@ -41,7 +41,7 @@ func TestIDs(t *testing.T) {
 func TestTransactionSiacoinOutputSum(t *testing.T) {
 	// Create a transaction with all types of siacoin outputs.
 	txn := Transaction{
-		SiacoinOutputs: []SiacoinOutput{
+		CoinOutputs: []CoinOutput{
 			{Value: NewCurrency64(1)},
 			{Value: NewCurrency64(20)},
 		},
@@ -50,7 +50,7 @@ func TestTransactionSiacoinOutputSum(t *testing.T) {
 			NewCurrency64(600000),
 		},
 	}
-	if txn.SiacoinOutputSum().Cmp(NewCurrency64(654321)) != 0 {
-		t.Error("wrong siacoin output sum was calculated, got:", txn.SiacoinOutputSum())
+	if txn.CoinOutputSum().Cmp(NewCurrency64(654321)) != 0 {
+		t.Error("wrong siacoin output sum was calculated, got:", txn.CoinOutputSum())
 	}
 }

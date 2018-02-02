@@ -23,7 +23,7 @@ func TestTryValidTransactionSet(t *testing.T) {
 	initialHash := cst.cs.dbConsensusChecksum()
 
 	// Try a valid transaction.
-	_, err = cst.wallet.SendSiacoins(types.NewCurrency64(1), types.UnlockHash{})
+	_, err = cst.wallet.SendCoins(types.NewCurrency64(1), types.UnlockHash{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestTryValidTransactionSet(t *testing.T) {
 	if cst.cs.dbConsensusChecksum() != initialHash {
 		t.Error("TryTransactionSet did not resotre order")
 	}
-	if len(cc.SiacoinOutputDiffs) == 0 {
+	if len(cc.CoinOutputDiffs) == 0 {
 		t.Error("consensus change is missing diffs after verifying a transction clump")
 	}
 }
@@ -55,13 +55,13 @@ func TestTryInvalidTransactionSet(t *testing.T) {
 	initialHash := cst.cs.dbConsensusChecksum()
 
 	// Try a valid transaction followed by an invalid transaction.
-	_, err = cst.wallet.SendSiacoins(types.NewCurrency64(1), types.UnlockHash{})
+	_, err = cst.wallet.SendCoins(types.NewCurrency64(1), types.UnlockHash{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	txns := cst.tpool.TransactionList()
 	txn := types.Transaction{
-		SiacoinInputs: []types.SiacoinInput{{}},
+		CoinInputs: []types.CoinInput{{}},
 	}
 	txns = append(txns, txn)
 	cc, err := cst.cs.TryTransactionSet(txns)
@@ -71,7 +71,7 @@ func TestTryInvalidTransactionSet(t *testing.T) {
 	if cst.cs.dbConsensusChecksum() != initialHash {
 		t.Error("TryTransactionSet did not restore order")
 	}
-	if len(cc.SiacoinOutputDiffs) != 0 {
+	if len(cc.CoinOutputDiffs) != 0 {
 		t.Error("consensus change was not empty despite an error being returned")
 	}
 }
@@ -90,11 +90,11 @@ func TestValidSiacoins(t *testing.T) {
 
 	// Create a transaction pointing to a nonexistent siacoin output.
 	txn := types.Transaction{
-		SiacoinInputs: []types.SiacoinInput{{}},
+		CoinInputs: []types.CoinInput{{}},
 	}
 	err = cst.cs.db.View(func(tx *bolt.Tx) error {
-		err := validSiacoins(tx, txn)
-		if err != errMissingSiacoinOutput {
+		err := validCoins(tx, txn)
+		if err != errMissingCoinOutput {
 			t.Fatal(err)
 		}
 		return nil
@@ -104,17 +104,17 @@ func TestValidSiacoins(t *testing.T) {
 	}
 
 	// Create a transaction with invalid unlock conditions.
-	scoid, _, err := cst.cs.getArbSiacoinOutput()
+	scoid, _, err := cst.cs.getArbCoinOutput()
 	if err != nil {
 		t.Fatal(err)
 	}
 	txn = types.Transaction{
-		SiacoinInputs: []types.SiacoinInput{{
+		CoinInputs: []types.CoinInput{{
 			ParentID: scoid,
 		}},
 	}
 	err = cst.cs.db.View(func(tx *bolt.Tx) error {
-		err := validSiacoins(tx, txn)
+		err := validCoins(tx, txn)
 		if err != errWrongUnlockConditions {
 			t.Fatal(err)
 		}
@@ -126,12 +126,12 @@ func TestValidSiacoins(t *testing.T) {
 
 	// Create a txn with more outputs than inputs.
 	txn = types.Transaction{
-		SiacoinOutputs: []types.SiacoinOutput{{
+		CoinOutputs: []types.CoinOutput{{
 			Value: types.NewCurrency64(1),
 		}},
 	}
 	err = cst.cs.db.View(func(tx *bolt.Tx) error {
-		err := validSiacoins(tx, txn)
+		err := validCoins(tx, txn)
 		if err != errSiacoinInputOutputMismatch {
 			t.Fatal(err)
 		}

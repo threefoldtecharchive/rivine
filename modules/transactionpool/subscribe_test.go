@@ -1,9 +1,10 @@
 package transactionpool
 
 import (
+	"testing"
+
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
-	"testing"
 )
 
 // mockSubscriber receives transactions from the transaction pool it is
@@ -48,7 +49,7 @@ func TestSubscription(t *testing.T) {
 
 	// Create a valid transaction set and check that the mock subscriber's
 	// transaction list is updated.
-	_, err = tpt.wallet.SendSiacoins(types.NewCurrency64(100), types.UnlockHash{})
+	_, err = tpt.wallet.SendCoins(types.NewCurrency64(100), types.UnlockHash{})
 	if err != nil {
 		t.Fatal(err)
 	}

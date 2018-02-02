@@ -9,6 +9,7 @@ import (
 
 // TestCalculateCoinbase probes the CalculateCoinbase function. The test code
 // is probably too similar to the function code to be of value.
+// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestCalculateCoinbase(t *testing.T) {
 	c := CalculateCoinbase(0)
 	if c.Cmp(NewCurrency64(InitialCoinbase).Mul(OneCoin)) != 0 {
@@ -38,6 +39,8 @@ func TestCalculateCoinbase(t *testing.T) {
 // TestCalculateNumSiacoins checks that the siacoin calculator is correctly
 // determining the number of siacoins in circulation. The check is performed by
 // doing a naive computation, instead of by doing the optimized computation.
+// TODO: CalculateNumSiacoins has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
+// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestCalculateNumSiacoins(t *testing.T) {
 	c := CalculateNumSiacoins(0)
 	if c.Cmp(CalculateCoinbase(0)) != 0 {
@@ -58,12 +61,13 @@ func TestCalculateNumSiacoins(t *testing.T) {
 
 // TestBlockHeader checks that BlockHeader returns the correct value, and that
 // the hash is consistent with the old method for obtaining the hash.
+// TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
 func TestBlockHeader(t *testing.T) {
 	var b Block
 	b.ParentID[1] = 1
 	b.Nonce[2] = 2
 	b.Timestamp = 3
-	b.MinerPayouts = []SiacoinOutput{{Value: NewCurrency64(4)}}
+	b.MinerPayouts = []CoinOutput{{Value: NewCurrency64(4)}}
 	b.Transactions = []Transaction{{ArbitraryData: [][]byte{{'5'}}}}
 
 	id1 := b.ID()
@@ -81,6 +85,8 @@ func TestBlockHeader(t *testing.T) {
 }
 
 // TestBlockID probes the ID function of the block type.
+// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
+// TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
 func TestBlockID(t *testing.T) {
 	// Create a bunch of different blocks and check that all of them have
 	// unique ids.
@@ -90,13 +96,14 @@ func TestBlockID(t *testing.T) {
 	ids = append(ids, b.ID())
 	b.ParentID[0] = 1
 	ids = append(ids, b.ID())
+
 	b.Nonce[0] = 45
 	ids = append(ids, b.ID())
 	b.Timestamp = CurrentTimestamp()
 	ids = append(ids, b.ID())
-	b.MinerPayouts = append(b.MinerPayouts, SiacoinOutput{Value: CalculateCoinbase(0)})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: CalculateCoinbase(0)})
 	ids = append(ids, b.ID())
-	b.MinerPayouts = append(b.MinerPayouts, SiacoinOutput{Value: CalculateCoinbase(0)})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: CalculateCoinbase(0)})
 	ids = append(ids, b.ID())
 	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{CalculateCoinbase(1)}})
 	ids = append(ids, b.ID())
@@ -114,6 +121,8 @@ func TestBlockID(t *testing.T) {
 }
 
 // TestHeaderID probes the ID function of the BlockHeader type.
+// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
+// TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
 func TestHeaderID(t *testing.T) {
 	// Create a bunch of different blocks and check that all of them have
 	// unique ids.
@@ -127,9 +136,9 @@ func TestHeaderID(t *testing.T) {
 	blocks = append(blocks, b)
 	b.Timestamp = CurrentTimestamp()
 	blocks = append(blocks, b)
-	b.MinerPayouts = append(b.MinerPayouts, SiacoinOutput{Value: CalculateCoinbase(0)})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: CalculateCoinbase(0)})
 	blocks = append(blocks, b)
-	b.MinerPayouts = append(b.MinerPayouts, SiacoinOutput{Value: CalculateCoinbase(0)})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: CalculateCoinbase(0)})
 	blocks = append(blocks, b)
 	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{CalculateCoinbase(1)}})
 	blocks = append(blocks, b)
@@ -153,6 +162,8 @@ func TestHeaderID(t *testing.T) {
 
 // TestBlockCalculateSubsidy probes the CalculateSubsidy function of the block
 // type.
+// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
+// TODO: CalculateSubsidiy has been removed, and reworked in https://github.com/rivine/rivine/commit/6e737b401696673ba33d0382f7ab94401eace141#diff-fd289e47592d409909487becb9d38925
 func TestBlockCalculateSubsidy(t *testing.T) {
 	// All tests are done at height = 0.
 	coinbase := CalculateCoinbase(0)
@@ -208,12 +219,13 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 }
 
 // TestBlockMinerPayoutID probes the MinerPayout function of the block type.
+// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestBlockMinerPayoutID(t *testing.T) {
 	// Create a block with 2 miner payouts, and check that each payout has a
 	// different id, and that the id is dependent on the block id.
-	var ids []SiacoinOutputID
+	var ids []CoinOutputID
 	b := Block{
-		MinerPayouts: []SiacoinOutput{
+		MinerPayouts: []CoinOutput{
 			{Value: CalculateCoinbase(0)},
 			{Value: CalculateCoinbase(0)},
 		},
@@ -222,7 +234,7 @@ func TestBlockMinerPayoutID(t *testing.T) {
 	b.ParentID[0] = 1
 	ids = append(ids, b.MinerPayoutID(1), b.MinerPayoutID(2))
 
-	knownIDs := make(map[SiacoinOutputID]struct{})
+	knownIDs := make(map[CoinOutputID]struct{})
 	for i, id := range ids {
 		_, exists := knownIDs[id]
 		if exists {
@@ -234,9 +246,10 @@ func TestBlockMinerPayoutID(t *testing.T) {
 
 // TestBlockEncodes probes the MarshalSia and UnmarshalSia methods of the
 // Block type.
+// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestBlockEncoding(t *testing.T) {
 	b := Block{
-		MinerPayouts: []SiacoinOutput{
+		MinerPayouts: []CoinOutput{
 			{Value: CalculateCoinbase(0)},
 			{Value: CalculateCoinbase(0)},
 		},

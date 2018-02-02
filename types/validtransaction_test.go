@@ -27,7 +27,7 @@ func TestTransactionFitsInABlock(t *testing.T) {
 func TestTransactionFollowsMinimumValues(t *testing.T) {
 	// Start with a transaction that follows all of minimum-values rules.
 	txn := Transaction{
-		SiacoinOutputs:    []SiacoinOutput{{Value: NewCurrency64(1)}},
+		CoinOutputs:       []CoinOutput{{Value: NewCurrency64(1)}},
 		BlockStakeOutputs: []BlockStakeOutput{{Value: NewCurrency64(1)}},
 		MinerFees:         []Currency{NewCurrency64(1)},
 	}
@@ -37,12 +37,12 @@ func TestTransactionFollowsMinimumValues(t *testing.T) {
 	}
 
 	// Try a zero value for each type.
-	txn.SiacoinOutputs[0].Value = ZeroCurrency
+	txn.CoinOutputs[0].Value = ZeroCurrency
 	err = txn.followsMinimumValues()
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
-	txn.SiacoinOutputs[0].Value = NewCurrency64(1)
+	txn.CoinOutputs[0].Value = NewCurrency64(1)
 	txn.BlockStakeOutputs[0].Value = ZeroCurrency
 	err = txn.followsMinimumValues()
 	if err != ErrZeroOutput {
@@ -63,17 +63,17 @@ func TestTransactionFollowsMinimumValues(t *testing.T) {
 func TestTransactionNoRepeats(t *testing.T) {
 	// Try a transaction all the repeatable types but no conflicts.
 	txn := Transaction{
-		SiacoinInputs:    []SiacoinInput{{}},
+		CoinInputs:       []CoinInput{{}},
 		BlockStakeInputs: []BlockStakeInput{{}},
 	}
 
 	// Try a transaction double spending a siacoin output.
-	txn.SiacoinInputs = append(txn.SiacoinInputs, SiacoinInput{})
+	txn.CoinInputs = append(txn.CoinInputs, CoinInput{})
 	err := txn.noRepeats()
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
-	txn.SiacoinInputs = txn.SiacoinInputs[:1]
+	txn.CoinInputs = txn.CoinInputs[:1]
 
 	// Try a transaction double spending a siafund output.
 	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{})
@@ -107,7 +107,7 @@ func TestValidUnlockConditions(t *testing.T) {
 func TestTransactionValidUnlockConditions(t *testing.T) {
 	// Create a transaction with each type of valid unlock condition.
 	txn := Transaction{
-		SiacoinInputs: []SiacoinInput{
+		CoinInputs: []CoinInput{
 			{UnlockConditions: UnlockConditions{Timelock: 3}},
 		},
 		BlockStakeInputs: []BlockStakeInput{
@@ -120,12 +120,12 @@ func TestTransactionValidUnlockConditions(t *testing.T) {
 	}
 
 	// Try with illegal conditions in the siacoin inputs.
-	txn.SiacoinInputs[0].UnlockConditions.Timelock = 5
+	txn.CoinInputs[0].UnlockConditions.Timelock = 5
 	err = txn.validUnlockConditions(4)
 	if err == nil {
 		t.Error(err)
 	}
-	txn.SiacoinInputs[0].UnlockConditions.Timelock = 3
+	txn.CoinInputs[0].UnlockConditions.Timelock = 3
 
 	// Try with illegal conditions in the siafund inputs.
 	txn.BlockStakeInputs[0].UnlockConditions.Timelock = 5
@@ -156,29 +156,29 @@ func TestTransactionStandaloneValid(t *testing.T) {
 	txn.ArbitraryData = nil
 
 	// Violate noRepeats
-	txn.SiacoinInputs = []SiacoinInput{{}, {}}
+	txn.CoinInputs = []CoinInput{{}, {}}
 	err = txn.StandaloneValid(0)
 	if err == nil {
 		t.Error("failed to trigger noRepeats error")
 	}
-	txn.SiacoinInputs = nil
+	txn.CoinInputs = nil
 
 	// Violate followsMinimumValues
-	txn.SiacoinOutputs = []SiacoinOutput{{}}
+	txn.CoinOutputs = []CoinOutput{{}}
 	err = txn.StandaloneValid(0)
 	if err == nil {
 		t.Error("failed to trigger followsMinimumValues error")
 	}
-	txn.SiacoinOutputs = nil
+	txn.CoinOutputs = nil
 
 	// Violate validUnlockConditions
-	txn.SiacoinInputs = []SiacoinInput{{}}
-	txn.SiacoinInputs[0].UnlockConditions.Timelock = 1
+	txn.CoinInputs = []CoinInput{{}}
+	txn.CoinInputs[0].UnlockConditions.Timelock = 1
 	err = txn.StandaloneValid(0)
 	if err == nil {
 		t.Error("failed to trigger validUnlockConditions error")
 	}
-	txn.SiacoinInputs = nil
+	txn.CoinInputs = nil
 
 	// Violate validSignatures
 	txn.TransactionSignatures = []TransactionSignature{{}}
