@@ -169,10 +169,10 @@ func (na NetAddress) IsStdValid() error {
 	return nil
 }
 
-// TryDNSResolution tries to perform dns resolution on a NetAddress, converting a host to an associated ip address.
+// TryNameResolution tries to perform dns resolution on a NetAddress, converting a host to an associated ip address.
 // If an error occurs, or no IP is found for the host, the NetAddress remains unchanged
-func (na *NetAddress) TryDNSResolution() error {
-	// If its not a valid ip address try to look it up
+func (na *NetAddress) TryNameResolution() error {
+	// Try to look up the NetAddress as it might not be a valid IP
 	IPs, err := net.LookupIP(na.Host())
 	if err != nil {
 		// Report errors, don't modify the NetAddress

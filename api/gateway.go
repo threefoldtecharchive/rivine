@@ -29,9 +29,9 @@ func (api *API) gatewayHandler(w http.ResponseWriter, req *http.Request, _ httpr
 // gatewayConnectHandler handles the API call to add a peer to the gateway.
 func (api *API) gatewayConnectHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	addr := modules.NetAddress(ps.ByName("netaddress"))
-	// Try DNS Resolution
+	// Try to resolve a possible (domain) name
 	// Catching an error here is not particularly usefull I feel, so ignore it
-	addr.TryDNSResolution()
+	addr.TryNameResolution()
 	err := api.gateway.Connect(addr)
 	if err != nil {
 		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
@@ -46,7 +46,7 @@ func (api *API) gatewayDisconnectHandler(w http.ResponseWriter, req *http.Reques
 	addr := modules.NetAddress(ps.ByName("netaddress"))
 	// I don't feel like this is particularly usefull here, but I suppose its nice to have nonetheless
 	// Handeling a possible error is not really that usefull
-	addr.TryDNSResolution()
+	addr.TryNameResolution()
 	err := api.gateway.Disconnect(addr)
 	if err != nil {
 		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
