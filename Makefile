@@ -2,31 +2,6 @@
 # and much faster mining and block constants.
 all: install
 
-# dependencies installs all of the dependencies that are required for building
-# Sia.
-dependencies:
-	# Consensus Dependencies
-	go get -u github.com/NebulousLabs/demotemutex
-	go get -u github.com/NebulousLabs/ed25519
-	go get -u github.com/NebulousLabs/fastrand
-	go get -u github.com/NebulousLabs/merkletree
-	go get -u github.com/NebulousLabs/bolt
-	go get -u golang.org/x/crypto/blake2b
-	# Module + Daemon Dependencies
-	go get -u github.com/NebulousLabs/entropy-mnemonics
-	go get -u github.com/NebulousLabs/go-upnp
-	go get -u github.com/NebulousLabs/muxado
-	go get -u github.com/klauspost/reedsolomon
-	go get -u github.com/julienschmidt/httprouter
-	go get -u github.com/inconshreveable/go-update
-	go get -u github.com/kardianos/osext
-	# Frontend Dependencies
-	go get -u github.com/bgentry/speakeasy
-	go get -u github.com/spf13/cobra
-	# Developer Dependencies
-	go install -race std
-	go get -u github.com/golang/lint/golint
-
 # pkgs changes which packages the makefile calls operate on. run changes which
 # tests are run during testing.
 run = Test
@@ -41,14 +16,6 @@ fmt:
 vet: release-std
 	go vet $(pkgs)
 
-# will always run on some packages for a while.
-lintpkgs = ./modules ./modules/gateway ./persist
-lint:
-	@for package in $(lintpkgs); do                           \
-		golint -min_confidence=1.0 $$package                  \
-		&& test -z $$(golint -min_confidence=1.0 $$package) ; \
-	done
-
 # install builds and installs developer binaries.
 install:
 	go install -race -tags='dev debug profile' $(pkgs)
@@ -61,58 +28,55 @@ release-race:
 release-std:
 	go install $(pkgs)
 
-# xc builds and packages release binaries for all systems by using goxc.
-# Cross Compile - makes binaries for windows, linux, and mac, 64 bit only.
-xc: dependencies test test-long
-	goxc -arch="amd64" -bc="darwin linux windows" -d=release \
-	     -pv=v1.0.1 -include=LICENSE,README.md,doc/API.md \
-	     -tasks-=archive,rmbin,deb,deb-dev,deb-source,go-test -n=Sia
-
-# clean removes all directories that get automatically created during
-# development.
-clean:
-	rm -rf release doc/whitepaper.aux doc/whitepaper.log doc/whitepaper.pdf
-
 test:
 	go test -short -tags='debug testing' -timeout=5s $(pkgs) -run=$(run)
 test-v:
 	go test -race -v -short -tags='debug testing' -timeout=15s $(pkgs) -run=$(run)
 test-long: fmt vet lint
 	go test -v -race -tags='testing debug' -timeout=500s $(pkgs) -run=$(run)
-bench: clean fmt
+bench: fmt
 	go test -tags='testing' -timeout=500s -run=XXX -bench=. $(pkgs)
-cover: clean
+cover:
 	@mkdir -p cover/modules
 	@mkdir -p cover/modules/renter
 	@mkdir -p cover/modules/host
-	@for package in $(pkgs); do                                                                                     \
+	@for package in $(pkgs); do \
 		go test -tags='testing debug' -timeout=500s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
-		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html                                          \
-		&& rm cover/$$package.out ;                                                                                 \
+		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html \
+		&& rm cover/$$package.out ; \
 	done
-cover-integration: clean
+cover-integration:
 	@mkdir -p cover/modules
 	@mkdir -p cover/modules/renter
 	@mkdir -p cover/modules/host
-	@for package in $(pkgs); do                                                                                     \
+	@for package in $(pkgs); do \
 		go test -run=TestIntegration -tags='testing debug' -timeout=500s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
-		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html                                          \
-		&& rm cover/$$package.out ;                                                                                 \
+		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html \
+		&& rm cover/$$package.out ; \
 	done
-cover-unit: clean
+cover-unit:
 	@mkdir -p cover/modules
 	@mkdir -p cover/modules/renter
 	@mkdir -p cover/modules/host
-	@for package in $(pkgs); do                                                                                     \
+	@for package in $(pkgs); do \
 		go test -run=TestUnit -tags='testing debug' -timeout=500s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
-		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html                                          \
-		&& rm cover/$$package.out ;                                                                                 \
+		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html \
+		&& rm cover/$$package.out ; \
 	done
 
-# whitepaper builds the whitepaper from whitepaper.tex. pdflatex has to be
-# called twice because references will not update correctly the first time.
-whitepaper:
-	@pdflatex -output-directory=doc whitepaper.tex > /dev/null
-	pdflatex -output-directory=doc whitepaper.tex
+ensure_deps:
+	dep ensure -v
 
-.PHONY: all dependencies fmt install release release-std xc clean test test-v test-long cover cover-integration cover-unit whitepaper
+add_dep:
+	dep ensure -v
+	dep ensure -v -add $$DEP
+
+update_dep:
+	dep ensure -v
+	dep ensure -v -update $$DEP
+
+update_deps:
+	dep ensure -v
+	dep ensure -update -v
+
+.PHONY: all fmt install release release-std test test-v test-long cover cover-integration cover-unit ensure_deps add_dep update_dep update_deps
