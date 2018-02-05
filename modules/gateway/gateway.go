@@ -257,7 +257,7 @@ func New(addr string, bootstrap bool, persistDir string) (*Gateway, error) {
 	// Add the bootstrap peers to the node list.
 	if bootstrap {
 		for _, addr := range modules.BootstrapPeers {
-			if err := addr.TryDNSResolution(); err != nil {
+			if err := addr.TryNameResolution(); err != nil {
 				// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
 				g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", addr, err)
 			}
