@@ -7,58 +7,6 @@ import (
 	"github.com/rivine/rivine/encoding"
 )
 
-// TestCalculateCoinbase probes the CalculateCoinbase function. The test code
-// is probably too similar to the function code to be of value.
-// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
-func TestCalculateCoinbase(t *testing.T) {
-	c := CalculateCoinbase(0)
-	if c.Cmp(NewCurrency64(InitialCoinbase).Mul(OneCoin)) != 0 {
-		t.Error("Unexpected CalculateCoinbase result")
-	}
-
-	c = CalculateCoinbase(1)
-	if c.Cmp(NewCurrency64(InitialCoinbase-1).Mul(OneCoin)) != 0 {
-		t.Error("Unexpected CalculateCoinbase result")
-	}
-
-	c = CalculateCoinbase(295000)
-	if c.Cmp(NewCurrency64(MinimumCoinbase).Mul(OneCoin)) != 0 {
-		t.Error(c)
-		t.Error(NewCurrency64(MinimumCoinbase).Mul(OneCoin))
-		t.Error("Unexpected CalculateCoinbase result")
-	}
-
-	c = CalculateCoinbase(1000000000)
-	if c.Cmp(NewCurrency64(MinimumCoinbase).Mul(OneCoin)) != 0 {
-		t.Error(c)
-		t.Error(NewCurrency64(MinimumCoinbase).Mul(OneCoin))
-		t.Error("Unexpected CalculateCoinbase result")
-	}
-}
-
-// TestCalculateNumSiacoins checks that the siacoin calculator is correctly
-// determining the number of siacoins in circulation. The check is performed by
-// doing a naive computation, instead of by doing the optimized computation.
-// TODO: CalculateNumSiacoins has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
-// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
-func TestCalculateNumSiacoins(t *testing.T) {
-	c := CalculateNumSiacoins(0)
-	if c.Cmp(CalculateCoinbase(0)) != 0 {
-		t.Error("unexpected circulation result for value 0, got", c)
-	}
-
-	if testing.Short() {
-		t.SkipNow()
-	}
-	totalCoins := NewCurrency64(0)
-	for i := BlockHeight(0); i < 500e3; i++ {
-		totalCoins = totalCoins.Add(CalculateCoinbase(i))
-		if totalCoins.Cmp(CalculateNumSiacoins(i)) != 0 {
-			t.Fatal("coin miscalculation", i, totalCoins, CalculateNumSiacoins(i))
-		}
-	}
-}
-
 // TestBlockHeader checks that BlockHeader returns the correct value, and that
 // the hash is consistent with the old method for obtaining the hash.
 // TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
