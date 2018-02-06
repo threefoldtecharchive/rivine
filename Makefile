@@ -28,6 +28,10 @@ release-race:
 release-std:
 	go install $(pkgs)
 
+
+# xc builds and packages release binaries
+# for all windows, linux and mac, 64-bit only,
+# using the standard Golang toolchain.
 xc:
 	./release.sh $$version
 
