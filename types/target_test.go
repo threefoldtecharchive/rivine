@@ -49,9 +49,9 @@ func TestTargetDifficulty(t *testing.T) {
 	target2[crypto.HashSize-1] = 1
 	target3[crypto.HashSize-1] = 2
 
-	expDifficulty1 := NewCurrency(RootDepth.Int())
-	expDifficulty2 := NewCurrency(RootDepth.Int())
-	expDifficulty3 := NewCurrency(RootDepth.Int()).Div(NewCurrency64(2))
+	expDifficulty1 := NewDifficulty(RootDepth.Int())
+	expDifficulty2 := NewDifficulty(RootDepth.Int())
+	expDifficulty3 := NewDifficulty(RootDepth.Int()).Div64(2)
 
 	if difficulty := target1.Difficulty(); difficulty.Cmp(expDifficulty1) != 0 {
 		t.Errorf("Expected difficulty %v, got %v", expDifficulty1, difficulty)
