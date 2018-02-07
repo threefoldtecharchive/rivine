@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/NebulousLabs/muxado"
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
@@ -29,7 +28,7 @@ func (s insufficientVersionError) Error() string {
 
 type peer struct {
 	modules.Peer
-	sess muxado.Session
+	sess streamSession
 }
 
 // versionHeader is sent as the initial exchange between peers.
@@ -173,7 +172,7 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
-		sess: muxado.Server(conn),
+		sess: newSmuxServer(conn),
 	})
 
 	// Attempt to ping the supplied address. If successful, and a connection is wanted,
@@ -387,7 +386,7 @@ func (g *Gateway) managedConnectPeer(conn net.Conn, remoteVersion build.Protocol
 			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
-		sess: muxado.Client(conn),
+		sess: newSmuxClient(conn),
 	})
 	// Add the peer to the node list. We can ignore the error: addNode
 	// validates the address and checks for duplicates, but we don't care
@@ -488,6 +487,7 @@ func (g *Gateway) Disconnect(addr modules.NetAddress) error {
 	if !exists {
 		return errors.New("not connected to that node")
 	}
+	p.sess.Close()
 	g.mu.Lock()
 	delete(g.peers, addr)
 	g.mu.Unlock()
