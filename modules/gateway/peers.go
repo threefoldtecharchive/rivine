@@ -158,8 +158,12 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 // The requesting peer is added as a node and a peer. The peer is only added if
 // a nil error is returned.
 func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) error {
-	// Get the remote address from opened socket
-	remoteAddr := modules.NetAddress(conn.RemoteAddr().String())
+	// Get the remote address on which the connecting peer is listening on.
+	// This means we need to combine the incoming connections ip address with
+	// the announced open port of the peer.
+	remoteIP := modules.NetAddress(conn.RemoteAddr().String()).Host()
+	remotePort := remoteInfo.NetAddress.Port()
+	remoteAddr := modules.NetAddress(net.JoinHostPort(remoteIP, remotePort))
 
 	// Accept the peer.
 	peer := &peer{
@@ -170,9 +174,8 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) er
 			Local: remoteAddr.IsLocal(),
 			// Ignoring claimed IP address (which should be == to the socket address)
 			// by the host but keeping note of the port number so we can call back
-			NetAddress: modules.NetAddress(net.JoinHostPort(
-				remoteAddr.Host(), remoteInfo.NetAddress.Port())),
-			Version: remoteInfo.Version,
+			NetAddress: remoteAddr,
+			Version:    remoteInfo.Version,
 		},
 		sess: newSmuxServer(conn),
 	}
@@ -185,10 +188,10 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) er
 	// remoteInfo.NetAddress to our node list after accepting the peer. We do this in a
 	// goroutine so that we can start communicating with the peer immediately.
 	go func() {
-		err := g.pingNode(remoteInfo.NetAddress)
+		err := g.pingNode(remoteAddr)
 		if err == nil {
 			g.mu.Lock()
-			g.addNode(remoteInfo.NetAddress)
+			g.addNode(remoteAddr)
 			g.mu.Unlock()
 		}
 	}()
