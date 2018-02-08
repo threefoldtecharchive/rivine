@@ -23,7 +23,13 @@ func (bc *BlockCreator) SolveBlocks() {
 		default:
 		}
 
-		// TODO: where to put the lock exactly
+		// This is mainly here to avoid the creation of useless blocks during IBD and when a node comes back online
+		// after some downtime
+		if !bc.cs.Synced() {
+			bc.log.Debugln("Consensus set is not synced, don't create blocks")
+			time.Sleep(8 * time.Second)
+		}
+
 		// Try to solve a block for blocktimes of the next 10 seconds
 		now := time.Now().Unix()
 		b := bc.solveBlock(uint64(now), 10)
@@ -42,6 +48,9 @@ func (bc *BlockCreator) SolveBlocks() {
 }
 
 func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) (b *types.Block) {
+
+	bc.mu.RLock()
+	defer bc.mu.RUnlock()
 
 	stakemodifier := bc.cs.CalculateStakeModifier(bc.persist.Height + 1)
 	cbid := bc.cs.CurrentBlock().ID()
