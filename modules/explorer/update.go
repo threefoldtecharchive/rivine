@@ -53,6 +53,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				scoid := block.MinerPayoutID(uint64(j))
 				dbRemoveCoinOutputID(tx, scoid, tbid)
 				dbRemoveUnlockHash(tx, payout.UnlockHash, tbid)
+				dbRemoveCoinOutput(tx, scoid)
 			}
 
 			// Remove transactions
@@ -111,6 +112,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				scoid := block.MinerPayoutID(uint64(j))
 				dbAddCoinOutputID(tx, scoid, tbid)
 				dbAddUnlockHash(tx, payout.UnlockHash, tbid)
+				dbAddCoinOutput(tx, scoid, payout)
 			}
 
 			// Update cumulative stats for applied transactions.
