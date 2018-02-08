@@ -25,9 +25,13 @@ func (bc *BlockCreator) SolveBlocks() {
 
 		// This is mainly here to avoid the creation of useless blocks during IBD and when a node comes back online
 		// after some downtime
-		if !bc.cs.Synced() {
-			bc.log.Debugln("Consensus set is not synced, don't create blocks")
-			time.Sleep(8 * time.Second)
+		if !bc.csSynced {
+			if !bc.cs.Synced() {
+				bc.log.Debugln("Consensus set is not synced, don't create blocks")
+				time.Sleep(8 * time.Second)
+				continue
+			}
+			bc.csSynced = true
 		}
 
 		// Try to solve a block for blocktimes of the next 10 seconds
