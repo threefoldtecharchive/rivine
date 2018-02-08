@@ -40,29 +40,30 @@
   revision = "f01b2e9039dd48372d3e54c5121bf4efba21b8dc"
 
 [[projects]]
-  name = "github.com/NebulousLabs/muxado"
-  packages = [".","proto","proto/buffer","proto/ext","proto/frame"]
-  revision = "f89aef61e0e86f743a3d6639cbc530939a6d0411"
-
-[[projects]]
-  name = "github.com/bgentry/speakeasy"
-  packages = ["."]
-  revision = "e1439544d8ecd0f3e9373a636d447668096a8f81"
-
-[[projects]]
   name = "github.com/dchest/blake2b"
   packages = ["."]
   revision = "3c8c640cd7bea3ca78209d812b5854442ab92fed"
 
 [[projects]]
   name = "github.com/huin/goupnp"
-  packages = [".","dcps/internetgateway1","httpu","scpd","soap","ssdp"]
+  packages = [
+    ".",
+    "dcps/internetgateway1",
+    "httpu",
+    "scpd",
+    "soap",
+    "ssdp"
+  ]
   revision = "46bde78b11f3f021f2a511df138be9e2fc7506e8"
 
 [[projects]]
   branch = "master"
   name = "github.com/inconshreveable/go-update"
-  packages = [".","internal/binarydist","internal/osext"]
+  packages = [
+    ".",
+    "internal/binarydist",
+    "internal/osext"
+  ]
   revision = "8152e7eb6ccf8679a64582a66b78519688d156ad"
 
 [[projects]]
@@ -83,6 +84,12 @@
   revision = "29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
   revision = "6a8bd97bdb1fc0d08a83459940498ea49d3e8c93"
@@ -93,23 +100,57 @@
   revision = "367864438f1b1a3c7db4da06a2f55b144e6784e0"
 
 [[projects]]
+  name = "github.com/xtaci/smux"
+  packages = ["."]
+  revision = "ebec7ef2574b42a7088cd7751176483e0a27d458"
+  version = "v1.0.6"
+
+[[projects]]
   name = "golang.org/x/crypto"
-  packages = ["blake2b","twofish"]
+  packages = [
+    "blake2b",
+    "twofish"
+  ]
   revision = "5a033cc77e57eca05bdb50522851d29e03569cbe"
 
 [[projects]]
   name = "golang.org/x/net"
-  packages = ["html","html/atom","html/charset"]
+  packages = [
+    "html",
+    "html/atom",
+    "html/charset"
+  ]
   revision = "4d38db76854b199960801a1734443fd02870d7e1"
 
 [[projects]]
   name = "golang.org/x/text"
-  packages = ["encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","transform","unicode/cldr","unicode/norm"]
+  packages = [
+    "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
+    "encoding/unicode",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "internal/utf8internal",
+    "language",
+    "runes",
+    "transform",
+    "unicode/cldr",
+    "unicode/norm"
+  ]
   revision = "0a5a09ee4409a616bfa03115120f0bffacdff508"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9728327a9590b323952aa632946813a88e13f463f9f431a98ae4fb87f3417c62"
+  inputs-digest = "28294c5b7237d621e3382b8d8ca29f1d509d1cb4f165fdc38305cc6784fbf0a3"
   solver-name = "gps-cdcl"
   solver-version = 1
