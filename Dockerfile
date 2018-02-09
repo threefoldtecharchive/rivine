@@ -2,9 +2,8 @@ FROM golang:1.6.3
 MAINTAINER rivine.io
 
 ENV CGO_ENABLED 0
-COPY . /go/src/github.com/rivine/rivine
 WORKDIR /go/src/github.com/rivine/rivine
 
-EXPOSE 23112
+RUN apt-get update && apt-get install -y zip
 
-ENTRYPOINT go install -v -tags 'debug dev' ./... && rivined --no-bootstrap
+ENTRYPOINT ./release.sh
