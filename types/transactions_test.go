@@ -36,10 +36,10 @@ func TestIDs(t *testing.T) {
 	}
 }
 
-// TestTransactionSiacoinOutputSum probes the SiacoinOutputSum method of the
+// TestTransactionCoinOutputSum probes the CoinOutputSum method of the
 // Transaction type.
-func TestTransactionSiacoinOutputSum(t *testing.T) {
-	// Create a transaction with all types of siacoin outputs.
+func TestTransactionCoinOutputSum(t *testing.T) {
+	// Create a transaction with all types of coin outputs.
 	txn := Transaction{
 		CoinOutputs: []CoinOutput{
 			{Value: NewCurrency64(1)},
@@ -50,7 +50,7 @@ func TestTransactionSiacoinOutputSum(t *testing.T) {
 			NewCurrency64(600000),
 		},
 	}
-	if txn.CoinOutputSum().Cmp(NewCurrency64(654321)) != 0 {
-		t.Error("wrong siacoin output sum was calculated, got:", txn.CoinOutputSum())
+	if txn.CoinOutputSum().Cmp(NewCurrency64(650021)) != 0 {
+		t.Error("wrong coin output sum was calculated, got:", txn.CoinOutputSum())
 	}
 }
