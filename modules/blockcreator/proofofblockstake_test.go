@@ -65,7 +65,13 @@ func (cs consensusSetStub) TryTransactionSet([]types.Transaction) (csc modules.C
 
 func (cs consensusSetStub) Unsubscribe(modules.ConsensusSetSubscriber) { return }
 
+func (cs consensusSetStub) BlockHeightOfBlock(types.Block) (types.BlockHeight, bool) { return 0, false }
+
+func (cs consensusSetStub) CalculateStakeModifier(height types.BlockHeight) *big.Int { return nil }
+
 // TestCurrencyDiv64 checks that the Div64 function has been correctly implemented.
+// TODO: CalculateStakeModifier seems to have been moved to the consensusset
+// Moved in: https://github.com/rivine/rivine/commit/473885476ccbcc6c259fa55e3af2aa818fe26db6#diff-4a95df743bd21a9b70774bb3981eac9a
 func TestCalculateStakeModifier(t *testing.T) {
 
 	alloneshash := new(big.Int).Sub(new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(1))

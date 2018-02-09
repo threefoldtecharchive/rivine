@@ -25,8 +25,8 @@ func TestUnlockHash(t *testing.T) {
 // TestSigHash runs the SigHash function of the transaction type.
 func TestSigHash(t *testing.T) {
 	txn := Transaction{
-		SiacoinInputs:     []SiacoinInput{{}},
-		SiacoinOutputs:    []SiacoinOutput{{}},
+		CoinInputs:        []CoinInput{{}},
+		CoinOutputs:       []CoinOutput{{}},
 		BlockStakeInputs:  []BlockStakeInput{{}},
 		BlockStakeOutputs: []BlockStakeOutput{{}},
 		MinerFees:         []Currency{{}},
@@ -39,8 +39,8 @@ func TestSigHash(t *testing.T) {
 			},
 			{
 				CoveredFields: CoveredFields{
-					SiacoinInputs:         []uint64{0},
-					SiacoinOutputs:        []uint64{0},
+					CoinInputs:            []uint64{0},
+					CoinOutputs:           []uint64{0},
 					BlockStakeInputs:      []uint64{0},
 					BlockStakeOutputs:     []uint64{0},
 					MinerFees:             []uint64{0},
@@ -95,8 +95,8 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 	// Create a transaction with all fields filled in minimally. The first
 	// check has a legal CoveredFields object with 'WholeTransaction' set.
 	txn := Transaction{
-		SiacoinInputs:     []SiacoinInput{{}},
-		SiacoinOutputs:    []SiacoinOutput{{}},
+		CoinInputs:        []CoinInput{{}},
+		CoinOutputs:       []CoinOutput{{}},
 		BlockStakeInputs:  []BlockStakeInput{{}},
 		BlockStakeOutputs: []BlockStakeOutput{{}},
 		MinerFees:         []Currency{{}},
@@ -118,9 +118,9 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 	// set.
 	txn.TransactionSignatures = append(txn.TransactionSignatures, TransactionSignature{
 		CoveredFields: CoveredFields{
-			SiacoinOutputs: []uint64{0},
-			MinerFees:      []uint64{0},
-			ArbitraryData:  []uint64{0},
+			CoinOutputs:   []uint64{0},
+			MinerFees:     []uint64{0},
+			ArbitraryData: []uint64{0},
 		},
 	})
 	err = txn.validCoveredFields()
@@ -139,14 +139,14 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 	// Add siacoin output coverage to the first signature. This should violate
 	// rules, as the fields are not allowed to be set when 'WholeTransaction'
 	// is set.
-	txn.TransactionSignatures[0].CoveredFields.SiacoinOutputs = []uint64{0}
+	txn.TransactionSignatures[0].CoveredFields.CoinOutputs = []uint64{0}
 	err = txn.validCoveredFields()
 	if err != ErrWholeTransactionViolation {
 		t.Error("Expecting ErrWholeTransactionViolation, got", err)
 	}
 
 	// Create a SortedUnique violation instead of a WholeTransactionViolation.
-	txn.TransactionSignatures[0].CoveredFields.SiacoinOutputs = nil
+	txn.TransactionSignatures[0].CoveredFields.CoinOutputs = nil
 	txn.TransactionSignatures[0].CoveredFields.TransactionSignatures = []uint64{1, 2}
 	err = txn.validCoveredFields()
 	if err != ErrSortedUniqueViolation {
@@ -178,7 +178,7 @@ func TestTransactionValidSignatures(t *testing.T) {
 
 	// Create a transaction with each type of unlock condition.
 	txn := Transaction{
-		SiacoinInputs: []SiacoinInput{
+		CoinInputs: []CoinInput{
 			{UnlockConditions: uc},
 		},
 		BlockStakeInputs: []BlockStakeInput{
@@ -197,23 +197,16 @@ func TestTransactionValidSignatures(t *testing.T) {
 		{
 			CoveredFields: CoveredFields{WholeTransaction: true},
 		},
-		{
-			CoveredFields: CoveredFields{WholeTransaction: true},
-		},
 
 		// The second signatures should always work for being unrecognized
 		// types.
 		{PublicKeyIndex: 1},
 		{PublicKeyIndex: 1},
-		{PublicKeyIndex: 1},
 	}
-	txn.TransactionSignatures[1].ParentID[0] = 1
-	txn.TransactionSignatures[2].ParentID[0] = 2
-	txn.TransactionSignatures[4].ParentID[0] = 1
-	txn.TransactionSignatures[5].ParentID[0] = 2
+	txn.TransactionSignatures[1].ParentID[0] = 2
+	txn.TransactionSignatures[3].ParentID[0] = 2
 	sigHash0 := txn.SigHash(0)
 	sigHash1 := txn.SigHash(1)
-	sigHash2 := txn.SigHash(2)
 	sig0, err := crypto.SignHash(sigHash0, sk)
 	if err != nil {
 		t.Fatal(err)
@@ -222,13 +215,8 @@ func TestTransactionValidSignatures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig2, err := crypto.SignHash(sigHash2, sk)
-	if err != nil {
-		t.Fatal(err)
-	}
 	txn.TransactionSignatures[0].Signature = sig0[:]
 	txn.TransactionSignatures[1].Signature = sig1[:]
-	txn.TransactionSignatures[2].Signature = sig2[:]
 
 	// Check that the signing was successful.
 	err = txn.validSignatures(10)
@@ -247,24 +235,20 @@ func TestTransactionValidSignatures(t *testing.T) {
 	txn.TransactionSignatures[0].Signature = sig0[:]
 
 	// Fail the validCoveredFields check.
-	txn.TransactionSignatures[0].CoveredFields.SiacoinInputs = []uint64{33}
+	txn.TransactionSignatures[0].CoveredFields.CoinInputs = []uint64{33}
 	err = txn.validSignatures(10)
 	if err == nil {
 		t.Error("failed to flunk the validCoveredFields check")
 	}
-	txn.TransactionSignatures[0].CoveredFields.SiacoinInputs = nil
+	txn.TransactionSignatures[0].CoveredFields.CoinInputs = nil
 
-	// Double spend a SiacoinInput, FileContractTermination, and SiafundInput.
-	txn.SiacoinInputs = append(txn.SiacoinInputs, SiacoinInput{UnlockConditions: UnlockConditions{}})
+	// Double spend a CoinInput, and BlockStakeInput.
+	txn.CoinInputs = append(txn.CoinInputs, CoinInput{UnlockConditions: UnlockConditions{}})
 	err = txn.validSignatures(10)
 	if err == nil {
 		t.Error("failed to double spend a siacoin input")
 	}
-	txn.SiacoinInputs = txn.SiacoinInputs[:len(txn.SiacoinInputs)-1]
-	err = txn.validSignatures(10)
-	if err == nil {
-		t.Error("failed to double spend a file contract termination")
-	}
+	txn.CoinInputs = txn.CoinInputs[:len(txn.CoinInputs)-1]
 	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{UnlockConditions: UnlockConditions{}})
 	err = txn.validSignatures(10)
 	if err == nil {
@@ -314,12 +298,12 @@ func TestTransactionValidSignatures(t *testing.T) {
 	txn.TransactionSignatures[0] = tmpTxn0
 
 	// Insert a malformed public key into the transaction.
-	txn.SiacoinInputs[0].UnlockConditions.PublicKeys[0].Key = []byte{'b', 'a', 'd'}
+	txn.CoinInputs[0].UnlockConditions.PublicKeys[0].Key = []byte{'b', 'a', 'd'}
 	err = txn.validSignatures(10)
 	if err == nil {
 		t.Error(err)
 	}
-	txn.SiacoinInputs[0].UnlockConditions.PublicKeys[0].Key = pk[:]
+	txn.CoinInputs[0].UnlockConditions.PublicKeys[0].Key = pk[:]
 
 	// Insert a malformed signature into the transaction.
 	txn.TransactionSignatures[0].Signature = []byte{'m', 'a', 'l'}

@@ -73,7 +73,7 @@ func TestIntegrationConflictingTransactionSets(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundSiacoins(fund)
+	err = txnBuilder.FundCoins(fund)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestIntegrationConflictingTransactionSets(t *testing.T) {
 	// other create a siacoin output.
 	txnIndex := len(txnSet) - 1
 	txnSet[txnIndex].MinerFees = append(txnSet[txnIndex].MinerFees, fund)
-	txnSetDoubleSpend[txnIndex].SiacoinOutputs = append(txnSetDoubleSpend[txnIndex].SiacoinOutputs, types.SiacoinOutput{Value: fund})
+	txnSetDoubleSpend[txnIndex].CoinOutputs = append(txnSetDoubleSpend[txnIndex].CoinOutputs, types.CoinOutput{Value: fund})
 
 	// Add the first and then the second txn set.
 	err = tpt.tpool.AcceptTransactionSet(txnSet)
@@ -150,7 +150,7 @@ func TestIntegrationCheckMinerFees(t *testing.T) {
 	}
 
 	// Add a transaction that has sufficient fees.
-	_, err = tpt.wallet.SendSiacoins(types.NewCurrency64(100), types.UnlockHash{})
+	_, err = tpt.wallet.SendCoins(types.NewCurrency64(100), types.UnlockHash{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -174,7 +174,7 @@ func TestIntegrationTransactionSuperset(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundSiacoins(fund)
+	err = txnBuilder.FundCoins(fund)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestIntegrationTransactionSubset(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundSiacoins(fund)
+	err = txnBuilder.FundCoins(fund)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,7 +280,7 @@ func TestIntegrationTransactionChild(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundSiacoins(fund)
+	err = txnBuilder.FundCoins(fund)
 	if err != nil {
 		t.Fatal(err)
 	}

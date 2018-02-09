@@ -312,6 +312,7 @@ func TestUnitValidateHeaderAndBlock(t *testing.T) {
 
 // TestCheckHeaderTarget probes the checkHeaderTarget function and checks that
 // the result matches the result of checkTarget.
+// TODO: checkHeaderTarget seems to have been removed in https://github.com/rivine/rivine/commit/0a9bcd57da5311a6f52928347698af2bd886e333#diff-5810fbb838aedb15d7832e0d63744430
 func TestCheckHeaderTarget(t *testing.T) {
 	var b types.Block
 	var h types.BlockHeader

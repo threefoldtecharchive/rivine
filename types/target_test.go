@@ -42,14 +42,16 @@ func TestTargetCmp(t *testing.T) {
 }
 
 // TestTargetDifficulty probes the Difficulty function of the target type.
+// TODO: target.Difficulty() has been changed to return a new Difficutly type: https://github.com/rivine/rivine/commit/6c00f3be7798c017b84434a97f8b1cd895bf734a#diff-3e315e2069bf2cb7e545291ccc110377
+// Need to rework test to compile and work with the new type
 func TestTargetDifficulty(t *testing.T) {
 	var target1, target2, target3 Target
 	target2[crypto.HashSize-1] = 1
 	target3[crypto.HashSize-1] = 2
 
-	expDifficulty1 := NewCurrency(RootDepth.Int())
-	expDifficulty2 := NewCurrency(RootDepth.Int())
-	expDifficulty3 := NewCurrency(RootDepth.Int()).Div(NewCurrency64(2))
+	expDifficulty1 := NewDifficulty(RootDepth.Int())
+	expDifficulty2 := NewDifficulty(RootDepth.Int())
+	expDifficulty3 := NewDifficulty(RootDepth.Int()).Div64(2)
 
 	if difficulty := target1.Difficulty(); difficulty.Cmp(expDifficulty1) != 0 {
 		t.Errorf("Expected difficulty %v, got %v", expDifficulty1, difficulty)

@@ -40,8 +40,8 @@ type (
 	// Hashing the header results in the block ID.
 	BlockHeader struct {
 		ParentID   BlockID                 `json:"parentid"`
-		Timestamp  Timestamp               `json:"timestamp"`
 		POBSOutput BlockStakeOutputIndexes `json:"pobsindexes"`
+		Timestamp  Timestamp               `json:"timestamp"`
 		MerkleRoot crypto.Hash             `json:"merkleroot"`
 	}
 
@@ -64,7 +64,7 @@ func (b Block) Header() BlockHeader {
 	}
 }
 
-// CalculateSubsidy determines the block subsidy as the sum of the minerfees.
+// CalculateSubsidy determines the block subsidy as the sum of the minerfees and the block creator fee.
 func (b Block) CalculateSubsidy() Currency {
 	subsidy := NewCurrency64(0)
 	for _, txn := range b.Transactions {
