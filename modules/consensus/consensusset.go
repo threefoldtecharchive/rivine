@@ -361,9 +361,11 @@ func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight) *big.In
 	signedHeight -= int64(types.StakeModifierDelay)
 
 	mask := big.NewInt(1)
-	BlockIDHash := big.NewInt(0)
 	stakemodifier := big.NewInt(0)
-	var buffer bytes.Buffer
+	var (
+		buffer      bytes.Buffer
+		blockIDHash *big.Int
+	)
 
 	// now signedHeight points to the first block to use for the stakemodifier
 	// calculation, we count down 256 blocks and use 1 bit of each blocks ID to
@@ -376,16 +378,16 @@ func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight) *big.In
 				panic("block to be used for stakemodifier does not yet exist")
 			}
 			hashof := BlockID.ID()
-			BlockIDHash = big.NewInt(0).SetBytes(hashof[:])
+			blockIDHash = big.NewInt(0).SetBytes(hashof[:])
 		} else {
 			// if the counter goes sub genesis block , calculate a predefined hash
 			// from the sub genesis distance.
 			buffer.WriteString("genesis" + strconv.FormatInt(signedHeight, 10))
 			hashof := sha256.Sum256(buffer.Bytes())
-			BlockIDHash = big.NewInt(0).SetBytes(hashof[:])
+			blockIDHash = big.NewInt(0).SetBytes(hashof[:])
 		}
 
-		stakemodifier.Or(stakemodifier, big.NewInt(0).And(BlockIDHash, mask))
+		stakemodifier.Or(stakemodifier, big.NewInt(0).And(blockIDHash, mask))
 		mask.Mul(mask, big.NewInt(2)) //shift 1 bit to left (more close to msb)
 		signedHeight--
 	}
