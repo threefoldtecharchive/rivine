@@ -197,23 +197,16 @@ func TestTransactionValidSignatures(t *testing.T) {
 		{
 			CoveredFields: CoveredFields{WholeTransaction: true},
 		},
-		{
-			CoveredFields: CoveredFields{WholeTransaction: true},
-		},
 
 		// The second signatures should always work for being unrecognized
 		// types.
 		{PublicKeyIndex: 1},
 		{PublicKeyIndex: 1},
-		{PublicKeyIndex: 1},
 	}
-	txn.TransactionSignatures[1].ParentID[0] = 1
-	txn.TransactionSignatures[2].ParentID[0] = 2
-	txn.TransactionSignatures[4].ParentID[0] = 1
-	txn.TransactionSignatures[5].ParentID[0] = 2
+	txn.TransactionSignatures[1].ParentID[0] = 2
+	txn.TransactionSignatures[3].ParentID[0] = 2
 	sigHash0 := txn.SigHash(0)
 	sigHash1 := txn.SigHash(1)
-	sigHash2 := txn.SigHash(2)
 	sig0, err := crypto.SignHash(sigHash0, sk)
 	if err != nil {
 		t.Fatal(err)
@@ -222,13 +215,8 @@ func TestTransactionValidSignatures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig2, err := crypto.SignHash(sigHash2, sk)
-	if err != nil {
-		t.Fatal(err)
-	}
 	txn.TransactionSignatures[0].Signature = sig0[:]
 	txn.TransactionSignatures[1].Signature = sig1[:]
-	txn.TransactionSignatures[2].Signature = sig2[:]
 
 	// Check that the signing was successful.
 	err = txn.validSignatures(10)
@@ -254,17 +242,13 @@ func TestTransactionValidSignatures(t *testing.T) {
 	}
 	txn.TransactionSignatures[0].CoveredFields.CoinInputs = nil
 
-	// Double spend a SiacoinInput, FileContractTermination, and SiafundInput.
+	// Double spend a CoinInput, and BlockStakeInput.
 	txn.CoinInputs = append(txn.CoinInputs, CoinInput{UnlockConditions: UnlockConditions{}})
 	err = txn.validSignatures(10)
 	if err == nil {
 		t.Error("failed to double spend a siacoin input")
 	}
 	txn.CoinInputs = txn.CoinInputs[:len(txn.CoinInputs)-1]
-	err = txn.validSignatures(10)
-	if err == nil {
-		t.Error("failed to double spend a file contract termination")
-	}
 	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{UnlockConditions: UnlockConditions{}})
 	err = txn.validSignatures(10)
 	if err == nil {
