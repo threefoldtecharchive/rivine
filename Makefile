@@ -7,6 +7,7 @@ all: install
 run = Test
 pkgs = ./build ./modules/gateway ./rivined ./rivinec
 testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./persist ./rivinec ./rivined ./sync ./types
+version = $(shell git describe | cut -d '-' -f 1,3 |  cut -d '-' -f 1)
 
 # fmt calls go fmt on all packages.
 fmt:
@@ -34,6 +35,12 @@ release-std:
 # using the standard Golang toolchain.
 xc:
 	./release.sh
+
+# Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
+# TODOf: zero-os container image creation
+release-images: xc
+	docker build -t rivine/rivine:$(version) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64 .
+	docker push rivine/rivine:$(version)
 
 test:
 	go test -short -tags='debug testing' -timeout=5s $(testpkgs) -run=$(run)
