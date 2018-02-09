@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rivine/rivine/build"
 	"github.com/NebulousLabs/bolt"
+	"github.com/rivine/rivine/build"
 )
 
 // testInputs and testFilenames are global variables because most tests require
@@ -185,6 +185,10 @@ func TestOpenDatabase(t *testing.T) {
 			}
 			return nil
 		})
+		if err != nil {
+			t.Error(err)
+			continue
+		}
 		// Close and delete the newly emptied database.
 		err = db.Close()
 		if err != nil {

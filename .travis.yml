@@ -1,23 +1,36 @@
-language: go
-
-os:
-  - linux
-
-go:
-  - 1.8
-
-install:
-  - make dependencies
-  - test -z "$(go fmt ./...)"
-  - make
-
-script: make test && make test-long && make bench
-
-sudo: false
-
-branches:
-  only:
-    - master
-
-notifications:
-  email: false
+jobs:
+  include:
+    - stage: test
+      language: go
+      go: 1.8.x
+      script:
+        - make
+        - make test
+    - stage: test
+      language: go
+      go: 1.9.x
+      script:
+        - make
+        - make test
+    - stage: test
+      language: go
+      go: tip
+      script:
+        - make
+        - make test
+    - stage: test
+      language: go
+      go: 1.8.x
+      install:
+        - go get -u github.com/gordonklaus/ineffassign
+      script:
+        - make test-long
+        - make ineffassign
+    - stage: test
+      language: go
+      go: 1.9.x
+      install:
+        - go get -u github.com/gordonklaus/ineffassign
+      script:
+        - make test-long
+        - make ineffassign
