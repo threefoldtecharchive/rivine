@@ -35,6 +35,10 @@
 
 [[constraint]]
   branch = "master"
+  name = "github.com/bgentry/speakeasy"
+
+[[constraint]]
+  branch = "master"
   name = "github.com/inconshreveable/go-update"
 
 [[constraint]]

@@ -40,6 +40,12 @@
   revision = "f01b2e9039dd48372d3e54c5121bf4efba21b8dc"
 
 [[projects]]
+  name = "github.com/bgentry/speakeasy"
+  packages = ["."]
+  revision = "4aabc24848ce5fd31929f7d1e4ea74d3709c14cd"
+  version = "v0.1.0"
+
+[[projects]]
   name = "github.com/dchest/blake2b"
   packages = ["."]
   revision = "3c8c640cd7bea3ca78209d812b5854442ab92fed"
@@ -151,6 +157,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "28294c5b7237d621e3382b8d8ca29f1d509d1cb4f165fdc38305cc6784fbf0a3"
+  inputs-digest = "70deae52d62e978b00d17d1ab6b6df8278a61d6a55a0f746cc03d3f512d91c20"
   solver-name = "gps-cdcl"
   solver-version = 1
