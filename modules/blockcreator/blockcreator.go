@@ -19,6 +19,9 @@ type BlockCreator struct {
 	tpool  modules.TransactionPool
 	wallet modules.Wallet
 
+	// Cache the synced state of the consensus set to avoid unnecessarily locking it
+	csSynced bool
+
 	unsolvedBlock *types.Block
 
 	log        *persist.Logger
