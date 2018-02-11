@@ -6,7 +6,7 @@ all: install
 # tests are run during testing.
 run = Test
 pkgs = ./build ./modules/gateway ./rivined ./rivinec
-testpkgs = ./types ./build ./crypto ./encoding ./modules ./persist ./rivinec ./rivined ./sync ./types
+testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./persist ./rivinec ./rivined ./sync ./types
 
 # fmt calls go fmt on all packages.
 fmt:
