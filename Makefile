@@ -38,10 +38,10 @@ xc:
 	docker run --rm -v $(shell pwd):/go/src/github.com/rivine/rivine rivinebuilder
 
 # Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
-# TODOf: zero-os container image creation
 release-images: xc
 	docker build -t rivine/rivine:$(version) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64 .
 	docker push rivine/rivine:$(version)
+	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(version)" "https://hub.gig.tech/api/flist/me/docker"
 
 test:
 	go test -short -tags='debug testing' -timeout=5s $(testpkgs) -run=$(run)
