@@ -5,32 +5,38 @@ package crypto
 
 import (
 	"crypto/cipher"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"io"
+
+	"github.com/NebulousLabs/fastrand"
 
 	"golang.org/x/crypto/twofish"
 )
 
 const (
-	TwofishOverhead = 28 // number of bytes added by EncryptBytes
+	// TwofishOverhead is the number of bytes added by EncryptBytes
+	TwofishOverhead = 28
 )
 
 var (
+	// ErrInsufficientLen is an error when supplied ciphertext is not
+	// long enough to contain a nonce.
 	ErrInsufficientLen = errors.New("supplied ciphertext is not long enough to contain a nonce")
 )
 
 type (
+	// Ciphertext is an encrypted []byte.
 	Ciphertext []byte
+	// TwofishKey is a key used for encrypting and decrypting data.
 	TwofishKey [EntropySize]byte
 )
 
-// GenerateEncryptionKey produces a key that can be used for encrypting and
+// GenerateTwofishKey produces a key that can be used for encrypting and
 // decrypting files.
-func GenerateTwofishKey() (key TwofishKey, err error) {
-	_, err = rand.Read(key[:])
-	return key, err
+func GenerateTwofishKey() (key TwofishKey) {
+	fastrand.Read(key[:])
+	return
 }
 
 // NewCipher creates a new Twofish cipher from the key.
@@ -42,20 +48,17 @@ func (key TwofishKey) NewCipher() cipher.Block {
 
 // EncryptBytes encrypts a []byte using the key. EncryptBytes uses GCM and
 // prepends the nonce (12 bytes) to the ciphertext.
-func (key TwofishKey) EncryptBytes(plaintext []byte) (Ciphertext, error) {
+func (key TwofishKey) EncryptBytes(plaintext []byte) Ciphertext {
 	// Create the cipher.
 	// NOTE: NewGCM only returns an error if twofishCipher.BlockSize != 16.
 	aead, _ := cipher.NewGCM(key.NewCipher())
 
 	// Create the nonce.
-	nonce, err := RandBytes(aead.NonceSize())
-	if err != nil {
-		return nil, err
-	}
+	nonce := fastrand.Bytes(aead.NonceSize())
 
 	// Encrypt the data. No authenticated data is provided, as EncryptBytes is
 	// meant for file encryption.
-	return aead.Seal(nonce, nonce, plaintext, nil), nil
+	return aead.Seal(nonce, nonce, plaintext, nil)
 }
 
 // DecryptBytes decrypts the ciphertext created by EncryptBytes. The nonce is
@@ -92,10 +95,13 @@ func (key TwofishKey) NewReader(r io.Reader) io.Reader {
 	return &cipher.StreamReader{S: stream, R: r}
 }
 
+// MarshalJSON returns the JSON encoding of a CipherText
 func (c Ciphertext) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]byte(c))
 }
 
+// UnmarshalJSON parses the JSON-encoded b and returns an instance of
+// CipherText.
 func (c *Ciphertext) UnmarshalJSON(b []byte) error {
 	var umarB []byte
 	err := json.Unmarshal(b, &umarB)

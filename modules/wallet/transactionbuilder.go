@@ -61,10 +61,7 @@ func addSignatures(txn *types.Transaction, cf types.CoveredFields, uc types.Unlo
 			txn.TransactionSignatures = append(txn.TransactionSignatures, sig)
 			sigIndex := len(txn.TransactionSignatures) - 1
 			sigHash := txn.SigHash(sigIndex)
-			encodedSig, err := crypto.SignHash(sigHash, spendKey.SecretKeys[j])
-			if err != nil {
-				return nil, err
-			}
+			encodedSig := crypto.SignHash(sigHash, spendKey.SecretKeys[j])
 			txn.TransactionSignatures[sigIndex].Signature = encodedSig[:]
 
 			// Count that the signature has been added, and break out of the

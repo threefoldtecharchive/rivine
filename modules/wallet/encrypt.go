@@ -72,10 +72,7 @@ func (w *Wallet) initEncryption(masterKey crypto.TwofishKey) (modules.Seed, erro
 	// point, the wallet is encrypted.
 	uk := uidEncryptionKey(masterKey, w.persist.UID)
 	encryptionBase := make([]byte, encryptionVerificationLen)
-	w.persist.EncryptionVerification, err = uk.EncryptBytes(encryptionBase)
-	if err != nil {
-		return modules.Seed{}, err
-	}
+	w.persist.EncryptionVerification = uk.EncryptBytes(encryptionBase)
 	err = w.saveSettings()
 	if err != nil {
 		return modules.Seed{}, err

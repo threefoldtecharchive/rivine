@@ -158,10 +158,7 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 // Transaction type.
 func TestTransactionValidSignatures(t *testing.T) {
 	// Create keys for use in signing and verifying.
-	sk, pk, err := crypto.GenerateKeyPair()
-	if err != nil {
-		t.Fatal(err)
-	}
+	sk, pk := crypto.GenerateKeyPair()
 
 	// Create UnlockConditions with 3 keys, 2 of which are required. The first
 	// possible key is a standard signature. The second key is an unknown
@@ -207,19 +204,13 @@ func TestTransactionValidSignatures(t *testing.T) {
 	txn.TransactionSignatures[3].ParentID[0] = 2
 	sigHash0 := txn.SigHash(0)
 	sigHash1 := txn.SigHash(1)
-	sig0, err := crypto.SignHash(sigHash0, sk)
-	if err != nil {
-		t.Fatal(err)
-	}
-	sig1, err := crypto.SignHash(sigHash1, sk)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sig0 := crypto.SignHash(sigHash0, sk)
+	sig1 := crypto.SignHash(sigHash1, sk)
 	txn.TransactionSignatures[0].Signature = sig0[:]
 	txn.TransactionSignatures[1].Signature = sig1[:]
 
 	// Check that the signing was successful.
-	err = txn.validSignatures(10)
+	err := txn.validSignatures(10)
 	if err != nil {
 		t.Error(err)
 	}
