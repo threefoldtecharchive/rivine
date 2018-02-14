@@ -35,7 +35,7 @@ release-std:
 # for all windows, linux and mac, 64-bit only,
 # using the standard Golang toolchain.
 xc:
-	docker build -t rivinebuilder .
+	docker build -t rivinebuilder -f DockerBuilder .
 	docker run --rm -v $(shell pwd):/go/src/github.com/rivine/rivine rivinebuilder
 
 # Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
