@@ -8,7 +8,6 @@ run = Test
 pkgs = ./build ./modules/gateway ./rivined ./rivinec
 testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./persist ./rivinec ./rivined ./sync ./types
 version = $(shell git describe | cut -d '-' -f 1)
->>>>>>> Remove unnecessary cut when setting the version in the Makefile
 
 # fmt calls go fmt on all packages.
 fmt:
