@@ -5,20 +5,8 @@
 # build artifacts
 cover
 
-sia.iml
 dist
-rivinec/rivinec
-rivined/rivined
-rivined/consensus
-rivined/gateway
-rivined/transactionpool
-rivined/wallet
-rivined/profiles
-rivined/explorer
-rivined/blockcreator
 passwords testing
-rivined/debug
-rivined/debug.test
 /.project
 
 release/
