@@ -73,7 +73,7 @@ func (w *Wallet) encryptAndSaveSeedFile(masterKey crypto.TwofishKey, seed module
 	sf.EncryptionVerification = sek.EncryptBytes(plaintextVerification)
 	sf.Seed = sek.EncryptBytes(seed[:])
 	seedFilename := filepath.Join(w.persistDir, seedFilePrefix+persist.RandomSuffix()+seedFileSuffix)
-	err = persist.SaveFileSync(seedMetadata, sf, seedFilename)
+	err = persist.SaveJSON(seedMetadata, sf, seedFilename)
 	if err != nil {
 		return SeedFile{}, err
 	}

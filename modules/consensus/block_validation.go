@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
@@ -34,7 +33,7 @@ type stdBlockValidator struct {
 	clock types.Clock
 
 	// marshaler encodes and decodes between objects and byte slices.
-	marshaler encoding.GenericMarshaler
+	marshaler marshaler
 	cs        *ConsensusSet
 }
 
@@ -42,7 +41,7 @@ type stdBlockValidator struct {
 func NewBlockValidator(consensusSet *ConsensusSet) stdBlockValidator {
 	return stdBlockValidator{
 		clock:     types.StdClock{},
-		marshaler: encoding.StdGenericMarshaler{},
+		marshaler: stdMarshaler{},
 		cs:        consensusSet,
 	}
 }

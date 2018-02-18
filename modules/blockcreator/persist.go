@@ -62,15 +62,15 @@ func (b *BlockCreator) initPersist() error {
 
 // load loads the block creator persistence from disk.
 func (b *BlockCreator) load() error {
-	return persist.LoadFile(settingsMetadata, &b.persist, filepath.Join(b.persistDir, settingsFile))
+	return persist.LoadJSON(settingsMetadata, &b.persist, filepath.Join(b.persistDir, settingsFile))
 }
 
 // save saves the block creator persistence to disk.
 func (b *BlockCreator) save() error {
-	return persist.SaveFile(settingsMetadata, b.persist, filepath.Join(b.persistDir, settingsFile))
+	return persist.SaveJSON(settingsMetadata, b.persist, filepath.Join(b.persistDir, settingsFile))
 }
 
 // saveSync saves the block creator persistence to disk, and then syncs to disk.
 func (b *BlockCreator) saveSync() error {
-	return persist.SaveFileSync(settingsMetadata, b.persist, filepath.Join(b.persistDir, settingsFile))
+	return persist.SaveJSON(settingsMetadata, b.persist, filepath.Join(b.persistDir, settingsFile))
 }

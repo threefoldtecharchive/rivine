@@ -1,7 +1,6 @@
 package persist
 
 import (
-	"math/rand"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -9,6 +8,7 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/bolt"
+	"github.com/NebulousLabs/fastrand"
 	"github.com/rivine/rivine/build"
 )
 
@@ -86,7 +86,7 @@ func TestOpenDatabase(t *testing.T) {
 	}
 	// Create a folder for the database file. If a folder by that name exists
 	// already, it will be replaced by an empty folder.
-	testDir := build.TempDir(persistDir, "TestOpenNewDatabase")
+	testDir := build.TempDir(persistDir, t.Name())
 	err := os.MkdirAll(testDir, 0700)
 	if err != nil {
 		t.Fatal(err)
@@ -141,13 +141,9 @@ func TestOpenDatabase(t *testing.T) {
 		err = db.Update(func(tx *bolt.Tx) error {
 			for _, testBucket := range testBuckets {
 				b := tx.Bucket(testBucket)
-				x := rand.Intn(10)
+				x := fastrand.Intn(10)
 				for i := 0; i <= x; i++ {
-					k := make([]byte, 10)
-					rand.Read(k)
-					v := make([]byte, 1e3)
-					rand.Read(v)
-					err := b.Put(k, v)
+					err := b.Put(fastrand.Bytes(10), fastrand.Bytes(1e3))
 					if err != nil {
 						t.Errorf("db.Update failed to fill bucket %v for metadata %v, filename %v; error was %v", testBucket, in.md, dbFilename, err)
 						return err
@@ -216,7 +212,7 @@ func TestErrPermissionOpenDatabase(t *testing.T) {
 		dbVersion  = "0.0.0"
 		dbFilename = "Fake Filename"
 	)
-	testDir := build.TempDir(persistDir, "TestErrPermissionOpenDatabase")
+	testDir := build.TempDir(persistDir, t.Name())
 	err := os.MkdirAll(testDir, 0700)
 	if err != nil {
 		t.Fatal(err)
@@ -252,7 +248,7 @@ func TestErrTxNotWritable(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	testDir := build.TempDir(persistDir, "TestErrTxNotWritable")
+	testDir := build.TempDir(persistDir, t.Name())
 	err := os.MkdirAll(testDir, 0700)
 	if err != nil {
 		t.Fatal(err)
@@ -291,7 +287,7 @@ func TestErrDatabaseNotOpen(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	testDir := build.TempDir(persistDir, "TestErrDatabaseNotOpen")
+	testDir := build.TempDir(persistDir, t.Name())
 	err := os.MkdirAll(testDir, 0700)
 	if err != nil {
 		t.Fatal(err)
@@ -327,7 +323,7 @@ func TestErrCheckMetadata(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	testDir := build.TempDir(persistDir, "TestErrCheckMetadata")
+	testDir := build.TempDir(persistDir, t.Name())
 	err := os.MkdirAll(testDir, 0700)
 	if err != nil {
 		t.Fatal(err)
@@ -386,7 +382,7 @@ func TestErrIntegratedCheckMetadata(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	testDir := build.TempDir(persistDir, "TestErrIntegratedCheckMetadata")
+	testDir := build.TempDir(persistDir, t.Name())
 	err := os.MkdirAll(testDir, 0700)
 	if err != nil {
 		t.Fatal(err)

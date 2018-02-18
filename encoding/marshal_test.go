@@ -3,6 +3,7 @@ package encoding
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -104,27 +105,13 @@ func TestEncode(t *testing.T) {
 		}
 	}
 
-	// badWriter should fail on every encode
-	enc := NewEncoder(new(badWriter))
-	for i := range testStructs {
-		err := enc.Encode(testStructs[i])
-		if err != io.ErrShortWrite {
-			t.Errorf("testStructs[%d]: expected ErrShortWrite, got %v", i, err)
-		}
-	}
-	// special case, not covered by testStructs
-	err := enc.Encode(struct{ U [3]uint16 }{[3]uint16{1, 2, 3}})
-	if err != io.ErrShortWrite {
-		t.Error("expected ErrShortWrite, got", err)
-	}
-
 	// bad type
 	defer func() {
 		if recover() == nil {
 			t.Error("expected panic, got nil")
 		}
 	}()
-	enc.Encode(map[int]int{})
+	NewEncoder(ioutil.Discard).Encode(map[int]int{})
 }
 
 // TestDecode tests the Decode function.
@@ -159,22 +146,22 @@ func TestDecode(t *testing.T) {
 		t.Error("expected unknown type error, got", err)
 	}
 
-	// big slice (larger than maxSliceLen)
-	err = Unmarshal(EncUint64(maxSliceLen+1), new([]byte))
-	if err == nil || err.Error() != "could not decode type []uint8: slice is too large" {
+	// big slice (larger than MaxSliceSize)
+	err = Unmarshal(EncUint64(MaxSliceSize+1), new([]byte))
+	if err == nil || err.Error() != "could not decode type []uint8: encoded slice is too large" {
 		t.Error("expected large slice error, got", err)
 	}
 
 	// massive slice (larger than MaxInt32)
 	err = Unmarshal(EncUint64(1<<32), new([]byte))
-	if err == nil || err.Error() != "could not decode type []uint8: slice is too large" {
+	if err == nil || err.Error() != "could not decode type []uint8: encoded slice is too large" {
 		t.Error("expected large slice error, got", err)
 	}
 
 	// many small slices (total larger than maxDecodeLen)
-	bigSlice := strings.Split(strings.Repeat("0123456789abcdefghijklmnopqrstuvwxyz", (maxSliceLen/16)-1), "0")
+	bigSlice := strings.Split(strings.Repeat("0123456789abcdefghijklmnopqrstuvwxyz", (MaxSliceSize/16)-1), "0")
 	err = Unmarshal(Marshal(bigSlice), new([]string))
-	if err == nil || err.Error() != "could not decode type []string: encoded type exceeds size limit" {
+	if err == nil || err.Error() != "could not decode type []string: encoded object exceeds size limit" {
 		t.Error("expected size limit error, got", err)
 	}
 
@@ -346,7 +333,7 @@ func TestUnmarshalAll(t *testing.T) {
 func TestReadWriteFile(t *testing.T) {
 	// standard
 	os.MkdirAll(build.TempDir("encoding"), 0777)
-	path := build.TempDir("encoding", "TestReadWriteFile")
+	path := build.TempDir("encoding", t.Name())
 	err := WriteFile(path, testStructs[3])
 	if err != nil {
 		t.Fatal(err)
