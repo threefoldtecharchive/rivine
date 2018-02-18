@@ -5,10 +5,6 @@ set -e
 #  + add validation...
 #  + integrate gitian (https://gitian.org/)?
 
-# TODO
-# + Use git describe as default option? (tag or commit or both?)
-# + inject the version + commit into build/version.go
-
 # version is supplied as argument
 package="github.com/rivine/rivine"
 full_version=$(git describe | cut -d '-' -f 1,3)

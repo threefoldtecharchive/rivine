@@ -7,6 +7,7 @@ all: install
 run = Test
 pkgs = ./build ./modules/gateway ./rivined ./rivinec
 testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./persist ./rivinec ./rivined ./sync ./types
+version = $(shell git describe | cut -d '-' -f 1)
 
 # fmt calls go fmt on all packages.
 fmt:
@@ -33,7 +34,14 @@ release-std:
 # for all windows, linux and mac, 64-bit only,
 # using the standard Golang toolchain.
 xc:
-	./release.sh
+	docker build -t rivinebuilder -f DockerBuilder .
+	docker run --rm -v $(shell pwd):/go/src/github.com/rivine/rivine rivinebuilder
+
+# Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
+release-images: get_hub_jwt xc
+	docker build -t rivine/rivine:$(version) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64 .
+	docker push rivine/rivine:$(version)
+	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(version)" "https://hub.gig.tech/api/flist/me/docker"
 
 test:
 	go test -short -tags='debug testing' -timeout=5s $(testpkgs) -run=$(run)
@@ -82,5 +90,14 @@ update_dep:
 update_deps:
 	dep ensure -v
 	dep ensure -update -v
+
+get_hub_jwt: check-HUB_APP_ID check-HUB_APP_SECRET
+	$(eval HUB_JWT = $(shell curl -X POST "https://itsyou.online/v1/oauth/access_token?response_type=id_token&grant_type=client_credentials&client_id=$(HUB_APP_ID)&client_secret=$(HUB_APP_SECRET)&scope=user:memberof:rivine"))
+
+check-%:
+	@ if [ "${${*}}" = "" ]; then \
+		echo "Required env var $* not present"; \
+		exit 1; \
+	fi
 
 .PHONY: all fmt install release release-std test test-v test-long cover cover-integration cover-unit ineffassign ensure_deps add_dep update_dep update_deps
