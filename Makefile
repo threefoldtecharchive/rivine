@@ -38,7 +38,7 @@ xc:
 	docker run --rm -v $(shell pwd):/go/src/github.com/rivine/rivine rivinebuilder
 
 # Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
-release-images: make_hub_jwt xc
+release-images: get_hub_jwt xc
 	docker build -t rivine/rivine:$(version) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64 .
 	docker push rivine/rivine:$(version)
 	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(version)" "https://hub.gig.tech/api/flist/me/docker"
@@ -96,7 +96,7 @@ get_hub_jwt: check-HUB_APP_ID check-HUB_APP_SECRET
 
 check-%:
 	@ if [ "${${*}}" = "" ]; then \
-		echo "Env var $* not present"; \
+		echo "Required env var $* not present"; \
 		exit 1; \
 	fi
 
