@@ -18,7 +18,7 @@ type (
 var (
 	// stdKeyGen is a signature generator that can be used to generate random
 	// and deterministic keys for signing objects.
-	stdKeyGen sigKeyGen = sigKeyGen{entropySource: rand.Reader, keyDeriver: &stdKeyDeriver{}}
+	stdKeyGen = sigKeyGen{entropySource: rand.Reader, keyDeriver: &stdKeyDeriver{}}
 )
 
 // sigKeyGen contains a set of dependencies that are used to build out the core

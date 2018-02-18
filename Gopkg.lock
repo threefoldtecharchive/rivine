@@ -46,11 +46,6 @@
   version = "v0.1.0"
 
 [[projects]]
-  name = "github.com/dchest/blake2b"
-  packages = ["."]
-  revision = "3c8c640cd7bea3ca78209d812b5854442ab92fed"
-
-[[projects]]
   name = "github.com/huin/goupnp"
   packages = [
     ".",
@@ -115,6 +110,8 @@
   name = "golang.org/x/crypto"
   packages = [
     "blake2b",
+    "ed25519",
+    "ed25519/internal/edwards25519",
     "twofish"
   ]
   revision = "5a033cc77e57eca05bdb50522851d29e03569cbe"
@@ -157,6 +154,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "70deae52d62e978b00d17d1ab6b6df8278a61d6a55a0f746cc03d3f512d91c20"
+  inputs-digest = "9ca5ad0d425708fad60fec747e8f27a03c63714a9d182ac810930fc3d714a99b"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -15,14 +15,16 @@ import (
 
 	"github.com/rivine/rivine/encoding"
 
-	"github.com/dchest/blake2b"
+	"golang.org/x/crypto/blake2b"
 )
 
 const (
+	// HashSize is the length of a Hash in bytes.
 	HashSize = 32
 )
 
 type (
+	// Hash is a BLAKE2b 256-bit digest.
 	Hash [HashSize]byte
 
 	// HashSlice is used for sorting
@@ -30,18 +32,27 @@ type (
 )
 
 var (
+	// ErrHashWrongLen is the error when encoded value has the wrong
+	// length to be a hash.
 	ErrHashWrongLen = errors.New("encoded value has the wrong length to be a hash")
 )
 
 // NewHash returns a blake2b 256bit hasher.
 func NewHash() hash.Hash {
-	return blake2b.New256()
+	h, _ := blake2b.New256(nil) // cannot fail with nil argument
+	return h
 }
 
 // HashAll takes a set of objects as input, encodes them all using the encoding
 // package, and then hashes the result.
-func HashAll(objs ...interface{}) Hash {
-	return HashBytes(encoding.MarshalAll(objs...))
+func HashAll(objs ...interface{}) (hash Hash) {
+	h := NewHash()
+	enc := encoding.NewEncoder(h)
+	for _, obj := range objs {
+		enc.Encode(obj)
+	}
+	h.Sum(hash[:0])
+	return
 }
 
 // HashBytes takes a byte slice and returns the result.
@@ -51,8 +62,11 @@ func HashBytes(data []byte) Hash {
 
 // HashObject takes an object as input, encodes it using the encoding package,
 // and then hashes the result.
-func HashObject(obj interface{}) Hash {
-	return HashBytes(encoding.Marshal(obj))
+func HashObject(obj interface{}) (hash Hash) {
+	h := NewHash()
+	encoding.NewEncoder(h).Encode(obj)
+	h.Sum(hash[:0])
+	return
 }
 
 // These functions implement sort.Interface, allowing hashes to be sorted.
@@ -69,7 +83,7 @@ func (h *Hash) LoadString(s string) error {
 	}
 	hBytes, err := hex.DecodeString(s)
 	if err != nil {
-		return errors.New("could not unmarshal crypto.Hash: " + err.Error())
+		return errors.New("could not unmarshal hash: " + err.Error())
 	}
 	copy(h[:], hBytes)
 	return nil
@@ -96,7 +110,7 @@ func (h *Hash) UnmarshalJSON(b []byte) error {
 	// b[1 : len(b)-1] cuts off the leading and trailing `"` in the JSON string.
 	hBytes, err := hex.DecodeString(string(b[1 : len(b)-1]))
 	if err != nil {
-		return errors.New("could not unmarshal crypto.Hash: " + err.Error())
+		return errors.New("could not unmarshal hash: " + err.Error())
 	}
 	copy(h[:], hBytes)
 	return nil
