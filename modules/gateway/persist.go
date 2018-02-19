@@ -33,7 +33,7 @@ func (g *Gateway) persistData() (nodes []modules.NetAddress) {
 // load loads the Gateway's persistent data from disk.
 func (g *Gateway) load() error {
 	var nodes []modules.NetAddress
-	err := persist.LoadFile(persistMetadata, &nodes, filepath.Join(g.persistDir, nodesFile))
+	err := persist.LoadJSON(persistMetadata, &nodes, filepath.Join(g.persistDir, nodesFile))
 	if err != nil {
 		return err
 	}
@@ -48,11 +48,11 @@ func (g *Gateway) load() error {
 
 // save stores the Gateway's persistent data on disk.
 func (g *Gateway) save() error {
-	return persist.SaveFile(persistMetadata, g.persistData(), filepath.Join(g.persistDir, nodesFile))
+	return persist.SaveJSON(persistMetadata, g.persistData(), filepath.Join(g.persistDir, nodesFile))
 }
 
 // saveSync stores the Gateway's persistent data on disk, and then syncs to
 // disk to minimize the possibility of data loss.
 func (g *Gateway) saveSync() error {
-	return persist.SaveFileSync(persistMetadata, g.persistData(), filepath.Join(g.persistDir, nodesFile))
+	return persist.SaveJSON(persistMetadata, g.persistData(), filepath.Join(g.persistDir, nodesFile))
 }

@@ -67,19 +67,19 @@ type WalletPersist struct {
 // overwriting the settings object in memory. loadSettings should only be
 // called at startup.
 func (w *Wallet) loadSettings() error {
-	return persist.LoadFile(settingsMetadata, &w.persist, filepath.Join(w.persistDir, settingsFile))
+	return persist.LoadJSON(settingsMetadata, &w.persist, filepath.Join(w.persistDir, settingsFile))
 }
 
 // saveSettings writes the wallet's settings to the wallet's settings file,
 // replacing the existing file.
 func (w *Wallet) saveSettings() error {
-	return persist.SaveFile(settingsMetadata, w.persist, filepath.Join(w.persistDir, settingsFile))
+	return persist.SaveJSON(settingsMetadata, w.persist, filepath.Join(w.persistDir, settingsFile))
 }
 
 // saveSettingsSync writes the wallet's settings to the wallet's settings file,
 // replacing the existing file, and then syncs to disk.
 func (w *Wallet) saveSettingsSync() error {
-	return persist.SaveFileSync(settingsMetadata, w.persist, filepath.Join(w.persistDir, settingsFile))
+	return persist.SaveJSON(settingsMetadata, w.persist, filepath.Join(w.persistDir, settingsFile))
 }
 
 // initSettings creates the settings object at startup. If a settings file
@@ -129,7 +129,7 @@ func (w *Wallet) initPersist() error {
 
 // createBackup creates a backup file at the desired filepath.
 func (w *Wallet) createBackup(backupFilepath string) error {
-	return persist.SaveFileSync(settingsMetadata, w.persist, backupFilepath)
+	return persist.SaveJSON(settingsMetadata, w.persist, backupFilepath)
 }
 
 // CreateBackup creates a backup file at the desired filepath.
