@@ -5,8 +5,9 @@ all: install
 # pkgs changes which packages the makefile calls operate on. run changes which
 # tests are run during testing.
 run = Test
-pkgs = ./build ./modules/gateway ./rivined ./rivinec
-testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./persist ./rivinec ./rivined ./sync ./types
+pkgs = ./build ./modules/gateway ./cmd/rivined ./cmd/rivinec
+testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types
+
 version = $(shell git describe | cut -d '-' -f 1)
 
 # fmt calls go fmt on all packages.

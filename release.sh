@@ -17,7 +17,7 @@ for os in darwin linux windows; do
 	rm -rf "$folder"
 	mkdir -p "$folder"
 	# compile and sign binaries
-	for pkg in rivinec rivined; do
+	for pkg in cmd/rivinec cmd/rivined; do
 		bin=$pkg
 		if [ "$os" == "windows" ]; then
 			bin=${pkg}.exe
