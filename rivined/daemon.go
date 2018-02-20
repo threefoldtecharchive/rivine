@@ -56,9 +56,6 @@ type RivinedCfg struct {
 	Profile    bool
 	ProfileDir string
 	RivineDir  string
-
-	// DaemonNameis the name of the application for the command line help messages
-	DaemonName string
 }
 
 // DefaultConfig returns the default daemon configuration
@@ -77,8 +74,6 @@ func DefaultConfig() RivinedCfg {
 		Profile:    false,
 		ProfileDir: "profiles",
 		RivineDir:  "",
-
-		DaemonName: "Rivine",
 	}
 }
 
@@ -91,9 +86,9 @@ func verifyAPISecurity(config Config) error {
 		addr := modules.NetAddress(config.Rivined.APIaddr)
 		if !addr.IsLoopback() {
 			if addr.Host() == "" {
-				return fmt.Errorf("a blank host will listen on all interfaces, did you mean localhost:%v?\nyou must pass --disable-api-security to bind %s to a non-localhost address", addr.Port(), config.Rivined.DaemonName)
+				return fmt.Errorf("a blank host will listen on all interfaces, did you mean localhost:%v?\nyou must pass --disable-api-security to bind %s to a non-localhost address", addr.Port(), DaemonName)
 			}
-			return fmt.Errorf("you must pass --disable-api-security to bind %s to a non-localhost address", config.Rivined.DaemonName)
+			return fmt.Errorf("you must pass --disable-api-security to bind %s to a non-localhost address", DaemonName)
 		}
 		return nil
 	}
@@ -173,7 +168,7 @@ func startDaemon(config Config) (err error) {
 	loadStart := time.Now()
 
 	// Create the server and start serving daemon routes immediately.
-	fmt.Printf("(0/%d) Loading "+config.Rivined.DaemonName+"...\n", len(config.Rivined.Modules))
+	fmt.Printf("(0/%d) Loading "+DaemonName+"...\n", len(config.Rivined.Modules))
 	srv, err := NewServer(config.Rivined.APIaddr, config.Rivined.RequiredUserAgent, config.APIPassword)
 	if err != nil {
 		return err
