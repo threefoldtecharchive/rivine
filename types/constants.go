@@ -216,6 +216,12 @@ func init() {
 		GenesisCoinDistribution = append(GenesisCoinDistribution, co)
 	}
 
+	CalculateGenesis()
+}
+
+// CalculateGenesis fills in the genesis block variables which are computed based on
+// variables that have been set earlier
+func CalculateGenesis() {
 	// Create the genesis block.
 	GenesisBlock = Block{
 		Timestamp: GenesisTimestamp,

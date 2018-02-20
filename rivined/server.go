@@ -1,4 +1,4 @@
-package main
+package rivined
 
 import (
 	"archive/zip"

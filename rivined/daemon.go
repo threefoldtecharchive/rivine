@@ -1,4 +1,4 @@
-package main
+package rivined
 
 import (
 	"errors"
@@ -19,31 +19,88 @@ import (
 	"github.com/rivine/rivine/modules/gateway"
 	"github.com/rivine/rivine/modules/transactionpool"
 	"github.com/rivine/rivine/modules/wallet"
-	"github.com/rivine/rivine/profile"
 
 	"github.com/bgentry/speakeasy"
-	"github.com/spf13/cobra"
 )
+
+var (
+	// globalConfig is used by the cobra package to fill out the configuration
+	// variables.
+	globalConfig Config
+)
+
+// The Config struct contains all configurable variables for siad. It is
+// compatible with gcfg.
+type Config struct {
+	// The APIPassword is input by the user after the daemon starts up, if the
+	// --authenticate-api flag is set.
+	APIPassword string
+
+	// The Rivined variables are referenced directly by cobra, and are set
+	// according to the flags.
+	Rivined RivinedCfg
+}
+
+// RivinedCfg holds variables referenced by cobra and set by flags
+type RivinedCfg struct {
+	APIaddr      string
+	RPCaddr      string
+	HostAddr     string
+	AllowAPIBind bool
+
+	Modules           string
+	NoBootstrap       bool
+	RequiredUserAgent string
+	AuthenticateAPI   bool
+
+	Profile    bool
+	ProfileDir string
+	RivineDir  string
+
+	// DaemonNameis the name of the application for the command line help messages
+	DaemonName string
+}
+
+// DefaultConfig returns the default daemon configuration
+func DefaultConfig() RivinedCfg {
+	return RivinedCfg{
+		APIaddr:      "localhost:23110",
+		RPCaddr:      "localhost:23112",
+		HostAddr:     "",
+		AllowAPIBind: false,
+
+		Modules:           "cgtwb",
+		NoBootstrap:       false,
+		RequiredUserAgent: "Rivine-Agent",
+		AuthenticateAPI:   false,
+
+		Profile:    false,
+		ProfileDir: "profiles",
+		RivineDir:  "",
+
+		DaemonName: "Rivine",
+	}
+}
 
 // verifyAPISecurity checks that the security values are consistent with a
 // sane, secure system.
 func verifyAPISecurity(config Config) error {
 	// Make sure that only the loopback address is allowed unless the
 	// --disable-api-security flag has been used.
-	if !config.Siad.AllowAPIBind {
-		addr := modules.NetAddress(config.Siad.APIaddr)
+	if !config.Rivined.AllowAPIBind {
+		addr := modules.NetAddress(config.Rivined.APIaddr)
 		if !addr.IsLoopback() {
 			if addr.Host() == "" {
-				return fmt.Errorf("a blank host will listen on all interfaces, did you mean localhost:%v?\nyou must pass --disable-api-security to bind Siad to a non-localhost address", addr.Port())
+				return fmt.Errorf("a blank host will listen on all interfaces, did you mean localhost:%v?\nyou must pass --disable-api-security to bind %s to a non-localhost address", addr.Port(), config.Rivined.DaemonName)
 			}
-			return errors.New("you must pass --disable-api-security to bind Siad to a non-localhost address")
+			return fmt.Errorf("you must pass --disable-api-security to bind %s to a non-localhost address", config.Rivined.DaemonName)
 		}
 		return nil
 	}
 
 	// If the --disable-api-security flag is used, enforce that
 	// --authenticate-api must also be used.
-	if config.Siad.AllowAPIBind && !config.Siad.AuthenticateAPI {
+	if config.Rivined.AllowAPIBind && !config.Rivined.AuthenticateAPI {
 		return errors.New("cannot use --disable-api-security without setting an api password")
 	}
 	return nil
@@ -79,10 +136,10 @@ func processModules(modules string) (string, error) {
 // incorrect-but-allowed values.
 func processConfig(config Config) (Config, error) {
 	var err1 error
-	config.Siad.APIaddr = processNetAddr(config.Siad.APIaddr)
-	config.Siad.RPCaddr = processNetAddr(config.Siad.RPCaddr)
-	config.Siad.HostAddr = processNetAddr(config.Siad.HostAddr)
-	config.Siad.Modules, err1 = processModules(config.Siad.Modules)
+	config.Rivined.APIaddr = processNetAddr(config.Rivined.APIaddr)
+	config.Rivined.RPCaddr = processNetAddr(config.Rivined.RPCaddr)
+	config.Rivined.HostAddr = processNetAddr(config.Rivined.HostAddr)
+	config.Rivined.Modules, err1 = processModules(config.Rivined.Modules)
 	err2 := verifyAPISecurity(config)
 	err := build.JoinErrors([]error{err1, err2}, ", and ")
 	if err != nil {
@@ -95,7 +152,7 @@ func processConfig(config Config) (Config, error) {
 // siad.
 func startDaemon(config Config) (err error) {
 	// Prompt user for API password.
-	if config.Siad.AuthenticateAPI {
+	if config.Rivined.AuthenticateAPI {
 		config.APIPassword, err = speakeasy.Ask("Enter API password: ")
 		if err != nil {
 			return err
@@ -116,8 +173,8 @@ func startDaemon(config Config) (err error) {
 	loadStart := time.Now()
 
 	// Create the server and start serving daemon routes immediately.
-	fmt.Printf("(0/%d) Loading rivined...\n", len(config.Siad.Modules))
-	srv, err := NewServer(config.Siad.APIaddr, config.Siad.RequiredUserAgent, config.APIPassword)
+	fmt.Printf("(0/%d) Loading "+config.Rivined.DaemonName+"...\n", len(config.Rivined.Modules))
+	srv, err := NewServer(config.Rivined.APIaddr, config.Rivined.RequiredUserAgent, config.APIPassword)
 	if err != nil {
 		return err
 	}
@@ -127,13 +184,13 @@ func startDaemon(config Config) (err error) {
 		servErrs <- srv.Serve()
 	}()
 
-	// Initialize the Sia modules
+	// Initialize the Rivine modules
 	i := 0
 	var g modules.Gateway
-	if strings.Contains(config.Siad.Modules, "g") {
+	if strings.Contains(config.Rivined.Modules, "g") {
 		i++
-		fmt.Printf("(%d/%d) Loading gateway...\n", i, len(config.Siad.Modules))
-		g, err = gateway.New(config.Siad.RPCaddr, !config.Siad.NoBootstrap, filepath.Join(config.Siad.SiaDir, modules.GatewayDir))
+		fmt.Printf("(%d/%d) Loading gateway...\n", i, len(config.Rivined.Modules))
+		g, err = gateway.New(config.Rivined.RPCaddr, !config.Rivined.NoBootstrap, filepath.Join(config.Rivined.RivineDir, modules.GatewayDir))
 		if err != nil {
 			return err
 		}
@@ -147,10 +204,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var cs modules.ConsensusSet
-	if strings.Contains(config.Siad.Modules, "c") {
+	if strings.Contains(config.Rivined.Modules, "c") {
 		i++
-		fmt.Printf("(%d/%d) Loading consensus...\n", i, len(config.Siad.Modules))
-		cs, err = consensus.New(g, !config.Siad.NoBootstrap, filepath.Join(config.Siad.SiaDir, modules.ConsensusDir))
+		fmt.Printf("(%d/%d) Loading consensus...\n", i, len(config.Rivined.Modules))
+		cs, err = consensus.New(g, !config.Rivined.NoBootstrap, filepath.Join(config.Rivined.RivineDir, modules.ConsensusDir))
 		if err != nil {
 			return err
 		}
@@ -164,10 +221,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var e modules.Explorer
-	if strings.Contains(config.Siad.Modules, "e") {
+	if strings.Contains(config.Rivined.Modules, "e") {
 		i++
-		fmt.Printf("(%d/%d) Loading explorer...\n", i, len(config.Siad.Modules))
-		e, err = explorer.New(cs, filepath.Join(config.Siad.SiaDir, modules.ExplorerDir))
+		fmt.Printf("(%d/%d) Loading explorer...\n", i, len(config.Rivined.Modules))
+		e, err = explorer.New(cs, filepath.Join(config.Rivined.RivineDir, modules.ExplorerDir))
 		if err != nil {
 			return err
 		}
@@ -181,10 +238,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var tpool modules.TransactionPool
-	if strings.Contains(config.Siad.Modules, "t") {
+	if strings.Contains(config.Rivined.Modules, "t") {
 		i++
-		fmt.Printf("(%d/%d) Loading transaction pool...\n", i, len(config.Siad.Modules))
-		tpool, err = transactionpool.New(cs, g, filepath.Join(config.Siad.SiaDir, modules.TransactionPoolDir))
+		fmt.Printf("(%d/%d) Loading transaction pool...\n", i, len(config.Rivined.Modules))
+		tpool, err = transactionpool.New(cs, g, filepath.Join(config.Rivined.RivineDir, modules.TransactionPoolDir))
 		if err != nil {
 			return err
 		}
@@ -198,10 +255,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var w modules.Wallet
-	if strings.Contains(config.Siad.Modules, "w") {
+	if strings.Contains(config.Rivined.Modules, "w") {
 		i++
-		fmt.Printf("(%d/%d) Loading wallet...\n", i, len(config.Siad.Modules))
-		w, err = wallet.New(cs, tpool, filepath.Join(config.Siad.SiaDir, modules.WalletDir))
+		fmt.Printf("(%d/%d) Loading wallet...\n", i, len(config.Rivined.Modules))
+		w, err = wallet.New(cs, tpool, filepath.Join(config.Rivined.RivineDir, modules.WalletDir))
 		if err != nil {
 			return err
 		}
@@ -215,10 +272,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var b modules.BlockCreator
-	if strings.Contains(config.Siad.Modules, "b") {
+	if strings.Contains(config.Rivined.Modules, "b") {
 		i++
-		fmt.Printf("(%d/%d) Loading block creator...\n", i, len(config.Siad.Modules))
-		b, err = blockcreator.New(cs, tpool, w, filepath.Join(config.Siad.SiaDir, modules.BlockCreatorDir))
+		fmt.Printf("(%d/%d) Loading block creator...\n", i, len(config.Rivined.Modules))
+		b, err = blockcreator.New(cs, tpool, w, filepath.Join(config.Rivined.RivineDir, modules.BlockCreatorDir))
 		if err != nil {
 			return err
 		}
@@ -233,7 +290,7 @@ func startDaemon(config Config) (err error) {
 
 	// Create the Sia API
 	a := api.New(
-		config.Siad.RequiredUserAgent,
+		config.Rivined.RequiredUserAgent,
 		config.APIPassword,
 		cs,
 		e,
@@ -264,18 +321,4 @@ func startDaemon(config Config) (err error) {
 	}
 
 	return nil
-}
-
-// startDaemonCmd is a passthrough function for startDaemon.
-func startDaemonCmd(cmd *cobra.Command, _ []string) {
-	// Create the profiling directory if profiling is enabled.
-	if globalConfig.Siad.Profile || build.DEBUG {
-		go profile.StartContinuousProfile(globalConfig.Siad.ProfileDir)
-	}
-
-	// Start siad. startDaemon will only return when it is shutting down.
-	err := startDaemon(globalConfig)
-	if err != nil {
-		die(err)
-	}
 }
