@@ -1,4 +1,4 @@
-package main
+package rivinec
 
 import (
 	"testing"
@@ -41,7 +41,7 @@ func TestEstimatedHeightAt(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		h := estimatedHeightAt(tt.t)
+		h := EstimatedHeightAt(tt.t)
 		if h != tt.expectedHeight {
 			t.Errorf("expected an estimated height of %v, but got %v", tt.expectedHeight, h)
 		}
