@@ -3,7 +3,7 @@ package consensus
 import (
 	"github.com/rivine/rivine/modules"
 
-	"github.com/NebulousLabs/bolt"
+	"github.com/coreos/bbolt"
 )
 
 // computeConsensusChange computes the consensus change from the change entry
