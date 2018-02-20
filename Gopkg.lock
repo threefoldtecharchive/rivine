@@ -2,12 +2,6 @@
 
 
 [[projects]]
-  name = "github.com/NebulousLabs/bolt"
-  packages = ["."]
-  revision = "aa66506030b376f848667d84d2596faa8a7099ea"
-  version = "v1.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/NebulousLabs/demotemutex"
   packages = ["."]
@@ -44,6 +38,12 @@
   packages = ["."]
   revision = "4aabc24848ce5fd31929f7d1e4ea74d3709c14cd"
   version = "v0.1.0"
+
+[[projects]]
+  name = "github.com/coreos/bbolt"
+  packages = ["."]
+  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/huin/goupnp"
@@ -126,6 +126,12 @@
   revision = "4d38db76854b199960801a1734443fd02870d7e1"
 
 [[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
+
+[[projects]]
   name = "golang.org/x/text"
   packages = [
     "encoding",
@@ -154,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9ca5ad0d425708fad60fec747e8f27a03c63714a9d182ac810930fc3d714a99b"
+  inputs-digest = "836c1276a12c9570bb1f4521ee7e7d62aaf741dfed83354125055a6c139c6ac6"
   solver-name = "gps-cdcl"
   solver-version = 1

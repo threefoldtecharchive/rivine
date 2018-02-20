@@ -10,7 +10,7 @@ import (
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/types"
 
-	"github.com/NebulousLabs/bolt"
+	"github.com/coreos/bbolt"
 )
 
 // manageErr handles an error detected by the consistency checks.

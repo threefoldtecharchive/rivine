@@ -6,7 +6,7 @@ import (
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/modules"
 
-	"github.com/NebulousLabs/bolt"
+	"github.com/coreos/bbolt"
 )
 
 var (

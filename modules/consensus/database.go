@@ -12,7 +12,7 @@ import (
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/persist"
 
-	"github.com/NebulousLabs/bolt"
+	"github.com/coreos/bbolt"
 )
 
 var (

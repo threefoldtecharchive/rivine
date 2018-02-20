@@ -4,7 +4,7 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
-	"github.com/NebulousLabs/bolt"
+	"github.com/coreos/bbolt"
 )
 
 // purge removes all transactions from the transaction pool.
