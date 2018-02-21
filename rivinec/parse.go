@@ -1,4 +1,4 @@
-package main
+package rivinec
 
 import (
 	"errors"
@@ -11,13 +11,13 @@ import (
 
 var errUnableToParseSize = errors.New("unable to parse size")
 
-// periodUnits turns a period in terms of blocks to a number of weeks.
-func periodUnits(blocks types.BlockHeight) string {
+// PeriodUnits turns a period in terms of blocks to a number of weeks.
+func PeriodUnits(blocks types.BlockHeight) string {
 	return fmt.Sprint(blocks / 1008) // 1008 blocks per week
 }
 
-// parsePeriod converts a number of weeks to a number of blocks.
-func parsePeriod(period string) (string, error) {
+// ParsePeriod converts a number of weeks to a number of blocks.
+func ParsePeriod(period string) (string, error) {
 	var weeks float64
 	_, err := fmt.Sscan(period, &weeks)
 	if err != nil {
@@ -27,10 +27,10 @@ func parsePeriod(period string) (string, error) {
 	return fmt.Sprint(blocks), nil
 }
 
-// currencyUnits converts a types.Currency to a string with human-readable
+// CurrencyUnits converts a types.Currency to a string with human-readable
 // units. The unit used will be the largest unit that results in a value
 // greater than 1. The value is rounded to 4 significant digits.
-func currencyUnits(c types.Currency) string {
+func CurrencyUnits(c types.Currency) string {
 	pico := types.OneCoin.Div64(1e12)
 	if c.Cmp(pico) < 0 {
 		return c.String() + " H"
@@ -56,8 +56,8 @@ func currencyUnits(c types.Currency) string {
 	return fmt.Sprintf("%.4g %s", res, unit)
 }
 
-// parseCurrency converts a siacoin amount to base units.
-func parseCurrency(amount string) (string, error) {
+// ParseCurrency converts a siacoin amount to base units.
+func ParseCurrency(amount string) (string, error) {
 	units := []string{"p", "n", "u", "m", "C", "K", "M", "G", "T"}
 	for i, unit := range units {
 		if strings.HasSuffix(amount, unit) {
@@ -85,8 +85,8 @@ func parseCurrency(amount string) (string, error) {
 	return "", errors.New("amount is missing units; run 'wallet --help' for a list of units")
 }
 
-// yesNo returns "Yes" if b is true, and "No" if b is false.
-func yesNo(b bool) string {
+// YesNo returns "Yes" if b is true, and "No" if b is false.
+func YesNo(b bool) string {
 	if b {
 		return "Yes"
 	}

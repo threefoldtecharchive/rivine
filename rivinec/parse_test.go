@@ -1,4 +1,4 @@
-package main
+package rivinec
 
 import (
 	"math/big"
@@ -31,7 +31,7 @@ func TestCurrencyUnits(t *testing.T) {
 	}
 	for _, test := range tests {
 		i, _ := new(big.Int).SetString(test.in, 10)
-		out := currencyUnits(types.NewCurrency(i))
+		out := CurrencyUnits(types.NewCurrency(i))
 		if out != test.out {
 			t.Errorf("currencyUnits(%v): expected %v, got %v", test.in, test.out, out)
 		}
