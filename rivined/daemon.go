@@ -62,7 +62,7 @@ type RivinedCfg struct {
 func DefaultConfig() RivinedCfg {
 	return RivinedCfg{
 		APIaddr:      "localhost:23110",
-		RPCaddr:      "localhost:23112",
+		RPCaddr:      ":23112",
 		HostAddr:     "",
 		AllowAPIBind: false,
 
