@@ -32,17 +32,8 @@ var (
 // The Config struct contains all configurable variables for siad. It is
 // compatible with gcfg.
 type Config struct {
-	// The APIPassword is input by the user after the daemon starts up, if the
-	// --authenticate-api flag is set.
 	APIPassword string
 
-	// The Rivined variables are referenced directly by cobra, and are set
-	// according to the flags.
-	Rivined RivinedCfg
-}
-
-// RivinedCfg holds variables referenced by cobra and set by flags
-type RivinedCfg struct {
 	APIaddr      string
 	RPCaddr      string
 	HostAddr     string
@@ -59,8 +50,10 @@ type RivinedCfg struct {
 }
 
 // DefaultConfig returns the default daemon configuration
-func DefaultConfig() RivinedCfg {
-	return RivinedCfg{
+func DefaultConfig() Config {
+	return Config{
+		APIPassword: "",
+
 		APIaddr:      "localhost:23110",
 		RPCaddr:      ":23112",
 		HostAddr:     "",
@@ -82,8 +75,8 @@ func DefaultConfig() RivinedCfg {
 func verifyAPISecurity(config Config) error {
 	// Make sure that only the loopback address is allowed unless the
 	// --disable-api-security flag has been used.
-	if !config.Rivined.AllowAPIBind {
-		addr := modules.NetAddress(config.Rivined.APIaddr)
+	if !config.AllowAPIBind {
+		addr := modules.NetAddress(config.APIaddr)
 		if !addr.IsLoopback() {
 			if addr.Host() == "" {
 				return fmt.Errorf("a blank host will listen on all interfaces, did you mean localhost:%v?\nyou must pass --disable-api-security to bind %s to a non-localhost address", addr.Port(), DaemonName)
@@ -95,7 +88,7 @@ func verifyAPISecurity(config Config) error {
 
 	// If the --disable-api-security flag is used, enforce that
 	// --authenticate-api must also be used.
-	if config.Rivined.AllowAPIBind && !config.Rivined.AuthenticateAPI {
+	if config.AllowAPIBind && !config.AuthenticateAPI {
 		return errors.New("cannot use --disable-api-security without setting an api password")
 	}
 	return nil
@@ -131,10 +124,10 @@ func processModules(modules string) (string, error) {
 // incorrect-but-allowed values.
 func processConfig(config Config) (Config, error) {
 	var err1 error
-	config.Rivined.APIaddr = processNetAddr(config.Rivined.APIaddr)
-	config.Rivined.RPCaddr = processNetAddr(config.Rivined.RPCaddr)
-	config.Rivined.HostAddr = processNetAddr(config.Rivined.HostAddr)
-	config.Rivined.Modules, err1 = processModules(config.Rivined.Modules)
+	config.APIaddr = processNetAddr(config.APIaddr)
+	config.RPCaddr = processNetAddr(config.RPCaddr)
+	config.HostAddr = processNetAddr(config.HostAddr)
+	config.Modules, err1 = processModules(config.Modules)
 	err2 := verifyAPISecurity(config)
 	err := build.JoinErrors([]error{err1, err2}, ", and ")
 	if err != nil {
@@ -143,21 +136,58 @@ func processConfig(config Config) (Config, error) {
 	return config, nil
 }
 
-// startDaemon uses the config parameters to initialize Sia modules and start
-// siad.
-func startDaemon(config Config) (err error) {
-	// Prompt user for API password.
-	if config.Rivined.AuthenticateAPI {
-		config.APIPassword, err = speakeasy.Ask("Enter API password: ")
-		if err != nil {
-			return err
+// StartDaemon uses the config parameters to initialize Rivine modules and start
+// rivined. Required parameters are, in order of appearance:
+// 	- authenticateAPI (bool): indicates if the http api is password protected
+// 	- apiPassword (string): the password required to use the http api, if `authenticateAPI` is true. If `authenticateAPI` is true, and the password is the empty string, a password will be prompted when the daemon starts
+// 	- allowAPIBind (bool): indicates that the http API can listen on a non localhost address. If this is true, then the authenticateAPI parameter must also be true
+// 	- apiAddr (string): the host:port for the http api to listen on. If allowAPIBind is false, only localhost hosts are allowed
+// 	- rpcAddr (string): the host:port to listen for rpc calls
+// 	- moduleString (string): the modules to enable, this string must contain one letter for each module (order does not matter). All required modules must be specified, if a required (parent) module is not present, an error is returned
+// 	 	Allowed letters: g(gateway), c(consensus), w(wallet), t(transactionpool), b(blockcreator), e(explorer)
+// 	- noBootstrap (bool): indicates that the daemon should not try to connect to the bootstrap nodes
+// 	- requiredUserAgent (string): the user agent required to connect to the http api.
+// 	- profile (bool): indicates if profile info should be collected while the daemon is running
+// 	- profileDir (string): name of the directory to store the profile info, should this be collected
+// 	- rivineDir (string): the parent directory where the individual module directories will be created
+func StartDaemon(authenticateAPI bool, apiPassword string, allowAPIBind bool, apiAddr string, rpcAddr string, moduleString string, noBootstrap bool, requiredUserAgent string, profile bool, profileDir string, rivineDir string) (err error) {
+	// Check if we require an api password
+	if authenticateAPI {
+		// if its not set, ask one now
+		if apiPassword == "" {
+			// Prompt user for API password.
+			apiPassword, err = speakeasy.Ask("Enter API password: ")
+			if err != nil {
+				return err
+			}
 		}
-		if config.APIPassword == "" {
+		if apiPassword == "" {
 			return errors.New("password cannot be blank")
 		}
+	} else {
+		// If authenticateAPI is not set, explicitly set the password to the empty string.
+		// This way the api server maintains consistency with the authenticateAPI var, even if apiPassword is set (possibly by mistake)
+		apiPassword = ""
 	}
 
-	// Process the config variables after they are parsed by cobra.
+	// create a config to validate the variables
+	config := Config{
+		APIPassword:       apiPassword,
+		APIaddr:           apiAddr,
+		RPCaddr:           rpcAddr,
+		HostAddr:          "",
+		AllowAPIBind:      allowAPIBind,
+		Modules:           moduleString,
+		NoBootstrap:       noBootstrap,
+		RequiredUserAgent: requiredUserAgent,
+		AuthenticateAPI:   authenticateAPI,
+		Profile:           profile,
+		ProfileDir:        profileDir,
+		RivineDir:         rivineDir,
+	}
+
+	// Process the config variables
+	// If there is an error or inconsistency in the config, we return, so there is no need to correct any values
 	config, err = processConfig(config)
 	if err != nil {
 		return err
@@ -168,8 +198,8 @@ func startDaemon(config Config) (err error) {
 	loadStart := time.Now()
 
 	// Create the server and start serving daemon routes immediately.
-	fmt.Printf("(0/%d) Loading "+DaemonName+"...\n", len(config.Rivined.Modules))
-	srv, err := NewServer(config.Rivined.APIaddr, config.Rivined.RequiredUserAgent, config.APIPassword)
+	fmt.Printf("(0/%d) Loading "+DaemonName+"...\n", len(moduleString))
+	srv, err := NewServer(apiAddr, requiredUserAgent, apiPassword)
 	if err != nil {
 		return err
 	}
@@ -182,10 +212,10 @@ func startDaemon(config Config) (err error) {
 	// Initialize the Rivine modules
 	i := 0
 	var g modules.Gateway
-	if strings.Contains(config.Rivined.Modules, "g") {
+	if strings.Contains(moduleString, "g") {
 		i++
-		fmt.Printf("(%d/%d) Loading gateway...\n", i, len(config.Rivined.Modules))
-		g, err = gateway.New(config.Rivined.RPCaddr, !config.Rivined.NoBootstrap, filepath.Join(config.Rivined.RivineDir, modules.GatewayDir))
+		fmt.Printf("(%d/%d) Loading gateway...\n", i, len(moduleString))
+		g, err = gateway.New(rpcAddr, !noBootstrap, filepath.Join(rivineDir, modules.GatewayDir))
 		if err != nil {
 			return err
 		}
@@ -199,10 +229,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var cs modules.ConsensusSet
-	if strings.Contains(config.Rivined.Modules, "c") {
+	if strings.Contains(moduleString, "c") {
 		i++
-		fmt.Printf("(%d/%d) Loading consensus...\n", i, len(config.Rivined.Modules))
-		cs, err = consensus.New(g, !config.Rivined.NoBootstrap, filepath.Join(config.Rivined.RivineDir, modules.ConsensusDir))
+		fmt.Printf("(%d/%d) Loading consensus...\n", i, len(moduleString))
+		cs, err = consensus.New(g, !noBootstrap, filepath.Join(rivineDir, modules.ConsensusDir))
 		if err != nil {
 			return err
 		}
@@ -216,10 +246,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var e modules.Explorer
-	if strings.Contains(config.Rivined.Modules, "e") {
+	if strings.Contains(moduleString, "e") {
 		i++
-		fmt.Printf("(%d/%d) Loading explorer...\n", i, len(config.Rivined.Modules))
-		e, err = explorer.New(cs, filepath.Join(config.Rivined.RivineDir, modules.ExplorerDir))
+		fmt.Printf("(%d/%d) Loading explorer...\n", i, len(moduleString))
+		e, err = explorer.New(cs, filepath.Join(rivineDir, modules.ExplorerDir))
 		if err != nil {
 			return err
 		}
@@ -233,10 +263,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var tpool modules.TransactionPool
-	if strings.Contains(config.Rivined.Modules, "t") {
+	if strings.Contains(moduleString, "t") {
 		i++
-		fmt.Printf("(%d/%d) Loading transaction pool...\n", i, len(config.Rivined.Modules))
-		tpool, err = transactionpool.New(cs, g, filepath.Join(config.Rivined.RivineDir, modules.TransactionPoolDir))
+		fmt.Printf("(%d/%d) Loading transaction pool...\n", i, len(moduleString))
+		tpool, err = transactionpool.New(cs, g, filepath.Join(rivineDir, modules.TransactionPoolDir))
 		if err != nil {
 			return err
 		}
@@ -250,10 +280,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var w modules.Wallet
-	if strings.Contains(config.Rivined.Modules, "w") {
+	if strings.Contains(moduleString, "w") {
 		i++
-		fmt.Printf("(%d/%d) Loading wallet...\n", i, len(config.Rivined.Modules))
-		w, err = wallet.New(cs, tpool, filepath.Join(config.Rivined.RivineDir, modules.WalletDir))
+		fmt.Printf("(%d/%d) Loading wallet...\n", i, len(moduleString))
+		w, err = wallet.New(cs, tpool, filepath.Join(rivineDir, modules.WalletDir))
 		if err != nil {
 			return err
 		}
@@ -267,10 +297,10 @@ func startDaemon(config Config) (err error) {
 
 	}
 	var b modules.BlockCreator
-	if strings.Contains(config.Rivined.Modules, "b") {
+	if strings.Contains(moduleString, "b") {
 		i++
-		fmt.Printf("(%d/%d) Loading block creator...\n", i, len(config.Rivined.Modules))
-		b, err = blockcreator.New(cs, tpool, w, filepath.Join(config.Rivined.RivineDir, modules.BlockCreatorDir))
+		fmt.Printf("(%d/%d) Loading block creator...\n", i, len(moduleString))
+		b, err = blockcreator.New(cs, tpool, w, filepath.Join(rivineDir, modules.BlockCreatorDir))
 		if err != nil {
 			return err
 		}
@@ -285,8 +315,8 @@ func startDaemon(config Config) (err error) {
 
 	// Create the Sia API
 	a := api.New(
-		config.Rivined.RequiredUserAgent,
-		config.APIPassword,
+		requiredUserAgent,
+		apiPassword,
 		cs,
 		e,
 		g,

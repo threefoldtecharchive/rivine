@@ -80,27 +80,27 @@ func TestUnitProcessConfig(t *testing.T) {
 	}
 	var config Config
 	for i := range testVals.inputs {
-		config.Rivined.APIaddr = testVals.inputs[i][0]
-		config.Rivined.RPCaddr = testVals.inputs[i][1]
-		config.Rivined.HostAddr = testVals.inputs[i][2]
+		config.APIaddr = testVals.inputs[i][0]
+		config.RPCaddr = testVals.inputs[i][1]
+		config.HostAddr = testVals.inputs[i][2]
 		config, err := processConfig(config)
 		if err != nil {
 			t.Error("processConfig failed with error:", err)
 		}
-		if config.Rivined.APIaddr != testVals.expectedOutputs[i][0] {
+		if config.APIaddr != testVals.expectedOutputs[i][0] {
 			t.Error("processing failure at check", i, 0)
 		}
-		if config.Rivined.RPCaddr != testVals.expectedOutputs[i][1] {
+		if config.RPCaddr != testVals.expectedOutputs[i][1] {
 			t.Error("processing failure at check", i, 1)
 		}
-		if config.Rivined.HostAddr != testVals.expectedOutputs[i][2] {
+		if config.HostAddr != testVals.expectedOutputs[i][2] {
 			t.Error("processing failure at check", i, 2)
 		}
 	}
 
 	// Test invalid configs.
 	invalidModule := "z"
-	config.Rivined.Modules = invalidModule
+	config.Modules = invalidModule
 	_, err := processConfig(config)
 	if err == nil {
 		t.Error("processModules didn't error on invalid module:", invalidModule)
@@ -114,7 +114,7 @@ func TestUnitProcessConfig(t *testing.T) {
 func TestVerifyAPISecurity(t *testing.T) {
 	// Check that the loopback address is accepted when security is enabled.
 	var securityOnLoopback Config
-	securityOnLoopback.Rivined.APIaddr = "127.0.0.1:9980"
+	securityOnLoopback.APIaddr = "127.0.0.1:9980"
 	err := verifyAPISecurity(securityOnLoopback)
 	if err != nil {
 		t.Error("loopback + securityOn was rejected")
@@ -122,7 +122,7 @@ func TestVerifyAPISecurity(t *testing.T) {
 
 	// Check that the blank address is rejected when security is enabled.
 	var securityOnBlank Config
-	securityOnBlank.Rivined.APIaddr = ":9980"
+	securityOnBlank.APIaddr = ":9980"
 	err = verifyAPISecurity(securityOnBlank)
 	if err == nil {
 		t.Error("blank + securityOn was accepted")
@@ -130,7 +130,7 @@ func TestVerifyAPISecurity(t *testing.T) {
 
 	// Check that a public hostname is rejected when security is enabled.
 	var securityOnPublic Config
-	securityOnPublic.Rivined.APIaddr = "sia.tech:9980"
+	securityOnPublic.APIaddr = "sia.tech:9980"
 	err = verifyAPISecurity(securityOnPublic)
 	if err == nil {
 		t.Error("public + securityOn was accepted")
@@ -139,8 +139,8 @@ func TestVerifyAPISecurity(t *testing.T) {
 	// Check that a public hostname is rejected when security is disabled and
 	// there is no api password.
 	var securityOffPublic Config
-	securityOffPublic.Rivined.APIaddr = "sia.tech:9980"
-	securityOffPublic.Rivined.AllowAPIBind = true
+	securityOffPublic.APIaddr = "sia.tech:9980"
+	securityOffPublic.AllowAPIBind = true
 	err = verifyAPISecurity(securityOffPublic)
 	if err == nil {
 		t.Error("public + securityOff was accepted without authentication")
@@ -149,9 +149,9 @@ func TestVerifyAPISecurity(t *testing.T) {
 	// Check that a public hostname is accepted when security is disabled and
 	// there is an api password.
 	var securityOffPublicAuthenticated Config
-	securityOffPublicAuthenticated.Rivined.APIaddr = "sia.tech:9980"
-	securityOffPublicAuthenticated.Rivined.AllowAPIBind = true
-	securityOffPublicAuthenticated.Rivined.AuthenticateAPI = true
+	securityOffPublicAuthenticated.APIaddr = "sia.tech:9980"
+	securityOffPublicAuthenticated.AllowAPIBind = true
+	securityOffPublicAuthenticated.AuthenticateAPI = true
 	err = verifyAPISecurity(securityOffPublicAuthenticated)
 	if err != nil {
 		t.Error("public + securityOff with authentication was rejected:", err)
