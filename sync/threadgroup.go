@@ -50,13 +50,12 @@ func (tg *ThreadGroup) isStopped() bool {
 
 // Add increments the thread group counter.
 func (tg *ThreadGroup) Add() error {
-	tg.bmu.Lock()
-	defer tg.bmu.Unlock()
-
 	if tg.isStopped() {
 		return ErrStopped
 	}
+	tg.bmu.Lock()
 	tg.wg.Add(1)
+	tg.bmu.Unlock()
 	return nil
 }
 
@@ -70,14 +69,14 @@ func (tg *ThreadGroup) Add() error {
 // resources to be positioned next to each other. The purpose is similar to
 // `defer`, except for resources that outlive the function which creates them.
 func (tg *ThreadGroup) AfterStop(fn func()) {
-	tg.mu.Lock()
-	defer tg.mu.Unlock()
-
 	if tg.isStopped() {
 		fn()
 		return
 	}
+	tg.mu.Lock()
 	tg.afterStopFns = append(tg.afterStopFns, fn)
+	tg.mu.Unlock()
+
 }
 
 // OnStop ensures that a function will be called after Stop() has been called,
@@ -87,14 +86,15 @@ func (tg *ThreadGroup) AfterStop(fn func()) {
 // added, similar to defer. If Stop() has already been called, the input
 // function will be called immediately.
 func (tg *ThreadGroup) OnStop(fn func()) {
-	tg.mu.Lock()
-	defer tg.mu.Unlock()
-
 	if tg.isStopped() {
 		fn()
 		return
 	}
+
+	tg.mu.Lock()
 	tg.onStopFns = append(tg.onStopFns, fn)
+	tg.mu.Unlock()
+
 }
 
 // Done decrements the thread group counter.
@@ -106,13 +106,14 @@ func (tg *ThreadGroup) Done() {
 // called 'tg.Done'. This in effect 'flushes' the module, letting it complete
 // any tasks that are open before taking on new ones.
 func (tg *ThreadGroup) Flush() error {
-	tg.bmu.Lock()
-	defer tg.bmu.Unlock()
-
 	if tg.isStopped() {
 		return ErrStopped
 	}
+
+	tg.bmu.Lock()
 	tg.wg.Wait()
+	tg.bmu.Unlock()
+
 	return nil
 }
 
@@ -122,12 +123,13 @@ func (tg *ThreadGroup) Flush() error {
 // order. After Stop is called, most actions will return ErrStopped.
 func (tg *ThreadGroup) Stop() error {
 	// Establish that Stop has been called.
-	tg.bmu.Lock()
-	defer tg.bmu.Unlock()
-
 	if tg.isStopped() {
 		return ErrStopped
 	}
+
+	tg.bmu.Lock()
+	defer tg.bmu.Unlock()
+
 	close(tg.stopChan)
 
 	tg.mu.Lock()
