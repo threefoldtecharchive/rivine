@@ -37,7 +37,7 @@ type updateInfo struct {
 // Stopcmd is the handler for the command `siac stop`.
 // Stops the daemon.
 func Stopcmd() {
-	err := Get("/daemon/stop")
+	err := Post("/daemon/stop", "")
 	if err != nil {
 		Die("Could not stop daemon:", err)
 	}

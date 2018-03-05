@@ -294,7 +294,7 @@ func (srv *Server) daemonHandler(password string) http.Handler {
 	router.GET("/daemon/version", srv.daemonVersionHandler)
 	router.GET("/daemon/update", srv.daemonUpdateHandlerGET)
 	router.POST("/daemon/update", srv.daemonUpdateHandlerPOST)
-	router.GET("/daemon/stop", api.RequirePassword(srv.daemonStopHandler, password))
+	router.POST("/daemon/stop", api.RequirePassword(srv.daemonStopHandler, password))
 
 	return router
 }

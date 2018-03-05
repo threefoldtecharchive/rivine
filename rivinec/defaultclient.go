@@ -53,8 +53,8 @@ func DecodeError(resp *http.Response) error {
 }
 
 // ApiGet wraps a GET request with a status code check, such that if the GET does
-// not return 2xx, the error will be read and returned. The response body is
-// not closed.
+// not return 2xx, the error will be read and returned. When no error is returned,
+// the response's body isn't closed, otherwise it is.
 func ApiGet(call string) (*http.Response, error) {
 	if host, port, _ := net.SplitHostPort(addr); host == "" {
 		addr = net.JoinHostPort("localhost", port)
@@ -120,8 +120,8 @@ func Get(call string) error {
 }
 
 // ApiPost wraps a POST request with a status code check, such that if the POST
-// does not return 2xx, the error will be read and returned. The response body
-// is not closed.
+// does not return 2xx, the error will be read and returned. When no error is returned,
+// the response's body isn't closed, otherwise it is.
 func ApiPost(call, vals string) (*http.Response, error) {
 	if host, port, _ := net.SplitHostPort(addr); host == "" {
 		addr = net.JoinHostPort("localhost", port)

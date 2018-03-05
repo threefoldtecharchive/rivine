@@ -21,8 +21,8 @@ Index
 | Route                                     | HTTP verb |
 | ----------------------------------------- | --------- |
 | [/daemon/constants](#daemonconstants-get) | GET       |
-| [/daemon/stop](#daemonstop-get)           | GET       |
 | [/daemon/version](#daemonversion-get)     | GET       |
+| [/daemon/stop](#daemonstop-post)          | POST      |
 
 #### /daemon/constants [GET]
 
@@ -78,14 +78,6 @@ returns the set of constants in use.
 }
 ```
 
-#### /daemon/stop [GET]
-
-cleanly shuts down the daemon. May take a few seconds.
-
-###### Response
-standard success or error response. See
-[#standard-responses](#standard-responses).
-
 #### /daemon/version [GET]
 
 returns the version of the Sia daemon currently running.
@@ -98,3 +90,11 @@ returns the version of the Sia daemon currently running.
   "version": "1.0.0"
 }
 ```
+
+#### /daemon/stop [STOP]
+
+cleanly shuts down the daemon. May take a few seconds.
+
+###### Response
+standard success or error response. See
+[#standard-responses](#standard-responses).
