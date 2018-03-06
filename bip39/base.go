@@ -7,6 +7,7 @@ const (
 	set8bit  = 0x80
 )
 
+// encode11 takes a slice of bytes (8bits) and returns a slice of ints (11bits)
 func encode11(src []byte) []int {
 	var ret = make([]int, 0, len(src))
 
@@ -35,6 +36,7 @@ func encode11(src []byte) []int {
 	return ret
 }
 
+// decode11 takes a slice of ints (11bits) and returns a slice of bytes (8bits)
 func decode11(src []int) []byte {
 	var ret = make([]byte, 0, len(src))
 	var bits int
