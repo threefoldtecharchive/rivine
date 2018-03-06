@@ -379,9 +379,6 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: Failed to decode arbitrary data"}, http.StatusBadRequest)
 	}
-	if len(data) > 1024 {
-		WriteError(w, Error{"error after call to /wallet/coins: Arbitrary data too large"}, http.StatusBadRequest)
-	}
 	// Since zero outputs are not allowed, just send 1 hasting, the minimal amount.
 	// The transaction fee should be much higher anyway
 	txns, err := api.wallet.SendCoins(types.NewCurrency64(1), dest, data)

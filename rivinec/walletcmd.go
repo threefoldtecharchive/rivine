@@ -263,10 +263,6 @@ func Walletsendblockstakescmd(amount, dest string) {
 func Walletregisterdatacmd(dest, data string) {
 	// / At the moment, we need to prepend the non sia prefix for the transaction to be accepted by the transactionpool
 	dataBytes := append(modules.PrefixNonSia[:], []byte(data)...)
-	// Make sure the size of the data is acceptable
-	if len([]byte(dataBytes)) > 1024 {
-		Die("Arbitrary transaction data too large")
-	}
 	encodedData := base64.StdEncoding.EncodeToString(dataBytes)
 	err := Post("/wallet/data", fmt.Sprintf("destination=%s&data=%s", dest, encodedData))
 	if err != nil {
