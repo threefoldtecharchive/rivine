@@ -9,6 +9,19 @@ Blockchain technology for creating custom chains.
 
 [Whitepaper](doc/whitepaper.md)
 
+Releases
+--------
+
+Upcomming releases:
+
++ [0.5.0 kanban](https://waffle.io/rivine/home?milestone=0.5%20features%20required%20to%20launch%20tfchain) Feature release (Release date: 11/03/2018)
+  + registration of data: transfer data and replicate data on a KV storage;
+  + distributed exchange: exchange XRPs (Ripple) with TFTs (rivine::tfchain);
+  + allow for different nets of the same type of blockchain;
++ [0.6.0 kanban](https://waffle.io/rivine/home?milestone=0.6%20pre-launch) Bugfix release (Release date: 25/03/2018)
+  + bug-fixes and improvements to support the TFT launch;
+  + any small missing features;
+
 Public chain
 ------------
 
