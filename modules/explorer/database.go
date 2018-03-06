@@ -10,13 +10,14 @@ import (
 )
 
 var (
-	errNotExist = errors.New("entry does not exist")
 
 	// database buckets
-	bucketBlockFacts          = []byte("BlockFacts")
-	bucketBlockIDs            = []byte("BlockIDs")
-	bucketBlocksDifficulty    = []byte("BlocksDifficulty")
-	bucketBlockTargets        = []byte("BlockTargets")
+	bucketBlockFacts       = []byte("BlockFacts")
+	bucketBlockIDs         = []byte("BlockIDs")
+	bucketBlocksDifficulty = []byte("BlocksDifficulty")
+	bucketBlockTargets     = []byte("BlockTargets")
+	// bucketInternal is used to store values internal to the explorer
+	bucketInternal            = []byte("Internal")
 	bucketCoinOutputIDs       = []byte("CoinOutputIDs")
 	bucketCoinOutputs         = []byte("CoinOutputs")
 	bucketBlockStakeOutputIDs = []byte("BlockStakeOutputIDs")
@@ -24,8 +25,7 @@ var (
 	bucketTransactionIDs      = []byte("TransactionIDs")
 	bucketUnlockHashes        = []byte("UnlockHashes")
 
-	// bucketInternal is used to store values internal to the explorer
-	bucketInternal = []byte("Internal")
+	errNotExist = errors.New("entry does not exist")
 
 	// keys for bucketInternal
 	internalBlockHeight  = []byte("BlockHeight")
