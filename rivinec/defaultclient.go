@@ -251,7 +251,8 @@ func DefaultClient() {
 	root.AddCommand(walletCmd)
 	walletCmd.AddCommand(walletAddressCmd, walletAddressesCmd, walletInitCmd,
 		walletLoadCmd, walletLockCmd, walletSeedsCmd, walletSendCmd,
-		walletBalanceCmd, walletTransactionsCmd, walletUnlockCmd, walletBlockStakeStatCmd)
+		walletBalanceCmd, walletTransactionsCmd, walletUnlockCmd,
+		walletBlockStakeStatCmd, walletRegisterDataCmd)
 	walletInitCmd.Flags().BoolVarP(&initPassword, "password", "p", false, "Prompt for a custom password")
 	walletSendCmd.AddCommand(walletSendSiacoinsCmd, walletSendSiafundsCmd)
 	walletLoadCmd.AddCommand(walletLoadSeedCmd)

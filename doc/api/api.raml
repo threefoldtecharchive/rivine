@@ -611,6 +611,34 @@ types:
                   Transaction IDs are 64 character long hex strings.
                 type: array
                 items: string
+  /data:
+    post:
+      description: |
+        Registers data on the blockchain. A transaction is created which sends the
+        minimal amount of 1 hasting to the provided address. The data provided is added
+        as arbitrary data in the transaction
+      queryParameters:
+        destination:
+          type: string
+          description: |
+            Address that is receiving the 1 hasting sent in the transaction.
+          required: true
+        data:
+          type: string
+          description: |
+            The base64 encoded representation of the data
+          required: true
+      responses:
+        200:
+          body:
+            properties:
+              transactionid:
+                description: |
+                  Array of IDs of the transactions that were created when sending the coins.
+                  The last transaction contains the output headed to the 'destination'.
+                  Transaction IDs are 64 character long hex strings.
+                type: array
+                items: string
   /lock:
     post:
       description: |
