@@ -14,7 +14,7 @@ func TestSendSiacoins(t *testing.T) {
 	// if testing.Short() {
 	// 	t.SkipNow()
 	// }
-	// wt, err := createWalletTester("TestSendSiacoins")
+	// wt, err := createWalletTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -24,13 +24,13 @@ func TestSendSiacoins(t *testing.T) {
 	// // should be 0.
 	// confirmedBal, _, _ := wt.wallet.ConfirmedBalance()
 	// unconfirmedOut, unconfirmedIn := wt.wallet.UnconfirmedBalance()
-	// if confirmedBal.Cmp(types.CalculateCoinbase(1)) != 0 {
+	// if !confirmedBal.Equals(types.CalculateCoinbase(1)) {
 	// 	t.Error("unexpected confirmed balance")
 	// }
-	// if unconfirmedOut.Cmp(types.ZeroCurrency) != 0 {
+	// if !unconfirmedOut.Equals(types.ZeroCurrency) {
 	// 	t.Error("unconfirmed balance should be 0")
 	// }
-	// if unconfirmedIn.Cmp(types.ZeroCurrency) != 0 {
+	// if !unconfirmedIn.Equals(types.ZeroCurrency) {
 	// 	t.Error("unconfirmed balance should be 0")
 	// }
 	//
@@ -82,7 +82,7 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	wt, err := createWalletTester("TestIntegrationSpendOverUnder")
+	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	wt, err := createWalletTester("TestIntegrationSpendHalfHalf")
+	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestIntegrationSpendUnconfirmed(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	wt, err := createWalletTester("TestIntegrationSpendUnconfirmed")
+	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestIntegrationSortedOutputsSorting(t *testing.T) {
 		if so.ids[i] != expectedIDSorting[i] {
 			t.Error("an id is out of place: ", i)
 		}
-		if so.outputs[i].Value.Cmp(types.NewCurrency64(i)) != 0 {
+		if !so.outputs[i].Value.Equals64(i) {
 			t.Error("a value is out of place: ", i)
 		}
 	}

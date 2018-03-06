@@ -81,7 +81,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	cst, err := createConsensusSetTester("TestIntegrationSimpleBlock")
+// 	cst, err := createConsensusSetTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
@@ -124,7 +124,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 	if err != nil {
 // 		panic(err)
 // 	}
-// 	if sco.Value.Cmp(txnValue) != 0 {
+// 	if !sco.Value.Equals(txnValue) {
 // 		panic("output added with wrong value")
 // 	}
 // 	if sco.UnlockHash != destAddr {
@@ -139,7 +139,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	cst, err := createConsensusSetTester("TestSpendSiacoinsBlock")
+// 	cst, err := createConsensusSetTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
@@ -208,7 +208,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	cst, err := createConsensusSetTester("TestIntegtrationSpendSiafunds")
+// 	cst, err := createConsensusSetTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
@@ -757,7 +757,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 	if testing.Short() {
 // 		t.SkipNow()
 // 	}
-// 	cst, err := createConsensusSetTester("TestPaymentChannelBlocks")
+// 	cst, err := createConsensusSetTester(t.Name())
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}

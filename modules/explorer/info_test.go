@@ -12,7 +12,7 @@ func TestImmediateBlockFacts(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	et, err := createExplorerTester("TestImmediateBlockFacts")
+	et, err := createExplorerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestImmediateBlockFacts(t *testing.T) {
 		t.Error("wrong height reported in facts object")
 	}
 	// TODO: CalculateNumSiacoins has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
-	if facts.TotalCoins.Cmp(types.CalculateNumCoins(et.cs.Height())) != 0 {
+	if !facts.TotalCoins.EqualsCmp(types.CalculateNumCoins(et.cs.Height())) {
 		t.Error("wrong number of total coins:", facts.TotalCoins, et.cs.Height())
 	}
 }
@@ -37,7 +37,7 @@ func TestBlock(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	et, err := createExplorerTester("TestBlock")
+	et, err := createExplorerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestBlockFacts(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	et, err := createExplorerTester("TestBlockFacts")
+	et, err := createExplorerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

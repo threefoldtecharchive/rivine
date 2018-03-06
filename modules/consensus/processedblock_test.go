@@ -12,7 +12,7 @@ import "testing"
 // 	t.Parallel()
 //
 // 	// Create a custom consensus set to control the blocks.
-// 	testdir := build.TempDir(modules.ConsensusDir, "TestIntegrationMinimumValidChildTimestamp")
+// 	testdir := build.TempDir(modules.ConsensusDir, t.Name())
 // 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))
 // 	if err != nil {
 // 		t.Fatal(err)
@@ -29,10 +29,7 @@ import "testing"
 // 	if err != nil {
 // 		t.Fatal(err)
 // 	}
-// 	key, err := crypto.GenerateTwofishKey()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+// 	key := crypto.GenerateTwofishKey()
 // 	_, err = w.Encrypt(key)
 // 	if err != nil {
 // 		t.Fatal(err)
@@ -157,7 +154,7 @@ func TestChildDepth(t *testing.T) {
 // TestTargetAdjustmentBase probes the targetAdjustmentBase method of the block
 // node type.
 func TestTargetAdjustmentBase(t *testing.T) {
-	cst, err := createConsensusSetTester("TestTargetAdjustmentBase")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -288,7 +285,7 @@ func TestClampTargetAdjustment(t *testing.T) {
 
 // TestSetChildTarget probes the setChildTarget method of the block node type.
 func TestSetChildTarget(t *testing.T) {
-	cst, err := createConsensusSetTester("TestSetChildTarget")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -320,7 +317,7 @@ func TestSetChildTarget(t *testing.T) {
 
 // TestNewChild probes the newChild method of the block node type.
 func TestNewChild(t *testing.T) {
-	cst, err := createConsensusSetTester("TestNewChild")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -13,7 +13,7 @@ import (
 func TestIntegrationAcceptTransactionSet(t *testing.T) {
 	//TODO: fix test
 	// // Create a transaction pool tester.
-	// tpt, err := createTpoolTester("TestIntegrationAcceptTransactionSet")
+	// tpt, err := createTpoolTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -64,7 +64,7 @@ func TestIntegrationConflictingTransactionSets(t *testing.T) {
 		t.SkipNow()
 	}
 	// Create a transaction pool tester.
-	tpt, err := createTpoolTester("TestIntegrationConflictingTransactionSets")
+	tpt, err := createTpoolTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestIntegrationCheckMinerFees(t *testing.T) {
 		t.SkipNow()
 	}
 	// Create a transaction pool tester.
-	tpt, err := createTpoolTester("TestIntegrationCheckMinerFees")
+	tpt, err := createTpoolTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestIntegrationTransactionSuperset(t *testing.T) {
 		t.SkipNow()
 	}
 	// Create a transaction pool tester.
-	tpt, err := createTpoolTester("TestTransactionSuperset")
+	tpt, err := createTpoolTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestIntegrationTransactionSubset(t *testing.T) {
 		t.SkipNow()
 	}
 	// Create a transaction pool tester.
-	tpt, err := createTpoolTester("TestTransactionSubset")
+	tpt, err := createTpoolTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +271,7 @@ func TestIntegrationTransactionChild(t *testing.T) {
 		t.SkipNow()
 	}
 	// Create a transaction pool tester.
-	tpt, err := createTpoolTester("TestTransactionChild")
+	tpt, err := createTpoolTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,7 +317,7 @@ func TestIntegrationNilAccept(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	tpt, err := createTpoolTester("TestTransactionChild")
+	tpt, err := createTpoolTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestPartialConfirmation(t *testing.T) {
 	// if testing.Short() {
 	// 	t.SkipNow()
 	// }
-	// tpt, err := createTpoolTester("TestPartialConfirmation")
+	// tpt, err := createTpoolTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -419,7 +419,7 @@ func TestPartialConfirmationWeave(t *testing.T) {
 	// if testing.Short() {
 	// 	t.SkipNow()
 	// }
-	// tpt, err := createTpoolTester("TestPartialConfirmation")
+	// tpt, err := createTpoolTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }

@@ -494,7 +494,7 @@ func TestIntegrationDoSBlockHandling(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestIntegrationDoSBlockHandling")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -540,7 +540,7 @@ func TestBlockKnownHandling(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestBlockKnownHandling")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -604,7 +604,7 @@ func TestOrphanHandling(t *testing.T) {
 		t.SkipNow()
 	}
 	t.Parallel()
-	cst, err := createConsensusSetTester("TestOrphanHandling")
+	cst, err := createConsensusSetTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -631,7 +631,7 @@ func TestMissedTarget(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestMissedTarget")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -662,7 +662,7 @@ func TestMinerPayoutHandling(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestMinerPayoutHandling")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -691,7 +691,7 @@ func TestEarlyTimestampHandling(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestEarlyTimestampHandling")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -722,7 +722,7 @@ func TestFutureTimestampHandling(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestFutureTimestampHandling")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -763,7 +763,7 @@ func TestExtremeFutureTimestampHandling(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestExtremeFutureTimestampHandling")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -790,7 +790,7 @@ func TestBuriedBadTransaction(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestBuriedBadTransaction")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -842,7 +842,7 @@ func TestInconsistentCheck(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestInconsistentCheck")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -868,13 +868,13 @@ func TestInconsistentCheck(t *testing.T) {
 //
 // This test checks that the hardfork scheduled for block 21,000 rolls through
 // smoothly.
+//TODO: remove this deprecated  test
 func TestTaxHardfork(t *testing.T) {
-	//TODO: fix test
 	// if testing.Short() {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := createConsensusSetTester("TestTaxHardfork")
+	// cst, err := createConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -915,7 +915,7 @@ func TestTaxHardfork(t *testing.T) {
 	//
 	// // Check that the siafund pool was increased by the faulty float amount.
 	// siafundPool := cst.cs.dbGetSiafundPool()
-	// if siafundPool.Cmp(types.NewCurrency64(15590e3)) != 0 {
+	// if !siafundPool.Equals64(15590e3) {
 	// 	t.Fatal("siafund pool was not increased correctly")
 	// }
 	//
@@ -967,7 +967,7 @@ func TestTaxHardfork(t *testing.T) {
 	//
 	// // Check that the siafund pool did not change after the submitted revision.
 	// siafundPool = cst.cs.dbGetSiafundPool()
-	// if siafundPool.Cmp(types.NewCurrency64(15590e3)) != 0 {
+	// if !siafundPool.Equals64(15590e3) {
 	// 	t.Fatal("siafund pool was not increased correctly")
 	// }
 }
@@ -994,7 +994,7 @@ func TestAcceptBlockBroadcasts(t *testing.T) {
 	// 	t.SkipNow()
 	// }
 	// t.Parallel()
-	// cst, err := blankConsensusSetTester("TestAcceptBlockBroadcasts")
+	// cst, err := blankConsensusSetTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }

@@ -129,7 +129,6 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 					scoid := txn.CoinOutputID(uint64(j))
 					dbAddCoinOutputID(tx, scoid, txid)
 					dbAddUnlockHash(tx, sco.UnlockHash, txid)
-					dbAddCoinOutput(tx, scoid, sco)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
@@ -139,7 +138,6 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbAddBlockStakeOutputID(tx, sfoid, txid)
 					dbAddUnlockHash(tx, sfo.UnlockHash, txid)
-					dbAddBlockStakeOutput(tx, sfoid, sfo)
 				}
 			}
 
@@ -147,6 +145,20 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			if tx.Bucket(bucketBlockFacts).Get(encoding.Marshal(block.ParentID)) != nil {
 				facts := dbCalculateBlockFacts(tx, e.cs, block)
 				dbAddBlockFacts(tx, facts)
+			}
+		}
+
+		// Update stats according to CoinOutputDiffs
+		for _, scod := range cc.CoinOutputDiffs {
+			if scod.Direction == modules.DiffApply {
+				dbAddCoinOutput(tx, scod.ID, scod.CoinOutput)
+			}
+		}
+
+		// Update stats according to BlockStakeOutputDiffs
+		for _, sfod := range cc.BlockStakeOutputDiffs {
+			if sfod.Direction == modules.DiffApply {
+				dbAddBlockStakeOutput(tx, sfod.ID, sfod.BlockStakeOutput)
 			}
 		}
 
@@ -203,6 +215,10 @@ func mustPutSet(bucket *bolt.Bucket, key interface{}) {
 func mustDelete(bucket *bolt.Bucket, key interface{}) {
 	assertNil(bucket.Delete(encoding.Marshal(key)))
 }
+func bucketIsEmpty(bucket *bolt.Bucket) bool {
+	k, _ := bucket.Cursor().First()
+	return k == nil
+}
 
 // These functions panic on error. The panic will be caught by
 // ProcessConsensusChange.
@@ -245,9 +261,13 @@ func dbAddCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.Transactio
 	assertNil(err)
 	mustPutSet(b, txid)
 }
+
 func dbRemoveCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
-	// TODO: delete bucket when it becomes empty
-	mustDelete(tx.Bucket(bucketCoinOutputIDs).Bucket(encoding.Marshal(id)), txid)
+	bucket := tx.Bucket(bucketCoinOutputIDs).Bucket(encoding.Marshal(id))
+	mustDelete(bucket, txid)
+	if bucketIsEmpty(bucket) {
+		tx.Bucket(bucketCoinOutputIDs).DeleteBucket(encoding.Marshal(id))
+	}
 }
 
 // Add/Remove blockstake output
@@ -264,9 +284,13 @@ func dbAddBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid type
 	assertNil(err)
 	mustPutSet(b, txid)
 }
+
 func dbRemoveBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
-	// TODO: delete bucket when it becomes empty
-	mustDelete(tx.Bucket(bucketBlockStakeOutputIDs).Bucket(encoding.Marshal(id)), txid)
+	bucket := tx.Bucket(bucketBlockStakeOutputIDs).Bucket(encoding.Marshal(id))
+	mustDelete(bucket, txid)
+	if bucketIsEmpty(bucket) {
+		tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(encoding.Marshal(id))
+	}
 }
 
 // Add/Remove transaction ID
@@ -284,8 +308,11 @@ func dbAddUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID)
 	mustPutSet(b, txid)
 }
 func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
-	// TODO: delete bucket when it becomes empty
-	mustDelete(tx.Bucket(bucketUnlockHashes).Bucket(encoding.Marshal(uh)), txid)
+	bucket := tx.Bucket(bucketUnlockHashes).Bucket(encoding.Marshal(uh))
+	mustDelete(bucket, txid)
+	if bucketIsEmpty(bucket) {
+		tx.Bucket(bucketUnlockHashes).DeleteBucket(encoding.Marshal(uh))
+	}
 }
 
 func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Block) blockFacts {

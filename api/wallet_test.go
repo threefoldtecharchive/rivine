@@ -35,7 +35,7 @@ func TestIntegrationWalletGETEncrypted(t *testing.T) {
 	}
 
 	// Check a wallet that has never been encrypted.
-	testdir := build.TempDir("api", "TestIntegrationWalletGETEncrypted")
+	testdir := build.TempDir("api", t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))
 	if err != nil {
 		t.Fatal("Failed to create gateway:", err)
@@ -100,7 +100,7 @@ func TestIntegrationWalletBlankEncrypt(t *testing.T) {
 		t.SkipNow()
 	}
 	// Create a server object without encrypting or unlocking the wallet.
-	testdir := build.TempDir("api", "TestIntegrationWalletBlankEncrypt")
+	testdir := build.TempDir("api", t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))
 	if err != nil {
 		t.Fatal(err)
@@ -164,7 +164,7 @@ func TestIntegrationWalletGETSiacoins(t *testing.T) {
 	// if testing.Short() {
 	// 	t.SkipNow()
 	// }
-	// st, err := createServerTester("TestIntegrationWalletGETSiacoins")
+	// st, err := createServerTester(t.Name())
 	// if err != nil {
 	// 	t.Fatal(err)
 	// }
@@ -186,10 +186,10 @@ func TestIntegrationWalletGETSiacoins(t *testing.T) {
 	// if wg.ConfirmedSiacoinBalance.Cmp(types.CalculateCoinbase(1)) != 0 {
 	// 	t.Error("reported wallet balance does not reflect the single block that has been mined")
 	// }
-	// if wg.UnconfirmedOutgoingSiacoins.Cmp(types.NewCurrency64(0)) != 0 {
+	// if wg.UnconfirmedOutgoingSiacoins.Cmp64(0) != 0 {
 	// 	t.Error("there should not be unconfirmed outgoing siacoins")
 	// }
-	// if wg.UnconfirmedIncomingSiacoins.Cmp(types.NewCurrency64(0)) != 0 {
+	// if wg.UnconfirmedIncomingSiacoins.Cmp64(0) != 0 {
 	// 	t.Error("there should not be unconfirmed incoming siacoins")
 	// }
 	//
@@ -221,10 +221,10 @@ func TestIntegrationWalletGETSiacoins(t *testing.T) {
 	// if wg.ConfirmedSiacoinBalance.Cmp(types.CalculateCoinbase(1)) != 0 {
 	// 	t.Error("reported wallet balance does not reflect the single block that has been mined")
 	// }
-	// if wg.UnconfirmedOutgoingSiacoins.Cmp(types.NewCurrency64(0)) <= 0 {
+	// if wg.UnconfirmedOutgoingSiacoins.Cmp64(0) <= 0 {
 	// 	t.Error("there should be unconfirmed outgoing siacoins")
 	// }
-	// if wg.UnconfirmedIncomingSiacoins.Cmp(types.NewCurrency64(0)) <= 0 {
+	// if wg.UnconfirmedIncomingSiacoins.Cmp64(0) <= 0 {
 	// 	t.Error("there should be unconfirmed incoming siacoins")
 	// }
 	// if wg.UnconfirmedOutgoingSiacoins.Cmp(wg.UnconfirmedIncomingSiacoins) <= 0 {
@@ -244,10 +244,10 @@ func TestIntegrationWalletGETSiacoins(t *testing.T) {
 	// if wg.ConfirmedSiacoinBalance.Cmp(types.CalculateCoinbase(1).Add(types.CalculateCoinbase(2))) >= 0 {
 	// 	t.Error("reported wallet balance does not reflect mining two blocks and eating a miner fee")
 	// }
-	// if wg.UnconfirmedOutgoingSiacoins.Cmp(types.NewCurrency64(0)) != 0 {
+	// if wg.UnconfirmedOutgoingSiacoins.Cmp64(0) != 0 {
 	// 	t.Error("there should not be unconfirmed outgoing siacoins")
 	// }
-	// if wg.UnconfirmedIncomingSiacoins.Cmp(types.NewCurrency64(0)) != 0 {
+	// if wg.UnconfirmedIncomingSiacoins.Cmp64(0) != 0 {
 	// 	t.Error("there should not be unconfirmed incoming siacoins")
 	// }
 }
@@ -258,7 +258,8 @@ func TestIntegrationWalletTransactionGETid(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	st, err := createServerTester("TestIntegrationWalletTransactionGETid")
+	t.Parallel()
+	st, err := createServerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +309,8 @@ func TestWalletRelativePathErrorBackup(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	st, err := createServerTester("TestWalletRelativePathErrorBackup")
+	t.Parallel()
+	st, err := createServerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +352,8 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	st, err := createServerTester("TestWalletRelativePathErrorSiag")
+	t.Parallel()
+	st, err := createServerTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
 	}

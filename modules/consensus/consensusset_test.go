@@ -38,6 +38,7 @@ func randAddress() types.UnlockHash {
 	return uh
 }
 
+//TODO: rename to blockstakes and fix
 // addSiafunds makes a transaction that moves some testing genesis siafunds
 // into the wallet.
 func (cst *consensusSetTester) addSiafunds() {
@@ -71,10 +72,10 @@ func (cst *consensusSetTester) addSiafunds() {
 	// 	panic(err)
 	// }
 
-	// Check that the siafunds made it to the wallet.
+	// Check that the blockstakes made it to the wallet.
 	_, blockstakeBalance := cst.wallet.ConfirmedBalance()
-	if blockstakeBalance.Cmp(types.NewCurrency64(1e3)) != 0 {
-		panic("wallet does not have the siafunds")
+	if !blockstakeBalance.Equals64(1e3) {
+		panic("wallet does not have the blockstakes")
 	}
 }
 
@@ -100,10 +101,7 @@ func blankConsensusSetTester(name string) (*consensusSetTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	key, err := crypto.GenerateTwofishKey()
-	if err != nil {
-		return nil, err
-	}
+	key := crypto.GenerateTwofishKey()
 	_, err = w.Encrypt(key)
 	if err != nil {
 		return nil, err
@@ -160,7 +158,7 @@ func TestNilInputs(t *testing.T) {
 		t.SkipNow()
 	}
 	t.Parallel()
-	testdir := build.TempDir(modules.ConsensusDir, "TestNilInputs")
+	testdir := build.TempDir(modules.ConsensusDir, t.Name())
 	_, err := New(nil, false, testdir)
 	if err != errNilGateway {
 		t.Fatal(err)
@@ -173,7 +171,7 @@ func TestDatabaseClosing(t *testing.T) {
 		t.SkipNow()
 	}
 	t.Parallel()
-	testdir := build.TempDir(modules.ConsensusDir, "TestClosing")
+	testdir := build.TempDir(modules.ConsensusDir, t.Name())
 
 	// Create the gateway.
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))

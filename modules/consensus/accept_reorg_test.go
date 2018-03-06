@@ -165,7 +165,7 @@ package consensus
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	rs := createReorgSets("TestIntegrationSimpleReorg")
+// 	rs := createReorgSets(t.Name())
 // 	defer rs.Close()
 //
 // 	// Give a simple block to cstMain.
@@ -183,7 +183,7 @@ package consensus
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	rs := createReorgSets("TestIntegrationSiacoinReorg")
+// 	rs := createReorgSets(t.Name())
 // 	defer rs.Close()
 //
 // 	// Give a siacoin block to cstMain.
@@ -201,7 +201,7 @@ package consensus
 // 		t.SkipNow()
 // 	}
 // 	t.Parallel()
-// 	rs := createReorgSets("TestIntegrationValidStorageProofReorg")
+// 	rs := createReorgSets(t.Name())
 // 	defer rs.Close()
 //
 // 	// Give a series of blocks containing a file contract and a valid storage

@@ -52,10 +52,7 @@ func createExplorerTester(name string) (*explorerTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	key, err := crypto.GenerateTwofishKey()
-	if err != nil {
-		return nil, err
-	}
+	key := crypto.GenerateTwofishKey()
 	_, err = w.Encrypt(key)
 	if err != nil {
 		return nil, err
@@ -106,10 +103,7 @@ func (et *explorerTester) reorgToBlank() error {
 	if err != nil {
 		return err
 	}
-	key, err := crypto.GenerateTwofishKey()
-	if err != nil {
-		return err
-	}
+	key := crypto.GenerateTwofishKey()
 	_, err = w.Encrypt(key)
 	if err != nil {
 		return err
@@ -149,8 +143,11 @@ func TestNilExplorerDependencies(t *testing.T) {
 // TestExplorerGenesisHeight checks that when the explorer is initialized and given the
 // genesis block, the result has the correct height.
 func TestExplorerGenesisHeight(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	// Create the dependencies.
-	testdir := build.TempDir(build.SiaTestingDir, "TestExplorerGenesisHeight")
+	testdir := build.TempDir(modules.HostDir, t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))
 	if err != nil {
 		t.Fatal(err)

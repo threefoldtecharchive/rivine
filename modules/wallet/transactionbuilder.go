@@ -160,7 +160,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	}
 
 	// Create a refund output if needed.
-	if amount.Cmp(fund) != 0 {
+	if !amount.Equals(fund) {
 		refundUnlockConditions, err := tb.wallet.nextPrimarySeedAddress()
 		if err != nil {
 			return err
@@ -232,7 +232,7 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 	}
 
 	// Create a refund output if needed.
-	if amount.Cmp(fund) != 0 {
+	if !amount.Equals(fund) {
 		refundUnlockConditions, err := tb.wallet.nextPrimarySeedAddress()
 		if err != nil {
 			return err
