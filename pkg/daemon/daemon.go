@@ -1,4 +1,4 @@
-package rivined
+package daemon
 
 import (
 	"errors"

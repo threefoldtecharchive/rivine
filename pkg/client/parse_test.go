@@ -1,4 +1,4 @@
-package rivinec
+package client
 
 import (
 	"math/big"
