@@ -4,6 +4,7 @@ package bip39
 
 import (
 	"crypto/sha256"
+
 	"errors"
 	"strings"
 )
