@@ -3,7 +3,10 @@
 package bip39
 
 import (
+<<<<<<< HEAD
 	"crypto/sha256"
+=======
+>>>>>>> 53156a661ae8bc5176a7770d6991a8578d6794bb
 	"errors"
 	"strings"
 )
