@@ -52,7 +52,12 @@ func (t Target) Difficulty() Difficulty {
 
 // NewTarget makes a new target from a given difficulty
 func NewTarget(difficulty Difficulty) Target {
-	return IntToTarget(new(big.Int).Div(RootDepth.Int(), difficulty.Big()))
+	return NewTargetWithDepth(difficulty, RootDepth)
+}
+
+// NewTargetWithDepth makes a new target from a given difficulty with a custom root depth
+func NewTargetWithDepth(difficulty Difficulty, depth Target) Target {
+	return IntToTarget(new(big.Int).Div(depth.Int(), difficulty.Big()))
 }
 
 // Int converts a Target to a big.Int.

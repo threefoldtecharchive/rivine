@@ -161,6 +161,7 @@ func SetupDefaultDaemon(cfg Config) {
 	root.Flags().StringVarP(&cfg.RedisAddr, "redis-address", "", cfg.RedisAddr, "the host + port of the redis instance to connect to")
 	root.Flags().StringVarP(&cfg.RedisPassword, "redis-password", "", cfg.RedisPassword, "the password for the redis instance")
 	root.Flags().IntVarP(&cfg.RedisDB, "redis-db", "", cfg.RedisDB, "the redis db to connect to in the redis instance")
+	root.Flags().StringVarP(&cfg.NetworkName, "network", "n", cfg.NetworkName, "the name of the network to which the daemon connects")
 
 	// Parse cmdline flags, overwriting both the default values and the config
 	// file values.

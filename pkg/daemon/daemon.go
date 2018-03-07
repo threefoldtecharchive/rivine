@@ -71,6 +71,8 @@ type Config struct {
 	RedisAddr     string
 	RedisPassword string
 	RedisDB       int
+
+	NetworkName string
 }
 
 // DefaultConfig returns the default daemon configuration
@@ -96,6 +98,8 @@ func DefaultConfig() Config {
 		RedisAddr:     "localhost:6379",
 		RedisPassword: "",
 		RedisDB:       0,
+
+		NetworkName: "main",
 	}
 }
 
@@ -163,6 +167,13 @@ func processConfig(config *Config) error {
 // StartDaemon uses the config parameters
 // to initialize Rivine modules and start
 func StartDaemon(cfg Config) (err error) {
+	// First try to initialize the correct network
+	err = setupNetwork(cfg.NetworkName)
+	if err != nil {
+		return err
+	}
+	// Silently append a subdirectory for storage with the name of the network so we don't create conflicts
+	cfg.RootPersistentDir = filepath.Join(cfg.RootPersistentDir, cfg.NetworkName)
 	// Check if we require an api password
 	if cfg.AuthenticateAPI {
 		// if its not set, ask one now
