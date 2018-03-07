@@ -1,9 +1,46 @@
+// Copyright GreenITGlobe/ThreeFold 2018, Licensed under the MIT Licence
+
 package bip39
 
 // Dictionaries are copies from bitcoin open source code and other projects.
-// Copyright GreenITGlobe/ThreeFold 2018, Licensed under the MIT Licence
 
-type Dictionary [2048]string
+// Dictionary is a DictionarySize list of words which can be used to create
+// human-friendly entropy.
+
+const (
+	// DictionarySize Size of Dictionary, 2048 = 2^11 or 11 bits of encoding
+	DictionarySize = 2048
+
+	// Languaje is an id referencing the dictionary to be used
+	English             DictionaryID = "english"
+	Japanese            DictionaryID = "japanese"
+	Korean              DictionaryID = "korean"
+	Spanish             DictionaryID = "spanish"
+	French              DictionaryID = "french"
+	Italian             DictionaryID = "italian"
+	ChinesseSimplified  DictionaryID = "chineseSimplified"
+	ChinesseTraditional DictionaryID = "chineseTraditional"
+)
+
+type (
+	// Dictionary is a DictionarySize list of words which can be used to create
+	// human-friendly entropy.
+	Dictionary [DictionarySize]string
+
+	// DictionaryID is a type-safe identifier that indicates which dictionary
+	// should be used.
+	DictionaryID string
+)
+
+var bibliotheque = map[DictionaryID]Dictionary{
+	"english":            english,
+	"japanese":           japanese,
+	"korean":             korean,
+	"spanish":            spanish,
+	"french":             french,
+	"italian":            italian,
+	"chineseSimplified":  chineseSimplified,
+	"chineseTraditional": chineseSimplified}
 
 var english = Dictionary{"abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse", "access", "accident", "account", "accuse", "achieve", "acid", "acoustic", "acquire", "across", "act", "action", "actor", "actress", "actual", "adapt", "add", "addict", "address", "adjust", "admit", "adult", "advance", "advice", "aerobic", "affair", "afford", "afraid", "again", "age", "agent", "agree", "ahead", "aim", "air", "airport", "aisle", "alarm", "album", "alcohol", "alert", "alien", "all", "alley",
 	"allow", "almost", "alone", "alpha", "already", "also", "alter", "always", "amateur", "amazing", "among", "amount", "amused", "analyst", "anchor", "ancient", "anger", "angle", "angry", "animal", "ankle", "announce", "annual", "another", "answer", "antenna", "antique", "anxiety", "any", "apart", "apology", "appear", "apple", "approve", "april", "arch", "arctic", "area", "arena", "argue", "arm", "armed", "armor", "army", "around", "arrange", "arrest", "arrive", "arrow", "art", "artefact", "artist", "artwork", "ask", "aspect",
