@@ -56,9 +56,10 @@ func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoi
 	return
 }
 
-// SendCoins creates a transaction sending 'amount' to 'dest'. The transaction
+// SendCoins creates a transaction sending 'amount' to 'dest'. If data is provided,
+// it is added as arbitrary data to the transaction. The transaction
 // is submitted to the transaction pool and is also returned.
-func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error) {
+func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) ([]types.Transaction, error) {
 	if err := w.tg.Add(); err != nil {
 		return nil, err
 	}
@@ -77,6 +78,9 @@ func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash) ([]type
 	}
 	txnBuilder.AddMinerFee(tpoolFee)
 	txnBuilder.AddCoinOutput(output)
+	if data != nil {
+		txnBuilder.AddArbitraryData(data)
+	}
 	txnSet, err := txnBuilder.Sign(true)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/base64"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -325,7 +326,7 @@ func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ h
 		return
 	}
 
-	txns, err := api.wallet.SendCoins(amount, dest)
+	txns, err := api.wallet.SendCoins(amount, dest, nil)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return
@@ -362,6 +363,34 @@ func (api *API) walletBlockStakesHandler(w http.ResponseWriter, req *http.Reques
 		txids = append(txids, txn.ID())
 	}
 	WriteJSON(w, WalletBlockStakesPOST{
+		TransactionIDs: txids,
+	})
+}
+
+// walletDataHandler handles the API calls to /wallet/data
+func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	dest, err := scanAddress(req.FormValue("destination"))
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	dataString := req.FormValue("data")
+	data, err := base64.StdEncoding.DecodeString(dataString)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/coins: Failed to decode arbitrary data"}, http.StatusBadRequest)
+	}
+	// Since zero outputs are not allowed, just send 1 hasting, the minimal amount.
+	// The transaction fee should be much higher anyway
+	txns, err := api.wallet.SendCoins(types.NewCurrency64(1), dest, data)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
+		return
+	}
+	var txids []types.TransactionID
+	for _, txn := range txns {
+		txids = append(txids, txn.ID())
+	}
+	WriteJSON(w, WalletCoinsPOST{
 		TransactionIDs: txids,
 	})
 }
