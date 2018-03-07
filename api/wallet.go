@@ -9,8 +9,8 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
-	"github.com/NebulousLabs/entropy-mnemonics"
 	"github.com/julienschmidt/httprouter"
+	mnemonics "github.com/rivine/rivine/bip39"
 )
 
 type (
