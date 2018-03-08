@@ -175,24 +175,32 @@ func Walletaddressescmd() {
 // Walletinitcmd encrypts the wallet with the given password
 func Walletinitcmd() {
 	var er api.WalletInitPOST
-	qs := fmt.Sprintf("dictionary=%s", "english")
-	if initPassword {
-		password, err := speakeasy.Ask("Wallet password: ")
-		if err != nil {
-			Die("Reading password failed:", err)
-		}
-		qs += fmt.Sprintf("&encryptionpassword=%s", password)
+
+	fmt.Println("You should provide a password, it may be empty if you wish.")
+
+	password, err := speakeasy.Ask("Wallet password: ")
+	if err != nil {
+		Die("Reading password failed:", err)
 	}
-	err := PostResp("/wallet/init", qs, &er)
+
+	repasswd, err := speakeasy.Ask("Reenter password: ")
+	if err != nil {
+		Die("Reading password failed:", err)
+	}
+
+	if repasswd != password {
+		Die("Passwords do not match !!")
+	}
+
+	qs := fmt.Sprintf("dictionary=%s&encryptionpassword=%s", "english", password)
+
+	err = PostResp("/wallet/init", qs, &er)
 	if err != nil {
 		Die("Error when encrypting wallet:", err)
 	}
+
 	fmt.Printf("Recovery seed:\n%s\n\n", er.PrimarySeed)
-	if initPassword {
-		fmt.Printf("Wallet encrypted with given password\n")
-	} else {
-		fmt.Printf("Wallet encrypted with password:\n%s\n", er.PrimarySeed)
-	}
+	fmt.Printf("Wallet encrypted with given password\n")
 }
 
 // Walletloadseedcmd adds a seed to the wallet's list of seeds

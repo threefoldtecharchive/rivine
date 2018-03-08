@@ -18,8 +18,7 @@ import (
 
 // flags
 var (
-	addr         string // override default API address
-	initPassword bool   // supply a custom password when creating a wallet
+	addr string // override default API address
 )
 
 var (
@@ -249,16 +248,32 @@ func DefaultClient() {
 	updateCmd.AddCommand(updateCheckCmd)
 
 	root.AddCommand(walletCmd)
-	walletCmd.AddCommand(walletAddressCmd, walletAddressesCmd, walletInitCmd,
-		walletLoadCmd, walletLockCmd, walletSeedsCmd, walletSendCmd,
-		walletBalanceCmd, walletTransactionsCmd, walletUnlockCmd,
-		walletBlockStakeStatCmd, walletRegisterDataCmd)
-	walletInitCmd.Flags().BoolVarP(&initPassword, "password", "p", false, "Prompt for a custom password")
-	walletSendCmd.AddCommand(walletSendSiacoinsCmd, walletSendSiafundsCmd)
+	walletCmd.AddCommand(
+		walletAddressCmd,
+		walletAddressesCmd,
+		walletInitCmd,
+		walletLoadCmd,
+		walletLockCmd,
+		walletSeedsCmd,
+		walletSendCmd,
+		walletBalanceCmd,
+		walletTransactionsCmd,
+		walletUnlockCmd,
+		walletBlockStakeStatCmd,
+		walletRegisterDataCmd)
+
+	walletSendCmd.AddCommand(
+		walletSendSiacoinsCmd,
+		walletSendSiafundsCmd)
+
 	walletLoadCmd.AddCommand(walletLoadSeedCmd)
 
 	root.AddCommand(gatewayCmd)
-	gatewayCmd.AddCommand(gatewayConnectCmd, gatewayDisconnectCmd, gatewayAddressCmd, gatewayListCmd)
+	gatewayCmd.AddCommand(
+		gatewayConnectCmd,
+		gatewayDisconnectCmd,
+		gatewayAddressCmd,
+		gatewayListCmd)
 
 	root.AddCommand(consensusCmd)
 
