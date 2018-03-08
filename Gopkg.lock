@@ -14,11 +14,6 @@
   revision = "0e573b1741e255fe4a9903f4b2346a01fc45935a"
 
 [[projects]]
-  name = "github.com/NebulousLabs/entropy-mnemonics"
-  packages = ["."]
-  revision = "6afa27f8f200f600ad9d02b80329052598f2d965"
-
-[[projects]]
   name = "github.com/NebulousLabs/fastrand"
   packages = ["."]
   revision = "5a1a312dd2ce7d5f1383e1d36ad197739f161bd3"
@@ -91,6 +86,12 @@
   version = "v0.8.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/rivine/go-bip39"
+  packages = ["."]
+  revision = "2dcf92c77e7bf268d9d02b8e4f21c6cdcdbd3fda"
+
+[[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
   revision = "6a8bd97bdb1fc0d08a83459940498ea49d3e8c93"
@@ -112,6 +113,7 @@
     "blake2b",
     "ed25519",
     "ed25519/internal/edwards25519",
+    "pbkdf2",
     "twofish"
   ]
   revision = "5a033cc77e57eca05bdb50522851d29e03569cbe"
@@ -146,20 +148,17 @@
     "encoding/unicode",
     "internal/gen",
     "internal/tag",
-    "internal/triegen",
-    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
-    "unicode/cldr",
-    "unicode/norm"
+    "unicode/cldr"
   ]
   revision = "0a5a09ee4409a616bfa03115120f0bffacdff508"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "836c1276a12c9570bb1f4521ee7e7d62aaf741dfed83354125055a6c139c6ac6"
+  inputs-digest = "970fff4ceb4d8b61aa9a0134af801dcfd5283b99b3f90e3bceb1ac48a9e46e7b"
   solver-name = "gps-cdcl"
   solver-version = 1

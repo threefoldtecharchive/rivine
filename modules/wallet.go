@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/NebulousLabs/entropy-mnemonics"
-
+	bip39 "github.com/rivine/go-bip39"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/types"
 )
@@ -365,20 +364,17 @@ func CalculateWalletTransactionID(tid types.TransactionID, oid types.OutputID) W
 }
 
 // SeedToString converts a wallet seed to a human friendly string.
-func SeedToString(seed Seed, did mnemonics.DictionaryID) (string, error) {
+func SeedToString(seed Seed) (string, error) {
 	fullChecksum := crypto.HashObject(seed)
 	checksumSeed := append(seed[:], fullChecksum[:SeedChecksumSize]...)
-	phrase, err := mnemonics.ToPhrase(checksumSeed, did)
-	if err != nil {
-		return "", err
-	}
-	return phrase.String(), nil
+	return bip39.NewMnemonic(checksumSeed)
+
 }
 
 // StringToSeed converts a string to a wallet seed.
-func StringToSeed(str string, did mnemonics.DictionaryID) (Seed, error) {
+func StringToSeed(str string) (Seed, error) {
 	// Decode the string into the checksummed byte slice.
-	checksumSeedBytes, err := mnemonics.FromString(str, did)
+	checksumSeedBytes, err := bip39.MnemonicToByteArray(str)
 	if err != nil {
 		return Seed{}, err
 	}
