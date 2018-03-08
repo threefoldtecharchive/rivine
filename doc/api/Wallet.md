@@ -153,6 +153,7 @@ blank, then the password will be set to the same as the seed.
 // also be the encryption password.
 encryptionpassword
 
+// DEPRECATED, no matter what dictionary is asked, only english is available
 // Name of the dictionary that should be used when encoding the seed. 'english'
 // is the most common choice when picking a dictionary.
 dictionary // Optional, default is english.
@@ -178,6 +179,7 @@ Only the primary seed will be used for generating new addresses.
 // Key used to encrypt the new seed when it is saved to disk.
 encryptionpassword
 
+// DEPRECATED, no matter what dictionary is asked, only english is available
 // Name of the dictionary that should be used when encoding the seed. 'english'
 // is the most common choice when picking a dictionary.
 dictionary
@@ -202,12 +204,12 @@ chosen from a small dictionary as indicated by the input. The most common
 choice for the dictionary is going to be 'english'. The underlying seed is the
 same no matter what dictionary is used for the encoding. The encoding also
 contains a small checksum of the seed, to help catch simple mistakes when
-copying. The library
-[entropy-mnemonics](https://github.com/NebulousLabs/entropy-mnemonics) is used
+copying. The library [go-bip39](https://github.com/rivine/go-bip39) is used 
 when encoding.
 
 ###### Query String Parameters
 ```
+// DEPRECATED, no matter what dictionary is asked, only english is available
 // Name of the dictionary that should be used when encoding the seed. 'english'
 // is the most common choice when picking a dictionary.
 dictionary
