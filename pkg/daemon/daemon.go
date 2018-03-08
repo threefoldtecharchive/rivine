@@ -15,6 +15,7 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/modules/blockcreator"
 	"github.com/rivine/rivine/modules/consensus"
+	"github.com/rivine/rivine/modules/datastore"
 	"github.com/rivine/rivine/modules/explorer"
 	"github.com/rivine/rivine/modules/gateway"
 	"github.com/rivine/rivine/modules/transactionpool"
@@ -66,6 +67,10 @@ type Config struct {
 	// the parent directory where the individual module
 	// directories will be created
 	RootPersistentDir string
+
+	RedisAddr     string
+	RedisPassword string
+	RedisDB       int
 }
 
 // DefaultConfig returns the default daemon configuration
@@ -87,6 +92,10 @@ func DefaultConfig() Config {
 		Profile:           false,
 		ProfileDir:        "profiles",
 		RootPersistentDir: "",
+
+		RedisAddr:     "localhost:6379",
+		RedisPassword: "",
+		RedisDB:       0,
 	}
 }
 
@@ -129,7 +138,7 @@ func processNetAddr(addr string) string {
 // invalid module character.
 func processModules(modules string) (string, error) {
 	modules = strings.ToLower(modules)
-	validModules := "cgtweb"
+	validModules := "cgtwebd"
 	invalidModules := modules
 	for _, m := range validModules {
 		invalidModules = strings.Replace(invalidModules, string(m), "", 1)
@@ -308,6 +317,28 @@ func StartDaemon(cfg Config) (err error) {
 			err := b.Close()
 			if err != nil {
 				fmt.Println("Error during block creator shutdown:", err)
+			}
+		}()
+	}
+	var ds *datastore.DataStore
+	if strings.Contains(cfg.Modules, "d") {
+		i++
+		fmt.Printf("(%d/%d) Loading datastore...\n", i, len(cfg.Modules))
+		db, err := datastore.NewRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+		if err != nil {
+			return err
+		}
+		ds, err = datastore.New(cs, db,
+			filepath.Join(cfg.RootPersistentDir, datastore.DataStoreDir),
+			cfg.BlockchainInfo)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			fmt.Println("Closing datastore...")
+			err := ds.Close()
+			if err != nil {
+				fmt.Println("Error during datastore shutdown:", err)
 			}
 		}()
 	}
