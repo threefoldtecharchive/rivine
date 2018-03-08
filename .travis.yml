@@ -14,13 +14,19 @@ jobs:
         - make test
     - stage: test
       language: go
+      go: 1.10.x
+      script:
+        - make
+        - make test
+    - stage: test
+      language: go
       go: tip
       script:
         - make
         - make test
     - stage: test
       language: go
-      go: 1.8.x
+      go: 1.9.x
       install:
         - go get -u github.com/gordonklaus/ineffassign
       script:
@@ -28,7 +34,7 @@ jobs:
         - make ineffassign
     - stage: test
       language: go
-      go: 1.9.x
+      go: 1.10.x
       install:
         - go get -u github.com/gordonklaus/ineffassign
       script:
