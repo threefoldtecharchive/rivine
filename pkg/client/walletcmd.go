@@ -192,7 +192,7 @@ func Walletinitcmd() {
 		Die("Passwords do not match !!")
 	}
 
-	qs := fmt.Sprintf("dictionary=%s&encryptionpassword=%s", "english", password)
+	qs := fmt.Sprintf("encryptionpassword=%s", password)
 
 	err = PostResp("/wallet/init", qs, &er)
 	if err != nil {
@@ -213,7 +213,7 @@ func Walletloadseedcmd() {
 	if err != nil {
 		Die("Reading seed failed:", err)
 	}
-	qs := fmt.Sprintf("encryptionpassword=%s&seed=%s&dictionary=%s", password, seed, "english")
+	qs := fmt.Sprintf("encryptionpassword=%s&seed=%s", password, seed)
 	err = Post("/wallet/seed", qs)
 	if err != nil {
 		Die("Could not add seed:", err)
@@ -229,7 +229,7 @@ func Walletlockcmd() {
 	}
 }
 
-// Walletseedcmd returns the current seed {
+// Walletseedscmd returns the current seed {
 func Walletseedscmd() {
 	var seedInfo api.WalletSeedsGET
 	err := GetAPI("/wallet/seeds", &seedInfo)

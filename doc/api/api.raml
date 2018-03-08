@@ -499,12 +499,6 @@ types:
             should use this password. If left blank, the seed that gets returned will
             also be the encryption password.
           required: false
-        dictionary:
-          type: string
-          description: |
-            Name of the dictionary that should be used when encoding the seed. 'english'
-            is the most common choice when picking a dictionary.
-          required: false
       responses:
         200:
           body:
@@ -526,12 +520,6 @@ types:
           description: |
             Key used to encrypt the new seed when it is saved to disk.
           required: true
-        dictionary:
-          type: string
-          description: |
-            Name of the dictionary that should be used when encoding the seed. 'english'
-            is the most common choice when picking a dictionary.
-          required: false
         seed:
           description: |
             Dictionary-encoded phrase that corresponds to the seed being added to the wallet.
@@ -544,14 +532,9 @@ types:
         Returns a list of seeds in use by the wallet.
         The primary seed is the only seed that gets used to generate new addresses.
         This call is unavailable when the wallet is locked.
-        A seed is an encoded version of a 128 bit random seed. The output is 15 words chosen from a small dictionary as indicated by the input. The most common choice for the dictionary is going to be 'english'. The underlying seed is the same no matter what dictionary is used for the encoding. The encoding also contains a small checksum of the seed, to help catch simple mistakes when copying. The library entropy-mnemonics is used when encoding.
-      queryParameters:
-        dictionary:
-          type: string
-          description: |
-            Name of the dictionary that should be used when encoding the seed. 'english'
-            is the most common choice when picking a dictionary.
-          required: false
+        A seed is an encoded version of a 128 bit random seed. The output is 15 words chosen from a small dictionary.
+        The encoding also contains a small checksum of the seed, to help catch simple mistakes when copying. 
+        The library go-bip39 is used when encoding.
       responses:
         200:
           body: Seed

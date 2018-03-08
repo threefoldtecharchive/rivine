@@ -11,8 +11,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/NebulousLabs/entropy-mnemonics"
-
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
@@ -56,7 +54,7 @@ func main() {
 		panic(err)
 	}
 	// First convert the seed from the mnemonic form to the byte form
-	seed, err := modules.StringToSeed(genesisOutputSeed, mnemonics.English)
+	seed, err := modules.StringToSeed(genesisOutputSeed)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to decode seed: %s", err))
 	}

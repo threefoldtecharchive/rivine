@@ -10,7 +10,6 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
-	"github.com/NebulousLabs/entropy-mnemonics"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -102,14 +101,11 @@ type (
 // encryptionKeys enumerates the possible encryption keys that can be derived
 // from an input string.
 func encryptionKeys(seedStr string) (validKeys []crypto.TwofishKey) {
-	dicts := []mnemonics.DictionaryID{"english", "german", "japanese"}
-	for _, dict := range dicts {
-		seed, err := modules.StringToSeed(seedStr, dict)
-		if err != nil {
-			continue
-		}
+	seed, err := modules.StringToSeed(seedStr)
+	if err == nil {
 		validKeys = append(validKeys, crypto.TwofishKey(crypto.HashObject(seed)))
 	}
+
 	validKeys = append(validKeys, crypto.TwofishKey(crypto.HashObject(seedStr)))
 	return validKeys
 }
@@ -220,11 +216,7 @@ func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ ht
 		return
 	}
 
-	dictID := mnemonics.DictionaryID(req.FormValue("dictionary"))
-	if dictID == "" {
-		dictID = "english"
-	}
-	seedStr, err := modules.SeedToString(seed, dictID)
+	seedStr, err := modules.SeedToString(seed)
 	if err != nil {
 		WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
 		return
@@ -236,12 +228,7 @@ func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ ht
 
 // walletSeedHandler handles API calls to /wallet/seed.
 func (api *API) walletSeedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	// Get the seed using the ditionary + phrase
-	dictID := mnemonics.DictionaryID(req.FormValue("dictionary"))
-	if dictID == "" {
-		dictID = "english"
-	}
-	seed, err := modules.StringToSeed(req.FormValue("seed"), dictID)
+	seed, err := modules.StringToSeed(req.FormValue("seed"))
 	if err != nil {
 		WriteError(w, Error{"error when calling /wallet/seed: " + err.Error()}, http.StatusBadRequest)
 		return
@@ -274,18 +261,13 @@ func (api *API) walletLockHandler(w http.ResponseWriter, req *http.Request, _ ht
 
 // walletSeedsHandler handles API calls to /wallet/seeds.
 func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	dictionary := mnemonics.DictionaryID(req.FormValue("dictionary"))
-	if dictionary == "" {
-		dictionary = mnemonics.English
-	}
-
 	// Get the primary seed information.
 	primarySeed, progress, err := api.wallet.PrimarySeed()
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
-	primarySeedStr, err := modules.SeedToString(primarySeed, dictionary)
+	primarySeedStr, err := modules.SeedToString(primarySeed)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, http.StatusBadRequest)
 		return
@@ -299,7 +281,7 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 	}
 	var allSeedsStrs []string
 	for _, seed := range allSeeds {
-		str, err := modules.SeedToString(seed, dictionary)
+		str, err := modules.SeedToString(seed)
 		if err != nil {
 			WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, http.StatusBadRequest)
 			return

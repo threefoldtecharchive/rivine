@@ -393,7 +393,6 @@ blank, then the password will be set to the same as the seed.
 ###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-2)
 ```
 encryptionpassword
-dictionary // Optional, default is english.
 ```
 
 ###### JSON Response [(with comments)](/doc/api/Wallet.md#json-response-3)
@@ -413,7 +412,6 @@ Only the primary seed will be used for generating new addresses.
 ###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-3)
 ```
 encryptionpassword
-dictionary
 seed
 ```
 
@@ -426,11 +424,6 @@ standard success or error response. See
 returns the list of seeds in use by the wallet. The primary seed is the only
 seed that gets used to generate new addresses. This call is unavailable when
 the wallet is locked.
-
-###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-4)
-```
-dictionary
-```
 
 ###### JSON Response [(with comments)](/doc/api/Wallet.md#json-response-4)
 ```javascript
