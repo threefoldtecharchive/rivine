@@ -11,7 +11,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/NebulousLabs/entropy-mnemonics"
+	mnemonics "github.com/rivine/rivine/bip39"
 
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/crypto"

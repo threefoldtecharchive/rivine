@@ -203,7 +203,7 @@ choice for the dictionary is going to be 'english'. The underlying seed is the
 same no matter what dictionary is used for the encoding. The encoding also
 contains a small checksum of the seed, to help catch simple mistakes when
 copying. The library
-[entropy-mnemonics](https://github.com/NebulousLabs/entropy-mnemonics) is used
+[bip39](https://github.com/rivine/rivine/bip39) is used
 when encoding.
 
 ###### Query String Parameters

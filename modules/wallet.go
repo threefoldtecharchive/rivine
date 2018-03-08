@@ -4,8 +4,7 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/NebulousLabs/entropy-mnemonics"
-
+	mnemonics "github.com/rivine/rivine/bip39"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/types"
 )
