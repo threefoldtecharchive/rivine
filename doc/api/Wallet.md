@@ -153,6 +153,7 @@ blank, then the password will be set to the same as the seed.
 // also be the encryption password.
 encryptionpassword
 
+// DEPRECATED, no matter what dictionary is asked, only english is available
 // Name of the dictionary that should be used when encoding the seed. 'english'
 // is the most common choice when picking a dictionary.
 dictionary // Optional, default is english.
@@ -178,6 +179,7 @@ Only the primary seed will be used for generating new addresses.
 // Key used to encrypt the new seed when it is saved to disk.
 encryptionpassword
 
+// DEPRECATED, no matter what dictionary is asked, only english is available
 // Name of the dictionary that should be used when encoding the seed. 'english'
 // is the most common choice when picking a dictionary.
 dictionary
@@ -207,6 +209,7 @@ when encoding.
 
 ###### Query String Parameters
 ```
+// DEPRECATED, no matter what dictionary is asked, only english is available
 // Name of the dictionary that should be used when encoding the seed. 'english'
 // is the most common choice when picking a dictionary.
 dictionary
