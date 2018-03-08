@@ -189,7 +189,7 @@ func Walletinitcmd() {
 	}
 
 	if repasswd != password {
-		Die("Passwords does not match !!")
+		Die("Passwords do not match !!")
 	}
 
 	qs := fmt.Sprintf("dictionary=%s&encryptionpassword=%s", "english", password)
