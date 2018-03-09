@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"bytes"
 	"errors"
 
 	bip39 "github.com/rivine/go-bip39"
@@ -365,9 +364,7 @@ func CalculateWalletTransactionID(tid types.TransactionID, oid types.OutputID) W
 
 // SeedToString converts a wallet seed to a human friendly string.
 func SeedToString(seed Seed) (string, error) {
-	fullChecksum := crypto.HashObject(seed)
-	checksumSeed := append(seed[:], fullChecksum[:SeedChecksumSize]...)
-	return bip39.NewMnemonic(checksumSeed)
+	return bip39.NewMnemonic(seed[:])
 
 }
 
@@ -382,9 +379,5 @@ func StringToSeed(str string) (Seed, error) {
 	// Copy the seed from the checksummed slice.
 	var seed Seed
 	copy(seed[:], checksumSeedBytes)
-	fullChecksum := crypto.HashObject(seed)
-	if len(checksumSeedBytes) != crypto.EntropySize+SeedChecksumSize || !bytes.Equal(fullChecksum[:SeedChecksumSize], checksumSeedBytes[crypto.EntropySize:]) {
-		return Seed{}, errors.New("seed failed checksum verification")
-	}
 	return seed, nil
 }
