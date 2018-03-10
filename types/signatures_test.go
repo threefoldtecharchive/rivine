@@ -9,10 +9,7 @@ import (
 
 // TestEd25519PublicKey tests the Ed25519PublicKey function.
 func TestEd25519PublicKey(t *testing.T) {
-	_, pk, err := crypto.GenerateKeyPair()
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, pk := crypto.GenerateKeyPair()
 	spk := Ed25519PublicKey(pk)
 	if spk.Algorithm != SignatureEd25519 {
 		t.Error("Ed25519PublicKey created key with wrong algorithm specifier:", spk.Algorithm)
