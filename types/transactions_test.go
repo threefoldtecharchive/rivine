@@ -59,7 +59,7 @@ func TestTransactionCoinOutputSum(t *testing.T) {
 // TestSpecifierMarshaling tests the marshaling methods of the specifier
 // type.
 func TestSpecifierMarshaling(t *testing.T) {
-	s1 := SpecifierClaimOutput
+	s1 := SpecifierBlockStakeOutput
 	b, err := json.Marshal(s1)
 	if err != nil {
 		t.Fatal(err)
