@@ -2,10 +2,10 @@ package types
 
 import (
 	"bytes"
-	"crypto/rand"
 	"strings"
 	"testing"
 
+	"github.com/NebulousLabs/fastrand"
 	"github.com/rivine/rivine/crypto"
 )
 
@@ -334,11 +334,7 @@ func TestTransactionValidSignatures(t *testing.T) {
 func TestSiaPublicKeyLoadString(t *testing.T) {
 	spk := SiaPublicKey{
 		Algorithm: SignatureEd25519,
-		Key:       make([]byte, 32),
-	}
-	_, err := rand.Read(spk.Key)
-	if err != nil {
-		t.Fatal(err)
+		Key:       fastrand.Bytes(32),
 	}
 
 	spkString := spk.String()
