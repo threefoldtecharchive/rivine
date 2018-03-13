@@ -17,6 +17,7 @@ package main
 
 import (
   "fmt"
+  "bytes"
 
   "github.com/rivine/go-bip39"
 )
@@ -26,11 +27,17 @@ func main(){
   entropy, _ := bip39.NewEntropy(256)
   mnemonic, _ := bip39.NewMnemonic(entropy)
 
-  // Generate a Bip32 HD wallet for the mnemonic and a user supplied password
+  // generate the seed from the mnemonic
   seed := bip39.NewSeed(mnemonic, "Secret Passphrase")
 
   // Display mnemonic and seed
   fmt.Println("Mnemonic: ", mnemonic)
   fmt.Println("Seed: ", seed)
+
+  // you can also get the original entropy from a mnemonic
+  origEntropy, _ := bip39.EntropyFromMnemonic(mnemonic)
+  if bytes.Compare(entropy, origEntropy) != 0 {
+    panic("oops")
+  }
 }
 ```

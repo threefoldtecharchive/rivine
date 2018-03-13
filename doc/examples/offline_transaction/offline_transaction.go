@@ -54,7 +54,7 @@ func main() {
 		panic(err)
 	}
 	// First convert the seed from the mnemonic form to the byte form
-	seed, err := modules.StringToSeed(genesisOutputSeed)
+	seed, err := modules.SeedFromMnemonicAndPassphrase(genesisOutputSeed, gatewayPass)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to decode seed: %s", err))
 	}

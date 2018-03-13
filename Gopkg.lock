@@ -89,7 +89,7 @@
   branch = "master"
   name = "github.com/rivine/go-bip39"
   packages = ["."]
-  revision = "2dcf92c77e7bf268d9d02b8e4f21c6cdcdbd3fda"
+  revision = "e35a707fc62766b909ae41fc6d45c1efac74bf34"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -148,17 +148,20 @@
     "encoding/unicode",
     "internal/gen",
     "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
-    "unicode/cldr"
+    "unicode/cldr",
+    "unicode/norm"
   ]
   revision = "0a5a09ee4409a616bfa03115120f0bffacdff508"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "970fff4ceb4d8b61aa9a0134af801dcfd5283b99b3f90e3bceb1ac48a9e46e7b"
+  inputs-digest = "b705cd18c608f6e080e8e8cdcde9294d14f07b7ed23461e2799284a8c5f21907"
   solver-name = "gps-cdcl"
   solver-version = 1

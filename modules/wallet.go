@@ -362,22 +362,19 @@ func CalculateWalletTransactionID(tid types.TransactionID, oid types.OutputID) W
 	return WalletTransactionID(crypto.HashAll(tid, oid))
 }
 
-// SeedToString converts a wallet seed to a human friendly string.
-func SeedToString(seed Seed) (string, error) {
+// NewMnemonic converts a wallet seed to a mnemonic, a human friendly string.
+func NewMnemonic(seed Seed) (string, error) {
 	return bip39.NewMnemonic(seed[:])
-
 }
 
-// StringToSeed converts a string to a wallet seed.
-func StringToSeed(str string) (Seed, error) {
-	// Decode the string into the checksummed byte slice.
-	checksumSeedBytes, err := bip39.MnemonicToByteArray(str)
+// SeedFromMnemonicAndPassphrase converts a mnemonic and passphrase into a wallet seed.
+// An error gets returned in case the given mnemonic is invalid.
+// Passphrase is optional and can be empty.
+func SeedFromMnemonicAndPassphrase(mnemonic, passphrase string) (out Seed, err error) {
+	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, passphrase)
 	if err != nil {
-		return Seed{}, err
+		return
 	}
-
-	// Copy the seed from the checksummed slice.
-	var seed Seed
-	copy(seed[:], checksumSeedBytes)
-	return seed, nil
+	copy(out[:], seed[:])
+	return
 }
