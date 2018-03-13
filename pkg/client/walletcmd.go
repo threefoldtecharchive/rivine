@@ -176,23 +176,23 @@ func Walletaddressescmd() {
 func Walletinitcmd() {
 	var er api.WalletInitPOST
 
-	fmt.Println("You should provide a password, it may be empty if you wish.")
+	fmt.Println("You should provide a passphrase, it may be empty if you wish.")
 
-	password, err := speakeasy.Ask("Wallet password: ")
+	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 	if err != nil {
-		Die("Reading password failed:", err)
+		Die("Reading passphrase failed:", err)
 	}
 
-	repasswd, err := speakeasy.Ask("Reenter password: ")
+	repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
 	if err != nil {
-		Die("Reading password failed:", err)
+		Die("Reading passphrase failed:", err)
 	}
 
-	if repasswd != password {
-		Die("Passwords do not match !!")
+	if repassphrase != passphrase {
+		Die("Given passphrases do not match !!")
 	}
 
-	qs := fmt.Sprintf("encryptionpassword=%s", password)
+	qs := fmt.Sprintf("passphrase=%s", passphrase)
 
 	err = PostResp("/wallet/init", qs, &er)
 	if err != nil {
@@ -200,20 +200,20 @@ func Walletinitcmd() {
 	}
 
 	fmt.Printf("Recovery seed:\n%s\n\n", er.PrimarySeed)
-	fmt.Printf("Wallet encrypted with given password\n")
+	fmt.Printf("Wallet encrypted with given passphrase\n")
 }
 
 // Walletloadseedcmd adds a seed to the wallet's list of seeds
 func Walletloadseedcmd() {
-	password, err := speakeasy.Ask("Wallet password: ")
+	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 	if err != nil {
-		Die("Reading password failed:", err)
+		Die("Reading passphrase failed:", err)
 	}
-	seed, err := speakeasy.Ask("New Seed: ")
+	mnemonic, err := speakeasy.Ask("New Mnemonic: ")
 	if err != nil {
 		Die("Reading seed failed:", err)
 	}
-	qs := fmt.Sprintf("encryptionpassword=%s&seed=%s", password, seed)
+	qs := fmt.Sprintf("passphrase=%s&mnemonic=%s", passphrase, mnemonic)
 	err = Post("/wallet/seed", qs)
 	if err != nil {
 		Die("Could not add seed:", err)
@@ -405,7 +405,7 @@ func Walletunlockcmd() {
 		Die("Reading password failed:", err)
 	}
 	fmt.Println("Unlocking the wallet. This may take several minutes...")
-	qs := fmt.Sprintf("encryptionpassword=%s&dictonary=%s", password, "english")
+	qs := fmt.Sprintf("passphrase=%s", password)
 	err = Post("/wallet/unlock", qs)
 	if err != nil {
 		Die("Could not unlock wallet:", err)

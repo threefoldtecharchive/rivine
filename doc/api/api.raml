@@ -492,7 +492,7 @@ types:
         initializes the wallet. After the wallet has been initialized once, it does not need to be initialized again, and future calls to /wallet/init will return an error.
         The encryption password is provided by the api call. If the password is blank, then the password will be set to the same as the seed.
       queryParameters:
-        encryptionpassword:
+        passphrase:
           type: string
           description: |
             Password that will be used to encrypt the wallet. All subsequent calls
@@ -515,12 +515,12 @@ types:
         The seed is added as an auxiliary seed, and does not replace the primary seed.
         Only the primary seed will be used for generating new addresses.
       queryParameters:
-        encryptionpassword:
+        passphrase:
           type: string
           description: |
             Key used to encrypt the new seed when it is saved to disk.
           required: true
-        seed:
+        mnemonic:
           description: |
             Dictionary-encoded phrase that corresponds to the seed being added to the wallet.
           type: string
@@ -637,7 +637,7 @@ types:
       description: |
         unlocks the wallet. The wallet is capable of knowing whether the correct password was provided.
       queryParameters:
-        encryptionpassword:
+        passphrase:
           type: string
           description: |
             Key used to encrypt the new seed when it is saved to disk.

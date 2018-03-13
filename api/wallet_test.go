@@ -146,7 +146,7 @@ func TestIntegrationWalletBlankEncrypt(t *testing.T) {
 	}
 	// Use the seed to call /wallet/unlock.
 	unlockValues := url.Values{}
-	unlockValues.Set("encryptionpassword", wip.PrimarySeed)
+	unlockValues.Set("passphrase", wip.PrimarySeed)
 	err = st.stdPostAPI("/wallet/unlock", unlockValues)
 	if err != nil {
 		t.Fatal(err)
@@ -383,7 +383,7 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 	// This should fail.
 	loadSiagValues := url.Values{}
 	loadSiagValues.Set("keyfiles", "test.dat")
-	loadSiagValues.Set("encryptionpassword", seed)
+	loadSiagValues.Set("passphrase", seed)
 	err = st.stdPostAPI("/wallet/siagkey", loadSiagValues)
 	if err == nil || err.Error() != loadSiagAbsoluteError {
 		t.Fatal(err)
@@ -392,7 +392,7 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 	// As should this.
 	loadSiagValues = url.Values{}
 	loadSiagValues.Set("keyfiles", "../test.dat")
-	loadSiagValues.Set("encryptionpassword", seed)
+	loadSiagValues.Set("passphrase", seed)
 	err = st.stdPostAPI("/wallet/siagkey", loadSiagValues)
 	if err == nil || err.Error() != loadSiagAbsoluteError {
 		t.Fatal(err)
@@ -401,7 +401,7 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 	// This should fail.
 	loadSiagValues = url.Values{}
 	loadSiagValues.Set("keyfiles", "/test.dat,test.dat,../test.dat")
-	loadSiagValues.Set("encryptionpassword", seed)
+	loadSiagValues.Set("passphrase", seed)
 	err = st.stdPostAPI("/wallet/siagkey", loadSiagValues)
 	if err == nil || err.Error() != loadSiagAbsoluteError {
 		t.Fatal(err)
@@ -410,7 +410,7 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 	// As should this.
 	loadSiagValues = url.Values{}
 	loadSiagValues.Set("keyfiles", "../test.dat,/test.dat")
-	loadSiagValues.Set("encryptionpassword", seed)
+	loadSiagValues.Set("passphrase", seed)
 	err = st.stdPostAPI("/wallet/siagkey", loadSiagValues)
 	if err == nil || err.Error() != loadSiagAbsoluteError {
 		t.Fatal(err)
@@ -422,7 +422,7 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 		t.Fatal(err)
 	}
 	loadSiagValues.Set("keyfiles", filepath.Join(walletTestDir, "test.dat"))
-	loadSiagValues.Set("encryptionpassword", seed)
+	loadSiagValues.Set("passphrase", seed)
 	err = st.stdPostAPI("/wallet/siagkey", loadSiagValues)
 	if err == nil || err.Error() != "error when calling /wallet/siagkey: provided encryption key is incorrect" {
 		t.Fatal(err)
@@ -434,7 +434,7 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 		t.Fatal(err)
 	}
 	loadSiagValues.Set("keyfiles", filepath.Join(walletTestDir, "test.dat")+","+filepath.Join(walletTestDir, "test1.dat"))
-	loadSiagValues.Set("encryptionpassword", seed)
+	loadSiagValues.Set("passphrase", seed)
 	err = st.stdPostAPI("/wallet/siagkey", loadSiagValues)
 	if err == nil || err.Error() != "error when calling /wallet/siagkey: provided encryption key is incorrect" {
 		t.Fatal(err)

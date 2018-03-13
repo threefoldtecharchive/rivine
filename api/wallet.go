@@ -196,8 +196,8 @@ func (api *API) walletBackupHandler(w http.ResponseWriter, req *http.Request, _ 
 // walletInitHandler handles API calls to /wallet/init.
 func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	var encryptionKey crypto.TwofishKey
-	if req.FormValue("encryptionpassword") != "" {
-		encryptionKey = crypto.TwofishKey(crypto.HashObject(req.FormValue("encryptionpassword")))
+	if passphrase := req.FormValue("passphrase"); passphrase != "" {
+		encryptionKey = crypto.TwofishKey(crypto.HashObject(passphrase))
 	}
 	seed, err := api.wallet.Encrypt(encryptionKey)
 	if err != nil {
@@ -217,8 +217,8 @@ func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ ht
 
 // walletSeedHandler handles API calls to /wallet/seed.
 func (api *API) walletSeedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	menmonic := req.FormValue("seed") // TODO change into seed
-	passphrase := req.FormValue("encryptionpassword")
+	menmonic := req.FormValue("mnemonic")
+	passphrase := req.FormValue("passphrase")
 
 	seed, err := modules.SeedFromMnemonicAndPassphrase(menmonic, passphrase)
 	if err != nil {
@@ -441,7 +441,7 @@ func (api *API) walletTransactionsAddrHandler(w http.ResponseWriter, req *http.R
 
 // walletUnlockHandler handles API calls to /wallet/unlock.
 func (api *API) walletUnlockHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	passphrase := req.FormValue("encryptionpassword") // TODO: rename to passphrase
+	passphrase := req.FormValue("passphrase")
 	key := crypto.TwofishKey(crypto.HashObject(passphrase))
 	err := api.wallet.Unlock(key)
 	if err == nil {
