@@ -62,7 +62,7 @@ To build from source, [Go 1.6 or higher must be installed](https://golang.org/do
 on the system. Then simply use `go get`:
 
 ```
-go get -u github.com/rivine/rivine/...
+go get -u github.com/rivine/rivine/cmd/...
 ```
 
 This will download the Rivine repo to your `$GOPATH/src` folder, and install the

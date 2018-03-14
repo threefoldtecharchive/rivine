@@ -21,7 +21,7 @@ create a wallet with the `/wallet/init` endpoint. Wallets are always encrypted
 on disk. Calls to some wallet API endpoints will fail until the wallet is
 unlocked. The wallet can be unlocked with the `/wallet/unlock` endpoint. Once
 the wallet is unlocked calls to the API endpoints will succeed until the wallet
-is locked again with `/wallet/lock`, or Siad is restarted. The host and renter
+is locked again with `/wallet/lock`, or rivined is restarted. The host and renter
 require the miner to be unlocked.
 
 Index
@@ -100,7 +100,7 @@ be returned if the wallet is locked.
 ###### JSON Response
 ```javascript
 {
-  // Wallet address that can receive siacoins or siafunds. Addresses are 76 character long hex strings.
+  // Wallet address that can receive coins or blockstakes. Addresses are 76 character long hex strings.
   "address": "1234567890abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab"
 }
 ```
@@ -227,8 +227,8 @@ from addresses in the wallet.
 
 ###### Query String Parameters
 ```
-// Number of hastings being sent. A hasting is the smallest unit in Sia. There
-// are 10^24 hastings in a siacoin.
+// Number of hastings being sent. A hasting is the smallest unit in Rivine. There
+// are 10^24 hastings in a coin.
 amount      // hastings
 
 // Address that is receiving the coins.
@@ -309,7 +309,7 @@ data            // base64 string
 #### /wallet/lock [POST]
 
 locks the wallet, wiping all secret keys. After being locked, the keys are
-encrypted. Queries for the seed, to send siafunds, and related queries become
+encrypted. Queries for the seed, to send blockstakes, and related queries become
 unavailable. Queries concerning transaction history and balance are still
 available.
 
@@ -368,7 +368,7 @@ gets the transaction associated with a specific transaction id.
         "relatedaddress": "1234567890abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
 
         // Amount of funds that have been moved in the input.
-        "value": "1234", // hastings or siafunds, depending on fundtype, big int
+        "value": "1234", // hastings or blockstakes, depending on fundtype, big int
       }
     ],
     // Array of processed outputs detailing the outputs of the transaction.
@@ -377,16 +377,16 @@ gets the transaction associated with a specific transaction id.
       {
         // Type of fund is represented by the output. Possible values are
         // 'siacoin output', 'siafund output', 'claim output', and 'miner
-        // payout'. Siacoin outputs and claim outputs both relate to siacoins.
-        // Siafund outputs relate to siafunds. Miner payouts point to siacoins
+        // payout'. oin outputs and claim outputs both relate to coins.
+        // blockstake outputs relate to blockstakes. Miner payouts point to coins
         // that have been spent on a miner payout. Because the destination of
         // the miner payout is determined by the block and not the transaction,
         // the data 'maturityheight', 'walletaddress', and 'relatedaddress' are
         // left blank.
         "fundtype": "siacoin output",
 
-        // Block height the output becomes available to be spent. Siacoin
-        // outputs and siafund outputs mature immediately - their maturity
+        // Block height the output becomes available to be spent. Coin
+        // outputs and blockstake outputs mature immediately - their maturity
         // height will always be the confirmation height of the transaction.
         // Claim outputs cannot be spent until they have had 144 confirmations,
         // thus the maturity height of a claim output will always be 144 larger
@@ -402,7 +402,7 @@ gets the transaction associated with a specific transaction id.
         "relatedaddress": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 
         // Amount of funds that have been moved in the output.
-        "value": "1234", // hastings or siafunds, depending on fundtype, big int
+        "value": "1234", // hastings or blockstakes, depending on fundtype, big int
       }
     ]
   }

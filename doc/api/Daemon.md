@@ -13,7 +13,7 @@ Overview
 --------
 
 The daemon is responsible for starting and stopping the modules which make up
-the rest of Sia. It also provides endpoints for viewing build constants.
+the rest of Rivine. It also provides endpoints for viewing build constants.
 
 Index
 -----
@@ -46,22 +46,20 @@ returns the set of constants in use.
   // further into the future will not be accepted immediately, but the daemon
   // will attempt to accept the block as soon as it is valid.
   "futurethreshold": 10800, // seconds
-  // Total number of siafunds.
-  "siafundcount": "10000",
-  // Fraction of each file contract payout given to siafund holders.
-  "siafundportion": "39/1000",
+  // Total number of blockstakes.
+  "blockstakecount": "10000",
   // Number of children a block must have before it is considered "mature."
   "maturitydelay": 144, // blocks
 
   // Number of coins given to the miner of the first block. Note that elsewhere
   // in the API currency is typically returned in hastings and as a bignum.
   // This is not the case here.
-  "initialcoinbase": 300000, // SiaCoins.
+  "initialcoinbase": 300000, // Coins.
   // Minimum number of coins paid out to the miner of a block (the coinbase
   // decreases with each block). Note that elsewhere in the API currency is
   // typically returned in hastings and as a bignum. This is not the case
   // here.
-  "minimumcoinbase": 30000, // SiaCoins
+  "minimumcoinbase": 30000, // Coins
 
   // Initial target.
   "roottarget": [0,0,0,0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
@@ -80,7 +78,7 @@ returns the set of constants in use.
 
 #### /daemon/version [GET]
 
-returns the version of the Sia daemon currently running.
+returns the version of the Rivine daemon currently running.
 
 ###### JSON Response
 ```javascript

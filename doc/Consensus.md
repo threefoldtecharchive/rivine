@@ -1,7 +1,7 @@
 Consensus Rules
 ===============
 
-This document is meant to provide a good high level overview of the Sia
+This document is meant to provide a good high level overview of the Rivine
 cryptosystem, but does not fully explain all of the small details. The most
 accurate explanation of the consensus rules is the consensus package (and all
 dependencies).
@@ -58,38 +58,28 @@ threshold signatures.
   to prove that the entropy buffers are invalid public keys.
 
   There are plans to also add ECDSA secp256k1 and Schnorr secp256k1. New
-  signing algorithms can be added to Sia through a soft fork, because
+  signing algorithms can be added to Rivine through a soft fork, because
   unrecognized algorithm types are always considered to have valid signatures.
 
 Currency
 --------
 
-The Sia cryptosystem has two types of currency. The first is the Siacoin.
-Siacoins are generated every block and distributed to the miners. These miners
-can then use the siacoins to fund file contracts, or can send the siacoins to
-other parties. The siacoin is represented by an infinite precision unsigned
-integer.
+The Rivine cryptosystem has two types of currency. The first is the coin.
 
-The second currency in the Sia cryptosystem is the Siafund, which is a special
-asset limited to 10,000 indivisible units. Each time a file contract payout is
-made, 3.9% of the payout is put into the siafund pool. The number of siacoins
-in the siafund pool must always be divisible by 10,000; the number of coins
-taken from the payout is rounded down to the nearest 10,000. The siafund is
-also represented by an infinite precision unsigned integer.
+// TODO: expand
 
-Siafund owners can collect the siacoins in the siafund pool. For every 10,000
-siacoins added to the siafund pool, a siafund owner can withdraw 1 siacoin.
-Approx. 8790 siafunds are owned by Nebulous Inc. The remaining siafunds are
-owned by early backers of the Sia project.
+The second currency in the Rivine cryptosystem is the blockstake, a special asset.
 
-There are future plans to enable sidechain compatibility with Sia. This would
+// TODO: expand
+
+There are future plans to enable sidechain compatibility with Rivine. This would
 allow other currencies such as Bitcoin to be spent in all the same places that
-the Siacoin can be spent.
+the coin can be spent.
 
 Marshaling
 -----------
 
-Many of the Sia types need to be hashed at some point, which requires having a
+Many of the Rivine types need to be hashed at some point, which requires having a
 consistent algorithm for marshaling types into a set of bytes that can be
 hashed. The following rules are used for hashing:
 
@@ -176,16 +166,16 @@ Transactions
 
 A Transaction is composed of the following:
 
-- Siacoin Inputs
-- Siacoin Outputs
+- Coin Inputs
+- Coin Outputs
 - BlockStake Inputs
 - BlockStake Outputs
 - Miner Fees
 - Arbitrary Data
 - Transaction Signatures
 
-The sum of all the siacoin inputs must equal the sum of all the miner fees and
-siacoin outputs. There can be no leftovers. The sum
+The sum of all the coin inputs must equal the sum of all the miner fees and
+coin outputs. There can be no leftovers. The sum
 of all BlockStake inputs must equal the sum of all BlockStake outputs.
 
 Several objects have unlock hashes. An unlock hash is the Merkle root of the
@@ -214,32 +204,32 @@ There must be exactly enough signatures. For example, if there are 3 public
 keys and only two required signatures, then only two signatures can be included
 into the transaction.
 
-Siacoin Inputs
+Coin Inputs
 --------------
 
 Each input spends an output. The output being spent must exist in the consensus
-set. The 'value' field of the output indicates how many siacoins must be used
-in the outputs of the transaction. Valid outputs are miner fees, siacoin
+set. The 'value' field of the output indicates how many coins must be used
+in the outputs of the transaction. Valid outputs are miner fees, coin
 outputs, and contract payouts.
 
-Siacoin Outputs
+Coin Outputs
 ---------------
 
-Siacoin outputs contain a value and an unlock hash (also called a coin
+Coin outputs contain a value and an unlock hash (also called a coin
 address). The unlock hash is the Merkle root of the spend conditions that must
 be met to spend the output.
 
 BlockStake Inputs
 -----------------
 
-A blockstake input works similar to a siacoin input. It contains the id of a
+A blockstake input works similar to a coin input. It contains the id of a
 blockstake output being spent, and the unlock conditions required to spend the
 output.
 
 BlockStake Outputs
 ------------------
 
-Like siacoin outputs, blockstake outputs contain a value and an unlock hash. The
+Like coin outputs, blockstake outputs contain a value and an unlock hash. The
 value indicates the number of blockstakes that are put into the output, and the
 unlock hash is the Merkle root of the unlock conditions object which allows the
 output to be spent.
@@ -254,7 +244,7 @@ Arbitrary Data
 Arbitrary data is a set of data that is ignored by consensus. In the future, it
 may be used for soft forks, paired with 'anyone can spend' transactions. In the
 meantime, it is an easy way for third party applications to make use of the
-siacoin blockchain.
+coin blockchain.
 
 Transaction Signatures
 ----------------------
@@ -281,7 +271,7 @@ signature. If the whole transaction flag is set, all other elements in the
 covered fields object must be empty except for the signatures field.
 
 The covered fields object contains a slice of indexes for each element of the
-transaction (siacoin inputs, minting fees, etc.). The slice must be sorted, and
+transaction (coin inputs, minting fees, etc.). The slice must be sorted, and
 there can be no repeated elements.
 
 Entirely nonmalleable transactions can be achieved by setting the 'whole
