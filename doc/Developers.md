@@ -13,10 +13,10 @@ you can simply use an official Go distribution (1.5 or above) to crosscompile.
 Rivine has a development build, an automated testing build, and a release
 build. The release build is the only one that can synchronize to the full
 network. To get the release build, it is usually sufficient to run `go get -u
-github.com/rivine/rivine/...`. This will download Sia and its dependencies
+github.com/rivine/rivine/...`. This will download Rivine and its dependencies
 and install binaries in $GOPATH/bin.
 
-After downloading, you can find the Sia source code in
+After downloading, you can find the Rivine source code in
 $GOPATH/src/github.com/rivine/rivine. To build the release binary, run
 `make release-std` from this directory. To build the release binary with a
 (slow) race detector and an array of debugging asserts, run `make release`. To
@@ -24,7 +24,7 @@ build the developer binary (which has a different genesis block, faster block
 times, and a few other tweaks), just run `make`.
 
 If you intend to contribute to Rivine, you should start by forking the project on
-GitHub, and then adding your fork as a "remote" in the Sia git repository via
+GitHub, and then adding your fork as a "remote" in the Rivine git repository via
 `git remote add [fork name] [fork url]`. Now you can develop by pulling changes
 from `origin`, pushing your modifications to `[fork name]`, and then making a
 pull request on GitHub.
@@ -45,9 +45,9 @@ Developer Conventions
 
 This file is meant to help a developer navigate the codebase and develop clean,
 maintainable code. Knowing all of these conventions will also make it easier to
-read and code review the Sia project.
+read and code review the Rivine project.
 
-The primary purpose of the conventions within Sia is to keep the codebase
+The primary purpose of the conventions within Rivine is to keep the codebase
 simple. Simpler constructions means easier code reviews, greater accessibility
 to newcomers, and less potential for mistakes. It is also to keep things
 uniform, much in the spirit of 'go fmt'. When everything looks the same,

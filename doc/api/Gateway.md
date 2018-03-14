@@ -37,7 +37,7 @@ returns information about the gateway, including the list of connected peers.
 {
     // netaddress is the network address of the gateway as seen by the rest of
     // the network. The address consists of the external IP address and the
-    // port Sia is listening on. It represents a `modules.NetAddress`.
+    // port Rivine is listening on. It represents a `modules.NetAddress`.
     "netaddress": String,
 
     // peers is an array of peers the gateway is connected to. It represents

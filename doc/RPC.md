@@ -1,7 +1,7 @@
 RPC
 ===
 
-Sia peers communicate with each other via Remote Procedure Calls. An RPC consists of a unique ID and a pair of functions, one on the calling end and one on the receiving end. After the ID is written/received, both peers hand the connection off to their respective functions. Typically, the calling end writes an object to the receiver and then reads a response.
+Rivine peers communicate with each other via Remote Procedure Calls. An RPC consists of a unique ID and a pair of functions, one on the calling end and one on the receiving end. After the ID is written/received, both peers hand the connection off to their respective functions. Typically, the calling end writes an object to the receiver and then reads a response.
 
 RPC IDs are always 8 bytes and contain a human-readable name for the RPC. If the name is shorter than 8 bytes, the remainder is padded with zeros. If the name is longer than 8 bytes, it is truncated.
 
