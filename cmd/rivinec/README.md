@@ -27,14 +27,6 @@ Wallet:
 * `rivinec wallet address` get a wallet address
 * `rivinec wallet send [amount] [dest]` sends coin to an address
 
-Renter:
-* `rivinec renter list` list all renter files
-* `rivinec renter upload [filepath] [nickname]` upload a file
-* `rivinec renter download [nickname] [filepath]` download a file
-* `rivinec renter share [nickname] [filepath]` create a .rvn file
-* `rivinec renter load [filepath]` load a .rvn file
-
-
 Full Descriptions
 -----------------
 

@@ -47,9 +47,7 @@ returns the set of constants in use.
   // will attempt to accept the block as soon as it is valid.
   "futurethreshold": 10800, // seconds
   // Total number of blockstakes.
-  "siafundcount": "10000",
-  // Fraction of each file contract payout given to blockstake holders.
-  "siafundportion": "39/1000",
+  "blockstakecount": "10000",
   // Number of children a block must have before it is considered "mature."
   "maturitydelay": 144, // blocks
 

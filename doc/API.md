@@ -331,12 +331,11 @@ locked or unlocked.
   "encrypted": true,
   "unlocked":  true,
 
-  "confirmedsiacoinbalance":     "123456", // hastings, big int
+  "confirmedcoinbalance":     "123456", // hastings, big int
   "unconfirmedoutgoingsiacoins": "0",      // hastings, big int
   "unconfirmedincomingsiacoins": "789",    // hastings, big int
 
-  "siafundbalance":      "1",    // blockstake s, big int
-  "siacoinclaimbalance": "9001", // hastings, big int
+  "blockstakebalance":      "1",    // blockstakes, big int
 }
 ```
 

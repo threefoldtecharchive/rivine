@@ -65,22 +65,12 @@ Currency
 --------
 
 The Rivine cryptosystem has two types of currency. The first is the coin.
-coins are generated every block and distributed to the miners. These miners
-can then use the coins to fund file contracts, or can send the coins to
-other parties. The coin is represented by an infinite precision unsigned
-integer.
 
-The second currency in the Rivine cryptosystem is the blockstake, which is a special
-asset limited to 10,000 indivisible units. Each time a file contract payout is
-made, 3.9% of the payout is put into the blockstake pool. The number of coins
-in the blockstake pool must always be divisible by 10,000; the number of coins
-taken from the payout is rounded down to the nearest 10,000. The blockstake is
-also represented by an infinite precision unsigned integer.
+// TODO: expand
 
-Blockstake owners can collect the coins in the blockstake pool. For every 10,000
-coins added to the blockstake pool, a blockstake owner can withdraw 1 coin.
-Approx. 8790 blockstakes are owned by Nebulous Inc. The remaining blockstakes are
-owned by early backers of the Rivine project.
+The second currency in the Rivine cryptosystem is the blockstake, a special asset.
+
+// TODO: expand
 
 There are future plans to enable sidechain compatibility with Rivine. This would
 allow other currencies such as Bitcoin to be spent in all the same places that
