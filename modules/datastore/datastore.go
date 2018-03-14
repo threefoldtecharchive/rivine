@@ -10,12 +10,6 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-// TODO: move this to modules in the interface definition
-const (
-	// DataStoreDir is the name of the subdirectory to create the persistent files
-	DataStoreDir = "datastore"
-)
-
 // local error variables
 var (
 	errNilCS = errors.New("datastore cannot use a nil consensus set")
@@ -73,6 +67,14 @@ func New(cs modules.ConsensusSet, db Database, persistDir string, bcInfo types.B
 	mgrs, err := ds.db.GetManagers()
 	if err != nil {
 		return nil, errors.New("Failed to load existing namespace managers: " + err.Error())
+	}
+	for _, mgr := range mgrs {
+		// Add some properties we don't serialize
+		mgr.DB = ds.db
+		mgr.log = ds.log
+		mgr.Buffer = NewBlockBuffer()
+		// Don't block initialization
+		go mgr.SubscribeCs(ds.cs)
 	}
 	ds.managers = mgrs
 

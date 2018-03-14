@@ -16,7 +16,8 @@ func (nsm *NamespaceManager) ProcessConsensusChange(cc modules.ConsensusChange) 
 		build.Critical("DataStore.ProcessConsensusChange called with a ConsensusChange that has no AppliedBlocks")
 	}
 
-	// FIX: DATAID BEOFRE START
+	// Check if we need to apply a change
+	changeApplied := false
 
 	nsm.mu.Lock()
 	defer nsm.mu.Unlock()
@@ -30,65 +31,87 @@ func (nsm *NamespaceManager) ProcessConsensusChange(cc modules.ConsensusChange) 
 		return
 	}
 
-	// TODO: Perhaps we can use pipes here to improve efficiency should there be a reasonable change set
-
-	// Update data in reverted blocks
+	// First try to remove the old blocks from the buffer, or delete them if required
 	for _, block := range cc.RevertedBlocks {
-		for _, txn := range block.Transactions {
-			// Check if there is data and it is for this namespace
-			data := nsm.getArbitraryData(txn)
-			if data == nil || len(data) == 0 {
-				continue
-			}
-			// There is something here, this is a rollback so delete it
-			for range data {
-				// Ignore blocks from before the start timestamp
-				if block.Header().Timestamp >= nsm.State.SubscribeStart {
-					err := nsm.DB.DeleteData(nsm.Namespace, nsm.State.DataID)
-					if err != nil {
-						nsm.log.Severe("Failed to delete data: ", err)
-					}
-					nsm.log.Debugln("Rolled back data from block %d, dataID: %d", nsm.State.BlockHeight, nsm.State.DataID)
-				}
-				// But still modify the data id
-				nsm.State.DataID--
-			}
+		oldFrame := nsm.Buffer.Pop(block.ID())
+		if oldFrame == nil {
+			// The buffer was empty, so we need to actually delete the block in the database
+			nsm.handleBlockRevert(block)
+			nsm.State.RecentChangeID = cc.ID
+			changeApplied = true
 		}
-		nsm.State.BlockHeight--
 	}
 
-	// Apply data in new blocks
+	// Then apply new blocks
 	for _, block := range cc.AppliedBlocks {
-		for _, txn := range block.Transactions {
-			// Check if there is data and and it is for this namespace
-			data := nsm.getArbitraryData(txn)
-			if data == nil || len(data) == 0 {
-				continue
-			}
-			// There is something here, save it
-			for _, dataRow := range data {
-				// Ignore blocks from before the start timestamps
-				if block.Header().Timestamp >= nsm.State.SubscribeStart {
-					err := nsm.DB.StoreData(nsm.Namespace, nsm.State.DataID, dataRow)
-					if err != nil {
-						nsm.log.Severe("Failed to save data: ", err)
-					}
-					nsm.log.Debugln("Saved data from block, dataID: ", nsm.State.DataID)
-				}
-				// Still modify the data id
-				nsm.State.DataID++
-			}
+		frame := NewBlockFrame(block, cc.ID)
+		acceptedFrame := nsm.Buffer.Push(frame)
+		if acceptedFrame != nil {
+			nsm.handleBlockApply(acceptedFrame.Block)
+			nsm.State.RecentChangeID = acceptedFrame.CCID
+			changeApplied = true
 		}
-		nsm.State.BlockHeight++
 	}
 
 	// Save the state
-	nsm.State.RecentChangeID = cc.ID
-	err := nsm.DB.SaveManager(nsm)
-	if err != nil {
-		nsm.log.Severe("Failed to save namespace manager state: ", err)
+	if changeApplied {
+		err := nsm.DB.SaveManager(nsm)
+		if err != nil {
+			nsm.log.Severe("Failed to save namespace manager state: ", err)
+		}
 	}
 
+}
+
+// handleBlockRevert reverts data in a block (if any). Calling this method means there was a fork
+// which was not corrected by the block buffer
+func (nsm *NamespaceManager) handleBlockRevert(block types.Block) {
+	for _, txn := range block.Transactions {
+		// Check if there is data and it is for this namespace
+		data := nsm.getArbitraryData(txn)
+		if data == nil || len(data) == 0 {
+			continue
+		}
+		// There is something here, this is a rollback so delete it
+		for range data {
+			// Ignore blocks from before the start timestamp
+			if block.Header().Timestamp >= nsm.State.SubscribeStart {
+				err := nsm.DB.DeleteData(nsm.Namespace, nsm.State.DataID)
+				if err != nil {
+					nsm.log.Severe("Failed to delete data: ", err)
+				}
+				nsm.log.Debugln("Rolled back data from block %d, dataID: %d", nsm.State.BlockHeight, nsm.State.DataID)
+			}
+			// But still modify the data id
+			nsm.State.DataID--
+		}
+	}
+	nsm.State.BlockHeight--
+}
+
+// handleBlockApply handles writing the data from a block (if any) to the database.
+func (nsm *NamespaceManager) handleBlockApply(block types.Block) {
+	for _, txn := range block.Transactions {
+		// Check if there is data and and it is for this namespace
+		data := nsm.getArbitraryData(txn)
+		if data == nil || len(data) == 0 {
+			continue
+		}
+		// There is something here, save it
+		for _, dataRow := range data {
+			// Ignore blocks from before the start timestamps
+			if block.Header().Timestamp >= nsm.State.SubscribeStart {
+				err := nsm.DB.StoreData(nsm.Namespace, nsm.State.DataID, dataRow)
+				if err != nil {
+					nsm.log.Severe("Failed to save data: ", err)
+				}
+				nsm.log.Debugln("Saved data from block, dataID: ", nsm.State.DataID)
+			}
+			// Still modify the data id
+			nsm.State.DataID++
+		}
+	}
+	nsm.State.BlockHeight++
 }
 
 // getArbitraryData returns all parsed data for the tracked namespace. Only the data which is written to

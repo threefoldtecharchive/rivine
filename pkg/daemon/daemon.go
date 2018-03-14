@@ -320,7 +320,7 @@ func StartDaemon(cfg Config) (err error) {
 			}
 		}()
 	}
-	var ds *datastore.DataStore
+	var ds modules.DataStore
 	if strings.Contains(cfg.Modules, "d") {
 		i++
 		fmt.Printf("(%d/%d) Loading datastore...\n", i, len(cfg.Modules))
@@ -329,7 +329,7 @@ func StartDaemon(cfg Config) (err error) {
 			return err
 		}
 		ds, err = datastore.New(cs, db,
-			filepath.Join(cfg.RootPersistentDir, datastore.DataStoreDir),
+			filepath.Join(cfg.RootPersistentDir, modules.DataStoreDir),
 			cfg.BlockchainInfo)
 		if err != nil {
 			return err

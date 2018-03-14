@@ -18,6 +18,9 @@ type (
 		Namespace Namespace
 		// State of the manager
 		State NamespaceManagerState
+		// Buffer for the incomming blocks so replication is delayed
+		// and we can prevent deletion of data
+		Buffer *BlockBuffer
 		// Cs we are subscribed to
 		Cs modules.ConsensusSet
 		// DB used to replicate the data
@@ -49,6 +52,7 @@ func NewNamespaceManager(namespace Namespace, db Database, ts types.Timestamp, l
 			SubscribeStart: ts,
 		},
 		Namespace: namespace,
+		Buffer:    NewBlockBuffer(),
 		DB:        db,
 		log:       log,
 	}
