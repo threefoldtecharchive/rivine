@@ -388,9 +388,31 @@ types:
       description: |
         Cleanly shuts down the daemon. May take a few seconds.
       responses:
-        200:
+        204:
           description: |
-            Succesfully stopped
+            Succesfully stopped, No contents
+  /update:
+    get:
+      description: |
+        checks for an update.
+      responses:
+        200:
+          description:
+          body: 
+            type: UpdateInfo
+        500:
+          description: |
+            Failed to fetch latest release.
+    post:
+      description:  |
+        Fetches latest release code from github
+      responses:
+        204:
+          description: |
+            Succesfully fetched, No contents
+        500:
+          description: |
+            Error fetching or applying the update.
   /version:
     get:
       description: |
@@ -427,17 +449,23 @@ types:
         connects the gateway to a peer. The peer is added to the node list if it is not already present.
         The node list is the list of all nodes the gateway knows about, but is not necessarily connected to.
       responses:
-        200:
+        204:
           description: |
-            Succesfully connected
+            Succesfully connected, No contents
+        400:
+          description: |
+            Can not connect to the given address.
   /disconnect/{netaddr}:
     post:
       description: |
         Disconnects the gateway from a peer. The peer remains in the node list.
       responses:
-        200:
+        204:
           description: |
-            Succesfully disconnected
+            Succesfully disconnected, No contents
+        400:
+          description: |
+            Can not connect to the given address.            
 /transactionpool/transactions:
   post:
     description: |
@@ -448,6 +476,19 @@ types:
       200:
         description: |
           Succesfully created transaction
+        400:
+          description: |
+            error decoding the supplied transaction.
+  get:
+    description: |
+      Returns a list of transactions in the pool 
+    responses:
+      200:
+        description: |
+    		  Succesfully retrieved transaction list	
+        body: 
+          type: array
+          items: Transaction
 /wallet:
   get:
     description: |
@@ -473,7 +514,11 @@ types:
       responses:
         200:
           body:
-            type: Addresses
+            type: array
+            items: Addresses
+        400:
+          description: |
+            error in call to /wallet/addresses
   /backup:
     get:
       queryParameters:
@@ -485,7 +530,10 @@ types:
         creates a backup of the wallet settings file. Though this can easily be done manually, the settings file is often in an unknown or difficult to find location.
         The /wallet/backup call can spare users the trouble of needing to find their wallet file. The destination file is overwritten if it already exists.
       responses:
-        200:
+        204:
+          description: |
+            Success, No contents.
+        400:
   /init:
     post:
       description: |
@@ -507,6 +555,9 @@ types:
                 type: string
                 description: |
                   Wallet seed used to generate addresses that the wallet is able to spend.
+        400:
+          description: |
+            error calling /wallet/init
   /seed:
     post:
       description: |
@@ -526,7 +577,13 @@ types:
           type: string
           required: true
       responses:
-        200:
+        204:
+          description: |
+            Seed successfully loaded. No contents
+        400:
+          description: |
+            Can not complete the request, error calling wallet/seed
+  /seeds:
     get:
       description: |
         Returns a list of seeds in use by the wallet.
@@ -538,7 +595,10 @@ types:
       responses:
         200:
           body: Seed
-  /coin:
+        400:
+          description: |
+            Can not complete the request, error calling wallet/seed
+  /coins:
     post:
       description: |
         Function: Send coins to an address. The outputs are arbitrarily selected from addresses in the wallet.
@@ -567,6 +627,12 @@ types:
                   Transaction IDs are 64 character long hex strings.
                 type: array
                 items: string
+        400:
+          description: |
+            Could not read query parameters.
+        500:
+          description: |
+            Can not complete the request, error calling wallet/coin
   /blockstakes:
     post:
       description: |
@@ -594,6 +660,12 @@ types:
                   Transaction IDs are 64 character long hex strings.
                 type: array
                 items: string
+        400:
+          description: |
+            Could not read query parameters.
+        500:
+          description: |
+            Can not complete the request, error calling wallet/blockstakes
   /data:
     post:
       description: |
@@ -622,6 +694,12 @@ types:
                   Transaction IDs are 64 character long hex strings.
                 type: array
                 items: string
+        400:
+          description: |
+            Could not read data.
+        500:
+          description: |
+            Can not complete the request, error calling wallet/data
   /lock:
     post:
       description: |
@@ -631,7 +709,9 @@ types:
       body:
         application/json: !!null
       responses:
-        200:
+        204:
+        description: |
+          Success, No contents
   /unlock:
     post:
       description: |
@@ -643,7 +723,12 @@ types:
             Key used to encrypt the new seed when it is saved to disk.
           required: true
       responses:
-        200:
+        204:
+          description: |
+            Success, No contents
+        400:
+          description: |
+            Can not complete the request, error calling wallet/unlock
   /transaction/{id}:
     get:
       description: |
@@ -652,6 +737,9 @@ types:
         200:
           body:
             type: Transaction
+        400:
+          description: |
+            Can not complete the request, transaction not found, error calling wallet/transaction            
   /transactions:
     get:
       description: |
@@ -680,20 +768,6 @@ types:
                   type: Transaction[]
                   description: |
                      All of the unconfirmed transactions.
-    /{addr}:
-      get:
-        description: |
-          Returns all of the transactions related to a specific address.
-        queryParameters:
-          addr:
-            type: string
-            description: |
-              Unlock hash (i.e. wallet address) whose transactions are being requested.
-        responses:
-          200:
-            body:
-              properties:
-                transactions:
-                  type: Transaction[]
-                  description: |
-                    Array of processed transactions that relate to the supplied address.
+        400:
+          description: |
+            Can not complete the request, error calling wallet/transactions
