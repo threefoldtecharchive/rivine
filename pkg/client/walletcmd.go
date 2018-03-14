@@ -182,6 +182,9 @@ func Walletinitcmd() {
 	if err != nil {
 		Die("Reading passphrase failed:", err)
 	}
+	if passphrase == "" {
+		Die("passphrase is required and cannot be empty")
+	}
 
 	repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
 	if err != nil {

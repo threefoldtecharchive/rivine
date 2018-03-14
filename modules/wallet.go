@@ -367,11 +367,10 @@ func NewMnemonic(seed Seed) (string, error) {
 	return bip39.NewMnemonic(seed[:])
 }
 
-// SeedFromMnemonicAndPassphrase converts a mnemonic and passphrase into a wallet seed.
-// An error gets returned in case the given mnemonic is invalid.
-// Passphrase is optional and can be empty.
-func SeedFromMnemonicAndPassphrase(mnemonic, passphrase string) (out Seed, err error) {
-	seed, err := bip39.NewSeedWithErrorChecking(mnemonic, passphrase)
+// InitialSeedFromMnemonic converts the mnemonic into the initial seed,
+// also called entropy, that was used to create the given mnemonic initially.
+func InitialSeedFromMnemonic(mnemonic string) (out Seed, err error) {
+	seed, err := bip39.EntropyFromMnemonic(mnemonic)
 	if err != nil {
 		return
 	}

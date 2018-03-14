@@ -11,7 +11,6 @@ import (
 	"github.com/rivine/rivine/types"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/rivine/go-bip39"
 )
 
 type (
@@ -195,17 +194,21 @@ func (api *API) walletBackupHandler(w http.ResponseWriter, req *http.Request, _ 
 
 // walletInitHandler handles API calls to /wallet/init.
 func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	var encryptionKey crypto.TwofishKey
-	if passphrase := req.FormValue("passphrase"); passphrase != "" {
-		encryptionKey = crypto.TwofishKey(crypto.HashObject(passphrase))
+	passphrase := req.FormValue("passphrase")
+	if passphrase == "" {
+		WriteError(w, Error{"error when calling /wallet/init: passphrase is required"},
+			http.StatusUnauthorized)
+		return
 	}
+
+	encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
 	seed, err := api.wallet.Encrypt(encryptionKey)
 	if err != nil {
 		WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 
-	seedStr, err := bip39.NewMnemonic(seed[:])
+	seedStr, err := modules.NewMnemonic(seed)
 	if err != nil {
 		WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
 		return
@@ -219,15 +222,20 @@ func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ ht
 func (api *API) walletSeedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	menmonic := req.FormValue("mnemonic")
 	passphrase := req.FormValue("passphrase")
+	if passphrase == "" {
+		WriteError(w, Error{"error when calling /wallet/seed: passphrase is required"},
+			http.StatusUnauthorized)
+		return
+	}
 
-	seed, err := modules.SeedFromMnemonicAndPassphrase(menmonic, passphrase)
+	seed, err := modules.InitialSeedFromMnemonic(menmonic)
 	if err != nil {
 		WriteError(w, Error{"error when calling /wallet/seed: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 
-	key := crypto.TwofishKey(crypto.HashObject(passphrase))
-	err = api.wallet.LoadSeed(key, seed)
+	encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
+	err = api.wallet.LoadSeed(encryptionKey, seed)
 	if err == nil {
 		WriteSuccess(w)
 		return
@@ -442,8 +450,13 @@ func (api *API) walletTransactionsAddrHandler(w http.ResponseWriter, req *http.R
 // walletUnlockHandler handles API calls to /wallet/unlock.
 func (api *API) walletUnlockHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	passphrase := req.FormValue("passphrase")
-	key := crypto.TwofishKey(crypto.HashObject(passphrase))
-	err := api.wallet.Unlock(key)
+	if passphrase == "" {
+		WriteError(w, Error{"error when calling /wallet/unlock: passphrase is required"},
+			http.StatusUnauthorized)
+		return
+	}
+	encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
+	err := api.wallet.Unlock(encryptionKey)
 	if err == nil {
 		WriteSuccess(w)
 		return

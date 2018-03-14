@@ -90,14 +90,14 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 
 	// Spend too many siacoins.
 	tooManyCoins := types.OneCoin.Mul64(1e12)
-	_, err = wt.wallet.SendCoins(tooManyCoins, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(tooManyCoins, types.UnlockHash{}, nil)
 	if err != modules.ErrLowBalance {
 		t.Error("low balance err not returned after attempting to send too many coins")
 	}
 
 	// Spend a reasonable amount of siacoins.
 	reasonableCoins := types.OneCoin.Mul64(100e3)
-	_, err = wt.wallet.SendCoins(reasonableCoins, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(reasonableCoins, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
@@ -118,11 +118,11 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 
 	// Spend more than half of the coins twice.
 	halfPlus := types.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{1})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{1}, nil)
 	if err != modules.ErrIncompleteTransactions {
 		t.Error("wallet appears to be reusing outputs when building transactions: ", err)
 	}
@@ -141,12 +141,12 @@ func TestIntegrationSpendUnconfirmed(t *testing.T) {
 
 	// Spend the only output.
 	halfPlus := types.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
 	someMore := types.OneCoin.Mul64(75e3)
-	_, err = wt.wallet.SendCoins(someMore, types.UnlockHash{1})
+	_, err = wt.wallet.SendCoins(someMore, types.UnlockHash{1}, nil)
 	if err != nil {
 		t.Error("wallet appears to be struggling to spend unconfirmed outputs")
 	}

@@ -60,9 +60,6 @@ func (w *Wallet) initEncryption(masterKey crypto.TwofishKey) (modules.Seed, erro
 
 	// If the input key is blank, use the seed to create the master key.
 	// Otherwise, use the input key.
-	if masterKey == (crypto.TwofishKey{}) {
-		masterKey = crypto.TwofishKey(crypto.HashObject(seed))
-	}
 	err = w.createSeed(masterKey, seed)
 	if err != nil {
 		return modules.Seed{}, err
