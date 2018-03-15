@@ -431,6 +431,19 @@ types:
           Succesfully retrieved consensus
         body:
           type: Consensus
+  /transactions/{shortid}:
+    description: |
+      Fetches an existing transaction from a block within the blockchain, using a given shortID.
+    responses:
+      200:
+        description: |
+          Succesfully retrieved transaction
+        body:
+          type: Transaction
+      204:
+        description: |
+          Succesfully lookup, no transaction available for the given short ID
+
 /gateway:
   get:
     description: |

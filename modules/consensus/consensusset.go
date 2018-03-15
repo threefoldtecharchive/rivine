@@ -227,6 +227,23 @@ func (cs *ConsensusSet) BlockHeightOfBlock(block types.Block) (height types.Bloc
 	return height, exists
 }
 
+// TransactionAtShortID allows you fetch a transaction from a block within the blockchain,
+// using a given shortID.  If that transaction does not exist, false is returned.
+func (cs *ConsensusSet) TransactionAtShortID(shortID types.TransactionShortID) (types.Transaction, bool) {
+	height := shortID.BlockHeight()
+	block, found := cs.BlockAtHeight(height)
+	if !found {
+		return types.Transaction{}, false
+	}
+
+	txSeqID := int(shortID.TransactionSequenceIndex())
+	if len(block.Transactions) <= txSeqID {
+		return types.Transaction{}, false
+	}
+
+	return block.Transactions[txSeqID], true
+}
+
 // ChildTarget returns the target for the child of a block.
 func (cs *ConsensusSet) ChildTarget(id types.BlockID) (target types.Target, exists bool) {
 	// A call to a closed database can cause undefined behavior.
@@ -355,3 +372,7 @@ func (cs *ConsensusSet) MinimumValidChildTimestamp(id types.BlockID) (timestamp 
 	})
 	return timestamp, exists
 }
+
+var (
+	_ modules.ConsensusSet = (*ConsensusSet)(nil)
+)

@@ -276,6 +276,9 @@ func DefaultClient() {
 		gatewayListCmd)
 
 	root.AddCommand(consensusCmd)
+	consensusCmd.AddCommand(
+		consensusTransactionCmd,
+	)
 
 	// parse flags
 	root.PersistentFlags().StringVarP(&addr, "addr", "a", "localhost:23110", fmt.Sprintf("which host/port to communicate with (i.e. the host/port %sd is listening on)", ClientName))

@@ -1,7 +1,10 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"regexp"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -17,9 +20,16 @@ var (
 		Long:  "Print the current state of consensus such as current block, block height, and target.",
 		Run:   wrap(Consensuscmd),
 	}
+
+	consensusTransactionCmd = &cobra.Command{
+		Use:   "transaction <shortID>",
+		Short: "Get an existing transaction",
+		Long:  "Get an existing transaction from the blockchain, using its given shortID.",
+		Run:   wrap(Consensustransactioncmd),
+	}
 )
 
-// Consensuscmd is the handler for the command `siac consensus`.
+// Consensuscmd is the handler for the command `rivinec consensus`.
 // Prints the current state of consensus.
 func Consensuscmd() {
 	var cg api.ConsensusGET
@@ -55,3 +65,27 @@ func EstimatedHeightAt(t time.Time) types.BlockHeight {
 	estimatedHeight := 5e4 + (diff.Minutes() / 10)
 	return types.BlockHeight(estimatedHeight + 0.5) // round to the nearest block
 }
+
+// Consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
+// Prints the transaction found for the given shortID.
+func Consensustransactioncmd(shortID string) {
+	if !consensusShortIDRegexp.MatchString(shortID) {
+		Die("invalid shortID: ", shortID)
+	}
+
+	var txn api.ConsensusGetTransaction
+	err := GetAPI("/consensus/transactions/"+shortID, &txn)
+	if err != nil {
+		Die("failed to get transaction: ", err, "; shortID: ", shortID)
+	}
+
+	encoder := json.NewEncoder(os.Stdout)
+	err = encoder.Encode(txn)
+	if err != nil {
+		Die("failed to encode transaction: ", err, "; shortID: ", shortID)
+	}
+}
+
+var (
+	consensusShortIDRegexp = regexp.MustCompile("^[0-9]{1,8}$")
+)

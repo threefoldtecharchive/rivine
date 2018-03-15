@@ -381,6 +381,21 @@ func (css *consensusSetStub) BlockHeightOfBlock(block types.Block) (types.BlockH
 	return 0, false
 }
 
+func (css *consensusSetStub) TransactionAtShortID(shortID types.TransactionShortID) (types.Transaction, bool) {
+	height := shortID.BlockHeight()
+	block, found := css.BlockAtHeight(height)
+	if !found {
+		return types.Transaction{}, false
+	}
+
+	txSeqID := int(shortID.TransactionSequenceIndex())
+	if len(block.Transactions) <= txSeqID {
+		return types.Transaction{}, false
+	}
+
+	return block.Transactions[txSeqID], true
+}
+
 func (css *consensusSetStub) ChildTarget(id types.BlockID) (types.Target, bool) {
 	// TODO: return a more sensible value if required
 	return types.Target{}, false
