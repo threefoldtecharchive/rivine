@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/rivine/rivine/types"
@@ -26,5 +27,35 @@ func (api *API) consensusHandler(w http.ResponseWriter, req *http.Request, _ htt
 		Height:       api.cs.Height(),
 		CurrentBlock: cbid,
 		Target:       currentTarget,
+	})
+}
+
+// ConsensusGetTransaction is the object returned by a GET request to
+// /consensus/transaction/:shortid.
+type ConsensusGetTransaction struct {
+	ExplorerTransaction
+}
+
+func (api *API) consensusGetTransactionHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	var txShortID types.TransactionShortID
+	_, err := fmt.Sscan(ps.ByName("shortid"), &txShortID)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	txn, found := api.cs.TransactionAtShortID(txShortID)
+	if !found {
+		WriteError(w, Error{fmt.Sprintf("no tx found for shortID %v", txShortID)},
+			http.StatusNoContent)
+		return
+	}
+
+	height := txShortID.BlockHeight()
+	block, _ := api.cs.BlockAtHeight(height)
+
+	explorerTxn := api.buildExplorerTransaction(height, block.ID(), txn)
+	WriteJSON(w, ConsensusGetTransaction{
+		ExplorerTransaction: explorerTxn,
 	})
 }

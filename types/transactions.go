@@ -9,8 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
 )
 
 const (
@@ -187,6 +189,89 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 
 	return
 }
+
+// NewTransactionShortID creates a new Transaction ShortID,
+// combining a blockheight together with a transaction index.
+// See the TransactionShortID type for more information.
+func NewTransactionShortID(height BlockHeight, txSequenceID uint16) TransactionShortID {
+	if (height & blockHeightOOBMask) > 0 {
+		panic("block height out of bounds")
+	}
+	if (txSequenceID & txSeqIndexOOBMask) > 0 {
+		panic("transaction sequence ID out of bounds")
+	}
+
+	return TransactionShortID(height<<txShortIDBlockHeightShift) |
+		TransactionShortID(txSequenceID&txSeqIndexMaxMask)
+}
+
+// BlockHeight returns the block height part of the transacton short ID.
+func (txsid TransactionShortID) BlockHeight() BlockHeight {
+	return BlockHeight(txsid >> txShortIDBlockHeightShift)
+}
+
+// TransactionSequenceIndex returns the transaction sequence index,
+// which is the local (sequence) index of the transaction within a block,
+// of the transacton short ID.
+func (txsid TransactionShortID) TransactionSequenceIndex() uint16 {
+	return uint16(txsid & txSeqIndexMaxMask)
+}
+
+// MarshalSia implements SiaMarshaler.SiaMarshaler
+func (txsid TransactionShortID) MarshalSia(w io.Writer) error {
+	b := encoding.EncUint64(uint64(txsid))
+	_, err := w.Write(b)
+	return err
+}
+
+// UnmarshalSia implements SiaMarshaler.UnmarshalSia
+func (txsid *TransactionShortID) UnmarshalSia(r io.Reader) error {
+	b := make([]byte, 8)
+	_, err := r.Read(b)
+	if err != nil {
+		return err
+	}
+
+	*txsid = TransactionShortID(encoding.DecUint64(b))
+	return nil
+}
+
+// masking and shifting constants used to (de)compose a short transaction ID,
+// see the TransactionShortID type for more information.
+const (
+	// used to protect against a given block height which goes out of
+	// the bit range of the available 50 bits, panicing if we're OOB
+	blockHeightOOBMask        = 0xFFFC000000000000
+	txShortIDBlockHeightShift = 14 // amount of bits reserved for tx index
+
+	txSeqIndexOOBMask = 0xC000
+	txSeqIndexMaxMask = 0x3FFF
+)
+
+// TransactionShortID is another way to uniquely identify a transaction,
+// just as the default hash-based (32-byte) ID uniquely identifies a transaction as well.
+// The differences with the default/long ID is that it is 4 times smaller (only 8 bytes),
+// and is not just unique, but also ordered. Meaning that byte-wise,
+// this short ID informs about its position within the blockchain,
+// on such a precise level that you not only to which block it belongs,
+// but also its position within that transaction.
+//
+// The position (indicated by the transaction index),
+// is obviously not as important as it is more of a client-side choice,
+// rather something agreed upon by consensus.
+//
+// In memory the transaction is used and manipulated as a uint64,
+// where the first 50 bits (going from left to right),
+// define the block height, which can have a maximum of about 1.126e+15 (2^50) blocks,
+// and the last 14 bits (again going from left to right),
+// define the transaction sequence ID, or in other words,
+// its unique and shorted position within a given block.
+// When serialized into a binary (byte slice) format, is done so using LittleEndian,
+// as to correctly preserve the sorted property in all cases.
+// Meaning that the ID can be represented in memory and in serialized form as follows:
+//
+//    [ blockHeight: 50 bits | txSequenceID: 14 bits ]
+type TransactionShortID uint64
 
 // MarshalJSON marshals a specifier as a string.
 func (s Specifier) MarshalJSON() ([]byte, error) {

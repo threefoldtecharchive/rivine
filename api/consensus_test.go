@@ -36,6 +36,8 @@ func TestIntegrationConsensusGET(t *testing.T) {
 	}
 }
 
+// TODO: add unit test here for TestConsensusGetTransaction
+
 // TestConsensusValidateTransactionSet probes the POST call to
 // /consensus/validate/transactionset.
 func TestConsensusValidateTransactionSet(t *testing.T) {

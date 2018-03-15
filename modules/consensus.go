@@ -158,6 +158,11 @@ type (
 		// bool to indicate whether that block exists.
 		BlockHeightOfBlock(types.Block) (types.BlockHeight, bool)
 
+		// TransactionAtShortID allows you fetch a transaction from a block within
+		// the blockchain, using a given shortID.
+		// If that transaction does not exist, false is returned.
+		TransactionAtShortID(shortID types.TransactionShortID) (types.Transaction, bool)
+
 		// ChildTarget returns the target required to extend the current heaviest
 		// fork. This function is typically used by miners looking to extend the
 		// heaviest fork.

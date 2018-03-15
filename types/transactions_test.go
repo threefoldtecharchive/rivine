@@ -80,3 +80,33 @@ func TestSpecifierMarshaling(t *testing.T) {
 		t.Fatal("Unmarshal should have failed")
 	}
 }
+
+func TestTransactionShortID(t *testing.T) {
+	testCases := []struct {
+		Height       BlockHeight
+		TxSequenceID uint16
+		ShortTxID    TransactionShortID
+	}{
+		// nil/default/zero, and also minimum
+		{0, 0, 0},
+		// the maximum possible value
+		{1125899906842623, 16383, 18446744073709551615},
+		// some other examples
+		{1, 2, 16386},
+		{0, 16383, 16383},
+		{1125899906842623, 0, 18446744073709535232},
+		{42, 13, 688141},
+	}
+	for _, testCase := range testCases {
+		shortID := NewTransactionShortID(testCase.Height, testCase.TxSequenceID)
+		if shortID != testCase.ShortTxID {
+			t.Errorf("shortID (%v) != %v", shortID, testCase.ShortTxID)
+		}
+		if bh := shortID.BlockHeight(); bh != testCase.Height {
+			t.Errorf("block height (%v) != %v", bh, testCase.Height)
+		}
+		if tsid := shortID.TransactionSequenceIndex(); tsid != testCase.TxSequenceID {
+			t.Errorf("transaction seq ID (%v) != %v", tsid, testCase.TxSequenceID)
+		}
+	}
+}
