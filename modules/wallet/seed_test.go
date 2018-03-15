@@ -2,13 +2,13 @@ package wallet
 
 import (
 	"bytes"
-	"fmt"
 	"path/filepath"
 	"testing"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // TestPrimarySeed checks that the correct seed is returned when calling
@@ -123,7 +123,7 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("fresh wallet should not have a balance")
 	}
 
-	err = cs.addTransactionAsBlock(unlockConditions.UnlockHash(), 1000)
+	err = cs.addTransactionAsBlock(unlockConditions.UnlockHash(), types.NewCurrency64(1000))
 	if err != nil {
 		t.Errorf("failed to add transaction as block: %v", err)
 	}
@@ -170,6 +170,13 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("AllSeeds returned the wrong seed")
 	}
 
+	// rescan
+	cs.Unsubscribe(w)
+	err = cs.ConsensusSetSubscribe(w, modules.ConsensusChangeID{})
+	if err != nil {
+		t.Errorf("Couldn't rescan by unsubscribing and subscribing again: %v", err)
+	}
+
 	// Balance of wallet should be 0.
 	siacoinBal, _ = w.ConfirmedBalance()
 	if !siacoinBal.Equals64(1000) {
@@ -188,8 +195,6 @@ func TestLoadSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 	siacoinBal, _ = w2.ConfirmedBalance()
-	fmt.Println(w.ConfirmedBalance())
-	fmt.Println(w2.ConfirmedBalance())
 	if !siacoinBal.Equals64(1000) {
 		t.Errorf("wallet with loaded key should have old balance but has: %v", siacoinBal)
 	}

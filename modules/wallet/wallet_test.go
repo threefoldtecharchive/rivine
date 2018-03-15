@@ -310,7 +310,7 @@ type consensusSetStub struct {
 	subscribers map[modules.ConsensusSetSubscriber]struct{}
 }
 
-func (css *consensusSetStub) addTransactionAsBlock(unlockHash types.UnlockHash, value uint64) error {
+func (css *consensusSetStub) addTransactionAsBlock(unlockHash types.UnlockHash, value types.Currency) error {
 	l := len(css.blocks)
 	if l == 0 {
 		return errors.New("invalid block list in consensus set")
@@ -322,7 +322,7 @@ func (css *consensusSetStub) addTransactionAsBlock(unlockHash types.UnlockHash, 
 			{
 				CoinOutputs: []types.CoinOutput{
 					{
-						Value:      types.NewCurrency64(value),
+						Value:      value,
 						UnlockHash: unlockHash,
 					},
 				},
@@ -469,22 +469,28 @@ func (css *consensusSetStub) CalculateStakeModifier(height types.BlockHeight) *b
 }
 
 func (css *consensusSetStub) TryTransactionSet(txs []types.Transaction) (change modules.ConsensusChange, err error) {
-	panic("oops")
-	/*if len(txs) == 0 {
-		err = errors.New("no transactions given")
-		return
+	l := len(css.blocks)
+	if l == 0 {
+		return modules.ConsensusChange{}, errors.New("invalid block list in consensus set")
 	}
-	if len(css.blocks) == 0 {
-		err = errors.New("genesis block missing")
-		return
+	block := types.Block{
+		ParentID:     css.blocks[l-1].ID(),
+		Timestamp:    types.CurrentTimestamp(),
+		Transactions: txs,
 	}
-
-	for _, tx := range txs {
-
+	cc := modules.ConsensusChange{
+		ID: modules.ConsensusChangeID(crypto.HashObject(block)),
 	}
-
-	change.CoinOutputDiffs = diffHolder.CoinOutputDiffs,
-	change.BlockStakeOutputDiffs = diffHolder.BlockStakeOutputDiffs*/
+	for _, tx := range block.Transactions {
+		for _, co := range tx.CoinOutputs {
+			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, modules.CoinOutputDiff{
+				Direction:  modules.DiffApply,
+				ID:         types.CoinOutputID(crypto.HashObject(co)),
+				CoinOutput: co,
+			})
+		}
+	}
+	return cc, nil
 }
 
 func (css *consensusSetStub) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, changeID modules.ConsensusChangeID) error {
@@ -494,9 +500,11 @@ func (css *consensusSetStub) ConsensusSetSubscribe(subscriber modules.ConsensusS
 	css.subscribers[subscriber] = struct{}{}
 
 	var i int
-	for ; i < len(css.blocks); i++ {
-		if modules.ConsensusChangeID(crypto.HashObject(css.blocks[i])) == changeID {
-			break
+	if changeID != modules.ConsensusChangeID(crypto.Hash{}) {
+		for ; i < len(css.blocks); i++ {
+			if modules.ConsensusChangeID(crypto.HashObject(css.blocks[i])) == changeID {
+				break
+			}
 		}
 	}
 	for _, block := range css.blocks[i:] {

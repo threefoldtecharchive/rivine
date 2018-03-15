@@ -1,9 +1,8 @@
 package modules
 
 import (
+	"bytes"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // TestSeedMnemonicFunctions tests that
@@ -28,11 +27,22 @@ func TestSeedMnemonicFunctions(t *testing.T) {
 	}
 	for _, initialSeed := range testCases {
 		mnemonic, err := NewMnemonic(initialSeed)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, mnemonic)
+		if err != nil {
+			t.Errorf("failed to create mnemonic: %v", err)
+			continue
+		}
+		if mnemonic == "" {
+			t.Errorf("mnemonic created using i.seed %v is empty", initialSeed)
+			continue
+		}
 
 		seed, err := InitialSeedFromMnemonic(mnemonic)
-		assert.NoError(t, err)
-		assert.Equal(t, initialSeed, seed)
+		if err != nil {
+			t.Errorf("failed to recover seed from mnemonic %q: %v", mnemonic, err)
+			continue
+		}
+		if bytes.Compare(initialSeed[:], seed[:]) != 0 {
+			t.Errorf("out %v != %v in", seed, initialSeed)
+		}
 	}
 }
