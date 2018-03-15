@@ -151,7 +151,7 @@ blank, then the password will be set to the same as the seed.
 // Password that will be used to encrypt the wallet. All subsequent calls
 // should use this password. If left blank, the seed that gets returned will
 // also be the encryption password.
-encryptionpassword
+passphrase
 ```
 
 ###### JSON Response
@@ -172,11 +172,11 @@ Only the primary seed will be used for generating new addresses.
 ###### Query String Parameters
 ```
 // Key used to encrypt the new seed when it is saved to disk.
-encryptionpassword
+passphrase
 
 // Dictionary-encoded phrase that corresponds to the seed being added to the
 // wallet.
-seed
+mnemonic
 ```
 
 ###### Response
@@ -190,9 +190,7 @@ that gets used to generate new addresses. This call is unavailable when the
 wallet is locked.
 
 A seed is an encoded version of a 128 bit random seed. The output is 15 words
-chosen from a small dictionary as indicated by the input. The most common
-choice for the dictionary is going to be 'english'. The underlying seed is the
-same no matter what dictionary is used for the encoding. The encoding also
+chosen from a small dictionary as indicated by the input. The encoding also
 contains a small checksum of the seed, to help catch simple mistakes when
 copying. The library [go-bip39](https://github.com/rivine/go-bip39) is used 
 when encoding.
@@ -475,7 +473,7 @@ password was provided.
 ```
 // Password that gets used to decrypt the file. Most frequently, the encryption
 // password is the same as the primary wallet seed.
-encryptionpassword string
+passphrase string
 ```
 
 ###### Response

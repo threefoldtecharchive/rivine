@@ -8,70 +8,64 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-// TestSendSiacoins probes the SendSiacoins method of the wallet.
-func TestSendSiacoins(t *testing.T) {
-	//TODO: fix test
-	// if testing.Short() {
-	// 	t.SkipNow()
-	// }
-	// wt, err := createWalletTester(t.Name())
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// defer wt.closeWt()
-	//
-	// // Get the initial balance - should be 1 block. The unconfirmed balances
-	// // should be 0.
-	// confirmedBal, _, _ := wt.wallet.ConfirmedBalance()
-	// unconfirmedOut, unconfirmedIn := wt.wallet.UnconfirmedBalance()
-	// if !confirmedBal.Equals(types.CalculateCoinbase(1)) {
-	// 	t.Error("unexpected confirmed balance")
-	// }
-	// if !unconfirmedOut.Equals(types.ZeroCurrency) {
-	// 	t.Error("unconfirmed balance should be 0")
-	// }
-	// if !unconfirmedIn.Equals(types.ZeroCurrency) {
-	// 	t.Error("unconfirmed balance should be 0")
-	// }
-	//
-	// // Send 5000 hastings. The wallet will automatically add a fee. Outgoing
-	// // unconfirmed siacoins - incoming unconfirmed siacoins should equal 5000 +
-	// // fee.
-	// tpoolFee := types.OneCoin.Mul64(10)
-	// _, err = wt.wallet.SendSiacoins(types.NewCurrency64(5000), types.UnlockHash{})
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// confirmedBal2, _, _ := wt.wallet.ConfirmedBalance()
-	// unconfirmedOut2, unconfirmedIn2 := wt.wallet.UnconfirmedBalance()
-	// if confirmedBal2.Cmp(confirmedBal) != 0 {
-	// 	t.Error("confirmed balance changed without introduction of blocks")
-	// }
-	// if unconfirmedOut2.Cmp(unconfirmedIn2.Add(types.NewCurrency64(5000)).Add(tpoolFee)) != 0 {
-	// 	t.Error("sending siacoins appears to be ineffective")
-	// }
-	//
-	// // Move the balance into the confirmed set.
-	// b, _ := wt.miner.FindBlock()
-	// err = wt.cs.AcceptBlock(b)
-	// if err != nil {
-	// 	t.Fatal(err)
-	// }
-	// confirmedBal3, _, _ := wt.wallet.ConfirmedBalance()
-	// unconfirmedOut3, unconfirmedIn3 := wt.wallet.UnconfirmedBalance()
-	// if confirmedBal3.Cmp(confirmedBal2.Add(types.CalculateCoinbase(2)).Sub(types.NewCurrency64(5000)).Sub(tpoolFee)) != 0 {
-	// 	t.Error("confirmed balance did not adjust to the expected value")
-	// }
-	// if unconfirmedOut3.Cmp(types.ZeroCurrency) != 0 {
-	// 	t.Error("unconfirmed balance should be 0")
-	// }
-	// if unconfirmedIn3.Cmp(types.ZeroCurrency) != 0 {
-	// 	t.Error("unconfirmed balance should be 0")
-	// }
+// TestSendCoins probes the SendCoins method of the wallet.
+func TestSendCoins(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	// Get the initial balance - should be 1 block. The unconfirmed balances
+	// should be 0.
+	confirmedBal, _ := wt.wallet.ConfirmedBalance()
+	unconfirmedOut, unconfirmedIn := wt.wallet.UnconfirmedBalance()
+	if !confirmedBal.Equals64(0) {
+		t.Error("unexpected confirmed balance")
+	}
+	if !unconfirmedOut.Equals64(0) {
+		t.Error("unconfirmed balance should be 0")
+	}
+	if !unconfirmedIn.Equals64(0) {
+		t.Error("unconfirmed balance should be 0")
+	}
+
+	// sending coins requires funds to be send
+	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.UnlockHash{}, nil)
+	if err != modules.ErrLowBalance {
+		t.Fatal(err)
+	}
+
+	// give wallet some money to spend
+	addr, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs.addTransactionAsBlock(addr.UnlockHash(),
+		types.OneCoin.Mul64(1).Add(types.NewCurrency64(5000)))
+
+	// Send 5000 hastings. The wallet will automatically add a fee. Outgoing
+	// unconfirmed siacoins - incoming unconfirmed coins should equal 5000 +
+	// fee.
+	tpoolFee := types.OneCoin.Mul64(1) // TODO change
+	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.UnlockHash{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmedBal2, _ := wt.wallet.ConfirmedBalance()
+
+	if confirmedBal2.Cmp(types.NewCurrency64(5000).Add(tpoolFee)) != 0 {
+		t.Error("sending cioins appears to have been send")
+	}
 }
 
-// TestIntegrationSendOverUnder sends too many siacoins, resulting in an error,
-// followed by sending few enough siacoins that the send should complete.
+// TestIntegrationSendOverUnder sends too many coins, resulting in an error,
+// followed by sending few enough coins that the send should complete.
 //
 // This test is here because of a bug found in production where the wallet
 // would mark outputs as spent before it knew that there was enough money  to
@@ -82,22 +76,33 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	wt, err := createWalletTester(t.Name())
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer wt.closeWt()
 
-	// Spend too many siacoins.
+	// Spend too many coins.
 	tooManyCoins := types.OneCoin.Mul64(1e12)
-	_, err = wt.wallet.SendCoins(tooManyCoins, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(tooManyCoins, types.UnlockHash{}, nil)
 	if err != modules.ErrLowBalance {
 		t.Error("low balance err not returned after attempting to send too many coins")
 	}
-
-	// Spend a reasonable amount of siacoins.
 	reasonableCoins := types.OneCoin.Mul64(100e3)
-	_, err = wt.wallet.SendCoins(reasonableCoins, types.UnlockHash{})
+
+	addr, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = cs.addTransactionAsBlock(addr.UnlockHash(),
+		types.OneCoin.Mul64(1).Add(reasonableCoins))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Spend a reasonable amount of coins.
+	_, err = wt.wallet.SendCoins(reasonableCoins, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
@@ -107,9 +112,9 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 // more than half of the coins again, to make sure that the wallet is not
 // reusing outputs that it has already spent.
 func TestIntegrationSpendHalfHalf(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+	//if testing.Short() {
+	t.SkipNow()
+	//}
 	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -118,11 +123,11 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 
 	// Spend more than half of the coins twice.
 	halfPlus := types.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{1})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{1}, nil)
 	if err != modules.ErrIncompleteTransactions {
 		t.Error("wallet appears to be reusing outputs when building transactions: ", err)
 	}
@@ -130,9 +135,9 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 
 // TestIntegrationSpendUnconfirmed spends an unconfirmed siacoin output.
 func TestIntegrationSpendUnconfirmed(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+	//if testing.Short() {
+	t.SkipNow()
+	//}
 	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -141,12 +146,12 @@ func TestIntegrationSpendUnconfirmed(t *testing.T) {
 
 	// Spend the only output.
 	halfPlus := types.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{})
+	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
 	someMore := types.OneCoin.Mul64(75e3)
-	_, err = wt.wallet.SendCoins(someMore, types.UnlockHash{1})
+	_, err = wt.wallet.SendCoins(someMore, types.UnlockHash{1}, nil)
 	if err != nil {
 		t.Error("wallet appears to be struggling to spend unconfirmed outputs")
 	}

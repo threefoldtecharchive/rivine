@@ -8,6 +8,7 @@ import (
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // TestPrimarySeed checks that the correct seed is returned when calling
@@ -24,11 +25,12 @@ func TestPrimarySeed(t *testing.T) {
 	defer wt.closeWt()
 
 	// Create a seed and unlock the wallet.
-	seed, err := wt.wallet.Encrypt(crypto.TwofishKey{})
+	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
+	seed, err := wt.wallet.Encrypt(encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = wt.wallet.Unlock(crypto.TwofishKey(crypto.HashObject(seed)))
+	err = wt.wallet.Unlock(encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +67,7 @@ func TestPrimarySeed(t *testing.T) {
 	if err != modules.ErrLockedWallet {
 		t.Error("unexpected err:", err)
 	}
-	err = wt.wallet.Unlock(crypto.TwofishKey(crypto.HashObject(seed)))
+	err = wt.wallet.Unlock(encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +90,10 @@ func TestLoadSeed(t *testing.T) {
 		t.SkipNow()
 	}
 	t.Parallel()
-	wt, err := createWalletTester(t.Name())
+
+	cs := newConsensusSetStub()
+
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,16 +113,37 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("AllSeeds returned the wrong seed")
 	}
 
+	unlockConditions, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Errorf("next address couldn't be created: %v", err)
+	}
+
+	c, _ := wt.wallet.ConfirmedBalance()
+	if !c.Equals64(0) {
+		t.Error("fresh wallet should not have a balance")
+	}
+
+	err = cs.addTransactionAsBlock(unlockConditions.UnlockHash(), types.NewCurrency64(1000))
+	if err != nil {
+		t.Errorf("failed to add transaction as block: %v", err)
+	}
+
+	c, _ = wt.wallet.ConfirmedBalance()
+	if !c.Equals64(1000) {
+		t.Error("wallet requires 1000 coins at this point")
+	}
+
 	dir := filepath.Join(build.TempDir(modules.WalletDir, t.Name()+"1"), modules.WalletDir)
 	w, err := New(wt.cs, wt.tpool, dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	newSeed, err := w.Encrypt(crypto.TwofishKey{})
+	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
+	newSeed, err := w.Encrypt(encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = w.Unlock(crypto.TwofishKey(crypto.HashObject(newSeed)))
+	err = w.Unlock(encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +152,7 @@ func TestLoadSeed(t *testing.T) {
 	if !siacoinBal.Equals64(0) {
 		t.Error("fresh wallet should not have a balance")
 	}
-	err = w.LoadSeed(crypto.TwofishKey(crypto.HashObject(newSeed)), seed)
+	err = w.LoadSeed(encryptionKey, seed)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,6 +170,19 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("AllSeeds returned the wrong seed")
 	}
 
+	// rescan
+	cs.Unsubscribe(w)
+	err = cs.ConsensusSetSubscribe(w, modules.ConsensusChangeID{})
+	if err != nil {
+		t.Errorf("Couldn't rescan by unsubscribing and subscribing again: %v", err)
+	}
+
+	// Balance of wallet should be 0.
+	siacoinBal, _ = w.ConfirmedBalance()
+	if !siacoinBal.Equals64(1000) {
+		t.Errorf("wallet with loaded key should have old balance but has: %v", siacoinBal)
+	}
+
 	// Rather than worry about a rescan, which isn't implemented and has
 	// synchronization difficulties, just load a new wallet from the same
 	// settings file - the same effect is achieved without the difficulties.
@@ -151,13 +190,13 @@ func TestLoadSeed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = w2.Unlock(crypto.TwofishKey(crypto.HashObject(newSeed)))
+	err = w2.Unlock(encryptionKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	siacoinBal2, _ := w2.ConfirmedBalance()
-	if siacoinBal2.Cmp64(0) <= 0 {
-		t.Error("wallet failed to load a seed with money in it")
+	siacoinBal, _ = w2.ConfirmedBalance()
+	if !siacoinBal.Equals64(1000) {
+		t.Errorf("wallet with loaded key should have old balance but has: %v", siacoinBal)
 	}
 	allSeeds, err = w2.AllSeeds()
 	if err != nil {

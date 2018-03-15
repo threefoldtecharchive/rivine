@@ -6,29 +6,29 @@ import (
 	"strings"
 )
 
-// The wordlist to use
-var WordList = EnglishWordList
-
-var ReverseWordMap map[string]int = map[string]int{}
+var _ReverseEnglishWordMap = map[string]int{}
 
 func init() {
-	for i, v := range WordList {
-		ReverseWordMap[v] = i
+	for i, v := range _EnglishWordList {
+		_ReverseEnglishWordMap[v] = i
 	}
 
 	// Ensure word list is correct
 	// $ wget https://raw.githubusercontent.com/bitcoin/bips/master/bip-0039/english.txt
 	// $ crc32 english.txt
 	// c1dbd296
-	checksum := crc32.ChecksumIEEE([]byte(englishWordList))
+	checksum := crc32.ChecksumIEEE([]byte(EnglishWordListString))
 	if fmt.Sprintf("%x", checksum) != "c1dbd296" {
 		panic("englishWordList checksum invalid")
 	}
 }
 
 // Language-specific wordlists
-var EnglishWordList = strings.Split(strings.TrimSpace(englishWordList), "\n")
-var englishWordList = `abandon
+var _EnglishWordList = strings.Split(strings.TrimSpace(EnglishWordListString), "\n")
+
+// EnglishWordListString source can be found
+// at https://raw.githubusercontent.com/bitcoin/bips/master/bip-0039/english.txt
+const EnglishWordListString = `abandon
 ability
 able
 about

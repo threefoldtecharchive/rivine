@@ -129,9 +129,9 @@ import (
 // TestDoubleSignError checks that an error is returned if there is a problem
 // when trying to call 'Sign' on a transaction twice.
 func TestDoubleSignError(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+	//if testing.Short() {
+	t.SkipNow()
+	//}
 	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)

@@ -164,23 +164,22 @@ func TestIntegrationBlankEncryption(t *testing.T) {
 	}
 	defer wt.closeWt()
 	// Encrypt the wallet using a blank key.
-	seed, err := wt.wallet.Encrypt(crypto.TwofishKey{})
+	_, err = wt.wallet.Encrypt(crypto.TwofishKey{})
+	if err != modules.ErrBadEncryptionKey {
+		t.Fatal(err)
+	}
+
+	// Encrypt the wallet using a valid key.
+	var key crypto.TwofishKey
+	rand.Read(key[:])
+	_, err = wt.wallet.Encrypt(key)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 
 	// Try unlocking the wallet using a blank key.
 	err = wt.wallet.Unlock(crypto.TwofishKey{})
 	if err != modules.ErrBadEncryptionKey {
-		t.Fatal(err)
-	}
-	// Try unlocking the wallet using the correct key.
-	err = wt.wallet.Unlock(crypto.TwofishKey(crypto.HashObject(seed)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = wt.wallet.Lock()
-	if err != nil {
 		t.Fatal(err)
 	}
 	//TODO: uncomment

@@ -391,7 +391,7 @@ blank, then the password will be set to the same as the seed.
 
 ###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-2)
 ```
-encryptionpassword
+passphrase
 ```
 
 ###### JSON Response [(with comments)](/doc/api/Wallet.md#json-response-3)
@@ -410,8 +410,8 @@ Only the primary seed will be used for generating new addresses.
 
 ###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-3)
 ```
-encryptionpassword
-seed
+passphrase
+mnemonic
 ```
 
 ###### Response
@@ -521,7 +521,7 @@ currently in addresses created by siag.
 
 ###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-7)
 ```
-encryptionpassword
+passphrase
 keyfiles
 ```
 
@@ -633,7 +633,7 @@ password was provided.
 
 ###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-9)
 ```
-encryptionpassword
+passphrase
 ```
 
 ###### Response

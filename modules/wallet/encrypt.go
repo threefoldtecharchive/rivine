@@ -28,6 +28,11 @@ func uidEncryptionKey(masterKey crypto.TwofishKey, uid UniqueID) crypto.TwofishK
 
 // checkMasterKey verifies that the master key is correct.
 func (w *Wallet) checkMasterKey(masterKey crypto.TwofishKey) error {
+	// ensure if crypto key is given
+	if masterKey == (crypto.TwofishKey{}) {
+		return modules.ErrBadEncryptionKey
+	}
+
 	uk := uidEncryptionKey(masterKey, w.persist.UID)
 	verification, err := uk.DecryptBytes(w.persist.EncryptionVerification)
 	if err != nil {
@@ -45,6 +50,11 @@ func (w *Wallet) checkMasterKey(masterKey crypto.TwofishKey) error {
 // encryption key for the wallet. If encryption has not yet been established
 // for the wallet, an encryption key is created.
 func (w *Wallet) initEncryption(masterKey crypto.TwofishKey) (modules.Seed, error) {
+	// ensure if crypto key is given
+	if masterKey == (crypto.TwofishKey{}) {
+		return modules.Seed{}, modules.ErrBadEncryptionKey
+	}
+
 	// Check if the wallet encryption key has already been set.
 	if len(w.persist.EncryptionVerification) != 0 {
 		return modules.Seed{}, errReencrypt
@@ -60,9 +70,6 @@ func (w *Wallet) initEncryption(masterKey crypto.TwofishKey) (modules.Seed, erro
 
 	// If the input key is blank, use the seed to create the master key.
 	// Otherwise, use the input key.
-	if masterKey == (crypto.TwofishKey{}) {
-		masterKey = crypto.TwofishKey(crypto.HashObject(seed))
-	}
 	err = w.createSeed(masterKey, seed)
 	if err != nil {
 		return modules.Seed{}, err
