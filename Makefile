@@ -9,6 +9,7 @@ pkgs = ./build ./modules/gateway ./cmd/rivined ./cmd/rivinec
 testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./modules/wallet ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types
 
 version = $(shell git describe | cut -d '-' -f 1)
+versionTag = $(shell git describe | cut -d '-' -f 1| cut -d 'v' -f 2)
 
 # fmt calls go fmt on all packages.
 fmt:
@@ -40,9 +41,12 @@ xc:
 
 # Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
 release-images: get_hub_jwt xc
-	docker build -t rivine/rivine:$(version) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64 .
-	docker push rivine/rivine:$(version)
-	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(version)" "https://hub.gig.tech/api/flist/me/docker"
+	docker build -t rivine/rivine:$(versionTag) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64/cmd .
+	docker push rivine/rivine:$(versionTag)
+	# also create a latest tag
+	docker tag tfchain/tfchain:$(versionTag) tfchain/tfchain
+	docker push tfchain/tfchain:latest
+	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(versionTag)" "https://hub.gig.tech/api/flist/me/docker"
 
 test:
 	go test -short -tags='debug testing' -timeout=5s $(testpkgs) -run=$(run)
