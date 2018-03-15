@@ -51,7 +51,7 @@ Target: %v
 		}
 		fmt.Printf(`Synced: %v
 Height: %v
-Progress (estimated): %.f%%
+Progress (estimated): %.02f
 `, YesNo(cg.Synced), cg.Height, estimatedProgress)
 	}
 }
@@ -60,10 +60,14 @@ Progress (estimated): %.f%%
 // Block height is estimated by calculating the minutes since a known block in
 // the past and dividing by 10 minutes (the block time).
 func EstimatedHeightAt(t time.Time) types.BlockHeight {
-	block5e4Timestamp := time.Date(2016, time.May, 11, 19, 33, 0, 0, time.UTC)
-	diff := t.Sub(block5e4Timestamp)
-	estimatedHeight := 5e4 + (diff.Minutes() / 10)
-	return types.BlockHeight(estimatedHeight + 0.5) // round to the nearest block
+	// This should the timestamp of the genesis block, Not sure why it is hardcoded
+	// but as the tfchain has been stoped, the time generates much more records than
+	// the ones available, so we start from a know place
+	startTimestamp := time.Date(2018, time.March, 15, 13, 0, 0, 0, time.UTC)
+	diff := t.Sub(startTimestamp)
+	// Estimated number of blocks, starting from 15/03/2018 there were 2660
+	estimatedHeight := 2600 + (diff.Minutes() / 10)
+	return types.BlockHeight(estimatedHeight) // round to the nearest block
 }
 
 // Consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
