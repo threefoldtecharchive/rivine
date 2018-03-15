@@ -114,6 +114,30 @@ OP_IF   // top of Stack: secret
  OP_ENDIF 
  OP_EQUALVERIFY OP_CHECKSIG
 ```
+
+ ### audit contract
+
+Bob sendsAlice the contract and the contract transaction. Alice should now  verify if
+- the script is correct 
+- the locktime is far enough in the future
+- the amount is correct
+- she is the recipient 
+
+ ```
+$ btcatomicswap --testnet auditcontract 6382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac 0200000000010106a85a242263768b81554b0ccab63ec124146014338ec962ef0197a1043b867e0c00000017160014ad430d1ed266d7130b5207a9bef00f8030947c3ffeffffff02204bbc000000000017a914bf09ed70b0c505d750f333bad8ca0520e48370fb87104772000000000017a914616aac51e9c239f6f85fe6db12249f264dd5ff2987024730440220441058ac56f1db678f955610adc264d7982da25dc7079a36c9022bc72827311c0220209d552d7e5ac04cef5ab615edea6c7836e7276ae7dbe0c2950eb44c781c7c7b01210335c272b2cfbd3c0a02bb38bfd859e4a44175545eb12ce93e7a2bac690068f92f00000000
+Contract address:        2NAfLwhThYzB1kGYVxmjYqS98yXF8JBVc3v
+Contract value:          0.1234 BTC
+Recipient address:       mgmNWZN29WeFz3X4Na8thcbLB12JA5vj9j
+Author's refund address: n1YiBr87yEeiiKnL29d5ZEBkNW9SGVNWXs
+
+Secret hash: 2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988
+
+Locktime: 2018-03-17 09:04:24 +0000 UTC
+Locktime reached in 45h32m24s
+```
+
+WARNING:
+A check on the blockchain should be done as the auditcontract does not do that so an already spent output could have been used as an input. Checking if the contract has been mined in a block should suffice
 ## References
 
 Rivine atomic swaps are an implementation of [Decred atomic swaps](https://github.com/decred/atomicswap).
