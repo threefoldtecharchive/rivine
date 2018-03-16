@@ -2,6 +2,8 @@ package gateway
 
 import (
 	"testing"
+
+	"github.com/rivine/rivine/types"
 )
 
 func TestLoad(t *testing.T) {
@@ -17,7 +19,7 @@ func TestLoad(t *testing.T) {
 	g.mu.Unlock()
 	g.Close()
 
-	g2, err := New("localhost:0", false, g.persistDir)
+	g2, err := New("localhost:0", false, g.persistDir, types.DefaultBlockchainInfo())
 	if err != nil {
 		t.Fatal(err)
 	}

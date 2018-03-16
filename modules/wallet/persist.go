@@ -114,7 +114,8 @@ func (w *Wallet) initPersist() error {
 	}
 
 	// Start logging.
-	w.log, err = persist.NewFileLogger(filepath.Join(w.persistDir, logFile))
+	w.log, err = persist.NewFileLogger(w.bcInfo,
+		filepath.Join(w.persistDir, logFile))
 	if err != nil {
 		return err
 	}

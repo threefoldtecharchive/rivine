@@ -19,12 +19,15 @@ import (
 	"github.com/rivine/rivine/modules/gateway"
 	"github.com/rivine/rivine/modules/transactionpool"
 	"github.com/rivine/rivine/modules/wallet"
+	"github.com/rivine/rivine/types"
 
 	"github.com/bgentry/speakeasy"
 )
 
 // Config contains all configurable variables for rivined.
 type Config struct {
+	BlockchainInfo types.BlockchainInfo
+
 	// the password required to use the http api,
 	// if `AuthenticateAPI` is true, and the password is the empty string,
 	// a password will be prompted when the daemon starts
@@ -68,6 +71,8 @@ type Config struct {
 // DefaultConfig returns the default daemon configuration
 func DefaultConfig() Config {
 	return Config{
+		BlockchainInfo: types.DefaultBlockchainInfo(),
+
 		APIPassword: "",
 
 		APIaddr:      "localhost:23110",
@@ -87,23 +92,23 @@ func DefaultConfig() Config {
 
 // verifyAPISecurity checks that the security values are consistent with a
 // sane, secure system.
-func verifyAPISecurity(config Config) error {
+func verifyAPISecurity(cfg Config) error {
 	// Make sure that only the loopback address is allowed unless the
 	// --disable-api-security flag has been used.
-	if !config.AllowAPIBind {
-		addr := modules.NetAddress(config.APIaddr)
+	if !cfg.AllowAPIBind {
+		addr := modules.NetAddress(cfg.APIaddr)
 		if !addr.IsLoopback() {
 			if addr.Host() == "" {
-				return fmt.Errorf("a blank host will listen on all interfaces, did you mean localhost:%v?\nyou must pass --disable-api-security to bind %s to a non-localhost address", addr.Port(), DaemonName)
+				return fmt.Errorf("a blank host will listen on all interfaces, did you mean localhost:%v?\nyou must pass --disable-api-security to bind daemon of %s to a non-localhost address", addr.Port(), cfg.BlockchainInfo.Name)
 			}
-			return fmt.Errorf("you must pass --disable-api-security to bind %s to a non-localhost address", DaemonName)
+			return fmt.Errorf("you must pass --disable-api-security to bind daemon of %s to a non-localhost address", cfg.BlockchainInfo.Name)
 		}
 		return nil
 	}
 
 	// If the --disable-api-security flag is used, enforce that
 	// --authenticate-api must also be used.
-	if config.AllowAPIBind && !config.AuthenticateAPI {
+	if cfg.AllowAPIBind && !cfg.AuthenticateAPI {
 		return errors.New("cannot use --disable-api-security without setting an api password")
 	}
 	return nil
@@ -180,7 +185,7 @@ func StartDaemon(cfg Config) (err error) {
 	loadStart := time.Now()
 
 	// Create the server and start serving daemon routes immediately.
-	fmt.Printf("(0/%d) Loading "+DaemonName+"...\n", len(cfg.Modules))
+	fmt.Printf("(0/%d) Loading daemon of "+cfg.BlockchainInfo.Name+"...\n", len(cfg.Modules))
 	srv, err := NewServer(cfg.APIaddr, cfg.RequiredUserAgent, cfg.APIPassword)
 	if err != nil {
 		return err
@@ -197,7 +202,9 @@ func StartDaemon(cfg Config) (err error) {
 	if strings.Contains(cfg.Modules, "g") {
 		i++
 		fmt.Printf("(%d/%d) Loading gateway...\n", i, len(cfg.Modules))
-		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap, filepath.Join(cfg.RootPersistentDir, modules.GatewayDir))
+		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap,
+			filepath.Join(cfg.RootPersistentDir, modules.GatewayDir),
+			cfg.BlockchainInfo)
 		if err != nil {
 			return err
 		}
@@ -214,7 +221,9 @@ func StartDaemon(cfg Config) (err error) {
 	if strings.Contains(cfg.Modules, "c") {
 		i++
 		fmt.Printf("(%d/%d) Loading consensus...\n", i, len(cfg.Modules))
-		cs, err = consensus.New(g, !cfg.NoBootstrap, filepath.Join(cfg.RootPersistentDir, modules.ConsensusDir))
+		cs, err = consensus.New(g, !cfg.NoBootstrap,
+			filepath.Join(cfg.RootPersistentDir, modules.ConsensusDir),
+			cfg.BlockchainInfo)
 		if err != nil {
 			return err
 		}
@@ -231,7 +240,9 @@ func StartDaemon(cfg Config) (err error) {
 	if strings.Contains(cfg.Modules, "e") {
 		i++
 		fmt.Printf("(%d/%d) Loading explorer...\n", i, len(cfg.Modules))
-		e, err = explorer.New(cs, filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir))
+		e, err = explorer.New(cs,
+			filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir),
+			cfg.BlockchainInfo)
 		if err != nil {
 			return err
 		}
@@ -248,7 +259,9 @@ func StartDaemon(cfg Config) (err error) {
 	if strings.Contains(cfg.Modules, "t") {
 		i++
 		fmt.Printf("(%d/%d) Loading transaction pool...\n", i, len(cfg.Modules))
-		tpool, err = transactionpool.New(cs, g, filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir))
+		tpool, err = transactionpool.New(cs, g,
+			filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir),
+			cfg.BlockchainInfo)
 		if err != nil {
 			return err
 		}
@@ -265,7 +278,9 @@ func StartDaemon(cfg Config) (err error) {
 	if strings.Contains(cfg.Modules, "w") {
 		i++
 		fmt.Printf("(%d/%d) Loading wallet...\n", i, len(cfg.Modules))
-		w, err = wallet.New(cs, tpool, filepath.Join(cfg.RootPersistentDir, modules.WalletDir))
+		w, err = wallet.New(cs, tpool,
+			filepath.Join(cfg.RootPersistentDir, modules.WalletDir),
+			cfg.BlockchainInfo)
 		if err != nil {
 			return err
 		}
@@ -282,7 +297,9 @@ func StartDaemon(cfg Config) (err error) {
 	if strings.Contains(cfg.Modules, "b") {
 		i++
 		fmt.Printf("(%d/%d) Loading block creator...\n", i, len(cfg.Modules))
-		b, err = blockcreator.New(cs, tpool, w, filepath.Join(cfg.RootPersistentDir, modules.BlockCreatorDir))
+		b, err = blockcreator.New(cs, tpool, w,
+			filepath.Join(cfg.RootPersistentDir, modules.BlockCreatorDir),
+			cfg.BlockchainInfo)
 		if err != nil {
 			return err
 		}

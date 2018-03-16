@@ -92,12 +92,14 @@ type ConsensusSet struct {
 	mu         demotemutex.DemoteMutex
 	persistDir string
 	tg         sync.ThreadGroup
+
+	bcInfo types.BlockchainInfo
 }
 
 // New returns a new ConsensusSet, containing at least the genesis block. If
 // there is an existing block database present in the persist directory, it
 // will be loaded.
-func New(gateway modules.Gateway, bootstrap bool, persistDir string) (*ConsensusSet, error) {
+func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo) (*ConsensusSet, error) {
 	// Check for nil dependencies.
 	if gateway == nil {
 		return nil, errNilGateway
@@ -121,6 +123,8 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string) (*Consensus
 		blockRuleHelper: stdBlockRuleHelper{},
 
 		persistDir: persistDir,
+
+		bcInfo: bcInfo,
 	}
 
 	cs.blockValidator = NewBlockValidator(cs)

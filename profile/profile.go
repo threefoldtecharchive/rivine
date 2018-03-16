@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rivine/rivine/persist"
+	"github.com/rivine/rivine/types"
 )
 
 // There's a global lock on cpu and memory profiling, because I'm not sure what
@@ -83,7 +84,7 @@ func SaveMemProfile(profileDir, identifier string) error {
 
 // StartContinuousProfiling will continuously print statistics about the cpu
 // usage, memory usage, and runtime stats of the program.
-func StartContinuousProfile(profileDir string) {
+func StartContinuousProfile(profileDir string, bcInfo types.BlockchainInfo) {
 	// Create the folder for all of the profiling results.
 	err := os.MkdirAll(profileDir, 0700)
 	if err != nil {
@@ -94,7 +95,7 @@ func StartContinuousProfile(profileDir string) {
 	// Continuously log statistics about the running Sia application.
 	go func() {
 		// Create the logger.
-		log, err := persist.NewFileLogger(filepath.Join(profileDir, "continuousProfiling.log"))
+		log, err := persist.NewFileLogger(bcInfo, filepath.Join(profileDir, "continuousProfiling.log"))
 		if err != nil {
 			fmt.Println("Profile logging failed:", err)
 			return

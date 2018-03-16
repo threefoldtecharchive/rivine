@@ -7,6 +7,7 @@ import (
 
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 )
 
 // postEncryptionTesting runs a series of checks on the wallet after it has
@@ -110,7 +111,8 @@ func TestIntegrationPreEncryption(t *testing.T) {
 
 	// Create a second wallet using the same directory - make sure that if any
 	// files have been created, the wallet is still being treated as new.
-	w1, err := New(wt.cs, wt.tpool, filepath.Join(wt.persistDir, modules.WalletDir))
+	w1, err := New(wt.cs, wt.tpool,
+		filepath.Join(wt.persistDir, modules.WalletDir), types.DefaultBlockchainInfo())
 	if err != nil {
 		t.Fatal(err)
 	}
