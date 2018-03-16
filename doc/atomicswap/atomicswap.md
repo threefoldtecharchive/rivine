@@ -53,7 +53,7 @@ To Start bitcoin core qt in server mode on testnet:
 ` ./Bitcoin-Qt  -testnet -server -rpcuser=user -rpcpassword=pass-rpcport=18332`
 
 
-Alice creates a new bitcoin address (as of bitcoin core 0.16, make sure to specify the 'legacy' address type): 
+Alice creates a new bitcoin  address (as of bitcoin core 0.16, make sure to specify the 'legacy' address type since we need a p2pkh address): 
 ```￼
 getnewaddress "" legacy
 mgmNWZN29WeFz3X4Na8thcbLB12JA5vj9j
@@ -88,7 +88,7 @@ Publish contract transaction? [y/N] y
 Published contract transaction (afbc4dc719d9f79a9413945c92752bef644c618a4362fc8e8be0764a1b888e10)
 
 ``` 
-You can check the transaction [on the bitcoin testnet blockexplorer](https://testnet.blockexplorer.com/tx/afbc4dc719d9f79a9413945c92752bef644c618a4362fc8e8be0764a1b888e10) where you can see that 0.1234 BTC is sent to2NAfLwhThYzB1kGYVxmjYqS98yXF8JBVc3v (= the contract script hash) being a [p2sh](https://en.bitcoin.it/wiki/Pay_to_script_hash) address in the bitcoin testnet. 
+You can check the transaction [on a bitcoin testnet blockexplorer](https://testnet.blockexplorer.com/tx/afbc4dc719d9f79a9413945c92752bef644c618a4362fc8e8be0764a1b888e10) where you can see that 0.1234 BTC is sent to2NAfLwhThYzB1kGYVxmjYqS98yXF8JBVc3v (= the contract script hash) being a [p2sh](https://en.bitcoin.it/wiki/Pay_to_script_hash) address in the bitcoin testnet. 
 
 Decoding the contract( in the debug console or using the bitcoin-cli):
 ```￼
@@ -117,7 +117,7 @@ OP_IF   // top of Stack: secret
 
  ### audit contract
 
-Bob sendsAlice the contract and the contract transaction. Alice should now  verify if
+Bob sends Alice the contract and the contract transaction. Alice should now verify if
 - the script is correct 
 - the locktime is far enough in the future
 - the amount is correct
@@ -138,6 +138,66 @@ Locktime reached in 45h32m24s
 
 WARNING:
 A check on the blockchain should be done as the auditcontract does not do that so an already spent output could have been used as an input. Checking if the contract has been mined in a block should suffice
+
+### Participate
+
+Alice trusts the contract and so she participates in the atomic swap by paying the tokens into a Rivine contract using the same secret hash. The refund transaction can not be sent until the locktime expires, but should be saved in case a refund is necessary.
+
+```
+$rivatomicswap --testnet participate bb6e12437c6fecbe83f5bf3724ced0369c01e166364cc320adf166125a8b6e2c756ada1be3f6 98765 2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988
+
+//TODO
+``` 
+
+Alice now informs Bob that the threefold contract transaction has been created  and provides him with the contract details.
+
+### audit rivine contract
+
+Just as Alice had to audit Bob's contract, Bob now has to do the same with Alice's contract before withdrawing. 
+Bob verifies :
+- the script is correct
+- the locktime is correct
+- the amount of tokens is correct
+- he is the recipient
+
+```
+$rivatomicswap --testnet auditcontract 
+//TODO
+```
+
+WARNING:
+A check on the blockchain should be done as the auditcontract does not do that so an already spent output could have been used as an input. Checking if the contract has been included in a block should suffice.
+
+### redeem tokens
+
+Now that both Bob and Alice have paid into their respective contracts, Bob may withdraw from the rivine contract. This step involves publishing a transaction which reveals the secret to Alice, allowing her to withdraw from the Bitcoin contract.
+
+```
+//TODO
+```
+### redeem bitcoins
+
+Now that Bob has withdrawn from the rivine contract and revealed the secret, Alice must extract the secret from this redemption transaction. Alice may watch a block explorer to see when the rivine contract output was spent and look up the redeeming transaction.
+Alice can now extract the secret:
+```
+$$ rivatomicswap --testnet extractsecret 000000000118d94f38b8532bfe78bda0d0848a7965bdfbe6e88476896f01318717bc7e1aa50100000000ffffffff01885ef5050000000000001976a9149551ab760ba64b7e573f54d34c53506676e8145888ace6dabb590000000001ffffffffffffffff00000000ffffffffe0483045022100a1a3b37a67f3ed5d6445a0312e825299b54d91a09e0d1b59b5c0a8baa7c0642102201a0d53e9efe7db8dc47210b446fde6425be82761252ff0ebe620efc183788d86012103395a4a3c8c96ef5e5af6fd80ae42486b5d3d860bf3b41dafc415354de8c7ad80203e0b064c97247732a3b345ce7b2a835d928623cb2871c26db4c2539a38e61a16514c5163a61429c36b8dd380e0426bdc1d834e74a630bfd5d1118876a9149ee19833332a04d2be97b5c99c970191221c070c6704e6dabb59b17576a914b0ec0640c89cf803b8fdbd6e0183c354f71748c46888ac 29c36b8dd380e0426bdc1d834e74a630bfd5d111
+//TODO: REPLACE WITH ACTUAL TRANSACTION
+Secret: d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e
+```
+
+With the secret known, Alice may redeem from Bob's Bitcoin contract:
+```
+$ btcatomicswap --testnet --rpcuser=user --rpcpass=pass redeem 6382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac 0200000000010106a85a242263768b81554b0ccab63ec124146014338ec962ef0197a1043b867e0c00000017160014ad430d1ed266d7130b5207a9bef00f8030947c3ffeffffff02204bbc000000000017a914bf09ed70b0c505d750f333bad8ca0520e48370fb87104772000000000017a914616aac51e9c239f6f85fe6db12249f264dd5ff2987024730440220441058ac56f1db678f955610adc264d7982da25dc7079a36c9022bc72827311c0220209d552d7e5ac04cef5ab615edea6c7836e7276ae7dbe0c2950eb44c781c7c7b01210335c272b2cfbd3c0a02bb38bfd859e4a44175545eb12ce93e7a2bac690068f92f00000000 d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e
+Redeem fee: 0.00002499 BTC (0.00007713 BTC/kB)
+
+Redeem transaction (71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e43910):
+0200000001108e881b4a76e08b8efc62438a614c64ef2b75925c9413949af7d919c74dbcaf00000000ef4730440220500da27a6a46f99f7b96fc83c49f9b4207aae3433e971d9d21eb17267e565a5702204841ed1db53763384f661505fe230b876d2bce2c1b785fc457236602fc9a9b36012102696019f19198a3bbc4b774b81de7468e77301d5f836953d83831c2589ed19cbd20d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e514c616382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888acffffffff015d41bc00000000001976a914930c8178dec2519a18e0609e766fa881acab582d88ac18daac5a
+
+Publish redeem transaction? [y/N] y
+Published redeem transaction (71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e43910)
+```
+This transaction can be verified [on a bitcoin testnet blockexplorer](https://testnet.blockexplorer.com/tx/71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e43910) .
+The cross-chain atomic swap is now completed and successful.
 ## References
 
 Rivine atomic swaps are an implementation of [Decred atomic swaps](https://github.com/decred/atomicswap).
