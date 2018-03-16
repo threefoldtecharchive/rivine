@@ -29,17 +29,19 @@ func die(args ...interface{}) {
 	os.Exit(exitCodeGeneral)
 }
 
-// startDaemonCmd is a passthrough function for startDaemon.
-func startDaemonCmd(cmd *cobra.Command, _ []string) {
-	// Create the profiling directory if profiling is enabled.
-	if globalConfig.Rivined.Profile || build.DEBUG {
-		go profile.StartContinuousProfile(globalConfig.Rivined.ProfileDir)
-	}
+// newStartDaemonCmd is a passthrough function for startDaemon.
+func newStartDaemonCmd(cfg *Config) func(cmd *cobra.Command, _ []string) {
+	return func(cmd *cobra.Command, _ []string) {
+		// Create the profiling directory if profiling is enabled.
+		if cfg.Profile || build.DEBUG {
+			go profile.StartContinuousProfile(cfg.ProfileDir)
+		}
 
-	// Start siad. startDaemon will only return when it is shutting down.
-	err := startDaemon(globalConfig)
-	if err != nil {
-		die(err)
+		// Start rivined. StartDaemon will only return when it is shutting down.
+		err := StartDaemon(*cfg)
+		if err != nil {
+			die(err)
+		}
 	}
 }
 
@@ -110,12 +112,12 @@ Explorer (e):
 
 // SetupDefaultDaemon sets up and starts a default daemon. The chain options and constants
 // need to be configured prior to this. This function does not return untill the daemon is stopped
-func SetupDefaultDaemon(cfg RivinedCfg) {
+func SetupDefaultDaemon(cfg Config) {
 	root := &cobra.Command{
 		Use:   os.Args[0],
 		Short: strings.Title(DaemonName) + " Daemon v" + build.Version.String(),
 		Long:  strings.Title(DaemonName) + " Daemon v" + build.Version.String(),
-		Run:   startDaemonCmd,
+		Run:   newStartDaemonCmd(&cfg),
 	}
 
 	root.AddCommand(&cobra.Command{
@@ -133,16 +135,16 @@ func SetupDefaultDaemon(cfg RivinedCfg) {
 	})
 
 	// Set default values, which have the lowest priority.
-	root.Flags().StringVarP(&globalConfig.Rivined.RequiredUserAgent, "agent", "", cfg.RequiredUserAgent, "required substring for the user agent")
-	root.Flags().StringVarP(&globalConfig.Rivined.ProfileDir, "profile-directory", "", cfg.ProfileDir, "location of the profiling directory")
-	root.Flags().StringVarP(&globalConfig.Rivined.APIaddr, "api-addr", "", cfg.APIaddr, "which host:port the API server listens on")
-	root.Flags().StringVarP(&globalConfig.Rivined.RivineDir, DaemonName+"-directory", "d", cfg.RivineDir, "location of the "+DaemonName+" directory")
-	root.Flags().BoolVarP(&globalConfig.Rivined.NoBootstrap, "no-bootstrap", "", cfg.NoBootstrap, "disable bootstrapping on this run")
-	root.Flags().BoolVarP(&globalConfig.Rivined.Profile, "profile", "", cfg.Profile, "enable profiling")
-	root.Flags().StringVarP(&globalConfig.Rivined.RPCaddr, "rpc-addr", "", cfg.RPCaddr, "which port the gateway listens on")
-	root.Flags().StringVarP(&globalConfig.Rivined.Modules, "modules", "M", cfg.Modules, fmt.Sprintf("enabled modules, see '%sd modules' for more info", DaemonName))
-	root.Flags().BoolVarP(&globalConfig.Rivined.AuthenticateAPI, "authenticate-api", "", cfg.AuthenticateAPI, "enable API password protection")
-	root.Flags().BoolVarP(&globalConfig.Rivined.AllowAPIBind, "disable-api-security", "", cfg.AllowAPIBind, fmt.Sprintf("allow %sd to listen on a non-localhost address (DANGEROUS)", DaemonName))
+	root.Flags().StringVarP(&cfg.RequiredUserAgent, "agent", "", cfg.RequiredUserAgent, "required substring for the user agent")
+	root.Flags().StringVarP(&cfg.ProfileDir, "profile-directory", "", cfg.ProfileDir, "location of the profiling directory")
+	root.Flags().StringVarP(&cfg.APIaddr, "api-addr", "", cfg.APIaddr, "which host:port the API server listens on")
+	root.Flags().StringVarP(&cfg.RootPersistentDir, DaemonName+"-directory", "d", cfg.RootPersistentDir, "location of the "+DaemonName+" directory")
+	root.Flags().BoolVarP(&cfg.NoBootstrap, "no-bootstrap", "", cfg.NoBootstrap, "disable bootstrapping on this run")
+	root.Flags().BoolVarP(&cfg.Profile, "profile", "", cfg.Profile, "enable profiling")
+	root.Flags().StringVarP(&cfg.RPCaddr, "rpc-addr", "", cfg.RPCaddr, "which port the gateway listens on")
+	root.Flags().StringVarP(&cfg.Modules, "modules", "M", cfg.Modules, fmt.Sprintf("enabled modules, see '%sd modules' for more info", DaemonName))
+	root.Flags().BoolVarP(&cfg.AuthenticateAPI, "authenticate-api", "", cfg.AuthenticateAPI, "enable API password protection")
+	root.Flags().BoolVarP(&cfg.AllowAPIBind, "disable-api-security", "", cfg.AllowAPIBind, fmt.Sprintf("allow %sd to listen on a non-localhost address (DANGEROUS)", DaemonName))
 
 	// Parse cmdline flags, overwriting both the default values and the config
 	// file values.
