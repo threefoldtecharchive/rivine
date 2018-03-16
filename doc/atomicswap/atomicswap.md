@@ -196,8 +196,47 @@ Redeem transaction (71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e4
 Publish redeem transaction? [y/N] y
 Published redeem transaction (71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e43910)
 ```
+decoding the redeem transaction gives 
+```
+{
+  "txid": "71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e43910",
+  "hash": "71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e43910",
+  "version": 2,
+  "size": 324,
+  "vsize": 324,
+  "locktime": 1521277464,
+  "vin": [
+    {
+      "txid": "afbc4dc719d9f79a9413945c92752bef644c618a4362fc8e8be0764a1b888e10",
+      "vout": 0,
+      "scriptSig": {
+        "asm": "30440220500da27a6a46f99f7b96fc83c49f9b4207aae3433e971d9d21eb17267e565a5702204841ed1db53763384f661505fe230b876d2bce2c1b785fc457236602fc9a9b36[ALL] 02696019f19198a3bbc4b774b81de7468e77301d5f836953d83831c2589ed19cbd d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e 1 6382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac",
+        "hex": "4730440220500da27a6a46f99f7b96fc83c49f9b4207aae3433e971d9d21eb17267e565a5702204841ed1db53763384f661505fe230b876d2bce2c1b785fc457236602fc9a9b36012102696019f19198a3bbc4b774b81de7468e77301d5f836953d83831c2589ed19cbd20d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e514c616382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac"
+      },
+      "sequence": 4294967295
+    }
+  ],
+  "vout": [
+    {
+      "value": 0.12337501,
+      "n": 0,
+      "scriptPubKey": {
+        "asm": "OP_DUP OP_HASH160 930c8178dec2519a18e0609e766fa881acab582d OP_EQUALVERIFY OP_CHECKSIG",
+        "hex": "76a914930c8178dec2519a18e0609e766fa881acab582d88ac",
+        "reqSigs": 1,
+        "type": "pubkeyhash",
+        "addresses": [
+          "mtvUcAgzLLAWfjPPxkCu5vy7B67GmKJRuo"
+        ]
+      }
+    }
+  ]
+}
+```
+In the script signature to unlock the input, you can recognize the secret `d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e` and the transaction script `4730440220500da27a6a46f99f7b96fc83c49f9b4207aae3433e971d9d21eb17267e565a5702204841ed1db53763384f661505fe230b876d2bce2c1b785fc457236602fc9a9b36012102696019f19198a3bbc4b774b81de7468e77301d5f836953d83831c2589ed19cbd20d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e514c616382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac`"
 This transaction can be verified [on a bitcoin testnet blockexplorer](https://testnet.blockexplorer.com/tx/71775d49f8032a7e326b9ca04a3a2ba2f5661a877a187e1346cd21ac55e43910) .
 The cross-chain atomic swap is now completed and successful.
+
 ## References
 
 Rivine atomic swaps are an implementation of [Decred atomic swaps](https://github.com/decred/atomicswap).
