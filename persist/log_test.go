@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/types"
 )
 
 // TestLogger checks that the basic functions of the file logger work as
@@ -26,7 +27,7 @@ func TestLogger(t *testing.T) {
 
 	// Create the logger.
 	logFilename := filepath.Join(testdir, "test.log")
-	fl, err := NewFileLogger(logFilename)
+	fl, err := NewFileLogger(types.DefaultBlockchainInfo(), logFilename)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +72,7 @@ func TestLoggerCritical(t *testing.T) {
 
 	// Create the logger.
 	logFilename := filepath.Join(testdir, "test.log")
-	fl, err := NewFileLogger(logFilename)
+	fl, err := NewFileLogger(types.DefaultBlockchainInfo(), logFilename)
 	if err != nil {
 		t.Fatal(err)
 	}

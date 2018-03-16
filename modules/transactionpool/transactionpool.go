@@ -72,11 +72,13 @@ type (
 		db         *persist.BoltDatabase
 		mu         demotemutex.DemoteMutex
 		persistDir string
+
+		bcInfo types.BlockchainInfo
 	}
 )
 
 // New creates a transaction pool that is ready to receive transactions.
-func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string) (*TransactionPool, error) {
+func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo types.BlockchainInfo) (*TransactionPool, error) {
 	// Check that the input modules are non-nil.
 	if cs == nil {
 		return nil, errNilCS
@@ -95,6 +97,8 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string) (*Transa
 		transactionSetDiffs: make(map[TransactionSetID]modules.ConsensusChange),
 
 		persistDir: persistDir,
+
+		bcInfo: bcInfo,
 	}
 
 	// Open the tpool database.

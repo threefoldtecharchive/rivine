@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	seedFilePrefix = "Rivine Wallet Encrypted Backup Seed - "
-	seedFileSuffix = ".seed"
+	seedFilePartialPrefix = " Wallet Encrypted Backup Seed - "
+	seedFileSuffix        = ".seed"
 )
 
 var (
@@ -61,7 +61,8 @@ func (w *Wallet) encryptAndSaveSeedFile(masterKey crypto.TwofishKey, seed module
 	plaintextVerification := make([]byte, encryptionVerificationLen)
 	sf.EncryptionVerification = sek.EncryptBytes(plaintextVerification)
 	sf.Seed = sek.EncryptBytes(seed[:])
-	seedFilename := filepath.Join(w.persistDir, seedFilePrefix+persist.RandomSuffix()+seedFileSuffix)
+	seedFilename := filepath.Join(w.persistDir,
+		w.bcInfo.Name+seedFilePartialPrefix+persist.RandomSuffix()+seedFileSuffix)
 	err = persist.SaveJSON(seedMetadata, sf, seedFilename)
 	if err != nil {
 		return SeedFile{}, err

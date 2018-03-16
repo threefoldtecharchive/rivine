@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/types"
 )
 
 // Logger is a wrapper for the standard library logger that enforces logging
@@ -73,9 +74,12 @@ func (l *Logger) Severe(v ...interface{}) {
 
 // NewLogger returns a logger that can be closed. Calls should not be made to
 // the logger after 'Close' has been called.
-func NewLogger(w io.Writer) *Logger {
+func NewLogger(info types.BlockchainInfo, w io.Writer) *Logger {
 	l := log.New(w, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile|log.LUTC)
-	l.Output(3, "STARTUP: Logging has started. Rivined Version "+build.Version.String()) // Call depth is 3 because NewLogger is usually called by NewFileLogger
+	// Call depth is 3 because NewLogger is usually called by NewFileLogger
+	l.Output(3, fmt.Sprintf(
+		"STARTUP: Logging has started. %s Version %s",
+		info.Name, info.Version.String()))
 	return &Logger{l, w}
 }
 
@@ -118,11 +122,11 @@ func (cf *closeableFile) Write(b []byte) (int, error) {
 
 // NewFileLogger returns a logger that logs to logFilename. The file is opened
 // in append mode, and created if it does not exist.
-func NewFileLogger(logFilename string) (*Logger, error) {
+func NewFileLogger(info types.BlockchainInfo, logFilename string) (*Logger, error) {
 	logFile, err := os.OpenFile(logFilename, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
 	if err != nil {
 		return nil, err
 	}
 	cf := &closeableFile{File: logFile}
-	return NewLogger(cf), nil
+	return NewLogger(info, cf), nil
 }

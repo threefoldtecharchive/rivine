@@ -103,13 +103,15 @@ type Wallet struct {
 	// The wallet's ThreadGroup tells tracked functions to shut down and
 	// blocks until they have all exited before returning from Close.
 	tg siasync.ThreadGroup
+
+	bcInfo types.BlockchainInfo
 }
 
 // New creates a new wallet, loading any known addresses from the input file
 // name and then using the file to save in the future. Keys and addresses are
 // not loaded into the wallet during the call to 'new', but rather during the
 // call to 'Unlock'.
-func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir string) (*Wallet, error) {
+func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir string, bcInfo types.BlockchainInfo) (*Wallet, error) {
 	// Check for nil dependencies.
 	if cs == nil {
 		return nil, errNilConsensusSet
@@ -134,6 +136,8 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		historicOutputs: make(map[types.OutputID]types.Currency),
 
 		persistDir: persistDir,
+
+		bcInfo: bcInfo,
 	}
 	err := w.initPersist()
 	if err != nil {

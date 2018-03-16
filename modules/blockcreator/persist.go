@@ -52,7 +52,8 @@ func (b *BlockCreator) initPersist() error {
 	}
 
 	// Add a logger.
-	b.log, err = persist.NewFileLogger(filepath.Join(b.persistDir, logFile))
+	b.log, err = persist.NewFileLogger(b.bcInfo,
+		filepath.Join(b.persistDir, logFile))
 	if err != nil {
 		return err
 	}

@@ -19,6 +19,8 @@ type BlockCreator struct {
 	tpool  modules.TransactionPool
 	wallet modules.Wallet
 
+	bcInfo types.BlockchainInfo
+
 	// Cache the synced state of the consensus set to avoid unnecessarily locking it
 	csSynced bool
 
@@ -68,7 +70,7 @@ func (b *BlockCreator) startupRescan() error {
 }
 
 // New returns a block creator that is collaborating in the pobs protocol.
-func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Wallet, persistDir string) (*BlockCreator, error) {
+func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Wallet, persistDir string, bcInfo types.BlockchainInfo) (*BlockCreator, error) {
 	// Create the block creator and its dependencies.
 	if cs == nil {
 		return nil, errors.New("A consensset is required to create a block creator")
@@ -85,6 +87,8 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 		cs:     cs,
 		tpool:  tpool,
 		wallet: w,
+
+		bcInfo: bcInfo,
 
 		unsolvedBlock: &types.Block{},
 
