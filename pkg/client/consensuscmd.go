@@ -60,10 +60,12 @@ Progress (estimated): %.f%%
 // Block height is estimated by calculating the minutes since a known block in
 // the past and dividing by 10 minutes (the block time).
 func EstimatedHeightAt(t time.Time) types.BlockHeight {
-	block5e4Timestamp := time.Date(2016, time.May, 11, 19, 33, 0, 0, time.UTC)
-	diff := t.Sub(block5e4Timestamp)
-	estimatedHeight := 5e4 + (diff.Minutes() / 10)
-	return types.BlockHeight(estimatedHeight + 0.5) // round to the nearest block
+	// Calc the amount of time passed since the Genesis block
+	genesisTime := time.Unix(int64(types.GenesisTimestamp), 0)
+	diff := t.Sub(genesisTime)
+	// Estimated number of blocks, at a rate of 10/minute
+	estimatedHeight := (diff.Minutes() / 10)
+	return types.BlockHeight(estimatedHeight)
 }
 
 // Consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
