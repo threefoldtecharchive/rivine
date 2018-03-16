@@ -339,8 +339,5 @@ func (srv *Server) Serve() error {
 // Close closes the Server's listener, causing the HTTP server to shut down.
 func (srv *Server) Close() error {
 	// Close the listener, which will cause Server.Serve() to return.
-	if err := srv.listener.Close(); err != nil {
-		return err
-	}
-	return nil
+	return srv.listener.Close()
 }

@@ -82,8 +82,7 @@ func TestUnitProcessConfig(t *testing.T) {
 	for i := range testVals.inputs {
 		config.APIaddr = testVals.inputs[i][0]
 		config.RPCaddr = testVals.inputs[i][1]
-		config.HostAddr = testVals.inputs[i][2]
-		config, err := processConfig(config)
+		err := processConfig(&config)
 		if err != nil {
 			t.Error("processConfig failed with error:", err)
 		}
@@ -93,15 +92,12 @@ func TestUnitProcessConfig(t *testing.T) {
 		if config.RPCaddr != testVals.expectedOutputs[i][1] {
 			t.Error("processing failure at check", i, 1)
 		}
-		if config.HostAddr != testVals.expectedOutputs[i][2] {
-			t.Error("processing failure at check", i, 2)
-		}
 	}
 
 	// Test invalid configs.
 	invalidModule := "z"
 	config.Modules = invalidModule
-	_, err := processConfig(config)
+	err := processConfig(&config)
 	if err == nil {
 		t.Error("processModules didn't error on invalid module:", invalidModule)
 	}
