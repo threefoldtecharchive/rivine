@@ -66,7 +66,7 @@ func init() {
 		// Change as necessary. If not changed, the first few difficulty addaptions
 		// will be wrong, but after some new difficulty calculations the error will
 		// fade out.
-		GenesisTimestamp = Timestamp(1424139000)
+		GenesisTimestamp = Timestamp(1519560000) // 25 Feb 2018 12:00 UTC
 
 		TargetWindow = 20                        // Difficulty is adjusted based on prior 20 blocks.
 		MaxAdjustmentUp = big.NewRat(120, 100)   // Difficulty adjusts quickly.
