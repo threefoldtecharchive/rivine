@@ -29,7 +29,14 @@ var (
 	SpecifierBlockStakeOutput = Specifier{'b', 'l', 's', 't', 'a', 'k', 'e', ' ', 'o', 'u', 't', 'p', 'u', 't'}
 	SpecifierMinerFee         = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'f', 'e', 'e'}
 
-	ErrTransactionIDWrongLen = errors.New("input has wrong length to be an encoded transaction id")
+	ErrInvalidTransactionVersion = errors.New("invalid transaction version")
+	ErrTransactionIDWrongLen     = errors.New("input has wrong length to be an encoded transaction id")
+)
+
+const (
+	// TransactionVersionOne defines the initial (and currently only)
+	// version format. Any other version number is concidered invalid.
+	TransactionVersionOne TransactionVersion = iota + 1
 )
 
 type (
@@ -44,6 +51,12 @@ type (
 	// contained in the type. By prepending the data with Specifier, we can
 	// guarantee that distinct types will never produce the same hash.
 	Specifier [SpecifierLen]byte
+
+	// TransactionVersion defines the format version of a transaction.
+	// Currently only one format exists and it is identified by 0x01 (TransactionVersionOne).
+	// However in the future we might wish to support one or multiple new formats,
+	// which will be identifable during encoding/decoding by this version number.
+	TransactionVersion byte
 
 	// IDs are used to refer to a type without revealing its contents. They
 	// are constructed by hashing specific fields of the type, along with a
@@ -188,6 +201,58 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 	}
 
 	return
+}
+
+// MarshalSia implements the encoding.SiaMarshaler interface.
+func (t Transaction) MarshalSia(w io.Writer) error {
+	TransactionVersionOne.Encode(w)
+	return encoding.NewEncoder(w).EncodeAll(
+		t.CoinInputs,
+		t.CoinOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+		t.TransactionSignatures,
+	)
+}
+
+// UnmarshalSia implements the encoding.SiaUnmarshaler interface.
+func (t *Transaction) UnmarshalSia(r io.Reader) error {
+	var txVersion TransactionVersion
+	if err := txVersion.Decode(r); err != nil {
+		return err
+	}
+	if txVersion != TransactionVersionOne {
+		return ErrInvalidTransactionVersion
+	}
+	return encoding.NewDecoder(r).DecodeAll(
+		&t.CoinInputs,
+		&t.CoinOutputs,
+		&t.BlockStakeInputs,
+		&t.BlockStakeOutputs,
+		&t.MinerFees,
+		&t.ArbitraryData,
+		&t.TransactionSignatures,
+	)
+}
+
+// Encode the TransactionVersion as a binary slice
+// and write it into the writer.
+func (v TransactionVersion) Encode(w io.Writer) {
+	w.Write([]byte{byte(v)})
+}
+
+// Decode the TransactionVersion from a binary byte slice,
+// and convert it into the single byte transaction version it is supposed to be.
+func (v *TransactionVersion) Decode(r io.Reader) error {
+	var b [1]byte
+	_, err := r.Read(b[:])
+	if err != nil {
+		return err
+	}
+	*v = TransactionVersion(b[0])
+	return nil
 }
 
 // NewTransactionShortID creates a new Transaction ShortID,
