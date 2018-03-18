@@ -16,13 +16,16 @@ Releases
 
 Upcomming releases:
 
-+ [0.5.0 kanban](https://waffle.io/rivine/home?milestone=0.5%20features%20required%20to%20launch%20tfchain) Feature release (Release date: 11/03/2018)
++ [0.5.0 kanban](https://waffle.io/rivine/home?milestone=0.5%20data%20and%20config) Feature release (Release date: 21/03/2018)
   + registration of data: transfer data and replicate data on a KV storage;
-  + distributed exchange: exchange XRPs (Ripple) with TFTs (rivine::tfchain);
   + allow for different nets of the same type of blockchain;
-+ [0.6.0 kanban](https://waffle.io/rivine/home?milestone=0.6%20pre-launch) Bugfix release (Release date: 25/03/2018)
-  + bug-fixes and improvements to support the TFT launch;
-  + any small missing features;
+  + allow for better configuration of blockchain implementations;
++ [0.6.0 kanban](https://waffle.io/rivine/home?milestone=0.6%20transactions%202.0) Feature release (Release date: 21/03/2018)
+  + implement new transaction structure;
+  + support atomic swaps;
++ [0.7.0 kanban](https://waffle.io/rivine/home?milestone=0.7%20pre-launch) Bugfix release (Release date: 31/03/2018)
+  + bugfix anything that needs bugfixing, prior to the tf launch;
+  + improve what needs improving, prior to the tf launch;
 
 Public chain
 ------------
