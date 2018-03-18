@@ -108,7 +108,6 @@ type (
 	// unlock." If 'SignaturesRequired' > len('PublicKeys'), then the UnlockConditions
 	// cannot be fulfilled under any circumstances.
 	UnlockConditions struct {
-		Timelock           BlockHeight    `json:"timelock"`
 		PublicKeys         []SiaPublicKey `json:"publickeys"`
 		SignaturesRequired uint64         `json:"signaturesrequired"`
 	}
@@ -141,7 +140,6 @@ func Ed25519PublicKey(pk crypto.PublicKey) SiaPublicKey {
 // protected by having random public keys next to them.
 func (uc UnlockConditions) UnlockHash() UnlockHash {
 	tree := crypto.NewTree()
-	tree.PushObject(uc.Timelock)
 	for i := range uc.PublicKeys {
 		tree.PushObject(uc.PublicKeys[i])
 	}

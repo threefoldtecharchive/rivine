@@ -84,58 +84,6 @@ func TestTransactionNoRepeats(t *testing.T) {
 	txn.BlockStakeInputs = txn.BlockStakeInputs[:1]
 }
 
-// TestValudUnlockConditions probes the validUnlockConditions function.
-func TestValidUnlockConditions(t *testing.T) {
-	// The only thing to check is the timelock.
-	uc := UnlockConditions{Timelock: 3}
-	err := validUnlockConditions(uc, 2)
-	if err != ErrTimelockNotSatisfied {
-		t.Error(err)
-	}
-	err = validUnlockConditions(uc, 3)
-	if err != nil {
-		t.Error(err)
-	}
-	err = validUnlockConditions(uc, 4)
-	if err != nil {
-		t.Error(err)
-	}
-}
-
-// TestTransactionValidUnlockConditions probes the validUnlockConditions method
-// of the transaction type.
-func TestTransactionValidUnlockConditions(t *testing.T) {
-	// Create a transaction with each type of valid unlock condition.
-	txn := Transaction{
-		CoinInputs: []CoinInput{
-			{UnlockConditions: UnlockConditions{Timelock: 3}},
-		},
-		BlockStakeInputs: []BlockStakeInput{
-			{UnlockConditions: UnlockConditions{Timelock: 3}},
-		},
-	}
-	err := txn.validUnlockConditions(4)
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Try with illegal conditions in the siacoin inputs.
-	txn.CoinInputs[0].UnlockConditions.Timelock = 5
-	err = txn.validUnlockConditions(4)
-	if err == nil {
-		t.Error(err)
-	}
-	txn.CoinInputs[0].UnlockConditions.Timelock = 3
-
-	// Try with illegal conditions in the siafund inputs.
-	txn.BlockStakeInputs[0].UnlockConditions.Timelock = 5
-	err = txn.validUnlockConditions(4)
-	if err == nil {
-		t.Error(err)
-	}
-	txn.BlockStakeInputs[0].UnlockConditions.Timelock = 3
-}
-
 // TestTransactionStandaloneValid probes the StandaloneValid method of the
 // Transaction type.
 func TestTransactionStandaloneValid(t *testing.T) {
@@ -170,15 +118,6 @@ func TestTransactionStandaloneValid(t *testing.T) {
 		t.Error("failed to trigger followsMinimumValues error")
 	}
 	txn.CoinOutputs = nil
-
-	// Violate validUnlockConditions
-	txn.CoinInputs = []CoinInput{{}}
-	txn.CoinInputs[0].UnlockConditions.Timelock = 1
-	err = txn.StandaloneValid(0)
-	if err == nil {
-		t.Error("failed to trigger validUnlockConditions error")
-	}
-	txn.CoinInputs = nil
 
 	// Violate validSignatures
 	txn.TransactionSignatures = []TransactionSignature{{}}

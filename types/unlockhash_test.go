@@ -11,7 +11,6 @@ import (
 func TestUnlockHashJSONMarshalling(t *testing.T) {
 	// Create an unlock hash.
 	uc := UnlockConditions{
-		Timelock:           5,
 		SignaturesRequired: 3,
 	}
 	uh := uc.UnlockHash()
@@ -61,7 +60,6 @@ func TestUnlockHashJSONMarshalling(t *testing.T) {
 func TestUnlockHashStringMarshalling(t *testing.T) {
 	// Create an unlock hash.
 	uc := UnlockConditions{
-		Timelock:           2,
 		SignaturesRequired: 7,
 	}
 	uh := uc.UnlockHash()

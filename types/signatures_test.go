@@ -24,7 +24,6 @@ func TestEd25519PublicKey(t *testing.T) {
 // TestUnlockHash runs the UnlockHash code.
 func TestUnlockHash(t *testing.T) {
 	uc := UnlockConditions{
-		Timelock: 1,
 		PublicKeys: []SiaPublicKey{
 			{
 				Algorithm: SignatureEntropy,

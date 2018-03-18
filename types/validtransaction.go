@@ -12,12 +12,11 @@ import (
 )
 
 var (
-	ErrDoubleSpend          = errors.New("transaction uses a parent object twice")
-	ErrNonZeroRevision      = errors.New("new file contract has a nonzero revision number")
-	ErrTimelockNotSatisfied = errors.New("timelock has not been met")
-	ErrTransactionTooLarge  = errors.New("transaction is too large to fit in a block")
-	ErrZeroMinerFee         = errors.New("transaction has a zero value miner fee")
-	ErrZeroOutput           = errors.New("transaction cannot have an output or payout that has zero value")
+	ErrDoubleSpend         = errors.New("transaction uses a parent object twice")
+	ErrNonZeroRevision     = errors.New("new file contract has a nonzero revision number")
+	ErrTransactionTooLarge = errors.New("transaction is too large to fit in a block")
+	ErrZeroMinerFee        = errors.New("transaction has a zero value miner fee")
+	ErrZeroOutput          = errors.New("transaction cannot have an output or payout that has zero value")
 )
 
 // fitsInABlock checks if the transaction is likely to fit in a block.
@@ -81,36 +80,6 @@ func (t Transaction) noRepeats() error {
 	return nil
 }
 
-// validUnlockConditions checks that the conditions of uc have been met. The
-// height is taken as input so that modules who might be at a different height
-// can do the verification without needing to use their own function.
-// Additionally, it means that the function does not need to be a method of the
-// consensus set.
-func validUnlockConditions(uc UnlockConditions, currentHeight BlockHeight) (err error) {
-	if uc.Timelock > currentHeight {
-		return ErrTimelockNotSatisfied
-	}
-	return
-}
-
-// validUnlockConditions checks that all of the unlock conditions in the
-// transaction are valid.
-func (t Transaction) validUnlockConditions(currentHeight BlockHeight) (err error) {
-	for _, sci := range t.CoinInputs {
-		err = validUnlockConditions(sci.UnlockConditions, currentHeight)
-		if err != nil {
-			return
-		}
-	}
-	for _, bsi := range t.BlockStakeInputs {
-		err = validUnlockConditions(bsi.UnlockConditions, currentHeight)
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
 // StandaloneValid returns an error if a transaction is not valid in any
 // context, for example if the same output is spent twice in the same
 // transaction. StandaloneValid will not check that all outputs being spent are
@@ -125,10 +94,6 @@ func (t Transaction) StandaloneValid(currentHeight BlockHeight) (err error) {
 		return
 	}
 	err = t.followsMinimumValues()
-	if err != nil {
-		return
-	}
-	err = t.validUnlockConditions(currentHeight)
 	if err != nil {
 		return
 	}

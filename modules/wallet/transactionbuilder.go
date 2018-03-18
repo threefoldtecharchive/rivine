@@ -129,15 +129,11 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 			potentialFund = potentialFund.Add(sco.Value)
 			continue
 		}
-		outputUnlockConditions := tb.wallet.keys[sco.UnlockHash].UnlockConditions
-		if tb.wallet.consensusSetHeight < outputUnlockConditions.Timelock {
-			continue
-		}
 
 		// Add a coin input for this output.
 		sci := types.CoinInput{
 			ParentID:         scoid,
-			UnlockConditions: outputUnlockConditions,
+			UnlockConditions: tb.wallet.keys[sco.UnlockHash].UnlockConditions,
 		}
 
 		tb.coinInputs = append(tb.coinInputs, len(tb.transaction.CoinInputs))
@@ -203,14 +199,10 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 			potentialFund = potentialFund.Add(sfo.Value)
 			continue
 		}
-		outputUnlockConditions := tb.wallet.keys[sfo.UnlockHash].UnlockConditions
-		if tb.wallet.consensusSetHeight < outputUnlockConditions.Timelock {
-			continue
-		}
 
 		sfi := types.BlockStakeInput{
 			ParentID:         sfoid,
-			UnlockConditions: outputUnlockConditions,
+			UnlockConditions: tb.wallet.keys[sfo.UnlockHash].UnlockConditions,
 		}
 		tb.blockstakeInputs = append(tb.blockstakeInputs, len(tb.transaction.BlockStakeInputs))
 		tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, sfi)
@@ -299,15 +291,9 @@ func (tb *transactionBuilder) SpendBlockStake(ubsoid types.BlockStakeOutputID) e
 		return modules.ErrIncompleteTransactions //TODO: not right error
 	}
 
-	// Check that this output has no Timelock
-	outputUnlockConditions := tb.wallet.keys[ubso.UnlockHash].UnlockConditions
-	if tb.wallet.consensusSetHeight < outputUnlockConditions.Timelock {
-		return modules.ErrIncompleteTransactions //TODO: not right error
-	}
-
 	bsi := types.BlockStakeInput{
 		ParentID:         ubsoid,
-		UnlockConditions: outputUnlockConditions,
+		UnlockConditions: tb.wallet.keys[ubso.UnlockHash].UnlockConditions,
 	}
 	tb.blockstakeInputs = append(tb.blockstakeInputs, len(tb.transaction.BlockStakeInputs))
 	tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, bsi)
