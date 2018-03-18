@@ -26,7 +26,7 @@ type (
 		log *persist.Logger
 
 		// Keep a reference to all running namespace managers. Key is the Namespace
-		managers map[Namespace]*NamespaceManager
+		managers map[Namespace]*namespaceManager
 		mu       sync.Mutex // Add some protection to the map
 
 		bcInfo types.BlockchainInfo
@@ -64,24 +64,33 @@ func New(cs modules.ConsensusSet, db Database, persistDir string, bcInfo types.B
 	ds.log.Println("Datastore initialized")
 
 	// Load the already existing managers
-	mgrs, err := ds.db.GetManagers()
+	ds.managers = make(map[Namespace]*namespaceManager)
+	mgrs, err := ds.db.LoadFieldsForKey(subscriberSet)
 	if err != nil {
 		return nil, errors.New("Failed to load existing namespace managers: " + err.Error())
 	}
-	for _, mgr := range mgrs {
-		// Add some properties we don't serialize
-		mgr.DB = ds.db
-		mgr.log = ds.log
-		mgr.Buffer = NewBlockBuffer()
-		// Don't block initialization
-		go mgr.SubscribeCs(ds.cs)
+	for nsString, sb := range mgrs {
+		ns := Namespace{}
+		err := ns.LoadString(nsString)
+		if err != nil {
+			ds.log.Severe("Failed to load manager - namespace: ", err)
+			continue
+		}
+		mgr, err := newNamespaceManagerFromSerializedState(ns, cs, db, ds.log, sb)
+		if err != nil {
+			ds.log.Severe("Failed to load manager - state: ", err)
+			continue
+		}
+		ds.managers[ns] = mgr
 	}
-	ds.managers = mgrs
 
 	ds.log.Printf("Loaded %d namespace managers from db", len(mgrs))
 
+	// set up the event subscription
+	subChan := make(chan *SubEvent)
+	go ds.messageCollector(subChan)
 	// Subscribe to redis and start/stop managers
-	ds.db.Subscribe(ds.handleSubEvent)
+	ds.db.Subscribe(subChan)
 
 	return ds, nil
 }
@@ -91,14 +100,21 @@ func (ds *DataStore) Close() error {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
+	// First unsubscribe from the replication channel
+	if err := ds.db.Unsubscribe(); err != nil {
+		// Log a possible failure, but don't stop as the database connection can still be
+		// closed later on
+		ds.log.Severe("Failed to unsubscribe from subscription channel: ", err)
+	}
+
 	ds.log.Println("Datastore shutting down...")
 
 	wg := sync.WaitGroup{}
 	for _, nsm := range ds.managers {
 		wg.Add(1)
-		go func(n *NamespaceManager) {
+		go func(n *namespaceManager) {
 			ds.log.Debugln("Shutting down namespace manager...")
-			n.UnSubscribeCs()
+			n.close()
 			wg.Done()
 			ds.log.Debugln("Namespace manager shut down")
 		}(nsm)
@@ -119,39 +135,41 @@ func (ds *DataStore) Close() error {
 	return err
 }
 
-func (ds *DataStore) handleSubEvent(ev SubEvent) {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-
-	switch ev.Action {
-	case SubStart:
-		// Check if we track this namespace already
-		// For now, remove the old manager and fire up the new one
-		// This can be improved by also writing the first registered ID in the tracked set
-		// and ignoring the others
-		if eNsm, exists := ds.managers[ev.Namespace]; exists {
-			ds.log.Debugln("Removing duplicate namespace manager")
-			eNsm.UnSubscribeCs()
-		}
-		nsm := NewNamespaceManager(ev.Namespace, ds.db, ev.Start, ds.log)
-		if err := nsm.Save(); err != nil {
-			ds.log.Severe("Failed to save namespace manager during initializtion: ", err)
+func (ds *DataStore) messageCollector(ch <-chan *SubEvent) {
+	for ev := range ch {
+		if ev == nil {
+			// Closed channel
 			return
 		}
-		ds.managers[ev.Namespace] = nsm
-		go nsm.SubscribeCs(ds.cs)
-	case SubEnd:
-		nsm, exists := ds.managers[ev.Namespace]
-		if !exists {
-			ds.log.Debugln("Failed to unsubscribe from namespace, not subscribed to namespace", ev.Namespace)
-			return
+		switch ev.Action {
+		case SubStart:
+			// Check if we track this namespace already
+			// For now, remove the old manager and fire up the new one
+			// This can be improved by also writing the first registered ID in the tracked set
+			// and ignoring the others
+			if eNsm, exists := ds.managers[ev.Namespace]; exists {
+				ds.log.Debugln("Removing duplicate namespace manager")
+				eNsm.close()
+			}
+			nsm := newNamespaceManager(ev.Namespace, ds.cs, ds.db, ds.log, ev.Start)
+			if err := nsm.save(); err != nil {
+				ds.log.Severe("Failed to save namespace manager during initializtion: ", err)
+				return
+			}
+			ds.managers[ev.Namespace] = nsm
+		case SubEnd:
+			nsm, exists := ds.managers[ev.Namespace]
+			if !exists {
+				ds.log.Debugln("Failed to unsubscribe from namespace, not subscribed to namespace", ev.Namespace)
+				return
+			}
+			nsm.close()
+			err := nsm.delete()
+			if err != nil {
+				ds.log.Severe("Failed to delete namespace manager: ", err)
+				return
+			}
+			ds.log.Debugln("Deleted namespace manager for namespace", ev.Namespace)
 		}
-		nsm.UnSubscribeCs()
-		err := nsm.Delete()
-		if err != nil {
-			ds.log.Severe("Failed to delete namespace manager: ", err)
-			return
-		}
-		ds.log.Debugln("Deleted namespace manager for namespace", ev.Namespace)
 	}
 }

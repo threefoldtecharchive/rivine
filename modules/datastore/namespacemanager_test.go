@@ -7,18 +7,18 @@ import (
 )
 
 func TestSerialize(t *testing.T) {
-	nsm := &NamespaceManager{State: NamespaceManagerState{BlockHeight: types.BlockHeight(5)}}
-	nsm2 := &NamespaceManager{}
+	nsm := &namespaceManager{state: namespaceManagerState{BlockHeight: types.BlockHeight(5)}}
+	nsm2 := &namespaceManager{}
 
-	amBytes, err := nsm.Serialize()
+	amBytes, err := nsm.serialize()
 	if err != nil {
 		t.Fatal("Serializing namespace manager failed: ", err)
 	}
-	err = nsm2.Deserialize(amBytes)
+	err = nsm2.deserialize(amBytes)
 	if err != nil {
 		t.Fatal("Deserializing namespace manager failed: ", err)
 	}
-	if nsm.State != nsm2.State {
-		t.Fatal("Deserialized state does not match: ", nsm2.State.BlockHeight)
+	if nsm.state != nsm2.state {
+		t.Fatal("Deserialized state does not match: ", nsm2.state.BlockHeight)
 	}
 }

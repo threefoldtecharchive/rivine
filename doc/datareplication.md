@@ -10,9 +10,9 @@ This will set up a rivine daemon which acts as a full node (it has a full copy o
 
 ## Saving data
 
-Data is saved on the blockchain by adding it as `arbitrary data` in a  transaction. Although there is no hard requirement to the structure of such arbitrary data, the `datastore` module expects it to be of the form: `specifier|namespace|actualdata`. By default, a specifier has a length of 16 bytes, and a namespace has a length of 4 bytes. Currently the datastore ignores the specifier altogether (the specifier predates the `datastore` and is used to validate which arbitrary data is allowed).
+Data is saved on the blockchain by adding it as `arbitrary data` in a  transaction. Although there is no hard requirement to the structure of such arbitrary data, the `datastore` module expects it to be of the form: `specifier|namespace|actualdata`. By default, a specifier has a length of 16 bytes, and a namespace has a length of 4 bytes. The specifier is used by the transactionpool and consensus set to validate arbitrary data. Data which does not start with a validated specifier causes the transaction to be rejected. As such, the datastore currently ignores the specifier altoghether. The only whitelisted specifier is currently `NonSia` (padded with 0-value bytes to a length of 16 bytes).
 
-In order to allow people to store data on the blockchain, a command is exposed in the `client` which creates a minimal transaction to the provided address, while paying the miner fee, and adding the provided data. This command silently adds a specifier (as to not have the transaction rejected by the `transactionpool` for containing invalid data). The command is as follows:
+In order to allow people to store data on the blockchain, a command is exposed in the `client` which creates a minimal transaction to the provided address, while paying the miner fee, and adding the provided data. This command silently adds a specifier (the specifier being `NonSia`, as to not have the transaction rejected by the `transactionpool` for containing invalid data). The command is as follows:
 
 ```bash
 rivinec wallet registerdata [destination address] [data]
@@ -33,6 +33,7 @@ Currently only support for `Redis` is implemented (or rather, the `Redis protoco
 - `HGETALL`
 - `HDEL`
 - `SUBSCRIBE`
+- `UNSUBSCRIBE`
 
 ## Managing data replication
 

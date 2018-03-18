@@ -109,8 +109,8 @@ Explorer (e):
 		%[1]sd -M gce
 DataStore (d):
 	The datastore provides an interface to connect to a (possibly remote)
-	redis instance. Data added to transactions is replicated to an HSET for every
-	unlockhash which receives coins in the transaction.
+	redis instance. Data added to transactions is replicated to an HSET based
+	on the namespace embedded in the data.
 	The datastore module requires the consensus set.
 	Example:
 		%[1]sd -M gcd

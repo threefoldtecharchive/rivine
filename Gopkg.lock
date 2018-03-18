@@ -163,24 +163,17 @@
     "encoding/unicode",
     "internal/gen",
     "internal/tag",
-    "internal/triegen",
-    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
-    "unicode/cldr",
-    "unicode/norm"
+    "unicode/cldr"
   ]
   revision = "0a5a09ee4409a616bfa03115120f0bffacdff508"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-<<<<<<< HEAD
-  inputs-digest = "b705cd18c608f6e080e8e8cdcde9294d14f07b7ed23461e2799284a8c5f21907"
-=======
   inputs-digest = "9eb45128cf013aa530e2ff7d954ff5a4e99254bd2bb0b500b19267db0f202037"
->>>>>>> WIP: data replication to external redis interface
   solver-name = "gps-cdcl"
   solver-version = 1

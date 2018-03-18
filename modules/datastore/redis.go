@@ -1,26 +1,19 @@
 package datastore
 
 import (
-	"errors"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-redis/redis"
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/types"
 )
 
 const (
-	subscriberSet      = "s"
 	replicationChannel = "replication"
 
 	// The valid commands
 	subscribe   = "subscribe"
 	unsubscribe = "unsubscribe"
-
-	// 1 second between checks to the replication channel
-	pollPeriod = time.Second * 1
 )
 
 // Redis wraps a redis connection
@@ -37,11 +30,6 @@ func NewRedis(addr, password string, db int) (*Redis, error) {
 		Password: password,
 		DB:       db,
 	})
-	// Test the connection
-	_, err := client.Ping().Result()
-	if err != nil {
-		return nil, errors.New("Failed to create redis connection: " + err.Error())
-	}
 
 	return &Redis{
 		cl: client,
@@ -54,88 +42,62 @@ func (rd *Redis) Ping() error {
 	return err
 }
 
-// SaveManager saves a managers state in the predefined hset. The field
-// is the string representation of the unlockhash
-func (rd *Redis) SaveManager(nsm *NamespaceManager) error {
-	data, err := nsm.Serialize()
-	if err != nil {
-		return err
-	}
-	_, err = rd.cl.HSet(subscriberSet, nsm.Namespace.String(), data).Result()
-	return err
-}
-
-// GetManagers loads all active managers, stored in the predefined HSet
-func (rd *Redis) GetManagers() (map[Namespace]*NamespaceManager, error) {
-	result := rd.cl.HGetAll(subscriberSet).Val()
-	nsmMap := make(map[Namespace]*NamespaceManager)
-	for ns, mgr := range result {
-		nsm := &NamespaceManager{}
-		if err := nsm.Deserialize([]byte(mgr)); err != nil {
-			return nil, err
-		}
-		if err := nsm.Namespace.LoadString(ns); err != nil {
-			return nil, err
-		}
-		nsmMap[nsm.Namespace] = nsm
-	}
-	return nsmMap, nil
-}
-
-// DeleteManager removes a manager in case it unsubscribes
-func (rd *Redis) DeleteManager(nsm *NamespaceManager) error {
-	_, err := rd.cl.HDel(subscriberSet, nsm.Namespace.String()).Result()
-	return err
-}
-
 // StoreData stores data in an HSET
-func (rd *Redis) StoreData(ns Namespace, ID DataID, data []byte) error {
-	_, err := rd.cl.HSet(ns.String(), string(ID), data).Result()
+func (rd *Redis) StoreData(key string, field string, data []byte) error {
+	_, err := rd.cl.HSet(key, field, data).Result()
 	return err
 }
 
 // DeleteData removes data from an HSET
-func (rd *Redis) DeleteData(ns Namespace, ID DataID) error {
-	_, err := rd.cl.HDel(ns.String(), string(ID)).Result()
+func (rd *Redis) DeleteData(key string, field string) error {
+	_, err := rd.cl.HDel(key, field).Result()
 	return err
 }
 
-// Subscribe starts a subscription to the
-func (rd *Redis) Subscribe(fn SubEventCallback) {
+// LoadFieldsForKey returns all field-value mappings in an HSET defined by key
+func (rd *Redis) LoadFieldsForKey(key string) (map[string][]byte, error) {
+	result := rd.cl.HGetAll(subscriberSet).Val()
+	resultMap := make(map[string][]byte)
+	for k, v := range result {
+		resultMap[k] = []byte(v)
+	}
+	return resultMap, nil
+}
+
+// Subscribe starts a subscription to the replication channel. Once the subscribtion ends
+// after a call to Unsubscribe, the channel is also closed
+func (rd *Redis) Subscribe(seChan chan<- *SubEvent) {
 	ps := rd.cl.Subscribe(replicationChannel)
 	rd.rch = ps
 	go func() {
 		ch := ps.Channel()
-		for {
-			// Try to read from the message channel
-			select {
-			case msg := <-ch:
-				if msg == nil {
-					// Read a nil msg, so the channel is closed
-					return
-				}
-				ev, ok := parsePayload(msg)
-				if !ok {
-					continue
-				}
-				// Don't waste time here
-				go fn(ev)
-			default:
-				time.Sleep(pollPeriod)
+		for msg := range ch {
+			if msg == nil {
+				// Read a nil msg, so the channel is closed
+				// Close the channel to the datastore
+				close(seChan)
+				return
+			}
+			ev, ok := parsePayload(msg)
+			if !ok {
 				continue
 			}
+			seChan <- &ev
 		}
 	}()
 }
 
+// Unsubscribe stops the subsciption on the replication channel
+func (rd *Redis) Unsubscribe() error {
+	if rd.rch == nil {
+		return nil
+	}
+	return rd.rch.Close()
+}
+
 // Close gracefully closes the database connection
 func (rd *Redis) Close() error {
-	// Try to close the subscription
-	err := rd.rch.Close()
-	if err != nil {
-		build.Severe("Failed to close channel subscription: ", err)
-	}
-	// And the db connection
+	// Try to close the db connection
 	return rd.cl.Close()
 }
 

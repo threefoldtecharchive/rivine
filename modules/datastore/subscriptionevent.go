@@ -21,8 +21,4 @@ type (
 		Namespace Namespace
 		Start     types.Timestamp // Optional starttime
 	}
-
-	// SubEventCallback is a callback function which is executed when a database finds
-	// a event it is subscribed to
-	SubEventCallback func(SubEvent)
 )

@@ -4,20 +4,20 @@ package datastore
 type Database interface {
 	// Ping tests the database connection
 	Ping() error
-	// SaveManager saves a managers state
-	SaveManager(*NamespaceManager) error
-	// GetManagers loads all active managers
-	GetManagers() (map[Namespace]*NamespaceManager, error)
-	// DeleteManager removes a manager in case it unsubscribes
-	DeleteManager(*NamespaceManager) error
-	// StoreData stores the specified data, linked to the namespace and the generated ID
-	// Multiple section of data must be storeable for the same namespace. The ID is unique
-	// for the namespace, but other namespaces might have the same ID's for different data
-	StoreData(Namespace, DataID, []byte) error
-	// DeleteData removes the data specified by the namespace and ID.
-	DeleteData(Namespace, DataID) error
+	// StoreData stores the specified data, linked to a key and a field in that key
+	// Multiple section of data must be storeable for the same key. The field is unique
+	// for the key, but other keys might have the same fields for different data
+	StoreData(string, string, []byte) error
+	// DeleteData removes the data specified by the key and field.
+	DeleteData(string, string) error
+	// LoadFieldsForKey loads a mapping of all fields and the associated data for a given key
+	LoadFieldsForKey(string) (map[string][]byte, error)
 	// Subscribe continuously manages a channel for messages
-	Subscribe(SubEventCallback)
+	// Subscribe(SubEventCallback)
+	Subscribe(chan<- *SubEvent)
+	// Unsubscribe ends the subscription to the message channel and closes the
+	// event channel provided by the subscribe function
+	Unsubscribe() error
 	// Close gracefully closes the database connection
 	Close() error
 }

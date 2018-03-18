@@ -24,7 +24,7 @@ func TestBlockBuffer(t *testing.T) {
 
 	bufferSizes := []int{1, 5, 10, 25, 50}
 
-	// t.Parallel()
+	t.Parallel()
 	for _, bs := range bufferSizes {
 		for _, tb := range testBlocks {
 			t.Run(fmt.Sprintf("Test push %d-%d", bs, len(tb)), getBlockBufferPushTest(bs, tb))
@@ -36,16 +36,16 @@ func TestBlockBuffer(t *testing.T) {
 
 func getBlockBufferPushTest(bufferSize int, blocks []types.Block) func(*testing.T) {
 	return func(t *testing.T) {
-		buf := NewSizedBlockBuffer(int32(bufferSize))
+		buf := newSizedBlockBuffer(int32(bufferSize))
 		blockCount := len(blocks)
 		for i := 0; i < blockCount; i++ {
 			// Set a random consensus change id, does not really matter here
-			oldFrame := buf.Push(NewBlockFrame(blocks[i], modules.ConsensusChangeID{byte(i)}))
+			oldFrame := buf.push(newBlockFrame(blocks[i], modules.ConsensusChangeID{byte(i)}))
 			// Buffer is not at capicity yet so it should not have returned a frame
 			if i < bufferSize && oldFrame != nil {
 				t.Error("Buffer should not be at capacity but it returned a frame")
 			}
-			if i > bufferSize && oldFrame.Block.ID() != blocks[i-bufferSize].ID() {
+			if i > bufferSize && oldFrame.block.ID() != blocks[i-bufferSize].ID() {
 				t.Error("Wrong block returned when pushingn new block on a full buffer")
 			}
 		}
@@ -55,13 +55,13 @@ func getBlockBufferPushTest(bufferSize int, blocks []types.Block) func(*testing.
 func getBlockBufferPopTest(bufferSize int, blocks []types.Block) func(*testing.T) {
 	return func(t *testing.T) {
 		// First push all blocks, then remove them again and check if results are as expected
-		buf := NewSizedBlockBuffer(int32(bufferSize))
+		buf := newSizedBlockBuffer(int32(bufferSize))
 		blockCount := len(blocks)
 		for i := 0; i < blockCount; i++ {
-			buf.Push(NewBlockFrame(blocks[i], modules.ConsensusChangeID{byte(i)}))
+			buf.push(newBlockFrame(blocks[i], modules.ConsensusChangeID{byte(i)}))
 		}
 		for i := blockCount - 1; i >= 0; i-- {
-			fr := buf.Pop(blocks[i].ID())
+			fr := buf.pop(blocks[i].ID())
 			if i >= blockCount-bufferSize && fr == nil {
 				t.Error("Buffer should not be empty but no frame was popped")
 			}
@@ -71,15 +71,15 @@ func getBlockBufferPopTest(bufferSize int, blocks []types.Block) func(*testing.T
 		}
 
 		// Push 2, then pop one untill all blocks are in the buffer. Then check if the correct blocks are poped again
-		buf = NewSizedBlockBuffer(int32(bufferSize))
+		buf = newSizedBlockBuffer(int32(bufferSize))
 		for i := 0; i < blockCount; i++ {
 			// First pop the previous element.
 			// We could also pops on the empty buffer, since thats a NOOP, but that requires a fake blockID
 			if i%2 == 0 && i > 0 {
-				buf.Pop(blocks[i-1].ID())
+				buf.pop(blocks[i-1].ID())
 			}
 			// Add the current element
-			buf.Push(NewBlockFrame(blocks[i], modules.ConsensusChangeID{byte(i)}))
+			buf.push(newBlockFrame(blocks[i], modules.ConsensusChangeID{byte(i)}))
 		}
 
 		// Pop all the frames, ensure that they are as expected
@@ -89,12 +89,12 @@ func getBlockBufferPopTest(bufferSize int, blocks []types.Block) func(*testing.T
 			if i%2 != 0 && i != blockCount-1 {
 				continue
 			}
-			fr := buf.Pop(blocks[i].ID())
+			fr := buf.pop(blocks[i].ID())
 			// Check if the frame's block ID is as expected. We could skip this if we always build the
 			// tests in debug mode since then the wrong ID will panic inside the Pop function, but lets not rely
 			// on that
-			if fr != nil && fr.Block.ID() != blocks[i].ID() {
-				t.Errorf("Block in pop'ed framed has wrong ID, expected %v, but got %v", blocks[i].ID(), fr.Block.ID())
+			if fr != nil && fr.block.ID() != blocks[i].ID() {
+				t.Errorf("Block in pop'ed framed has wrong ID, expected %v, but got %v", blocks[i].ID(), fr.block.ID())
 			}
 			if count <= 0 && fr != nil {
 				t.Error("Got a frame while there should not be any left")
