@@ -49,9 +49,9 @@ release-images: get_hub_jwt xc
 	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(versionTag)" "https://hub.gig.tech/api/flist/me/docker"
 
 test:
-	go test -short -tags='debug testing' -timeout=5s $(testpkgs) -run=$(run)
+	go test -short -tags='debug testing' -timeout=10s $(testpkgs) -run=$(run)
 test-v:
-	go test -race -v -short -tags='debug testing' -timeout=15s $(testpkgs) -run=$(run)
+	go test -race -v -short -tags='debug testing' -timeout=20s $(testpkgs) -run=$(run)
 test-long: fmt vet
 	go test -v -race -tags='debug testing' -timeout=500s $(testpkgs) -run=$(run)
 bench: fmt
