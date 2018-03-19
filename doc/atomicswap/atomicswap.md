@@ -134,10 +134,11 @@ A check on the blockchain should be done as the auditcontract does not do that s
 Alice trusts the contract and so she participates in the atomic swap by paying the tokens into a Rivine contract using the same secret hash. The refund transaction can not be sent until the locktime expires, but should be saved in case a refund is necessary.
 
 ```
-$rivatomicswap --testnet participate bb6e12437c6fecbe83f5bf3724ced0369c01e166364cc320adf166125a8b6e2c756ada1be3f6 98765 2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988
-
-//TODO
+$rivinec atomicswap --testnet participate bb6e12437c6fecbe83f5bf3724ced0369c01e166364cc320adf166125a8b6e2c756ada1be3f6 98765 2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988
+abcdsdsfsfsefsese02033r0sdfsf03a # coinOutputID
 ``` 
+
+The above command will create a transaction with `98765` as the CoinOutput, and an atomic script very similar to the bitcoinscript earlier. The receiver is registered under public key `2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988` and the receiver will have to also proof the ownership of the secret that can get hash into the hashed_secret `\x86\x10\t\xecMY\x9f\xab\x1f@\xab\xc7no\x89\x88\f\xffX3ǜT\x8c\x99\xf9\x04_\x19\x1c\xd9\v`.
 
 Alice now informs Bob that the threefold contract transaction has been created  and provides him with the contract details.
 
@@ -145,37 +146,38 @@ Alice now informs Bob that the threefold contract transaction has been created  
 
 Just as Alice had to audit Bob's contract, Bob now has to do the same with Alice's contract before withdrawing. 
 Bob verifies :
-- the script is correct
-- the locktime is correct
-- the amount of tokens is correct
-- he is the recipient
-
+- the needed coinOutput (ID: `abcdsdsfsfsefsese02033r0sdfsf03a`) exists and has a script attached
+- the amount of tokens (coins) defined in the coinOutput is correct
+- the attached script is correct
+- the locktime, hashed secret (`2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988`) and public key (wallet addr), defined in the attached script, are correct
 ```
-$rivatomicswap --testnet auditcontract 
-//TODO
+$rivinec atomicswap --testnet audit abcdsdsfsfsefsese02033r0sdfsf03a \x86\x10\t\xecMY\x9f\xab\x1f@\xab\xc7no\x89\x88\f\xffX3ǜT\x8c\x99\xf9\x04_\x19\x1c\xd9\v
 ```
 
 WARNING:
-A check on the blockchain should be done as the auditcontract does not do that so an already spent output could have been used as an input. Checking if the contract has been included in a block should suffice.
+The audit should also ensure that the given `coinOutput` has not already been used as a `coinInput`.
 
 ### redeem tokens
 
 Now that both Bob and Alice have paid into their respective contracts, Bob may withdraw from the rivine contract. This step involves publishing a transaction which reveals the secret to Alice, allowing her to withdraw from the Bitcoin contract.
 
 ```
-//TODO
+$rivinec atomicswap --testnet redeem abcdsdsfsfsefsese02033r0sdfsf03a \x86\x10\t\xecMY\x9f\xab\x1f@\xab\xc7no\x89\x88\f\xffX3ǜT\x8c\x99\xf9\x04_\x19\x1c\xd9\v 01234567890123456789012345678901
 ```
+
+Note that redeeming tokens will firt validate (audit) the used rivine contract (unless specified otherwise), and thus the redeemer can in fact skip the manual audit step. `--no-audit` can be used in case no extra `audit` is required.
+
 ### redeem bitcoins
 
 Now that Bob has withdrawn from the rivine contract and revealed the secret, Alice must extract the secret from this redemption transaction. Alice may watch a block explorer to see when the rivine contract output was spent and look up the redeeming transaction.
 Alice can now extract the secret:
 ```
 $$ rivatomicswap --testnet extractsecret 000000000118d94f38b8532bfe78bda0d0848a7965bdfbe6e88476896f01318717bc7e1aa50100000000ffffffff01885ef5050000000000001976a9149551ab760ba64b7e573f54d34c53506676e8145888ace6dabb590000000001ffffffffffffffff00000000ffffffffe0483045022100a1a3b37a67f3ed5d6445a0312e825299b54d91a09e0d1b59b5c0a8baa7c0642102201a0d53e9efe7db8dc47210b446fde6425be82761252ff0ebe620efc183788d86012103395a4a3c8c96ef5e5af6fd80ae42486b5d3d860bf3b41dafc415354de8c7ad80203e0b064c97247732a3b345ce7b2a835d928623cb2871c26db4c2539a38e61a16514c5163a61429c36b8dd380e0426bdc1d834e74a630bfd5d1118876a9149ee19833332a04d2be97b5c99c970191221c070c6704e6dabb59b17576a914b0ec0640c89cf803b8fdbd6e0183c354f71748c46888ac 29c36b8dd380e0426bdc1d834e74a630bfd5d111
-//TODO: REPLACE WITH ACTUAL TRANSACTION
+dsadadadadad322r3rsfsdf123r2fsdf
 Secret: d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e
 ```
 
-With the secret known, Alice may redeem from Bob's Bitcoin contract:
+With the secret known (extracted from the coinInput with ID `dsadadadadad322r3rsfsdf123r2fsdf`), Alice may redeem from Bob's Bitcoin contract:
 ```
 $ btcatomicswap --testnet --rpcuser=user --rpcpass=pass redeem 6382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac 0200000000010106a85a242263768b81554b0ccab63ec124146014338ec962ef0197a1043b867e0c00000017160014ad430d1ed266d7130b5207a9bef00f8030947c3ffeffffff02204bbc000000000017a914bf09ed70b0c505d750f333bad8ca0520e48370fb87104772000000000017a914616aac51e9c239f6f85fe6db12249f264dd5ff2987024730440220441058ac56f1db678f955610adc264d7982da25dc7079a36c9022bc72827311c0220209d552d7e5ac04cef5ab615edea6c7836e7276ae7dbe0c2950eb44c781c7c7b01210335c272b2cfbd3c0a02bb38bfd859e4a44175545eb12ce93e7a2bac690068f92f00000000 d685a0b8aacf03f024c84092b4b951d1e54f7747a72cd21ed091f16996502a8e
 Redeem fee: 0.00002499 BTC (0.00007713 BTC/kB)
