@@ -111,14 +111,10 @@ func (nsm *namespaceManager) handleBlockApply(block types.Block) {
 // the namespace tracked by this manager will be returned. Correclty formated data (for this namespace),
 // which is otherwise empty (only prefix and namespace), is ignored.
 func (nsm *namespaceManager) getArbitraryData(txn types.Transaction) []byte {
-	fullData := []byte{}
-	if txn.ArbitraryData == nil || len(txn.ArbitraryData) == 0 {
-		return fullData
+	if len(txn.ArbitraryData) == 0 {
+		return nil
 	}
-	for _, rawdata := range txn.ArbitraryData {
-		fullData = append(fullData, rawdata...)
-	}
-	if _, ns, data := parseData(fullData); data != nil && len(data) > 0 && ns == nsm.namespace {
+	if _, ns, data := parseData(txn.ArbitraryData); data != nil && len(data) > 0 && ns == nsm.namespace {
 		return data
 	}
 	return nil
