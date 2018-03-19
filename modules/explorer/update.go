@@ -377,7 +377,6 @@ func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Blo
 		bf.BlockStakeInputCount += uint64(len(txn.BlockStakeInputs))
 		bf.BlockStakeOutputCount += uint64(len(txn.BlockStakeOutputs))
 		bf.MinerFeeCount += uint64(len(txn.MinerFees))
-		bf.ArbitraryDataCount += uint64(len(txn.ArbitraryData))
 		bf.TransactionSignatureCount += uint64(len(txn.TransactionSignatures))
 
 	}

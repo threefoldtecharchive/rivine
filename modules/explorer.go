@@ -30,7 +30,6 @@ type (
 		BlockStakeInputCount      uint64 `json:"blockstakeinputcount"`
 		BlockStakeOutputCount     uint64 `json:"blockstakeoutputcount"`
 		MinerFeeCount             uint64 `json:"minerfeecount"`
-		ArbitraryDataCount        uint64 `json:"arbitrarydatacount"`
 		TransactionSignatureCount uint64 `json:"transactionsignaturecount"`
 	}
 
