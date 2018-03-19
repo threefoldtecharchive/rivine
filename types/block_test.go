@@ -16,7 +16,7 @@ func TestBlockHeader(t *testing.T) {
 	b.POBSOutput = BlockStakeOutputIndexes{BlockHeight: 1, TransactionIndex: 1, OutputIndex: 0}
 	b.Timestamp = 3
 	b.MinerPayouts = []CoinOutput{{Value: NewCurrency64(4)}}
-	b.Transactions = []Transaction{{ArbitraryData: [][]byte{{'5'}}}}
+	b.Transactions = []Transaction{{ArbitraryData: []byte{'5'}}}
 
 	id1 := b.ID()
 	id2 := BlockID(crypto.HashBytes(encoding.Marshal(b.Header())))
@@ -131,7 +131,7 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 
 	// Add a single no-fee transaction and check again.
 	txn = Transaction{
-		ArbitraryData: [][]byte{{'6'}},
+		ArbitraryData: []byte{'6'},
 	}
 	b.Transactions = append(b.Transactions, txn)
 	if b.CalculateSubsidy().Cmp(expected) != 0 {
@@ -154,7 +154,7 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 
 	// Add an empty transaction to the beginning.
 	txn = Transaction{
-		ArbitraryData: [][]byte{{'7'}},
+		ArbitraryData: []byte{'7'},
 	}
 	b.Transactions = append([]Transaction{txn}, b.Transactions...)
 	if b.CalculateSubsidy().Cmp(expected) != 0 {

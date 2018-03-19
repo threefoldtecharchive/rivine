@@ -79,7 +79,7 @@ func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []
 	txnBuilder.AddMinerFee(tpoolFee)
 	txnBuilder.AddCoinOutput(output)
 	if data != nil {
-		txnBuilder.AddArbitraryData(data)
+		txnBuilder.SetArbitraryData(data)
 	}
 	txnSet, err := txnBuilder.Sign(true)
 	if err != nil {

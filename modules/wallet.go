@@ -161,9 +161,8 @@ type (
 		// the index of the blockstake output within the transaction.
 		AddBlockStakeOutput(types.BlockStakeOutput) uint64
 
-		// AddArbitraryData adds arbitrary data to the transaction, returning
-		// the index of the data within the transaction.
-		AddArbitraryData(arb []byte) uint64
+		// AddArbitraryData sets the arbitrary data of the transaction.
+		SetArbitraryData(arb []byte)
 
 		// AddTransactionSignature adds a transaction signature to the
 		// transaction, returning the index of the signature within the

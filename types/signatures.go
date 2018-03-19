@@ -60,7 +60,7 @@ type (
 		BlockStakeInputs      []uint64 `json:"blockstakeinputs"`
 		BlockStakeOutputs     []uint64 `json:"blockstakeoutputs"`
 		MinerFees             []uint64 `json:"minerfees"`
-		ArbitraryData         []uint64 `json:"arbitrarydata"`
+		ArbitraryData         bool     `json:"arbitrarydata"`
 		TransactionSignatures []uint64 `json:"transactionsignatures"`
 	}
 
@@ -181,8 +181,8 @@ func (t Transaction) SigHash(i int) (hash crypto.Hash) {
 		for _, minerFee := range cf.MinerFees {
 			enc.Encode(t.MinerFees[minerFee])
 		}
-		for _, arbData := range cf.ArbitraryData {
-			enc.Encode(t.ArbitraryData[arbData])
+		if cf.ArbitraryData {
+			enc.Encode(t.ArbitraryData)
 		}
 	}
 
@@ -231,7 +231,6 @@ func (t Transaction) validCoveredFields() error {
 			{cf.BlockStakeInputs, len(t.BlockStakeInputs)},
 			{cf.BlockStakeOutputs, len(t.BlockStakeOutputs)},
 			{cf.MinerFees, len(t.MinerFees)},
-			{cf.ArbitraryData, len(t.ArbitraryData)},
 			{cf.TransactionSignatures, len(t.TransactionSignatures)},
 		}
 

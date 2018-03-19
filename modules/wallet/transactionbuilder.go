@@ -310,11 +310,9 @@ func (tb *transactionBuilder) AddBlockStakeOutput(output types.BlockStakeOutput)
 	return uint64(len(tb.transaction.BlockStakeOutputs) - 1)
 }
 
-// AddArbitraryData adds arbitrary data to the transaction, returning the index
-// of the data within the transaction.
-func (tb *transactionBuilder) AddArbitraryData(arb []byte) uint64 {
-	tb.transaction.ArbitraryData = append(tb.transaction.ArbitraryData, arb)
-	return uint64(len(tb.transaction.ArbitraryData) - 1)
+// AddArbitraryData sets the arbitrary data of the transaction.
+func (tb *transactionBuilder) SetArbitraryData(arb []byte) {
+	tb.transaction.ArbitraryData = arb
 }
 
 // AddTransactionSignature adds a transaction signature to the transaction,
@@ -390,9 +388,7 @@ func (tb *transactionBuilder) Sign(wholeTransaction bool) ([]types.Transaction, 
 		for i := range tb.transaction.BlockStakeOutputs {
 			coveredFields.BlockStakeOutputs = append(coveredFields.BlockStakeOutputs, uint64(i))
 		}
-		for i := range tb.transaction.ArbitraryData {
-			coveredFields.ArbitraryData = append(coveredFields.ArbitraryData, uint64(i))
-		}
+		coveredFields.ArbitraryData = (len(tb.transaction.ArbitraryData) > 0)
 	}
 	// TransactionSignatures don't get covered by the 'WholeTransaction' flag,
 	// and must be covered manually.

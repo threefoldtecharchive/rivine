@@ -85,21 +85,6 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 		}
 	}
 
-	// Check that all arbitrary data is prefixed using the recognized set of
-	// prefixes. The allowed prefixes include a 'NonSia' prefix for truly
-	// arbitrary data. Blocking all other prefixes allows arbitrary data to be
-	// used to orchestrate more complicated soft forks in the future without
-	// putting older nodes at risk of violating the new rules.
-	var prefix types.Specifier
-	for _, arb := range t.ArbitraryData {
-		// Check for a whilelisted prefix.
-		copy(prefix[:], arb)
-		if prefix == modules.PrefixNonSia {
-			continue
-		}
-
-		return modules.ErrInvalidArbPrefix
-	}
 	return nil
 }
 

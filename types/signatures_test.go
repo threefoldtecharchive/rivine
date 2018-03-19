@@ -44,7 +44,7 @@ func TestSigHash(t *testing.T) {
 		BlockStakeInputs:  []BlockStakeInput{{}},
 		BlockStakeOutputs: []BlockStakeOutput{{}},
 		MinerFees:         []Currency{{}},
-		ArbitraryData:     [][]byte{{'o'}, {'t'}},
+		ArbitraryData:     []byte{'o', 't'},
 		TransactionSignatures: []TransactionSignature{
 			{
 				CoveredFields: CoveredFields{
@@ -58,7 +58,7 @@ func TestSigHash(t *testing.T) {
 					BlockStakeInputs:      []uint64{0},
 					BlockStakeOutputs:     []uint64{0},
 					MinerFees:             []uint64{0},
-					ArbitraryData:         []uint64{0},
+					ArbitraryData:         true,
 					TransactionSignatures: []uint64{0},
 				},
 			},
@@ -114,7 +114,7 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 		BlockStakeInputs:  []BlockStakeInput{{}},
 		BlockStakeOutputs: []BlockStakeOutput{{}},
 		MinerFees:         []Currency{{}},
-		ArbitraryData:     [][]byte{{'o'}, {'t'}},
+		ArbitraryData:     []byte{'o', 't'},
 		TransactionSignatures: []TransactionSignature{
 			{
 				CoveredFields: CoveredFields{
@@ -134,7 +134,7 @@ func TestTransactionValidCoveredFields(t *testing.T) {
 		CoveredFields: CoveredFields{
 			CoinOutputs:   []uint64{0},
 			MinerFees:     []uint64{0},
-			ArbitraryData: []uint64{0},
+			ArbitraryData: true,
 		},
 	})
 	err = txn.validCoveredFields()

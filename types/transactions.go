@@ -81,7 +81,7 @@ type (
 		BlockStakeInputs      []BlockStakeInput      `json:"blockstakeinputs"`
 		BlockStakeOutputs     []BlockStakeOutput     `json:"blockstakeoutputs"`
 		MinerFees             []Currency             `json:"minerfees"`
-		ArbitraryData         [][]byte               `json:"arbitrarydata"`
+		ArbitraryData         []byte                 `json:"arbitrarydata"`
 		TransactionSignatures []TransactionSignature `json:"transactionsignatures"`
 	}
 

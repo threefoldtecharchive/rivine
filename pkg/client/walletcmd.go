@@ -7,8 +7,6 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/rivine/rivine/modules"
-
 	"github.com/bgentry/speakeasy"
 	"github.com/spf13/cobra"
 
@@ -273,8 +271,7 @@ func Walletsendblockstakescmd(amount, dest string) {
 // and includes the data in the transaction
 func Walletregisterdatacmd(dest, data string) {
 	// / At the moment, we need to prepend the non sia prefix for the transaction to be accepted by the transactionpool
-	dataBytes := append(modules.PrefixNonSia[:], []byte(data)...)
-	encodedData := base64.StdEncoding.EncodeToString(dataBytes)
+	encodedData := base64.StdEncoding.EncodeToString([]byte(data))
 	err := Post("/wallet/data", fmt.Sprintf("destination=%s&data=%s", dest, encodedData))
 	if err != nil {
 		Die("Could not register data:", err)

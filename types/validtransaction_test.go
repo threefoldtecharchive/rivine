@@ -9,13 +9,13 @@ import (
 func TestTransactionFitsInABlock(t *testing.T) {
 	// Try a transaction that will fit in a block, followed by one that won't.
 	data := make([]byte, BlockSizeLimit/2)
-	txn := Transaction{ArbitraryData: [][]byte{data}}
+	txn := Transaction{ArbitraryData: data}
 	err := txn.fitsInABlock()
 	if err != nil {
 		t.Error(err)
 	}
 	data = make([]byte, BlockSizeLimit)
-	txn.ArbitraryData[0] = data
+	txn.ArbitraryData = data
 	err = txn.fitsInABlock()
 	if err != ErrTransactionTooLarge {
 		t.Error(err)
@@ -96,7 +96,7 @@ func TestTransactionStandaloneValid(t *testing.T) {
 
 	// Violate fitsInABlock.
 	data := make([]byte, BlockSizeLimit)
-	txn.ArbitraryData = [][]byte{data}
+	txn.ArbitraryData = data
 	err = txn.StandaloneValid(0)
 	if err == nil {
 		t.Error("failed to trigger fitsInABlock error")
