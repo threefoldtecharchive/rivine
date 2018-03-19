@@ -1,10 +1,13 @@
 package datastore
 
 import (
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/go-redis/redis"
+	"github.com/rivine/rivine/persist"
 	"github.com/rivine/rivine/types"
 )
 
@@ -14,25 +17,41 @@ const (
 	// The valid commands
 	subscribe   = "subscribe"
 	unsubscribe = "unsubscribe"
+
+	redisLogFile = "redis_replication.log"
 )
 
 // Redis wraps a redis connection
 type Redis struct {
 	cl  *redis.Client
 	rch *redis.PubSub // Reference to the replication channel subscription
+
+	logger *persist.Logger
 }
 
 // NewRedis creates a new redis struct which attempts to connect to the specified DB/instance
 // The connection always used tcp
-func NewRedis(addr, password string, db int) (*Redis, error) {
+func NewRedis(addr, password string, db int, persistDir string, bcInfo types.BlockchainInfo) (*Redis, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
 		DB:       db,
 	})
 
+	// Create the consensus directory
+	// and initialize the logger.
+	err := os.MkdirAll(persistDir, 0700)
+	if err != nil {
+		return nil, err
+	}
+	logger, err := persist.NewFileLogger(bcInfo, filepath.Join(persistDir, redisLogFile))
+	if err != nil {
+		return nil, err
+	}
+
 	return &Redis{
-		cl: client,
+		cl:     client,
+		logger: logger,
 	}, nil
 }
 
@@ -78,7 +97,7 @@ func (rd *Redis) Subscribe(seChan chan<- *SubEvent) {
 				close(seChan)
 				return
 			}
-			ev, ok := parsePayload(msg)
+			ev, ok := rd.parsePayload(msg)
 			if !ok {
 				continue
 			}
@@ -102,10 +121,11 @@ func (rd *Redis) Close() error {
 }
 
 // parsePayload attempts to parse a subscription message to a subevent
-func parsePayload(msg *redis.Message) (SubEvent, bool) {
+func (rd *Redis) parsePayload(msg *redis.Message) (SubEvent, bool) {
 	ev := SubEvent{}
 	parts := strings.Split(msg.Payload, ":")
 	if len(parts) < 2 {
+		rd.logger.Println("invalid redis payload received:", msg.Payload)
 		return ev, false
 	}
 	// Get the command
@@ -117,10 +137,12 @@ func parsePayload(msg *redis.Message) (SubEvent, bool) {
 		ev.Action = SubEnd
 		break
 	default:
+		rd.logger.Println("invalid redis payload action received:", parts[0])
 		return ev, false
 	}
 	// Set the namepsace
 	if err := ev.Namespace.LoadString(string(parts[1])); err != nil {
+		rd.logger.Println("invalid redis payload namespace received:", parts[1], "; err:", err)
 		// Malformed namespace
 		return ev, false
 	}
@@ -130,7 +152,8 @@ func parsePayload(msg *redis.Message) (SubEvent, bool) {
 	if len(parts) > 2 {
 		ut, err := strconv.ParseUint(parts[2], 10, 64)
 		if err != nil {
-			return ev, true
+			rd.logger.Println("invalid redis payload timestamp received:", parts[2], "; err:", err)
+			return ev, false
 		}
 		ev.Start = types.Timestamp(ut)
 	}

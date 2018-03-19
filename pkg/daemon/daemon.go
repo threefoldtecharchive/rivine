@@ -324,7 +324,9 @@ func StartDaemon(cfg Config) (err error) {
 	if strings.Contains(cfg.Modules, "d") {
 		i++
 		fmt.Printf("(%d/%d) Loading datastore...\n", i, len(cfg.Modules))
-		db, err := datastore.NewRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+		db, err := datastore.NewRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB,
+			filepath.Join(cfg.RootPersistentDir, modules.DataStoreDir, modules.DataStoreDatabaseSubDir),
+			cfg.BlockchainInfo)
 		if err != nil {
 			return err
 		}
