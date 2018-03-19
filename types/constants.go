@@ -89,7 +89,7 @@ func init() {
 		}
 
 		// Seed for this address:
-		// across knife thirsty puck itches hazard enmity fainted pebbles unzip echo queen rarest aphid bugs yanks okay abbey eskimos dove orange nouns august ailments inline rebel glass tyrant acumen
+		// recall view document apology stone tattoo job farm pilot favorite mango topic thing dilemma dawn width marble proud pen meadow sing museum lucky present
 		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
 		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
 		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
