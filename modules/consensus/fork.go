@@ -81,7 +81,7 @@ func (cs *ConsensusSet) applyUntilBlock(tx *bolt.Tx, pb *processedBlock) (applie
 		if block.DiffsGenerated {
 			commitDiffSet(tx, block, modules.DiffApply)
 		} else {
-			err := generateAndApplyDiff(tx, block)
+			err := cs.generateAndApplyDiff(tx, block)
 			if err != nil {
 				// Mark the block as invalid.
 				cs.dosBlocks[block.Block.ID()] = struct{}{}

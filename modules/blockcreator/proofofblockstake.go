@@ -70,7 +70,7 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 		// older than types.BlockStakeAging (more than 1 day)
 		if ubso.Indexes.TransactionIndex != 0 || ubso.Indexes.OutputIndex != 0 {
 			blockatheigh, _ := bc.cs.BlockAtHeight(ubso.Indexes.BlockHeight)
-			BlockStakeAge = blockatheigh.Header().Timestamp + types.Timestamp(types.BlockStakeAging)
+			BlockStakeAge = blockatheigh.Header().Timestamp + types.Timestamp(bc.chainCts.BlockStakeAging)
 		}
 		// Try all timestamps for this timerange
 		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {

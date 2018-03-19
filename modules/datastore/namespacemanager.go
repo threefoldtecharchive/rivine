@@ -49,33 +49,33 @@ type (
 
 // newNamespaceManager initializes a new namespace manager for a given namespace,
 // with a timestamp to start tracking from
-func newNamespaceManager(namespace Namespace, cs modules.ConsensusSet, db Database, log *persist.Logger, ts types.Timestamp) *namespaceManager {
+func (ds *DataStore) newNamespaceManager(namespace Namespace, ts types.Timestamp) *namespaceManager {
 	nsm := &namespaceManager{
 		state: namespaceManagerState{
 			SubscribeStart: ts,
 		},
 		namespace: namespace,
-		buffer:    newBlockBuffer(),
-		db:        db,
-		log:       log,
+		buffer:    ds.newBlockBuffer(),
+		db:        ds.db,
+		log:       ds.log,
 	}
-	go cs.ConsensusSetSubscribe(nsm, nsm.state.RecentChangeID)
+	go ds.cs.ConsensusSetSubscribe(nsm, nsm.state.RecentChangeID)
 	return nsm
 }
 
 // newNamespaceManagerFromSerializedState creates a new namespacemaneger with a pre-created state
-func newNamespaceManagerFromSerializedState(namespace Namespace, cs modules.ConsensusSet, db Database, log *persist.Logger, stateBytes []byte) (*namespaceManager, error) {
+func (ds *DataStore) newNamespaceManagerFromSerializedState(namespace Namespace, stateBytes []byte) (*namespaceManager, error) {
 	nsm := &namespaceManager{
 		namespace: namespace,
-		buffer:    newBlockBuffer(),
-		db:        db,
-		log:       log,
+		buffer:    ds.newBlockBuffer(),
+		db:        ds.db,
+		log:       ds.log,
 	}
 	err := nsm.deserialize(stateBytes)
 	if err != nil {
 		return nil, err
 	}
-	go cs.ConsensusSetSubscribe(nsm, nsm.state.RecentChangeID)
+	go ds.cs.ConsensusSetSubscribe(nsm, nsm.state.RecentChangeID)
 	return nsm, err
 }
 

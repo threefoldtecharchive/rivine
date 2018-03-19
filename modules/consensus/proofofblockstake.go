@@ -18,7 +18,7 @@ func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight) *big.In
 	// make a signed version of the current height because sub genesis block is
 	// possible here.
 	signedHeight := int64(height)
-	signedHeight -= int64(types.StakeModifierDelay)
+	signedHeight -= int64(cs.chainCts.StakeModifierDelay)
 
 	mask := big.NewInt(1)
 	var BlockIDHash *big.Int

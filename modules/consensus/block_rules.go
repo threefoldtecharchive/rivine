@@ -14,7 +14,9 @@ type blockRuleHelper interface {
 }
 
 // stdBlockRuleHelper is the standard implementation of blockRuleHelper.
-type stdBlockRuleHelper struct{}
+type stdBlockRuleHelper struct {
+	chainCts types.ChainConstants
+}
 
 // minimumValidChildTimestamp returns the earliest timestamp that a child node
 // can have while still being valid. See section 'Block Timestamps' in
@@ -24,10 +26,10 @@ type stdBlockRuleHelper struct{}
 // can use from inside of a boltdb transaction.
 func (rh stdBlockRuleHelper) minimumValidChildTimestamp(blockMap dbBucket, pb *processedBlock) types.Timestamp {
 	// Get the previous MedianTimestampWindow timestamps.
-	windowTimes := make(types.TimestampSlice, types.MedianTimestampWindow)
+	windowTimes := make(types.TimestampSlice, rh.chainCts.MedianTimestampWindow)
 	windowTimes[0] = pb.Block.Timestamp
 	parent := pb.Block.ParentID
-	for i := uint64(1); i < types.MedianTimestampWindow; i++ {
+	for i := uint64(1); i < rh.chainCts.MedianTimestampWindow; i++ {
 		// If the genesis block is 'parent', use the genesis block timestamp
 		// for all remaining times.
 		if parent == (types.BlockID{}) {

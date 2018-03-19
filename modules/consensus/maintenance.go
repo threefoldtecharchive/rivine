@@ -18,14 +18,14 @@ var (
 
 // applyMinerPayouts adds a block's miner payouts to the consensus set as
 // delayed coin outputs.
-func applyMinerPayouts(tx *bolt.Tx, pb *processedBlock) {
+func (cs *ConsensusSet) applyMinerPayouts(tx *bolt.Tx, pb *processedBlock) {
 	for i := range pb.Block.MinerPayouts {
 		mpid := pb.Block.MinerPayoutID(uint64(i))
 		dscod := modules.DelayedCoinOutputDiff{
 			Direction:      modules.DiffApply,
 			ID:             mpid,
 			CoinOutput:     pb.Block.MinerPayouts[i],
-			MaturityHeight: pb.Height + types.MaturityDelay,
+			MaturityHeight: pb.Height + cs.chainCts.MaturityDelay,
 		}
 		pb.DelayedCoinOutputDiffs = append(pb.DelayedCoinOutputDiffs, dscod)
 		commitDelayedCoinOutputDiff(tx, dscod, modules.DiffApply)
@@ -101,7 +101,7 @@ func applyMaturedCoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 // applyMaintenance applies block-level alterations to the consensus set.
 // Maintenance is applied after all of the transcations for the block have been
 // applied.
-func applyMaintenance(tx *bolt.Tx, pb *processedBlock) {
-	applyMinerPayouts(tx, pb)
+func (cs *ConsensusSet) applyMaintenance(tx *bolt.Tx, pb *processedBlock) {
+	cs.applyMinerPayouts(tx, pb)
 	applyMaturedCoinOutputs(tx, pb)
 }

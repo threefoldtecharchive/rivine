@@ -385,8 +385,8 @@ func Wallettransactionscmd() {
 		}
 
 		// Convert the siacoins to a float.
-		incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), types.OneCoin.Big()).Float64()
-		outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), types.OneCoin.Big()).Float64()
+		incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), oneCoin.Big()).Float64()
+		outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), oneCoin.Big()).Float64()
 
 		// Print the results.
 		if txn.ConfirmationHeight < 1e9 {

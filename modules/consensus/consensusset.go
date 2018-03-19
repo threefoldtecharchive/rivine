@@ -93,13 +93,14 @@ type ConsensusSet struct {
 	persistDir string
 	tg         sync.ThreadGroup
 
-	bcInfo types.BlockchainInfo
+	bcInfo   types.BlockchainInfo
+	chainCts types.ChainConstants
 }
 
 // New returns a new ConsensusSet, containing at least the genesis block. If
 // there is an existing block database present in the persist directory, it
 // will be loaded.
-func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo) (*ConsensusSet, error) {
+func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*ConsensusSet, error) {
 	// Check for nil dependencies.
 	if gateway == nil {
 		return nil, errNilGateway
@@ -110,9 +111,9 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		gateway: gateway,
 
 		blockRoot: processedBlock{
-			Block:       types.GenesisBlock,
-			ChildTarget: types.RootTarget,
-			Depth:       types.RootDepth,
+			Block:       chainCts.GenesisBlock,
+			ChildTarget: chainCts.RootTarget,
+			Depth:       chainCts.RootDepth,
 
 			DiffsGenerated: true,
 		},
@@ -120,18 +121,19 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		dosBlocks: make(map[types.BlockID]struct{}),
 
 		marshaler:       stdMarshaler{},
-		blockRuleHelper: stdBlockRuleHelper{},
+		blockRuleHelper: stdBlockRuleHelper{chainCts: chainCts},
 
 		persistDir: persistDir,
 
-		bcInfo: bcInfo,
+		bcInfo:   bcInfo,
+		chainCts: chainCts,
 	}
 
 	cs.blockValidator = NewBlockValidator(cs)
 
 	// Create the diffs for the genesis blockstake outputs.
-	for i, siafundOutput := range types.GenesisBlock.Transactions[0].BlockStakeOutputs {
-		sfid := types.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
+	for i, siafundOutput := range chainCts.GenesisBlock.Transactions[0].BlockStakeOutputs {
+		sfid := chainCts.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
 		sfod := modules.BlockStakeOutputDiff{
 			Direction:        modules.DiffApply,
 			ID:               sfid,
@@ -140,8 +142,8 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		cs.blockRoot.BlockStakeOutputDiffs = append(cs.blockRoot.BlockStakeOutputDiffs, sfod)
 	}
 	// Create the diffs for the genesis coin outputs.
-	for i, coinOutput := range types.GenesisBlock.Transactions[0].CoinOutputs {
-		sfid := types.GenesisBlock.Transactions[0].CoinOutputID(uint64(i))
+	for i, coinOutput := range chainCts.GenesisBlock.Transactions[0].CoinOutputs {
+		sfid := chainCts.GenesisBlock.Transactions[0].CoinOutputID(uint64(i))
 		cod := modules.CoinOutputDiff{
 			Direction:  modules.DiffApply,
 			ID:         sfid,

@@ -26,7 +26,7 @@ var (
 func (t Transaction) fitsInABlock() error {
 	// Check that the transaction will fit inside of a block, leaving 5kb for
 	// overhead.
-	if uint64(len(encoding.Marshal(t))) > BlockSizeLimit-5e3 {
+	if uint64(len(encoding.Marshal(t))) > cts.BlockSizeLimit-5e3 {
 		return ErrTransactionTooLarge
 	}
 	return nil

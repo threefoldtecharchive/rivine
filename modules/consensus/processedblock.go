@@ -63,7 +63,7 @@ func (cs *ConsensusSet) targetAdjustmentBase(blockMap *bolt.Bucket, pb *processe
 	var windowSize types.BlockHeight
 	parent := pb.Block.ParentID
 	current := pb.Block.ID()
-	for windowSize = 0; windowSize < types.TargetWindow && parent != (types.BlockID{}); windowSize++ {
+	for windowSize = 0; windowSize < cs.chainCts.TargetWindow && parent != (types.BlockID{}); windowSize++ {
 		current = parent
 		parentID, _ := pb.Block.UnmarshalBlockHeadersParentIDAndTS(blockMap.Get(parent[:]))
 		parent = parentID
@@ -80,7 +80,7 @@ func (cs *ConsensusSet) targetAdjustmentBase(blockMap *bolt.Bucket, pb *processe
 	// during the calculation. The big.Rat is just the int representation of a
 	// target.
 	timePassed := pb.Block.Timestamp - timestamp
-	expectedTimePassed := types.BlockFrequency * windowSize
+	expectedTimePassed := cs.chainCts.BlockFrequency * windowSize
 	return big.NewRat(int64(timePassed), int64(expectedTimePassed))
 }
 
@@ -89,11 +89,11 @@ func (cs *ConsensusSet) targetAdjustmentBase(blockMap *bolt.Bucket, pb *processe
 // ensures that raising and lowering the difficulty requires a minimum amount
 // of total work, which prevents certain classes of difficulty adjusting
 // attacks.
-func clampTargetAdjustment(base *big.Rat) *big.Rat {
-	if base.Cmp(types.MaxAdjustmentUp) > 0 {
-		return types.MaxAdjustmentUp
-	} else if base.Cmp(types.MaxAdjustmentDown) < 0 {
-		return types.MaxAdjustmentDown
+func (cs *ConsensusSet) clampTargetAdjustment(base *big.Rat) *big.Rat {
+	if base.Cmp(cs.chainCts.MaxAdjustmentUp) > 0 {
+		return cs.chainCts.MaxAdjustmentUp
+	} else if base.Cmp(cs.chainCts.MaxAdjustmentDown) < 0 {
+		return cs.chainCts.MaxAdjustmentDown
 	}
 	return base
 }
@@ -109,11 +109,11 @@ func (cs *ConsensusSet) setChildTarget(blockMap *bolt.Bucket, pb *processedBlock
 		panic(err)
 	}
 
-	if pb.Height%(types.TargetWindow/2) != 0 {
+	if pb.Height%(cs.chainCts.TargetWindow/2) != 0 {
 		pb.ChildTarget = parent.ChildTarget
 		return
 	}
-	adjustment := clampTargetAdjustment(cs.targetAdjustmentBase(blockMap, pb))
+	adjustment := cs.clampTargetAdjustment(cs.targetAdjustmentBase(blockMap, pb))
 	adjustedRatTarget := new(big.Rat).Mul(parent.ChildTarget.Rat(), adjustment)
 	pb.ChildTarget = types.RatToTarget(adjustedRatTarget)
 }

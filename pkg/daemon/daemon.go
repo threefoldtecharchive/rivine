@@ -72,7 +72,11 @@ type Config struct {
 	RedisPassword string
 	RedisDB       int
 
+	// NetworkName is the name of the network to connect to. A network for this name must
+	// be present in Networks
 	NetworkName string
+	// Networks is a list of all the networks this daemon can connect to
+	Networks map[string]NetworkConfig
 }
 
 // DefaultConfig returns the default daemon configuration
@@ -168,7 +172,11 @@ func processConfig(config *Config) error {
 // to initialize Rivine modules and start
 func StartDaemon(cfg Config) (err error) {
 	// First try to initialize the correct network
-	err = setupNetwork(cfg.NetworkName)
+	networkCfg, exists := cfg.Networks[cfg.NetworkName]
+	if !exists {
+		return fmt.Errorf("network with name %v does not exists", cfg.NetworkName)
+	}
+	err = networkCfg.Constants.CheckChainConstants()
 	if err != nil {
 		return err
 	}
@@ -206,7 +214,7 @@ func StartDaemon(cfg Config) (err error) {
 
 	// Create the server and start serving daemon routes immediately.
 	fmt.Printf("(0/%d) Loading daemon of "+cfg.BlockchainInfo.Name+"...\n", len(cfg.Modules))
-	srv, err := NewServer(cfg.APIaddr, cfg.RequiredUserAgent, cfg.APIPassword)
+	srv, err := NewServer(cfg.APIaddr, cfg.RequiredUserAgent, cfg.APIPassword, networkCfg.Constants)
 	if err != nil {
 		return err
 	}
@@ -224,7 +232,7 @@ func StartDaemon(cfg Config) (err error) {
 		fmt.Printf("(%d/%d) Loading gateway...\n", i, len(cfg.Modules))
 		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap,
 			filepath.Join(cfg.RootPersistentDir, modules.GatewayDir),
-			cfg.BlockchainInfo)
+			cfg.BlockchainInfo, networkCfg.Constants, networkCfg.BootstrapPeers)
 		if err != nil {
 			return err
 		}
@@ -243,7 +251,7 @@ func StartDaemon(cfg Config) (err error) {
 		fmt.Printf("(%d/%d) Loading consensus...\n", i, len(cfg.Modules))
 		cs, err = consensus.New(g, !cfg.NoBootstrap,
 			filepath.Join(cfg.RootPersistentDir, modules.ConsensusDir),
-			cfg.BlockchainInfo)
+			cfg.BlockchainInfo, networkCfg.Constants)
 		if err != nil {
 			return err
 		}
@@ -262,7 +270,7 @@ func StartDaemon(cfg Config) (err error) {
 		fmt.Printf("(%d/%d) Loading explorer...\n", i, len(cfg.Modules))
 		e, err = explorer.New(cs,
 			filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir),
-			cfg.BlockchainInfo)
+			cfg.BlockchainInfo, networkCfg.Constants)
 		if err != nil {
 			return err
 		}
@@ -281,7 +289,7 @@ func StartDaemon(cfg Config) (err error) {
 		fmt.Printf("(%d/%d) Loading transaction pool...\n", i, len(cfg.Modules))
 		tpool, err = transactionpool.New(cs, g,
 			filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir),
-			cfg.BlockchainInfo)
+			cfg.BlockchainInfo, networkCfg.Constants)
 		if err != nil {
 			return err
 		}
@@ -300,7 +308,7 @@ func StartDaemon(cfg Config) (err error) {
 		fmt.Printf("(%d/%d) Loading wallet...\n", i, len(cfg.Modules))
 		w, err = wallet.New(cs, tpool,
 			filepath.Join(cfg.RootPersistentDir, modules.WalletDir),
-			cfg.BlockchainInfo)
+			cfg.BlockchainInfo, networkCfg.Constants)
 		if err != nil {
 			return err
 		}
@@ -319,7 +327,7 @@ func StartDaemon(cfg Config) (err error) {
 		fmt.Printf("(%d/%d) Loading block creator...\n", i, len(cfg.Modules))
 		b, err = blockcreator.New(cs, tpool, w,
 			filepath.Join(cfg.RootPersistentDir, modules.BlockCreatorDir),
-			cfg.BlockchainInfo)
+			cfg.BlockchainInfo, networkCfg.Constants)
 		if err != nil {
 			return err
 		}
@@ -343,7 +351,7 @@ func StartDaemon(cfg Config) (err error) {
 		}
 		ds, err = datastore.New(cs, db,
 			filepath.Join(cfg.RootPersistentDir, modules.DataStoreDir),
-			cfg.BlockchainInfo)
+			cfg.BlockchainInfo, networkCfg.Constants)
 		if err != nil {
 			return err
 		}

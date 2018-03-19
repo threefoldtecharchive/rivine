@@ -39,12 +39,13 @@ type (
 		db         *persist.BoltDatabase
 		persistDir string
 		bcInfo     types.BlockchainInfo
+		chainCts   types.ChainConstants
 	}
 )
 
 // New creates the internal data structures, and subscribes to
 // consensus for changes to the blockchain
-func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo) (*Explorer, error) {
+func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*Explorer, error) {
 	// Check that input modules are non-nil
 	if cs == nil {
 		return nil, errNilCS
@@ -55,6 +56,7 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		cs:         cs,
 		persistDir: persistDir,
 		bcInfo:     bcInfo,
+		chainCts:   chainCts,
 	}
 
 	// Initialize the persistent structures, including the database.

@@ -47,13 +47,13 @@ func TestBlockID(t *testing.T) {
 	ids = append(ids, b.ID())
 	b.Timestamp = CurrentTimestamp()
 	ids = append(ids, b.ID())
-	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: BlockCreatorFee})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: cts.BlockCreatorFee})
 	ids = append(ids, b.ID())
-	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: BlockCreatorFee})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: cts.BlockCreatorFee})
 	ids = append(ids, b.ID())
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
 	ids = append(ids, b.ID())
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
 	ids = append(ids, b.ID())
 
 	knownIDs := make(map[BlockID]struct{})
@@ -82,13 +82,13 @@ func TestHeaderID(t *testing.T) {
 	blocks = append(blocks, b)
 	b.Timestamp = CurrentTimestamp()
 	blocks = append(blocks, b)
-	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: BlockCreatorFee})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: cts.BlockCreatorFee})
 	blocks = append(blocks, b)
-	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: BlockCreatorFee})
+	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: cts.BlockCreatorFee})
 	blocks = append(blocks, b)
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
 	blocks = append(blocks, b)
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
 	blocks = append(blocks, b)
 
 	knownIDs := make(map[BlockID]struct{})
@@ -110,7 +110,7 @@ func TestHeaderID(t *testing.T) {
 // type.
 func TestBlockCalculateSubsidy(t *testing.T) {
 	// All tests are done at height = 0.
-	coinbase := BlockCreatorFee
+	coinbase := cts.BlockCreatorFee
 
 	// Calculate the subsidy on a block with 0 fees at height 0. Result should
 	// be 300,000.
@@ -170,8 +170,8 @@ func TestBlockMinerPayoutID(t *testing.T) {
 	var ids []CoinOutputID
 	b := Block{
 		MinerPayouts: []CoinOutput{
-			{Value: BlockCreatorFee},
-			{Value: BlockCreatorFee},
+			{Value: cts.BlockCreatorFee},
+			{Value: cts.BlockCreatorFee},
 		},
 	}
 	ids = append(ids, b.MinerPayoutID(1), b.MinerPayoutID(2))
@@ -193,8 +193,8 @@ func TestBlockMinerPayoutID(t *testing.T) {
 func TestBlockEncoding(t *testing.T) {
 	b := Block{
 		MinerPayouts: []CoinOutput{
-			{Value: BlockCreatorFee},
-			{Value: BlockCreatorFee},
+			{Value: cts.BlockCreatorFee},
+			{Value: cts.BlockCreatorFee},
 		},
 	}
 	var decB Block

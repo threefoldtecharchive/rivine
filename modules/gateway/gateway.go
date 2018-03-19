@@ -161,7 +161,8 @@ type Gateway struct {
 	// Unique ID
 	id gatewayID
 
-	bcInfo types.BlockchainInfo
+	bcInfo   types.BlockchainInfo
+	chainCts types.ChainConstants
 }
 
 type gatewayID [8]byte
@@ -196,7 +197,7 @@ func (g *Gateway) Close() error {
 }
 
 // New returns an initialized Gateway.
-func New(addr string, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo) (*Gateway, error) {
+func New(addr string, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress) (*Gateway, error) {
 	// Create the directory if it doesn't exist.
 	err := os.MkdirAll(persistDir, 0700)
 	if err != nil {
@@ -212,7 +213,8 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 
 		persistDir: persistDir,
 
-		bcInfo: bcInfo,
+		bcInfo:   bcInfo,
+		chainCts: chainCts,
 	}
 
 	// Set Unique GatewayID
@@ -260,7 +262,7 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 
 	// Add the bootstrap peers to the node list.
 	if bootstrap {
-		for _, addr := range modules.BootstrapPeers {
+		for _, addr := range bootstrapPeers {
 			if err := addr.TryNameResolution(); err != nil {
 				// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
 				g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", addr, err)

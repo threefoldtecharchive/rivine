@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/rivine/rivine/modules"
@@ -13,13 +12,10 @@ import (
 
 // main establishes a set of commands and flags using the cobra package.
 func main() {
-	// register the default networks we use
-	if err := registerNetworks(); err != nil {
-		fmt.Println("Daemon setup failed: ", err)
-		return
-	}
-	// Daemon name defaults to rivine if it isn't set, but do so anyway just to make sure
+	// Use the default daemon configuration
 	cfg := daemon.DefaultConfig()
+	// register the default networks we use
+	cfg.Networks = registerNetworks()
 	// Try to connect to the right network by default without having to pass flags around
 	cfg.NetworkName = getDefaultNetworkForBuild()
 	daemon.SetupDefaultDaemon(cfg)
@@ -31,18 +27,17 @@ func getDefaultNetworkForBuild() string {
 }
 
 // registerNetworks registers all the networks
-func registerNetworks() error {
-	if err := registerDevNet(); err != nil {
-		return err
-	}
-	if err := registerTestingNet(); err != nil {
-		return err
-	}
-	return registerStandardNet()
+func registerNetworks() map[string]daemon.NetworkConfig {
+	netCfgs := make(map[string]daemon.NetworkConfig)
+	netCfgs["dev"] = registerDevNet()
+	netCfgs["testing"] = registerTestingNet()
+	netCfgs["standard"] = registerStandardNet()
+
+	return netCfgs
 }
 
 // registerDevNet registers the "dev" network
-func registerDevNet() error {
+func registerDevNet() daemon.NetworkConfig {
 	// 'dev' settings are for small developer testnets, usually on the same
 	// computer. Settings are slow enough that a small team of developers
 	// can coordinate their actions over a the developer testnets, but fast
@@ -88,16 +83,16 @@ func registerDevNet() error {
 	// Calculate the remaining params
 	cts.Calculate()
 
-	devNet := daemon.Network{
+	devNet := daemon.NetworkConfig{
 		BootstrapPeers: nil,
 		Constants:      cts,
 	}
 	// register the network
-	return daemon.RegisterNetwork("dev", devNet)
+	return devNet
 }
 
 // registerTestingNet registers the "testing" network
-func registerTestingNet() error {
+func registerTestingNet() daemon.NetworkConfig {
 	// 'testing' settings are for automatic testing, and create much faster
 	//  environments than a human can interact with.
 	cts := types.DefaultChainConstants()
@@ -147,16 +142,16 @@ func registerTestingNet() error {
 	// Set the root target after calculating the remainder of the constants so its not overwritten
 	cts.RootTarget = types.Target{128} // Takes an expected 2 hashes; very fast for testing but still probes 'bad hash' code.
 
-	testingNet := daemon.Network{
+	testingNet := daemon.NetworkConfig{
 		BootstrapPeers: nil,
 		Constants:      cts,
 	}
 	// register the network
-	return daemon.RegisterNetwork("testing", testingNet)
+	return testingNet
 }
 
 // registerStandardNet registers the "standard" network
-func registerStandardNet() error {
+func registerStandardNet() daemon.NetworkConfig {
 	// 'standard' settings are for the full network. They are slow enough
 	// that the network is secure in a real-world byzantine environment.
 	cts := types.DefaultChainConstants()
@@ -243,7 +238,7 @@ func registerStandardNet() error {
 	// small.
 	cts.RootTarget = types.Target{0, 0, 0, 0, 32}
 
-	standardNet := daemon.Network{
+	standardNet := daemon.NetworkConfig{
 		BootstrapPeers: []modules.NetAddress{
 			"136.243.144.132:23112",
 			"[2a01:4f8:171:1303::2]:23112",
@@ -253,5 +248,5 @@ func registerStandardNet() error {
 		Constants: cts,
 	}
 	// register the network
-	return daemon.RegisterNetwork("standard", standardNet)
+	return standardNet
 }

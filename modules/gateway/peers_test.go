@@ -96,7 +96,7 @@ func TestListen(t *testing.T) {
 	var gID gatewayID
 	fastrand.Read(gID[:])
 	addr := modules.NetAddress(conn.LocalAddr().String())
-	ack, err := connectHandshake(conn, build.NewVersion(0, 0, 0), gID, true)
+	ack, err := g.connectHandshake(conn, build.NewVersion(0, 0, 0), gID, true)
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
@@ -120,7 +120,7 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = connectHandshake(conn, build.Version, gID, true)
+	ack, err = g.connectHandshake(conn, build.Version, gID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = connectHandshake(conn, build.Version, gID, true)
+	ack, err = g.connectHandshake(conn, build.Version, gID, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,6 +314,8 @@ func TestConnectRejectsVersions(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
+	cts := types.DefaultChainConstants()
+	cts.Calculate()
 	g := newTestingGateway(t)
 	defer g.Close()
 	// Setup a listener that mocks Gateway.acceptConn, but sends the
@@ -344,13 +346,13 @@ func TestConnectRejectsVersions(t *testing.T) {
 			version:   build.Version,
 			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
 			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
-			genesisID: types.GenesisID,
+			genesisID: cts.GenesisID,
 		},
 		{
 			version:      build.Version,
 			msg:          "Connect should not succeed when peer is connecting to itself",
 			uniqueID:     g.id,
-			genesisID:    types.GenesisID,
+			genesisID:    cts.GenesisID,
 			errWant:      errOurAddress,
 			localErrWant: errOurAddress,
 		},
@@ -363,7 +365,7 @@ func TestConnectRejectsVersions(t *testing.T) {
 			if err != nil {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
 			}
-			remoteVersion, err := acceptConnHandshake(conn, tt.version, tt.uniqueID)
+			remoteVersion, err := g.acceptConnHandshake(conn, tt.version, tt.uniqueID)
 			if err != tt.localErrWant {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
 			} else if err == nil && build.Version.Compare(remoteVersion) != 0 {

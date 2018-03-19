@@ -34,6 +34,7 @@ type (
 		httpServer *http.Server
 		mux        *http.ServeMux
 		listener   net.Listener
+		chainCts   types.ChainConstants
 	}
 
 	// SiaConstants is a struct listing all of the constants in use.
@@ -244,22 +245,22 @@ func (srv *Server) daemonUpdateHandlerPOST(w http.ResponseWriter, _ *http.Reques
 // debugConstantsHandler prints a json file containing all of the constants.
 func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	sc := SiaConstants{
-		GenesisTimestamp:      types.GenesisTimestamp,
-		BlockSizeLimit:        types.BlockSizeLimit,
-		BlockFrequency:        types.BlockFrequency,
-		TargetWindow:          types.TargetWindow,
-		MedianTimestampWindow: types.MedianTimestampWindow,
-		FutureThreshold:       types.FutureThreshold,
-		BlockStakeCount:       types.GenesisBlockStakeCount,
-		MaturityDelay:         types.MaturityDelay,
+		GenesisTimestamp:      srv.chainCts.GenesisTimestamp,
+		BlockSizeLimit:        srv.chainCts.BlockSizeLimit,
+		BlockFrequency:        srv.chainCts.BlockFrequency,
+		TargetWindow:          srv.chainCts.TargetWindow,
+		MedianTimestampWindow: srv.chainCts.MedianTimestampWindow,
+		FutureThreshold:       srv.chainCts.FutureThreshold,
+		BlockStakeCount:       srv.chainCts.GenesisBlockStakeCount,
+		MaturityDelay:         srv.chainCts.MaturityDelay,
 
-		RootTarget: types.RootTarget,
-		RootDepth:  types.RootDepth,
+		RootTarget: srv.chainCts.RootTarget,
+		RootDepth:  srv.chainCts.RootDepth,
 
-		MaxAdjustmentUp:   types.MaxAdjustmentUp,
-		MaxAdjustmentDown: types.MaxAdjustmentDown,
+		MaxAdjustmentUp:   srv.chainCts.MaxAdjustmentUp,
+		MaxAdjustmentDown: srv.chainCts.MaxAdjustmentDown,
 
-		OneCoin: types.OneCoin,
+		OneCoin: srv.chainCts.OneCoin,
 	}
 
 	api.WriteJSON(w, sc)
@@ -302,7 +303,7 @@ func (srv *Server) daemonHandler(password string) http.Handler {
 // NewServer creates a new net.http server listening on bindAddr.  Only the
 // /daemon/ routes are registered by this func, additional routes can be
 // registered later by calling serv.mux.Handle.
-func NewServer(bindAddr, requiredUserAgent, requiredPassword string) (*Server, error) {
+func NewServer(bindAddr, requiredUserAgent, requiredPassword string, chainCts types.ChainConstants) (*Server, error) {
 	// Create the listener for the server
 	l, err := net.Listen("tcp", bindAddr)
 	if err != nil {
@@ -317,6 +318,7 @@ func NewServer(bindAddr, requiredUserAgent, requiredPassword string) (*Server, e
 		httpServer: &http.Server{
 			Handler: mux,
 		},
+		chainCts: chainCts,
 	}
 
 	// Register siad routes

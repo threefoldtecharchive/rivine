@@ -6,7 +6,6 @@ import (
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
 
 	"github.com/coreos/bbolt"
 )
@@ -120,7 +119,7 @@ func commitDiffSet(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirection) {
 // transactions are allowed to depend on each other. We can't be sure that a
 // transaction is valid unless we have applied all of the previous transactions
 // in the block, which means we need to apply while we verify.
-func generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) error {
+func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) error {
 	// Sanity check - the block being applied should have the current block as
 	// a parent.
 	if build.DEBUG && pb.Block.ParentID != currentBlockID(tx) {
@@ -130,7 +129,7 @@ func generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) error {
 	// Create the bucket to hold all of the delayed siacoin outputs created by
 	// transactions this block. Needs to happen before any transactions are
 	// applied.
-	createDCOBucket(tx, pb.Height+types.MaturityDelay)
+	createDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
 
 	// Validate and apply each transaction in the block. They cannot be
 	// validated all at once because some transactions may not be valid until
@@ -147,7 +146,7 @@ func generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) error {
 	// applied on the block. This includes adding any outputs that have reached
 	// maturity, applying any contracts with missed storage proofs, and adding
 	// the miner payouts to the list of delayed outputs.
-	applyMaintenance(tx, pb)
+	cs.applyMaintenance(tx, pb)
 
 	// DiffsGenerated are only set to true after the block has been fully
 	// validated and integrated. This is required to prevent later blocks from

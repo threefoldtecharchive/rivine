@@ -36,22 +36,24 @@ type walletTester struct {
 // createWalletTester takes a testing.T and creates a WalletTester.
 func createWalletTester(name string) (*walletTester, error) {
 	bcInfo := types.DefaultBlockchainInfo()
+	chainCts := types.DefaultChainConstants()
+	chainCts.Calculate()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo)
+	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
-	w, err := New(cs, tp, filepath.Join(testdir, modules.WalletDir), bcInfo)
+	w, err := New(cs, tp, filepath.Join(testdir, modules.WalletDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
@@ -105,18 +107,20 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 		return nil, errors.New("no stub consensus set given")
 	}
 	bcInfo := types.DefaultBlockchainInfo()
+	chainCts := types.DefaultChainConstants()
+	chainCts.Calculate()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo)
+	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
-	w, err := New(cs, tp, filepath.Join(testdir, modules.WalletDir), bcInfo)
+	w, err := New(cs, tp, filepath.Join(testdir, modules.WalletDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
@@ -167,21 +171,23 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 // blocks or encrypted the wallet.
 func createBlankWalletTester(name string) (*walletTester, error) {
 	bcInfo := types.DefaultBlockchainInfo()
+	chainCts := types.DefaultChainConstants()
+	chainCts.Calculate()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo)
+	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
 		return nil, err
 	}
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
-	w, err := New(cs, tp, filepath.Join(testdir, modules.WalletDir), bcInfo)
+	w, err := New(cs, tp, filepath.Join(testdir, modules.WalletDir), bcInfo, chainCts)
 	if err != nil {
 		return nil, err
 	}
@@ -220,30 +226,32 @@ func (wt *walletTester) closeWt() {
 // TestNilInputs tries starting the wallet using nil inputs.
 func TestNilInputs(t *testing.T) {
 	bcInfo := types.DefaultBlockchainInfo()
+	chainCts := types.DefaultChainConstants()
+	chainCts.Calculate()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo)
+	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	wdir := filepath.Join(testdir, modules.WalletDir)
-	_, err = New(cs, nil, wdir, bcInfo)
+	_, err = New(cs, nil, wdir, bcInfo, chainCts)
 	if err != errNilTpool {
 		t.Error(err)
 	}
-	_, err = New(nil, tp, wdir, bcInfo)
+	_, err = New(nil, tp, wdir, bcInfo, chainCts)
 	if err != errNilConsensusSet {
 		t.Error(err)
 	}
-	_, err = New(nil, nil, wdir, bcInfo)
+	_, err = New(nil, nil, wdir, bcInfo, chainCts)
 	if err != errNilConsensusSet {
 		t.Error(err)
 	}
@@ -278,21 +286,23 @@ func TestCloseWallet(t *testing.T) {
 		t.Skip()
 	}
 	bcInfo := types.DefaultBlockchainInfo()
+	chainCts := types.DefaultChainConstants()
+	chainCts.Calculate()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo)
+	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
 	if err != nil {
 		t.Fatal(err)
 	}
 	wdir := filepath.Join(testdir, modules.WalletDir)
-	w, err := New(cs, tp, wdir, bcInfo)
+	w, err := New(cs, tp, wdir, bcInfo, chainCts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -302,9 +312,11 @@ func TestCloseWallet(t *testing.T) {
 }
 
 func newConsensusSetStub() *consensusSetStub {
+	chainCts := types.DefaultChainConstants()
+	chainCts.Calculate()
 	return &consensusSetStub{
 		blocks: []types.Block{
-			types.GenesisBlock,
+			chainCts.GenesisBlock,
 		},
 		subscribers: make(map[modules.ConsensusSetSubscriber]struct{}),
 	}
@@ -454,7 +466,7 @@ func (css *consensusSetStub) CalculateStakeModifier(height types.BlockHeight) *b
 	// make a signed version of the current height because sub genesis block is
 	// possible here.
 	signedHeight := int64(height)
-	signedHeight -= int64(types.StakeModifierDelay)
+	signedHeight -= int64(types.DefaultChainConstants().StakeModifierDelay)
 
 	mask := big.NewInt(1)
 	var BlockIDHash *big.Int

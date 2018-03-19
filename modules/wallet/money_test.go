@@ -47,12 +47,12 @@ func TestSendCoins(t *testing.T) {
 		t.Fatal(err)
 	}
 	cs.addTransactionAsBlock(addr.UnlockHash(),
-		types.OneCoin.Mul64(1).Add(types.NewCurrency64(5000)))
+		wt.wallet.chainCts.OneCoin.Mul64(1).Add(types.NewCurrency64(5000)))
 
 	// Send 5000 hastings. The wallet will automatically add a fee. Outgoing
 	// unconfirmed siacoins - incoming unconfirmed coins should equal 5000 +
 	// fee.
-	tpoolFee := types.OneCoin.Mul64(1) // TODO change
+	tpoolFee := wt.wallet.chainCts.OneCoin.Mul64(1) // TODO change
 	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.UnlockHash{}, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -84,19 +84,19 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 	defer wt.closeWt()
 
 	// Spend too many coins.
-	tooManyCoins := types.OneCoin.Mul64(1e12)
+	tooManyCoins := wt.wallet.chainCts.OneCoin.Mul64(1e12)
 	_, err = wt.wallet.SendCoins(tooManyCoins, types.UnlockHash{}, nil)
 	if err != modules.ErrLowBalance {
 		t.Error("low balance err not returned after attempting to send too many coins")
 	}
-	reasonableCoins := types.OneCoin.Mul64(100e3)
+	reasonableCoins := wt.wallet.chainCts.OneCoin.Mul64(100e3)
 
 	addr, err := wt.wallet.NextAddress()
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = cs.addTransactionAsBlock(addr.UnlockHash(),
-		types.OneCoin.Mul64(1).Add(reasonableCoins))
+		wt.wallet.chainCts.OneCoin.Mul64(1).Add(reasonableCoins))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 	defer wt.closeWt()
 
 	// Spend more than half of the coins twice.
-	halfPlus := types.OneCoin.Mul64(200e3)
+	halfPlus := wt.wallet.chainCts.OneCoin.Mul64(200e3)
 	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
@@ -145,12 +145,12 @@ func TestIntegrationSpendUnconfirmed(t *testing.T) {
 	defer wt.closeWt()
 
 	// Spend the only output.
-	halfPlus := types.OneCoin.Mul64(200e3)
+	halfPlus := wt.wallet.chainCts.OneCoin.Mul64(200e3)
 	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
-	someMore := types.OneCoin.Mul64(75e3)
+	someMore := wt.wallet.chainCts.OneCoin.Mul64(75e3)
 	_, err = wt.wallet.SendCoins(someMore, types.UnlockHash{1}, nil)
 	if err != nil {
 		t.Error("wallet appears to be struggling to spend unconfirmed outputs")

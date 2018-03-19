@@ -32,8 +32,8 @@ type (
 )
 
 // newBlockBuffer creates a new BlockBuffer, with the size equal to the chain maturity delay (types.Maturitydelay).
-func newBlockBuffer() *blockBuffer {
-	return newSizedBlockBuffer(int32(types.MaturityDelay))
+func (ds *DataStore) newBlockBuffer() *blockBuffer {
+	return newSizedBlockBuffer(int32(ds.chainCts.MaturityDelay))
 }
 
 // newSizedBlockBuffer creates a new blockBuffer with a configurable size

@@ -8,13 +8,14 @@ import (
 // Transaction type.
 func TestTransactionFitsInABlock(t *testing.T) {
 	// Try a transaction that will fit in a block, followed by one that won't.
-	data := make([]byte, BlockSizeLimit/2)
+	SetConstants(DefaultChainConstants())
+	data := make([]byte, cts.BlockSizeLimit/2)
 	txn := Transaction{ArbitraryData: [][]byte{data}}
 	err := txn.fitsInABlock()
 	if err != nil {
 		t.Error(err)
 	}
-	data = make([]byte, BlockSizeLimit)
+	data = make([]byte, cts.BlockSizeLimit)
 	txn.ArbitraryData[0] = data
 	err = txn.fitsInABlock()
 	if err != ErrTransactionTooLarge {
@@ -147,7 +148,7 @@ func TestTransactionStandaloneValid(t *testing.T) {
 	}
 
 	// Violate fitsInABlock.
-	data := make([]byte, BlockSizeLimit)
+	data := make([]byte, cts.BlockSizeLimit)
 	txn.ArbitraryData = [][]byte{data}
 	err = txn.StandaloneValid(0)
 	if err == nil {

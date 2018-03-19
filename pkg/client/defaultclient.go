@@ -13,6 +13,7 @@ import (
 	"github.com/bgentry/speakeasy"
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +25,8 @@ var (
 var (
 	// ClientName sets the client name for some of the command help messages
 	ClientName = "rivine"
+
+	oneCoin types.Currency
 )
 
 // exit codes
@@ -226,7 +229,8 @@ func Version() {
 }
 
 // DefaultClient parses the arguments using cobra with the default rivine setup
-func DefaultClient() {
+func DefaultClient(oc types.Currency) {
+	oneCoin = oc
 	root := &cobra.Command{
 		Use:   os.Args[0],
 		Short: fmt.Sprintf("%s Client v", strings.Title(ClientName)) + build.Version.String(),

@@ -49,9 +49,9 @@ func TestTargetDifficulty(t *testing.T) {
 	target2[crypto.HashSize-1] = 1
 	target3[crypto.HashSize-1] = 2
 
-	expDifficulty1 := NewDifficulty(RootDepth.Int())
-	expDifficulty2 := NewDifficulty(RootDepth.Int())
-	expDifficulty3 := NewDifficulty(RootDepth.Int()).Div64(2)
+	expDifficulty1 := NewDifficulty(cts.RootDepth.Int())
+	expDifficulty2 := NewDifficulty(cts.RootDepth.Int())
+	expDifficulty3 := NewDifficulty(cts.RootDepth.Int()).Div64(2)
 
 	if difficulty := target1.Difficulty(); difficulty.Cmp(expDifficulty1) != 0 {
 		t.Errorf("Expected difficulty %v, got %v", expDifficulty1, difficulty)
@@ -149,7 +149,7 @@ func TestTargetRat(t *testing.T) {
 func TestTargetOverflow(t *testing.T) {
 	largeInt := new(big.Int).Lsh(big.NewInt(1), 260)
 	expectRoot := IntToTarget(largeInt)
-	if expectRoot != RootDepth {
+	if expectRoot != cts.RootDepth {
 		t.Error("IntToTarget does not properly handle overflows")
 	}
 }

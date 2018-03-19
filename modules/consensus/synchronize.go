@@ -205,7 +205,7 @@ func (cs *ConsensusSet) managedReceiveBlocks(conn modules.PeerConn) (returnErr e
 	for moreAvailable {
 		// Read a slice of blocks from the wire.
 		var newBlocks []types.Block
-		if err := encoding.ReadObject(conn, &newBlocks, uint64(MaxCatchUpBlocks)*types.BlockSizeLimit); err != nil {
+		if err := encoding.ReadObject(conn, &newBlocks, uint64(MaxCatchUpBlocks)*cs.chainCts.BlockSizeLimit); err != nil {
 			return err
 		}
 		if err := encoding.ReadObject(conn, &moreAvailable, 1); err != nil {
@@ -474,7 +474,7 @@ func (cs *ConsensusSet) managedReceiveBlock(id types.BlockID) modules.RPCFunc {
 			return err
 		}
 		var block types.Block
-		if err := encoding.ReadObject(conn, &block, types.BlockSizeLimit); err != nil {
+		if err := encoding.ReadObject(conn, &block, cs.chainCts.BlockSizeLimit); err != nil {
 			return err
 		}
 		if err := cs.managedAcceptBlock(block); err != nil {

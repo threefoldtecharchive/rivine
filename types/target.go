@@ -45,14 +45,14 @@ func (x Target) Cmp(y Target) int {
 // Difficulty returns the difficulty associated with a given target.
 func (t Target) Difficulty() Difficulty {
 	if t == (Target{}) {
-		return NewDifficulty(RootDepth.Int())
+		return NewDifficulty(cts.RootDepth.Int())
 	}
-	return NewDifficulty(new(big.Int).Div(RootDepth.Int(), t.Int()))
+	return NewDifficulty(new(big.Int).Div(cts.RootDepth.Int(), t.Int()))
 }
 
 // NewTarget makes a new target from a given difficulty
 func NewTarget(difficulty Difficulty) Target {
-	return NewTargetWithDepth(difficulty, RootDepth)
+	return NewTargetWithDepth(difficulty, cts.RootDepth)
 }
 
 // NewTargetWithDepth makes a new target from a given difficulty with a custom root depth
@@ -75,7 +75,7 @@ func IntToTarget(i *big.Int) (t Target) {
 	} else {
 		// In the event of overflow, return the maximum.
 		if i.BitLen() > 256 {
-			return RootDepth
+			return cts.RootDepth
 		}
 		b := i.Bytes()
 		offset := len(t[:]) - len(b)
