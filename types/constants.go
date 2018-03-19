@@ -89,10 +89,10 @@ func init() {
 		}
 
 		// Seed for this address:
-		// recall view document apology stone tattoo job farm pilot favorite mango topic thing dilemma dawn width marble proud pen meadow sing museum lucky present
-		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		// goose twelve sleep arm wall hat sting sad picture garage lazy catch surround vote over arena next luxury tonight spatial avoid crack still feature
+		bso.UnlockHash.LoadString("3d3d2f93f754899eb790be4c521f58fd790de7901a83fbcef666c2671efc546d3e627782131e")
 		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
-		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		co.UnlockHash.LoadString("3d3d2f93f754899eb790be4c521f58fd790de7901a83fbcef666c2671efc546d3e627782131e")
 		GenesisCoinDistribution = append(GenesisCoinDistribution, co)
 
 	} else if build.Release == "testing" {
