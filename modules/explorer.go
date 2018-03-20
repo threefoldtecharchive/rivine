@@ -23,14 +23,13 @@ type (
 		TotalCoins        types.Currency    `json:"totalcoins"`
 
 		// Transaction type counts.
-		MinerPayoutCount          uint64 `json:"minerpayoutcount"`
-		TransactionCount          uint64 `json:"transactioncount"`
-		CoinInputCount            uint64 `json:"coininputcount"`
-		CoinOutputCount           uint64 `json:"coinoutputcount"`
-		BlockStakeInputCount      uint64 `json:"blockstakeinputcount"`
-		BlockStakeOutputCount     uint64 `json:"blockstakeoutputcount"`
-		MinerFeeCount             uint64 `json:"minerfeecount"`
-		TransactionSignatureCount uint64 `json:"transactionsignaturecount"`
+		MinerPayoutCount      uint64 `json:"minerpayoutcount"`
+		TransactionCount      uint64 `json:"transactioncount"`
+		CoinInputCount        uint64 `json:"coininputcount"`
+		CoinOutputCount       uint64 `json:"coinoutputcount"`
+		BlockStakeInputCount  uint64 `json:"blockstakeinputcount"`
+		BlockStakeOutputCount uint64 `json:"blockstakeoutputcount"`
+		MinerFeeCount         uint64 `json:"minerfeecount"`
 	}
 
 	// Explorer tracks the blockchain and provides tools for gathering

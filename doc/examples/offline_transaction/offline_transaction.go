@@ -22,7 +22,7 @@ const (
 	generateAddressAmount = 50
 	// genesisOutputSeed is the mnemonic representation of the genesis seed
 	// We will be using this seed to generate the address(es) to transfer the funds from
-	genesisOutputSeed = "goose twelve sleep arm wall hat sting sad picture garage lazy catch surround vote over arena next luxury tonight spatial avoid crack still feature"
+	genesisOutputSeed = "badge alley rigid abuse virtual test spawn recycle estate junior learn three civil universe lift very color gauge upper miracle fun marine catch one"
 	// unlockHashType is the string representation expected in the hashtype field when checking the unlock hashes in the explorer api
 	unlockHashType = "unlockhash"
 	// minerPayoutMaturityWindow is the amount of blocks that need to pass before a miner payout can be spend
@@ -337,8 +337,8 @@ func RivineRequest(method string, endpoint string, body io.Reader) (*http.Respon
 // matched to the corresponding public keys in the unlock conditions.
 // Copied since the type is not exported
 type spendableKey struct {
-	UnlockConditions types.UnlockConditions
-	SecretKeys       []crypto.SecretKey
+	PublicKey crypto.PublicKey
+	SecretKey crypto.SecretKey
 }
 
 // generateSpendableKey creates the keys and unlock conditions a given index of a

@@ -46,7 +46,7 @@ func TestSendCoins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cs.addTransactionAsBlock(addr.UnlockHash(),
+	cs.addTransactionAsBlock(addr,
 		types.OneCoin.Mul64(1).Add(types.NewCurrency64(5000)))
 
 	// Send 5000 hastings. The wallet will automatically add a fee. Outgoing
@@ -95,7 +95,7 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cs.addTransactionAsBlock(addr.UnlockHash(),
+	err = cs.addTransactionAsBlock(addr,
 		types.OneCoin.Mul64(1).Add(reasonableCoins))
 	if err != nil {
 		t.Fatal(err)

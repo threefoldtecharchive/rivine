@@ -118,12 +118,4 @@ func TestTransactionStandaloneValid(t *testing.T) {
 		t.Error("failed to trigger followsMinimumValues error")
 	}
 	txn.CoinOutputs = nil
-
-	// Violate validSignatures
-	txn.TransactionSignatures = []TransactionSignature{{}}
-	err = txn.StandaloneValid(0)
-	if err == nil {
-		t.Error("failed to trigger validSignatures error")
-	}
-	txn.TransactionSignatures = nil
 }

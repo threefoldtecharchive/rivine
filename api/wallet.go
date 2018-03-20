@@ -159,13 +159,13 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 
 // walletAddressHandler handles API calls to /wallet/address.
 func (api *API) walletAddressHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	unlockConditions, err := api.wallet.NextAddress()
+	unlockHash, err := api.wallet.NextAddress()
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/addresses: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 	WriteJSON(w, WalletAddressGET{
-		Address: unlockConditions.UnlockHash(),
+		Address: unlockHash,
 	})
 }
 

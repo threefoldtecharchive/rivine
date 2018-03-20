@@ -36,8 +36,18 @@ var (
 // addresses that are to be used in 'FundSiacoins' or 'FundSiafunds' in the
 // transaction builder must conform to this form of spendable key.
 type spendableKey struct {
-	UnlockConditions types.UnlockConditions
-	SecretKeys       []crypto.SecretKey
+	PublicKey crypto.PublicKey
+	SecretKey crypto.SecretKey
+}
+
+func (sk spendableKey) WipeSecret() spendableKey {
+	crypto.SecureWipe(sk.SecretKey[:])
+	return sk
+}
+
+func (sk spendableKey) UnlockHash() types.UnlockHash {
+	epk := types.Ed25519PublicKey(sk.PublicKey)
+	return types.NewSingleSignatureInputLock(epk).UnlockHash()
 }
 
 // Wallet is an object that tracks balances, creates keys and addresses,

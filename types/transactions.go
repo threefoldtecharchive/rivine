@@ -36,7 +36,7 @@ var (
 const (
 	// TransactionVersionOne defines the initial (and currently only)
 	// version format. Any other version number is concidered invalid.
-	TransactionVersionOne TransactionVersion = iota + 1
+	TransactionVersionOne TransactionVersion = iota
 )
 
 type (
@@ -76,23 +76,24 @@ type (
 	// but transactions cannot spend outputs that they create or otherwise be
 	// self-dependent.
 	Transaction struct {
-		CoinInputs            []CoinInput            `json:"coininputs"`
-		CoinOutputs           []CoinOutput           `json:"coinoutputs"`
-		BlockStakeInputs      []BlockStakeInput      `json:"blockstakeinputs"`
-		BlockStakeOutputs     []BlockStakeOutput     `json:"blockstakeoutputs"`
-		MinerFees             []Currency             `json:"minerfees"`
-		ArbitraryData         []byte                 `json:"arbitrarydata"`
-		TransactionSignatures []TransactionSignature `json:"transactionsignatures"`
+		CoinInputs        []CoinInput        `json:"coininputs"`
+		CoinOutputs       []CoinOutput       `json:"coinoutputs"`
+		BlockStakeInputs  []BlockStakeInput  `json:"blockstakeinputs"`
+		BlockStakeOutputs []BlockStakeOutput `json:"blockstakeoutputs"`
+		MinerFees         []Currency         `json:"minerfees"`
+		ArbitraryData     []byte             `json:"arbitrarydata"`
+
+		_VersionNumber TransactionVersion
 	}
 
-	// A SiacoinInput consumes a SiacoinOutput and adds the siacoins to the set of
-	// siacoins that can be spent in the transaction. The ParentID points to the
+	// A CoinInput consumes a CoinInput and adds the coins to the set of
+	// coins that can be spent in the transaction. The ParentID points to the
 	// output that is getting consumed, and the UnlockConditions contain the rules
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
 	CoinInput struct {
-		ParentID         CoinOutputID     `json:"parentid"`
-		UnlockConditions UnlockConditions `json:"unlockconditions"`
+		ParentID CoinOutputID   `json:"parentid"`
+		Unlocker InputLockProxy `json:"unlocker"`
 	}
 
 	// A CoinOutput holds a volume of siacoins. Outputs must be spent
@@ -110,8 +111,8 @@ type (
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
 	BlockStakeInput struct {
-		ParentID         BlockStakeOutputID `json:"parentid"`
-		UnlockConditions UnlockConditions   `json:"unlockconditions"`
+		ParentID BlockStakeOutputID `json:"parentid"`
+		Unlocker InputLockProxy     `json:"unlocker"`
 	}
 
 	// A BlockStakeOutput holds a volume of blockstakes. Outputs must be spent
@@ -205,53 +206,50 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 
 // MarshalSia implements the encoding.SiaMarshaler interface.
 func (t Transaction) MarshalSia(w io.Writer) error {
-	TransactionVersionOne.Encode(w)
 	return encoding.NewEncoder(w).EncodeAll(
+		t._VersionNumber,
 		t.CoinInputs,
 		t.CoinOutputs,
 		t.BlockStakeInputs,
 		t.BlockStakeOutputs,
 		t.MinerFees,
 		t.ArbitraryData,
-		t.TransactionSignatures,
 	)
 }
 
 // UnmarshalSia implements the encoding.SiaUnmarshaler interface.
 func (t *Transaction) UnmarshalSia(r io.Reader) error {
-	var txVersion TransactionVersion
-	if err := txVersion.Decode(r); err != nil {
+	decoder := encoding.NewDecoder(r)
+	err := decoder.Decode(&t._VersionNumber)
+	if err != nil {
 		return err
 	}
-	if txVersion != TransactionVersionOne {
+	if t._VersionNumber != TransactionVersionOne {
 		return ErrInvalidTransactionVersion
 	}
-	return encoding.NewDecoder(r).DecodeAll(
+	return decoder.DecodeAll(
 		&t.CoinInputs,
 		&t.CoinOutputs,
 		&t.BlockStakeInputs,
 		&t.BlockStakeOutputs,
 		&t.MinerFees,
 		&t.ArbitraryData,
-		&t.TransactionSignatures,
 	)
 }
 
-// Encode the TransactionVersion as a binary slice
-// and write it into the writer.
-func (v TransactionVersion) Encode(w io.Writer) {
-	w.Write([]byte{byte(v)})
+// MarshalSia implements SiaMarshaler.MarshalSia
+func (v TransactionVersion) MarshalSia(w io.Writer) error {
+	return encoding.NewEncoder(w).Encode(byte(v))
 }
 
-// Decode the TransactionVersion from a binary byte slice,
-// and convert it into the single byte transaction version it is supposed to be.
-func (v *TransactionVersion) Decode(r io.Reader) error {
-	var b [1]byte
-	_, err := r.Read(b[:])
+// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
+func (v *TransactionVersion) UnmarshalSia(r io.Reader) error {
+	var bv byte
+	err := encoding.NewDecoder(r).Decode(&bv)
 	if err != nil {
 		return err
 	}
-	*v = TransactionVersion(b[0])
+	*v = TransactionVersion(bv)
 	return nil
 }
 

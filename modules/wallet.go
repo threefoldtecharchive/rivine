@@ -164,13 +164,6 @@ type (
 		// AddArbitraryData sets the arbitrary data of the transaction.
 		SetArbitraryData(arb []byte)
 
-		// AddTransactionSignature adds a transaction signature to the
-		// transaction, returning the index of the signature within the
-		// transaction. The signature should already be valid, and shouldn't
-		// sign any of the inputs that were added by calling 'FundCoins' or
-		// 'FundBlockStakes'.
-		AddTransactionSignature(types.TransactionSignature) uint64
-
 		// Sign will sign any inputs added by 'FundCoins' or 'FundBlockStakes'
 		// and return a transaction set that contains all parents prepended to
 		// the transaction. If more fields need to be added, a new transaction
@@ -189,7 +182,7 @@ type (
 		// ViewAdded returns all of the siacoin inputs, siafund inputs, and
 		// parent transactions that have been automatically added by the
 		// builder. Items are returned by index.
-		ViewAdded() (newParents, siacoinInputs, siafundInputs, transactionSignatures []int)
+		ViewAdded() (newParents, siacoinInputs, siafundInputs []int)
 
 		// Drop indicates that a transaction is no longer useful and will not be
 		// broadcast, and that all of the outputs can be reclaimed. 'Drop'
@@ -256,7 +249,7 @@ type (
 
 		// NextAddress returns a new coin addresses generated from the
 		// primary seed.
-		NextAddress() (types.UnlockConditions, error)
+		NextAddress() (types.UnlockHash, error)
 
 		// CreateBackup will create a backup of the wallet at the provided
 		// filepath. The backup will have all seeds and keys.

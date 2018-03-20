@@ -1,8 +1,6 @@
 package transactionpool
 
 import (
-	"errors"
-
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
@@ -37,22 +35,6 @@ import (
 //		A group of dependent transactions cannot exceed 100kb to limit how
 //		quickly the transaction pool can be filled with new transactions.
 
-// checkUnlockConditions looks at the UnlockConditions and verifies that all
-// public keys are recognized. Unrecognized public keys are automatically
-// accepted as valid by the consnensus set, but rejected by the transaction
-// pool. This allows new types of keys to be added via a softfork without
-// alienating all of the older nodes.
-func (tp *TransactionPool) checkUnlockConditions(uc types.UnlockConditions) error {
-	for _, pk := range uc.PublicKeys {
-		if pk.Algorithm != types.SignatureEntropy &&
-			pk.Algorithm != types.SignatureEd25519 {
-			return errors.New("unrecognized key type in transaction")
-		}
-	}
-
-	return nil
-}
-
 // IsStandardTransaction enforces extra rules such as a transaction size limit.
 // These rules can be altered without disrupting consensus.
 func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
@@ -67,19 +49,20 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 		return modules.ErrLargeTransaction
 	}
 
+	var err error
 	// Check that all public keys are of a recognized type. Need to check all
 	// of the UnlockConditions, which currently can appear in 3 separate fields
 	// of the transaction. Unrecognized types are ignored because a softfork
 	// may make certain unrecognized signatures invalid, and this node cannot
 	// tell which signatures are the invalid ones.
 	for _, sci := range t.CoinInputs {
-		err := tp.checkUnlockConditions(sci.UnlockConditions)
+		err = sci.Unlocker.StrictCheck()
 		if err != nil {
 			return err
 		}
 	}
 	for _, sfi := range t.BlockStakeInputs {
-		err := tp.checkUnlockConditions(sfi.UnlockConditions)
+		err = sfi.Unlocker.StrictCheck()
 		if err != nil {
 			return err
 		}

@@ -167,9 +167,7 @@ func (w *Wallet) wipeSecrets() {
 	// 'for i := range' must be used to prevent copies of secret data from
 	// being made.
 	for i := range w.keys {
-		for j := range w.keys[i].SecretKeys {
-			crypto.SecureWipe(w.keys[i].SecretKeys[j][:])
-		}
+		w.keys[i] = w.keys[i].WipeSecret()
 	}
 	for i := range w.seeds {
 		crypto.SecureWipe(w.seeds[i][:])

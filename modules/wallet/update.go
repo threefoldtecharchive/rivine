@@ -130,14 +130,14 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				ConfirmationTimestamp: block.Timestamp,
 			}
 			for _, sci := range txn.CoinInputs {
-				_, exists := w.keys[sci.UnlockConditions.UnlockHash()]
+				_, exists := w.keys[sci.Unlocker.UnlockHash()]
 				if exists {
 					relevant = true
 				}
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 					FundType:       types.SpecifierCoinInput,
 					WalletAddress:  exists,
-					RelatedAddress: sci.UnlockConditions.UnlockHash(),
+					RelatedAddress: sci.Unlocker.UnlockHash(),
 					Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
 				})
 			}
@@ -156,7 +156,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = sco.Value
 			}
 			for _, sfi := range txn.BlockStakeInputs {
-				_, exists := w.keys[sfi.UnlockConditions.UnlockHash()]
+				_, exists := w.keys[sfi.Unlocker.UnlockHash()]
 				if exists {
 					relevant = true
 				}
@@ -164,7 +164,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 					FundType:       types.SpecifierBlockStakeInput,
 					WalletAddress:  exists,
-					RelatedAddress: sfi.UnlockConditions.UnlockHash(),
+					RelatedAddress: sfi.Unlocker.UnlockHash(),
 					Value:          sfiValue,
 				})
 			}
@@ -251,14 +251,14 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			ConfirmationTimestamp: types.Timestamp(math.MaxUint64),
 		}
 		for _, sci := range txn.CoinInputs {
-			_, exists := w.keys[sci.UnlockConditions.UnlockHash()]
+			_, exists := w.keys[sci.Unlocker.UnlockHash()]
 			if exists {
 				relevant = true
 			}
 			pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 				FundType:       types.SpecifierCoinInput,
 				WalletAddress:  exists,
-				RelatedAddress: sci.UnlockConditions.UnlockHash(),
+				RelatedAddress: sci.Unlocker.UnlockHash(),
 				Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
 			})
 		}

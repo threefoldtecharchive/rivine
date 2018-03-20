@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"sort"
 	"testing"
+
+	"github.com/rivine/rivine/crypto"
 )
 
 // TestUnlockHashJSONMarshalling checks that when an unlock hash is marshalled
 // and unmarshalled using JSON, the result is what is expected.
 func TestUnlockHashJSONMarshalling(t *testing.T) {
-	// Create an unlock hash.
-	uc := UnlockConditions{
-		SignaturesRequired: 3,
-	}
+	_, pk := crypto.GenerateKeyPair()
+	uc := NewSingleSignatureInputLock(Ed25519PublicKey(pk))
 	uh := uc.UnlockHash()
 
 	// Marshal the unlock hash.
@@ -32,12 +32,17 @@ func TestUnlockHashJSONMarshalling(t *testing.T) {
 	}
 
 	// Corrupt the checksum.
-	marUH[36]++
+	old := marUH[36]
+	if old < 102 {
+		marUH[36]++
+	} else {
+		marUH[36] = 97
+	}
 	err = umarUH.UnmarshalJSON(marUH)
 	if err != ErrInvalidUnlockHashChecksum {
 		t.Error("expecting an invalid checksum:", err)
 	}
-	marUH[36]--
+	marUH[36] = old
 
 	// Try an input that's not correct hex.
 	marUH[7] += 100
@@ -58,10 +63,8 @@ func TestUnlockHashJSONMarshalling(t *testing.T) {
 // marshalled and unmarshalled using String and LoadString, the result is what
 // is expected.
 func TestUnlockHashStringMarshalling(t *testing.T) {
-	// Create an unlock hash.
-	uc := UnlockConditions{
-		SignaturesRequired: 7,
-	}
+	_, pk := crypto.GenerateKeyPair()
+	uc := NewSingleSignatureInputLock(Ed25519PublicKey(pk))
 	uh := uc.UnlockHash()
 
 	// Marshal the unlock hash.
