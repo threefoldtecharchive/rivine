@@ -15,13 +15,13 @@ Data is saved on the blockchain by adding it as `arbitrary data` in a  transacti
 In order to allow people to store data on the blockchain, a command is exposed in the `client` which creates a minimal transaction to the provided address, while paying the miner fee, and adding the provided data. This command silently adds a specifier (the specifier being `NonSia`, as to not have the transaction rejected by the `transactionpool` for containing invalid data). The command is as follows:
 
 ```bash
-rivinec wallet registerdata [destination address] [data]
+rivinec wallet registerdata [namespace] [data] [destination address]
 ```
 
 The destination address can be any valid address (inlcuding one of your own addresses). Keeping in mind the structure the data should have, as well as the fact that the client adds the specifier by itself, we only need to add the namespace to the data. For example, if we want to write "testdata" to the namespace "1111", we can do so with the following command:
 
 ```bash
-rivinec wallet registerdata 53d6162d18db2dffbe7f9dd9fcbce1c34... 1111testdata
+rivinec wallet registerdata 1111 testdata 53d6162d18db2dffbe7f9dd9fcbce1c34...
 ```
 
 ## Database support
