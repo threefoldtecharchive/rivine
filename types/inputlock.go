@@ -1,7 +1,10 @@
 package types
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/rivine/rivine/crypto"
@@ -14,6 +17,11 @@ var (
 	ErrUnlockConditionLocked = errors.New("unlock condition is already locked")
 )
 
+// Errors related to atomic swaps
+var (
+	ErrInvalidPreImageSha256 = errors.New("invalid pre-image sha256")
+)
+
 type (
 	// InputLockType defines the type of an unlock condition-fulfillment pair.
 	InputLockType byte
@@ -23,9 +31,6 @@ type (
 	// as well as the input used to unlock the input in the context of the
 	// used InputLock, extra serialized input and Transaction it lives in.
 	InputLock interface {
-		encoding.SiaMarshaler
-		encoding.SiaUnmarshaler
-
 		// UnlockHash generates a deterministic UnlockHash,
 		// and should be related only to the static unlock conditions,
 		// without any possible influence of other input parameters and other conditions.
@@ -57,12 +62,32 @@ type (
 	// UnlockerConstructor is used to create a fresh unlocker.
 	UnlockerConstructor func() InputLock
 
-	// SingleSignatureInputLock is the only and most simplest unlocker.
+	// SingleSignatureInputLock (0x01) is the only and most simplest unlocker.
 	// It uses a public key (used as UnlockHash), such that only one public key is expected.
 	// The spender will need to proof ownership of that public key by providing a correct signature.
 	SingleSignatureInputLock struct {
 		PublicKey SiaPublicKey
 		Signature []byte
+	}
+
+	AtomicSwapSecret       [sha256.Size]byte
+	AtomicSwapHashedSecret [sha256.Size]byte
+	AtomicSwapClaimKey     struct {
+		Secret    AtomicSwapSecret
+		SecretKey crypto.SecretKey
+	}
+
+	// AtomicSwapInputLock (0x02) is a more advanced unlocker,
+	// which allows for a more advanced InputLock,
+	// where before the TimeLock expired, the output can only go to the receiver,
+	// who has to give the secret in order to do so. After the InputLock,
+	// the output can only be claimed by the sender, with no deadline in this phase.
+	AtomicSwapInputLock struct {
+		Timelock                           Timestamp
+		PublicKeySender, PublicKeyReceiver SiaPublicKey
+		HashedSecret                       AtomicSwapHashedSecret
+		Secret                             AtomicSwapSecret
+		Signature                          []byte
 	}
 )
 
@@ -75,6 +100,13 @@ const (
 	// The receiver can redeem the relevant locked input by providing a signature
 	// which proofs the ownership of the private key linked to the known public key.
 	InputLockTypeSingleSignature
+
+	// InputLockTypeAtomicSwap provides a more advanced unlocker,
+	// which allows for a more advanced InputLock,
+	// where before the TimeLock expired, the output can only go to the receiver,
+	// who has to give the secret in order to do so. After the InputLock,
+	// the output can only be claimed by the sender, with no deadline in this phas
+	InputLockTypeAtomicSwap
 
 	// MaxStandardInputLockType can be used to define your own
 	// InputLockType without having to hardcode the final standard
@@ -100,7 +132,7 @@ func (p InputLockProxy) MarshalSia(w io.Writer) error {
 	if err != nil || p.t == InputLockTypeNil {
 		return err
 	}
-	return p.il.MarshalSia(w)
+	return encoding.NewEncoder(w).Encode(p.il)
 }
 
 // UnmarshalSia implements SiaMarshaler.UnmarshalSia
@@ -115,7 +147,7 @@ func (p InputLockProxy) UnmarshalSia(r io.Reader) error {
 		return ErrInvalidInputLockType
 	}
 	p.il = c()
-	return p.il.UnmarshalSia(r)
+	return encoding.NewDecoder(r).Decode(p.il)
 }
 
 // UnlockHash implements InputLock.UnlockHash
@@ -131,7 +163,12 @@ func (p InputLockProxy) Lock(inputIndex uint64, tx Transaction, key interface{})
 	if p.t == InputLockTypeNil {
 		return nil
 	}
-	return p.il.Lock(inputIndex, tx, key)
+	err := p.il.Lock(inputIndex, tx, key)
+	if err != nil {
+		return err
+	}
+	// validate the locking was done correctly
+	return p.il.Unlock(inputIndex, tx)
 }
 
 // Unlock implements InputLock.Unlock
@@ -157,16 +194,6 @@ func NewSingleSignatureInputLock(pk SiaPublicKey) InputLockProxy {
 		&SingleSignatureInputLock{PublicKey: pk})
 }
 
-// MarshalSia implements SiaMarshaler.MarshalSia
-func (ss *SingleSignatureInputLock) MarshalSia(w io.Writer) error {
-	return encoding.NewEncoder(w).EncodeAll(ss.PublicKey, ss.Signature)
-}
-
-// UnmarshalSia implements SiaMarshaler.UnmarshalSia
-func (ss *SingleSignatureInputLock) UnmarshalSia(r io.Reader) error {
-	return encoding.NewDecoder(r).DecodeAll(&ss.PublicKey, &ss.Signature)
-}
-
 // UnlockHash implements InputLock.UnlockHash
 func (ss *SingleSignatureInputLock) UnlockHash() UnlockHash {
 	return UnlockHash(crypto.HashObject(ss.PublicKey))
@@ -178,15 +205,144 @@ func (ss *SingleSignatureInputLock) Lock(inputIndex uint64, tx Transaction, key 
 		return ErrUnlockConditionLocked
 	}
 
-	switch ss.PublicKey.Algorithm {
+	var err error
+	ss.Signature, err = signHashUsingSiaPublicKey(ss.PublicKey, inputIndex, tx, key)
+	return err
+}
+
+// Unlock implements InputLock.Unlock
+func (ss *SingleSignatureInputLock) Unlock(inputIndex uint64, tx Transaction) error {
+	return verifyHashUsingSiaPublicKey(ss.PublicKey, inputIndex, tx, ss.Signature)
+}
+
+// StrictCheck implements InputLock.StrictCheck
+func (ss *SingleSignatureInputLock) StrictCheck() error {
+	return strictSignatureCheck(ss.PublicKey, ss.Signature)
+}
+
+// NewAtomicSwapInputLock creates a new input lock as part of an atomic swap,
+// using the given public keys, timelock and timestamp.
+// Prior to the timestamp only the receiver can claim, using the required secret,
+// after te deadline only the sender can claim a fund.
+func NewAtomicSwapInputLock(s, r SiaPublicKey, hs AtomicSwapHashedSecret, tl Timestamp) InputLockProxy {
+	return NewInputLockProxy(InputLockTypeAtomicSwap,
+		&AtomicSwapInputLock{
+			PublicKeySender:   s,
+			PublicKeyReceiver: r,
+			HashedSecret:      hs,
+			Timelock:          tl,
+		})
+}
+
+// UnlockHash implements InputLock.UnlockHash
+func (as *AtomicSwapInputLock) UnlockHash() UnlockHash {
+	return UnlockHash(crypto.HashAll(
+		as.Timelock, as.PublicKeyReceiver,
+		as.PublicKeySender, as.HashedSecret))
+}
+
+// Lock implements InputLock.Lock
+func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key interface{}) error {
+	if len(as.Signature) != 0 {
+		return ErrUnlockConditionLocked
+	}
+
+	switch v := key.(type) {
+	case AtomicSwapClaimKey: // claim
+		if CurrentTimestamp() > as.Timelock {
+			return errors.New("atomic swap contract expired")
+		}
+
+		as.Secret = v.Secret
+		hashedSecret := sha256.Sum256(as.Secret[:])
+		if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
+			return ErrInvalidPreImageSha256
+		}
+
+		// TODO: integrate secret in sigHash
+		var err error
+		as.Signature, err = signHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, v.SecretKey)
+		return err
+
+	case crypto.SecretKey: // refund
+		if CurrentTimestamp() <= as.Timelock {
+			return errors.New("atomic swap contract not yet expired")
+		}
+
+		// TODO: integrate secret in sigHash
+		var err error
+		as.Signature, err = signHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, v)
+		return err
+
+	default:
+		return fmt.Errorf("cannot atomic-swap-lock using %T key", key)
+	}
+}
+
+// Unlock implements InputLock.Unlock
+func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
+	// prior to our timelock, only the receiver can claim the unspend output
+	if CurrentTimestamp() <= as.Timelock {
+		// TODO: integrate secret in sigHash
+		err := verifyHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, as.Signature)
+		if err != nil {
+			return err
+		}
+
+		// in order for the receiver to spend,
+		// the secret has to be known
+		hashedSecret := sha256.Sum256(as.Secret[:])
+		if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
+			return ErrInvalidPreImageSha256
+		}
+
+		return nil
+	}
+
+	// after the deadline (timelock),
+	// only the original sender can reclaim the unspend output
+	// TODO: integrate secret in sigHash
+	return verifyHashUsingSiaPublicKey(as.PublicKeySender, inputIndex, tx, as.Signature)
+}
+
+// StrictCheck implements InputLock.StrictCheck
+func (as *AtomicSwapInputLock) StrictCheck() error {
+	// prior to our timelock, only the receiver can claim the unspend output
+	if CurrentTimestamp() <= as.Timelock {
+		return strictSignatureCheck(as.PublicKeyReceiver, as.Signature)
+	}
+	// after the deadline (timelock),
+	// only the original sender can reclaim the unspend output
+	return strictSignatureCheck(as.PublicKeySender, as.Signature)
+}
+
+func strictSignatureCheck(pk SiaPublicKey, signature []byte) error {
+	switch pk.Algorithm {
+	case SignatureEntropy:
+		return nil
+	case SignatureEd25519:
+		if len(pk.Key) != crypto.PublicKeySize {
+			return errors.New("invalid public key size in transaction")
+		}
+		if len(signature) != crypto.SignatureSize {
+			return errors.New("invalid signature size in transaction")
+		}
+		return nil
+	default:
+		return errors.New("unrecognized public key type in transaction")
+	}
+}
+
+func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, key interface{}) ([]byte, error) {
+	switch pk.Algorithm {
 	case SignatureEntropy:
 		// Entropy cannot ever be used to sign a transaction.
-		return ErrEntropyKey
+		return nil, ErrEntropyKey
 
 	case SignatureEd25519:
 		sigHash := tx.InputSigHash(inputIndex)
 		sig := crypto.SignHash(sigHash, key.(crypto.SecretKey))
-		ss.Signature = sig[:]
+		return sig[:], nil
 
 	default:
 		// If the identifier is not recognized, assume that the signature
@@ -194,12 +350,11 @@ func (ss *SingleSignatureInputLock) Lock(inputIndex uint64, tx Transaction, key 
 		// forking.
 	}
 
-	return nil
+	return nil, nil
 }
 
-// Unlock implements InputLock.Unlock
-func (ss *SingleSignatureInputLock) Unlock(inputIndex uint64, tx Transaction) error {
-	switch ss.PublicKey.Algorithm {
+func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte) error {
+	switch pk.Algorithm {
 	case SignatureEntropy:
 		// Entropy cannot ever be used to sign a transaction.
 		return ErrEntropyKey
@@ -207,12 +362,12 @@ func (ss *SingleSignatureInputLock) Unlock(inputIndex uint64, tx Transaction) er
 	case SignatureEd25519:
 		// Decode the public key and signature.
 		var edPK crypto.PublicKey
-		err := encoding.Unmarshal([]byte(ss.PublicKey.Key), &edPK)
+		err := encoding.Unmarshal([]byte(pk.Key), &edPK)
 		if err != nil {
 			return err
 		}
 		var edSig [crypto.SignatureSize]byte
-		err = encoding.Unmarshal(ss.Signature, &edSig)
+		err = encoding.Unmarshal(sig, &edSig)
 		if err != nil {
 			return err
 		}
@@ -230,24 +385,6 @@ func (ss *SingleSignatureInputLock) Unlock(inputIndex uint64, tx Transaction) er
 	}
 
 	return nil
-}
-
-// StrictCheck implements InputLock.StrictCheck
-func (ss *SingleSignatureInputLock) StrictCheck() error {
-	switch ss.PublicKey.Algorithm {
-	case SignatureEntropy:
-		return nil
-	case SignatureEd25519:
-		if len(ss.PublicKey.Key) != crypto.PublicKeySize {
-			return errors.New("invalid public key size in transaction")
-		}
-		if len(ss.Signature) != crypto.SignatureSize {
-			return errors.New("invalid signature size in transaction")
-		}
-		return nil
-	default:
-		return errors.New("unrecognized public key type in transaction")
-	}
 }
 
 // _RegisteredInputLocks contains all known/registered unlockers constructors.
@@ -272,5 +409,8 @@ func init() {
 	// standard non-nil input locks
 	RegisterInputLockType(InputLockTypeSingleSignature, func() InputLock {
 		return new(SingleSignatureInputLock)
+	})
+	RegisterInputLockType(InputLockTypeAtomicSwap, func() InputLock {
+		return new(AtomicSwapInputLock)
 	})
 }

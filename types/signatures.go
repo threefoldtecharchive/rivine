@@ -61,6 +61,9 @@ func (t Transaction) InputSigHash(inputIndex uint64) (hash crypto.Hash) {
 	h := crypto.NewHash()
 	enc := encoding.NewEncoder(h)
 
+	// TODO:
+	// investigate how we can sign everything, not just this custom stuff
+
 	enc.Encode(inputIndex)
 	for _, ci := range t.CoinInputs {
 		enc.EncodeAll(ci.ParentID, ci.Unlocker.UnlockHash())
