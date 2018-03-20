@@ -33,37 +33,9 @@ var (
 	ErrPublicKeyOveruse          = errors.New("public key was used multiple times while signing transaction")
 	ErrSortedUniqueViolation     = errors.New("sorted unique violation")
 	ErrUnlockHashWrongLen        = errors.New("marshalled unlock hash is the wrong length")
-	ErrWholeTransactionViolation = errors.New("covered fields violation")
-
-	// FullCoveredFields is a covered fileds object where the
-	// 'WholeTransaction' field has been set to true. The primary purpose of
-	// this variable is syntactic sugar.
-	FullCoveredFields = CoveredFields{WholeTransaction: true}
 )
 
 type (
-	// CoveredFields indicates which fields in a transaction have been covered by
-	// the signature. (Note that the signature does not sign the fields
-	// themselves, but rather their combined hash; see SigHash.) Each slice
-	// corresponds to a slice in the Transaction type, indicating which indices of
-	// the slice have been signed. The indices must be valid, i.e. within the
-	// bounds of the slice. In addition, they must be sorted and unique.
-	//
-	// As a convenience, a signature of the entire transaction can be indicated by
-	// the 'WholeTransaction' field. If 'WholeTransaction' == true, all other
-	// fields must be empty (except for the Signatures field, since a signature
-	// cannot sign itself).
-	CoveredFields struct {
-		WholeTransaction      bool     `json:"wholetransaction"`
-		CoinInputs            []uint64 `json:"coininputs"`
-		CoinOutputs           []uint64 `json:"coinoutputs"`
-		BlockStakeInputs      []uint64 `json:"blockstakeinputs"`
-		BlockStakeOutputs     []uint64 `json:"blockstakeoutputs"`
-		MinerFees             []uint64 `json:"minerfees"`
-		ArbitraryData         bool     `json:"arbitrarydata"`
-		TransactionSignatures []uint64 `json:"transactionsignatures"`
-	}
-
 	// A SiaPublicKey is a public key prefixed by a Specifier. The Specifier
 	// indicates the algorithm used for signing and verification. Unrecognized
 	// algorithms will always verify, which allows new algorithms to be added to
@@ -85,11 +57,10 @@ type (
 	// 'CoveredFields' indicates which parts of the transaction are being signed;
 	// see CoveredFields.
 	TransactionSignature struct {
-		ParentID       crypto.Hash   `json:"parentid"`
-		PublicKeyIndex uint64        `json:"publickeyindex"`
-		Timelock       BlockHeight   `json:"timelock"`
-		CoveredFields  CoveredFields `json:"coveredfields"`
-		Signature      []byte        `json:"signature"`
+		ParentID       crypto.Hash `json:"parentid"`
+		PublicKeyIndex uint64      `json:"publickeyindex"`
+		Timelock       BlockHeight `json:"timelock"`
+		Signature      []byte      `json:"signature"`
 	}
 
 	// UnlockConditions are a set of conditions which must be met to execute
@@ -147,48 +118,21 @@ func (uc UnlockConditions) UnlockHash() UnlockHash {
 	return UnlockHash(tree.Root())
 }
 
-// SigHash returns the hash of the fields in a transaction covered by a given
-// signature. See CoveredFields for more details.
+// SigHash returns the hash of all the fields in a transaction.
 func (t Transaction) SigHash(i int) (hash crypto.Hash) {
-	cf := t.TransactionSignatures[i].CoveredFields
 	h := crypto.NewHash()
 	enc := encoding.NewEncoder(h)
-	if cf.WholeTransaction {
-		enc.EncodeAll(
-			t.CoinInputs,
-			t.CoinOutputs,
-			t.BlockStakeInputs,
-			t.BlockStakeOutputs,
-			t.MinerFees,
-			t.ArbitraryData,
-			t.TransactionSignatures[i].ParentID,
-			t.TransactionSignatures[i].PublicKeyIndex,
-			t.TransactionSignatures[i].Timelock,
-		)
-	} else {
-		for _, input := range cf.CoinInputs {
-			enc.Encode(t.CoinInputs[input])
-		}
-		for _, output := range cf.CoinOutputs {
-			enc.Encode(t.CoinOutputs[output])
-		}
-		for _, blockstakeInput := range cf.BlockStakeInputs {
-			enc.Encode(t.BlockStakeInputs[blockstakeInput])
-		}
-		for _, blockstakeOutput := range cf.BlockStakeOutputs {
-			enc.Encode(t.BlockStakeOutputs[blockstakeOutput])
-		}
-		for _, minerFee := range cf.MinerFees {
-			enc.Encode(t.MinerFees[minerFee])
-		}
-		if cf.ArbitraryData {
-			enc.Encode(t.ArbitraryData)
-		}
-	}
-
-	for _, sig := range cf.TransactionSignatures {
-		enc.Encode(t.TransactionSignatures[sig])
-	}
+	enc.EncodeAll(
+		t.CoinInputs,
+		t.CoinOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+		t.TransactionSignatures[i].ParentID,
+		t.TransactionSignatures[i].PublicKeyIndex,
+		t.TransactionSignatures[i].Timelock,
+	)
 
 	h.Sum(hash[:0])
 	return
@@ -214,61 +158,8 @@ func sortedUnique(elems []uint64, max int) bool {
 	return true
 }
 
-// validCoveredFields makes sure that all covered fields objects in the
-// signatures follow the rules. This means that if 'WholeTransaction' is set to
-// true, all fields except for 'Signatures' must be empty. All fields must be
-// sorted numerically, and there can be no repeats.
-func (t Transaction) validCoveredFields() error {
-	for _, sig := range t.TransactionSignatures {
-		// convenience variables
-		cf := sig.CoveredFields
-		fieldMaxs := []struct {
-			field []uint64
-			max   int
-		}{
-			{cf.CoinInputs, len(t.CoinInputs)},
-			{cf.CoinOutputs, len(t.CoinOutputs)},
-			{cf.BlockStakeInputs, len(t.BlockStakeInputs)},
-			{cf.BlockStakeOutputs, len(t.BlockStakeOutputs)},
-			{cf.MinerFees, len(t.MinerFees)},
-			{cf.TransactionSignatures, len(t.TransactionSignatures)},
-		}
-
-		// Check that all fields are empty if 'WholeTransaction' is set, except
-		// for the Signatures field which isn't affected.
-		if cf.WholeTransaction {
-			// 'WholeTransaction' does not check signatures.
-			for _, fieldMax := range fieldMaxs[:len(fieldMaxs)-1] {
-				if len(fieldMax.field) != 0 {
-					return ErrWholeTransactionViolation
-				}
-			}
-		}
-
-		// Check that all fields are sorted, and without repeat values, and
-		// that all elements point to objects that exists within the
-		// transaction. If there are repeats, it means a transaction is trying
-		// to sign the same object twice. This is unncecessary, and opens up a
-		// DoS vector where the transaction asks the verifier to verify many GB
-		// of data.
-		for _, fieldMax := range fieldMaxs {
-			if !sortedUnique(fieldMax.field, fieldMax.max) {
-				return ErrSortedUniqueViolation
-			}
-		}
-	}
-
-	return nil
-}
-
 // validSignatures checks the validaty of all signatures in a transaction.
 func (t *Transaction) validSignatures(currentHeight BlockHeight) error {
-	// Check that all covered fields objects follow the rules.
-	err := t.validCoveredFields()
-	if err != nil {
-		return err
-	}
-
 	// Create the inputSignatures object for each input.
 	sigMap := make(map[crypto.Hash]*inputSignatures)
 	for i, input := range t.CoinInputs {

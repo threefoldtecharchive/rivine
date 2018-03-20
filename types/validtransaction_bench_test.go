@@ -31,9 +31,7 @@ func BenchmarkStandaloneValid(b *testing.B) {
 			UnlockConditions: uc,
 		})
 		copy(txn.CoinInputs[i].ParentID[:], encoding.Marshal(i))
-		txn.TransactionSignatures = append(txn.TransactionSignatures, TransactionSignature{
-			CoveredFields: CoveredFields{WholeTransaction: true},
-		})
+		txn.TransactionSignatures = append(txn.TransactionSignatures, TransactionSignature{})
 		copy(txn.TransactionSignatures[i].ParentID[:], encoding.Marshal(i))
 	}
 	// Transaction must be constructed before signing

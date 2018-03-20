@@ -39,35 +39,16 @@ func TestUnlockHash(t *testing.T) {
 // TestSigHash runs the SigHash function of the transaction type.
 func TestSigHash(t *testing.T) {
 	txn := Transaction{
-		CoinInputs:        []CoinInput{{}},
-		CoinOutputs:       []CoinOutput{{}},
-		BlockStakeInputs:  []BlockStakeInput{{}},
-		BlockStakeOutputs: []BlockStakeOutput{{}},
-		MinerFees:         []Currency{{}},
-		ArbitraryData:     []byte{'o', 't'},
-		TransactionSignatures: []TransactionSignature{
-			{
-				CoveredFields: CoveredFields{
-					WholeTransaction: true,
-				},
-			},
-			{
-				CoveredFields: CoveredFields{
-					CoinInputs:            []uint64{0},
-					CoinOutputs:           []uint64{0},
-					BlockStakeInputs:      []uint64{0},
-					BlockStakeOutputs:     []uint64{0},
-					MinerFees:             []uint64{0},
-					ArbitraryData:         true,
-					TransactionSignatures: []uint64{0},
-				},
-			},
-		},
+		CoinInputs:            []CoinInput{{}},
+		CoinOutputs:           []CoinOutput{{}},
+		BlockStakeInputs:      []BlockStakeInput{{}},
+		BlockStakeOutputs:     []BlockStakeOutput{{}},
+		MinerFees:             []Currency{{}},
+		ArbitraryData:         []byte{'o', 't'},
+		TransactionSignatures: []TransactionSignature{{}},
 	}
 
 	_ = txn.SigHash(0)
-	_ = txn.SigHash(1)
-
 }
 
 // TestSortedUnique probes the sortedUnique function.
@@ -96,75 +77,6 @@ func TestSortedUnique(t *testing.T) {
 	bothFlaws := []uint64{2, 3, 4, 5, 6, 6, 4}
 	if sortedUnique(bothFlaws, 7) {
 		t.Error("Sorted unique accetped array with multiple flaws")
-	}
-}
-
-// TestTransactionValidCoveredFields probes the validCoveredFields menthod of
-// the transaction type.
-func TestTransactionValidCoveredFields(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-
-	// Create a transaction with all fields filled in minimally. The first
-	// check has a legal CoveredFields object with 'WholeTransaction' set.
-	txn := Transaction{
-		CoinInputs:        []CoinInput{{}},
-		CoinOutputs:       []CoinOutput{{}},
-		BlockStakeInputs:  []BlockStakeInput{{}},
-		BlockStakeOutputs: []BlockStakeOutput{{}},
-		MinerFees:         []Currency{{}},
-		ArbitraryData:     []byte{'o', 't'},
-		TransactionSignatures: []TransactionSignature{
-			{
-				CoveredFields: CoveredFields{
-					WholeTransaction: true,
-				},
-			},
-		},
-	}
-	err := txn.validCoveredFields()
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Second check has CoveredFields object where 'WholeTransaction' is not
-	// set.
-	txn.TransactionSignatures = append(txn.TransactionSignatures, TransactionSignature{
-		CoveredFields: CoveredFields{
-			CoinOutputs:   []uint64{0},
-			MinerFees:     []uint64{0},
-			ArbitraryData: true,
-		},
-	})
-	err = txn.validCoveredFields()
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Add signature coverage to the first signature. This should not violate
-	// any rules.
-	txn.TransactionSignatures[0].CoveredFields.TransactionSignatures = []uint64{1}
-	err = txn.validCoveredFields()
-	if err != nil {
-		t.Error(err)
-	}
-
-	// Add siacoin output coverage to the first signature. This should violate
-	// rules, as the fields are not allowed to be set when 'WholeTransaction'
-	// is set.
-	txn.TransactionSignatures[0].CoveredFields.CoinOutputs = []uint64{0}
-	err = txn.validCoveredFields()
-	if err != ErrWholeTransactionViolation {
-		t.Error("Expecting ErrWholeTransactionViolation, got", err)
-	}
-
-	// Create a SortedUnique violation instead of a WholeTransactionViolation.
-	txn.TransactionSignatures[0].CoveredFields.CoinOutputs = nil
-	txn.TransactionSignatures[0].CoveredFields.TransactionSignatures = []uint64{1, 2}
-	err = txn.validCoveredFields()
-	if err != ErrSortedUniqueViolation {
-		t.Error("Expecting ErrSortedUniqueViolation, got", err)
 	}
 }
 
@@ -202,12 +114,9 @@ func TestTransactionValidSignatures(t *testing.T) {
 	txn.TransactionSignatures = []TransactionSignature{
 		// First signatures use cryptography.
 		{
-			Timelock:      5,
-			CoveredFields: CoveredFields{WholeTransaction: true},
+			Timelock: 5,
 		},
-		{
-			CoveredFields: CoveredFields{WholeTransaction: true},
-		},
+		{},
 
 		// The second signatures should always work for being unrecognized
 		// types.
@@ -238,14 +147,6 @@ func TestTransactionValidSignatures(t *testing.T) {
 	}
 	sig0[0]--
 	txn.TransactionSignatures[0].Signature = sig0[:]
-
-	// Fail the validCoveredFields check.
-	txn.TransactionSignatures[0].CoveredFields.CoinInputs = []uint64{33}
-	err = txn.validSignatures(10)
-	if err == nil {
-		t.Error("failed to flunk the validCoveredFields check")
-	}
-	txn.TransactionSignatures[0].CoveredFields.CoinInputs = nil
 
 	// Double spend a CoinInput, and BlockStakeInput.
 	txn.CoinInputs = append(txn.CoinInputs, CoinInput{UnlockConditions: UnlockConditions{}})

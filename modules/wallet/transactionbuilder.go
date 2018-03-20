@@ -38,7 +38,7 @@ type transactionBuilder struct {
 // addSignatures will sign a transaction using a spendable key, with support
 // for multisig spendable keys. Because of the restricted input, the function
 // is compatible with both coin inputs and blockstake inputs.
-func addSignatures(txn *types.Transaction, cf types.CoveredFields, uc types.UnlockConditions, parentID crypto.Hash, spendKey spendableKey) (newSigIndices []int, err error) {
+func addSignatures(txn *types.Transaction, uc types.UnlockConditions, parentID crypto.Hash, spendKey spendableKey) (newSigIndices []int, err error) {
 	// Try to find the matching secret key for each public key - some public
 	// keys may not have a match. Some secret keys may be used multiple times,
 	// which is why public keys are used as the outer loop.
@@ -54,7 +54,6 @@ func addSignatures(txn *types.Transaction, cf types.CoveredFields, uc types.Unlo
 			// Found the right secret key, add a signature.
 			sig := types.TransactionSignature{
 				ParentID:       parentID,
-				CoveredFields:  cf,
 				PublicKeyIndex: uint64(i),
 			}
 			newSigIndices = append(newSigIndices, len(txn.TransactionSignatures))
@@ -363,37 +362,9 @@ func (tb *transactionBuilder) Drop() {
 //
 // Sign should not be called more than once. If, for some reason, there is an
 // error while calling Sign, the builder should be dropped.
-func (tb *transactionBuilder) Sign(wholeTransaction bool) ([]types.Transaction, error) {
+func (tb *transactionBuilder) Sign() ([]types.Transaction, error) {
 	if tb.signed {
 		return nil, errBuilderAlreadySigned
-	}
-
-	// Create the coveredfields struct.
-	var coveredFields types.CoveredFields
-	if wholeTransaction {
-		coveredFields = types.CoveredFields{WholeTransaction: true}
-	} else {
-		for i := range tb.transaction.MinerFees {
-			coveredFields.MinerFees = append(coveredFields.MinerFees, uint64(i))
-		}
-		for i := range tb.transaction.CoinInputs {
-			coveredFields.CoinInputs = append(coveredFields.CoinInputs, uint64(i))
-		}
-		for i := range tb.transaction.CoinOutputs {
-			coveredFields.CoinOutputs = append(coveredFields.CoinOutputs, uint64(i))
-		}
-		for i := range tb.transaction.BlockStakeInputs {
-			coveredFields.BlockStakeInputs = append(coveredFields.BlockStakeInputs, uint64(i))
-		}
-		for i := range tb.transaction.BlockStakeOutputs {
-			coveredFields.BlockStakeOutputs = append(coveredFields.BlockStakeOutputs, uint64(i))
-		}
-		coveredFields.ArbitraryData = (len(tb.transaction.ArbitraryData) > 0)
-	}
-	// TransactionSignatures don't get covered by the 'WholeTransaction' flag,
-	// and must be covered manually.
-	for i := range tb.transaction.TransactionSignatures {
-		coveredFields.TransactionSignatures = append(coveredFields.TransactionSignatures, uint64(i))
 	}
 
 	// For each siacoin input in the transaction that we added, provide a
@@ -403,7 +374,7 @@ func (tb *transactionBuilder) Sign(wholeTransaction bool) ([]types.Transaction, 
 	for _, inputIndex := range tb.coinInputs {
 		input := tb.transaction.CoinInputs[inputIndex]
 		key := tb.wallet.keys[input.UnlockConditions.UnlockHash()]
-		newSigIndices, err := addSignatures(&tb.transaction, coveredFields, input.UnlockConditions, crypto.Hash(input.ParentID), key)
+		newSigIndices, err := addSignatures(&tb.transaction, input.UnlockConditions, crypto.Hash(input.ParentID), key)
 		if err != nil {
 			return nil, err
 		}
@@ -413,7 +384,7 @@ func (tb *transactionBuilder) Sign(wholeTransaction bool) ([]types.Transaction, 
 	for _, inputIndex := range tb.blockstakeInputs {
 		input := tb.transaction.BlockStakeInputs[inputIndex]
 		key := tb.wallet.keys[input.UnlockConditions.UnlockHash()]
-		newSigIndices, err := addSignatures(&tb.transaction, coveredFields, input.UnlockConditions, crypto.Hash(input.ParentID), key)
+		newSigIndices, err := addSignatures(&tb.transaction, input.UnlockConditions, crypto.Hash(input.ParentID), key)
 		if err != nil {
 			return nil, err
 		}

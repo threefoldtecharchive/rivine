@@ -176,17 +176,11 @@ type (
 		// the transaction. If more fields need to be added, a new transaction
 		// builder will need to be created.
 		//
-		// If the whole transaction flag is set to true, then the whole
-		// transaction flag will be set in the covered fields object. If the
-		// whole transaction flag is set to false, then the covered fields
-		// object will cover all fields that have already been added to the
-		// transaction, but will also leave room for more fields to be added.
-		//
 		// An error will be returned if there are multiple calls to 'Sign',
 		// sometimes even if the first call to Sign has failed. Sign should
 		// only ever be called once, and if the first signing fails, the
 		// transaction should be dropped.
-		Sign(wholeTransaction bool) ([]types.Transaction, error)
+		Sign() ([]types.Transaction, error)
 
 		// View returns the incomplete transaction along with all of its
 		// parents.
