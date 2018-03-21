@@ -114,6 +114,25 @@ const (
 	MaxStandardInputLockType = InputLockTypeSingleSignature
 )
 
+// MarshalSia implements SiaMarshaler.MarshalSia
+func (t InputLockType) MarshalSia(w io.Writer) error {
+	_, err := w.Write([]byte{byte(t)})
+	return err
+}
+
+// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
+func (t *InputLockType) UnmarshalSia(r io.Reader) error {
+	var bt [1]byte
+	_, err := io.ReadFull(r, bt[:])
+	*t = InputLockType(bt[0])
+	return err
+}
+
+var (
+	_ encoding.SiaMarshaler   = InputLockType(0)
+	_ encoding.SiaUnmarshaler = (*InputLockType)(nil)
+)
+
 // NewInputLockProxy creates a new input lock proxy,
 // from a type and (existing) input lock.
 func NewInputLockProxy(t InputLockType, il InputLock) InputLockProxy {
@@ -128,16 +147,18 @@ func NewInputLockProxy(t InputLockType, il InputLock) InputLockProxy {
 
 // MarshalSia implements SiaMarshaler.MarshalSia
 func (p InputLockProxy) MarshalSia(w io.Writer) error {
-	err := encoding.NewEncoder(w).Encode(p.t)
+	encoder := encoding.NewEncoder(w)
+	err := encoder.Encode(p.t)
 	if err != nil || p.t == InputLockTypeNil {
 		return err
 	}
-	return encoding.NewEncoder(w).Encode(p.il)
+	return encoder.Encode(p.il)
 }
 
 // UnmarshalSia implements SiaMarshaler.UnmarshalSia
-func (p InputLockProxy) UnmarshalSia(r io.Reader) error {
-	err := encoding.NewDecoder(r).Decode(&p.t)
+func (p *InputLockProxy) UnmarshalSia(r io.Reader) error {
+	decoder := encoding.NewDecoder(r)
+	err := decoder.Decode(&p.t)
 	if err != nil || p.t == InputLockTypeNil {
 		return err
 	}
@@ -147,8 +168,13 @@ func (p InputLockProxy) UnmarshalSia(r io.Reader) error {
 		return ErrInvalidInputLockType
 	}
 	p.il = c()
-	return encoding.NewDecoder(r).Decode(p.il)
+	return decoder.Decode(p.il)
 }
+
+var (
+	_ encoding.SiaMarshaler   = InputLockProxy{}
+	_ encoding.SiaUnmarshaler = (*InputLockProxy)(nil)
+)
 
 // UnlockHash implements InputLock.UnlockHash
 func (p InputLockProxy) UnlockHash() UnlockHash {
@@ -193,6 +219,21 @@ func NewSingleSignatureInputLock(pk SiaPublicKey) InputLockProxy {
 	return NewInputLockProxy(InputLockTypeSingleSignature,
 		&SingleSignatureInputLock{PublicKey: pk})
 }
+
+// MarshalSia implements SiaMarshaler.MarshalSia
+func (ss *SingleSignatureInputLock) MarshalSia(w io.Writer) error {
+	return encoding.NewEncoder(w).EncodeAll(ss.PublicKey, ss.Signature)
+}
+
+// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
+func (ss *SingleSignatureInputLock) UnmarshalSia(r io.Reader) error {
+	return encoding.NewDecoder(r).DecodeAll(&ss.PublicKey, &ss.Signature)
+}
+
+var (
+	_ encoding.SiaMarshaler   = (*SingleSignatureInputLock)(nil)
+	_ encoding.SiaUnmarshaler = (*SingleSignatureInputLock)(nil)
+)
 
 // UnlockHash implements InputLock.UnlockHash
 func (ss *SingleSignatureInputLock) UnlockHash() UnlockHash {
@@ -304,6 +345,27 @@ func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 	// TODO: integrate secret in sigHash
 	return verifyHashUsingSiaPublicKey(as.PublicKeySender, inputIndex, tx, as.Signature)
 }
+
+// MarshalSia implements SiaMarshaler.MarshalSia
+func (as *AtomicSwapInputLock) MarshalSia(w io.Writer) error {
+	return encoding.NewEncoder(w).EncodeAll(
+		as.PublicKeySender, as.PublicKeyReceiver,
+		as.HashedSecret, as.Timelock,
+		as.Secret, as.Signature)
+}
+
+// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
+func (as *AtomicSwapInputLock) UnmarshalSia(r io.Reader) error {
+	return encoding.NewDecoder(r).DecodeAll(
+		&as.PublicKeySender, &as.PublicKeyReceiver,
+		&as.HashedSecret, &as.Timelock,
+		&as.Secret, &as.Signature)
+}
+
+var (
+	_ encoding.SiaMarshaler   = (*AtomicSwapInputLock)(nil)
+	_ encoding.SiaUnmarshaler = (*AtomicSwapInputLock)(nil)
+)
 
 // StrictCheck implements InputLock.StrictCheck
 func (as *AtomicSwapInputLock) StrictCheck() error {
