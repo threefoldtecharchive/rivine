@@ -212,6 +212,191 @@ func TestInputLockTypeMarshaling(t *testing.T) {
 	}
 }
 
+func TestSingleSignatureInputLockEncodeDecode(t *testing.T) {
+	sk, pk := crypto.GenerateKeyPair()
+	ul := NewSingleSignatureInputLock(Ed25519PublicKey(pk))
+	err := ul.Lock(0, Transaction{}, sk)
+	if err != nil {
+		t.Errorf("couldn't lock sslock: %v", err)
+	}
+	testInputLockEncodeDecode(t, ul.il)
+}
+
+func TestAtomicSwapInputLockEncodeDecode(t *testing.T) {
+	_, pk := crypto.GenerateKeyPair()
+	sk2, pk2 := crypto.GenerateKeyPair()
+
+	var secret, hashedSecret [sha256.Size]byte
+	hashedSecret = sha256.Sum256(secret[:])
+
+	ul := NewAtomicSwapInputLock(
+		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+500000)
+	err := ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		Secret:    secret,
+		SecretKey: sk2,
+	})
+	if err != nil {
+		t.Errorf("error while locking InputLock: %v", err)
+	}
+	testInputLockEncodeDecode(t, ul.il)
+}
+
+func testInputLockEncodeDecode(t *testing.T, il InputLock) {
+	cond := il.EncodeCondition()
+	err := il.Decode(RawInputLockFormat{
+		Condition:   cond,
+		Fulfillment: il.EncodeFulfillment(),
+	})
+	if err != nil {
+		t.Errorf("couldn't encode->decode: %v", err)
+	}
+	cond2 := il.EncodeCondition()
+	if bytes.Compare(cond, cond2) != 0 {
+		t.Errorf("pre-cond (%v) != (%v) post-cond", cond, cond2)
+	}
+}
+
+func TestSingleSignatureUnknownEncoding(t *testing.T) {
+	sk, pk := crypto.GenerateKeyPair()
+	ul := NewSingleSignatureInputLock(Ed25519PublicKey(pk))
+	err := ul.Lock(0, Transaction{}, sk)
+	if err != nil {
+		t.Errorf("couldn't lock sslock: %v", err)
+	}
+
+	// serialize using specific struct made for it
+	buf := bytes.NewBuffer(nil)
+	err = ul.MarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't marshal sslock: %v", err)
+	}
+	var ul2 InputLockProxy
+	err = ul2.UnmarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't unmarshal sslock: %v", err)
+	}
+	if !reflect.DeepEqual(ul, ul2) {
+		t.Errorf("%v != %v", ul, ul2)
+	}
+	if !reflect.DeepEqual(ul.UnlockHash(), ul2.UnlockHash()) {
+		t.Errorf("UH(%v) != UH(%v)", ul, ul2)
+	}
+
+	ul2.t = 42
+	err = ul.MarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't marshal ?lock: %v", err)
+	}
+
+	var ul3 InputLockProxy
+	err = ul3.UnmarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't unmarshal sslock: %v", err)
+	}
+	if !reflect.DeepEqual(ul, ul3) {
+		t.Errorf("%v != %v", ul, ul3)
+	}
+	if !reflect.DeepEqual(ul.UnlockHash(), ul3.UnlockHash()) {
+		t.Errorf("UH(%v) != UH(%v)", ul, ul3)
+	}
+	ul3.t = InputLockTypeSingleSignature
+	err = ul3.MarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't marshal ?lock: %v", err)
+	}
+
+	var ul4 InputLockProxy
+	err = ul4.UnmarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't unmarshal sslock: %v", err)
+	}
+	if ul4.t != InputLockTypeSingleSignature {
+		t.Errorf("wrong input lock type: %v", ul4.t)
+	}
+	if !reflect.DeepEqual(ul, ul4) {
+		t.Errorf("%v != %v", ul, ul4)
+	}
+	if !reflect.DeepEqual(ul.UnlockHash(), ul4.UnlockHash()) {
+		t.Errorf("UH(%v) != UH(%v)", ul, ul4)
+	}
+}
+
+func TestAtomicSwapUnknownEncoding(t *testing.T) {
+	_, pk := crypto.GenerateKeyPair()
+	sk2, pk2 := crypto.GenerateKeyPair()
+
+	var secret, hashedSecret [sha256.Size]byte
+	hashedSecret = sha256.Sum256(secret[:])
+
+	ul := NewAtomicSwapInputLock(
+		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+500000)
+	err := ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		Secret:    secret,
+		SecretKey: sk2,
+	})
+	if err != nil {
+		t.Errorf("error while locking InputLock: %v", err)
+	}
+
+	// serialize using specific struct made for it
+	buf := bytes.NewBuffer(nil)
+	err = ul.MarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't marshal sslock: %v", err)
+	}
+	var ul2 InputLockProxy
+	err = ul2.UnmarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't unmarshal sslock: %v", err)
+	}
+	if !reflect.DeepEqual(ul, ul2) {
+		t.Errorf("%v != %v", ul, ul2)
+	}
+	if !reflect.DeepEqual(ul.UnlockHash(), ul2.UnlockHash()) {
+		t.Errorf("UH(%v) != UH(%v)", ul, ul2)
+	}
+
+	ul2.t = 42
+	err = ul.MarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't marshal ?lock: %v", err)
+	}
+
+	var ul3 InputLockProxy
+	err = ul3.UnmarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't unmarshal sslock: %v", err)
+	}
+	if !reflect.DeepEqual(ul, ul3) {
+		t.Errorf("%v != %v", ul, ul3)
+	}
+	if !reflect.DeepEqual(ul.UnlockHash(), ul3.UnlockHash()) {
+		t.Errorf("UH(%v) != UH(%v)", ul, ul3)
+	}
+	ul3.t = InputLockTypeAtomicSwap
+	err = ul3.MarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't marshal ?lock: %v", err)
+	}
+
+	var ul4 InputLockProxy
+	err = ul4.UnmarshalSia(buf)
+	if err != nil {
+		t.Errorf("couldn't unmarshal sslock: %v", err)
+	}
+	if ul4.t != InputLockTypeAtomicSwap {
+		t.Errorf("wrong input lock type: %v", ul4.t)
+	}
+	if !reflect.DeepEqual(ul, ul4) {
+		t.Errorf("%v != %v", ul, ul4)
+	}
+	if !reflect.DeepEqual(ul.UnlockHash(), ul4.UnlockHash()) {
+		t.Errorf("UH(%v) != UH(%v)", ul, ul4)
+	}
+}
+
 func TestInputLockProxyEncoding(t *testing.T) {
 	var ul InputLockProxy
 	err := encoding.NewDecoder(bytes.NewReader([]byte{0})).Decode(&ul)
@@ -236,7 +421,7 @@ func TestInputLockProxyEncoding(t *testing.T) {
 		t.Errorf("error while marshaling InputLock: %v", err)
 	}
 
-	expectedBytes := []byte{1, 101, 100, 50, 53, 53, 49, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 64, 0, 0, 0, 0, 0, 0, 0, 66, 25, 213, 18, 135, 159, 37, 24, 230, 55, 197, 175, 69, 230, 179, 61, 126, 220, 255, 213, 2, 30, 181, 202, 91, 195, 38, 154, 136, 120, 151, 38, 228, 28, 153, 72, 152, 85, 249, 167, 220, 161, 15, 61, 4, 55, 21, 134, 208, 142, 59, 180, 111, 50, 50, 126, 97, 12, 116, 246, 162, 235, 93, 9}
+	expectedBytes := []byte{1, 56, 0, 0, 0, 0, 0, 0, 0, 101, 100, 50, 53, 53, 49, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 59, 106, 39, 188, 206, 182, 164, 45, 98, 163, 168, 208, 42, 111, 13, 115, 101, 50, 21, 119, 29, 226, 67, 166, 58, 192, 72, 161, 139, 89, 218, 41, 64, 0, 0, 0, 0, 0, 0, 0, 66, 25, 213, 18, 135, 159, 37, 24, 230, 55, 197, 175, 69, 230, 179, 61, 126, 220, 255, 213, 2, 30, 181, 202, 91, 195, 38, 154, 136, 120, 151, 38, 228, 28, 153, 72, 152, 85, 249, 167, 220, 161, 15, 61, 4, 55, 21, 134, 208, 142, 59, 180, 111, 50, 50, 126, 97, 12, 116, 246, 162, 235, 93, 9}
 	if bytes.Compare(expectedBytes, buf.Bytes()) != 0 {
 		t.Errorf("wrong marshaling: %v", buf.Bytes())
 	}
