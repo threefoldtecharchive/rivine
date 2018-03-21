@@ -23,9 +23,6 @@ var (
 )
 
 type (
-	// InputLockType defines the type of an unlock condition-fulfillment pair.
-	InputLockType byte
-
 	// RawInputLockFormat defines the binary format of a condition-fullfilment pair,
 	// used internally of an input lock.
 	RawInputLockFormat struct {
@@ -80,7 +77,7 @@ type (
 	// as it is the one requirement that allows soft-forks to safely add new input locks,
 	// without having to be afraid that their transactions will screw up older/non-forked nodes.
 	InputLockProxy struct {
-		t  InputLockType
+		t  UnlockType
 		il InputLock
 	}
 
@@ -146,43 +143,6 @@ type (
 	}
 )
 
-const (
-	// InputLockTypeNil defines a nil (empty) Input Lock and is the default.
-	InputLockTypeNil InputLockType = iota
-
-	// InputLockTypeSingleSignature provides the standard and most simple unlock type.
-	// In it the sender gives the public key of the intendend receiver.
-	// The receiver can redeem the relevant locked input by providing a signature
-	// which proofs the ownership of the private key linked to the known public key.
-	InputLockTypeSingleSignature
-
-	// InputLockTypeAtomicSwap provides a more advanced unlocker,
-	// which allows for a more advanced InputLock,
-	// where before the TimeLock expired, the output can only go to the receiver,
-	// who has to give the secret in order to do so. After the InputLock,
-	// the output can only be claimed by the sender, with no deadline in this phas
-	InputLockTypeAtomicSwap
-
-	// MaxStandardInputLockType can be used to define your own
-	// InputLockType without having to hardcode the final standard
-	// unlock type, while still preventing any possible type overwrite.
-	MaxStandardInputLockType = InputLockTypeSingleSignature
-)
-
-// MarshalSia implements SiaMarshaler.MarshalSia
-func (t InputLockType) MarshalSia(w io.Writer) error {
-	_, err := w.Write([]byte{byte(t)})
-	return err
-}
-
-// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
-func (t *InputLockType) UnmarshalSia(r io.Reader) error {
-	var bt [1]byte
-	_, err := io.ReadFull(r, bt[:])
-	*t = InputLockType(bt[0])
-	return err
-}
-
 // MarshalSia implements SiaMarshaler.MarshalSia
 func (rf RawInputLockFormat) MarshalSia(w io.Writer) error {
 	return encoding.NewEncoder(w).EncodeAll(rf.Condition, rf.Fulfillment)
@@ -194,16 +154,14 @@ func (rf *RawInputLockFormat) UnmarshalSia(r io.Reader) error {
 }
 
 var (
-	_ encoding.SiaMarshaler   = InputLockType(0)
 	_ encoding.SiaMarshaler   = RawInputLockFormat{}
-	_ encoding.SiaUnmarshaler = (*InputLockType)(nil)
 	_ encoding.SiaUnmarshaler = (*RawInputLockFormat)(nil)
 )
 
 // NewInputLockProxy creates a new input lock proxy,
 // from a type and (existing) input lock.
-func NewInputLockProxy(t InputLockType, il InputLock) InputLockProxy {
-	if t != InputLockTypeNil && il == nil {
+func NewInputLockProxy(t UnlockType, il InputLock) InputLockProxy {
+	if t != UnlockTypeNil && il == nil {
 		panic("unexpected nil input lock")
 	}
 	return InputLockProxy{
@@ -216,7 +174,7 @@ func NewInputLockProxy(t InputLockType, il InputLock) InputLockProxy {
 func (p InputLockProxy) MarshalSia(w io.Writer) error {
 	encoder := encoding.NewEncoder(w)
 	err := encoder.Encode(p.t)
-	if err != nil || p.t == InputLockTypeNil {
+	if err != nil || p.t == UnlockTypeNil {
 		return err
 	}
 	return encoder.Encode(RawInputLockFormat{
@@ -229,7 +187,7 @@ func (p InputLockProxy) MarshalSia(w io.Writer) error {
 func (p *InputLockProxy) UnmarshalSia(r io.Reader) error {
 	decoder := encoding.NewDecoder(r)
 	err := decoder.Decode(&p.t)
-	if err != nil || p.t == InputLockTypeNil {
+	if err != nil || p.t == UnlockTypeNil {
 		return err
 	}
 	var rf RawInputLockFormat
@@ -237,7 +195,7 @@ func (p *InputLockProxy) UnmarshalSia(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	if c, found := _RegisteredInputLocks[p.t]; found {
+	if c, found := _RegisteredUnlockTypes[p.t]; found {
 		p.il = c()
 	} else {
 		p.il = new(UnknownInputLock)
@@ -252,15 +210,15 @@ var (
 
 // UnlockHash implements InputLock.UnlockHash
 func (p InputLockProxy) UnlockHash() UnlockHash {
-	if p.t == InputLockTypeNil {
+	if p.t == UnlockTypeNil {
 		return UnlockHash{}
 	}
-	return UnlockHash(crypto.HashObject(p.il.EncodeCondition()))
+	return NewUnlockHash(p.t, crypto.HashObject(p.il.EncodeCondition()))
 }
 
 // Lock implements InputLock.Lock
 func (p InputLockProxy) Lock(inputIndex uint64, tx Transaction, key interface{}) error {
-	if p.t == InputLockTypeNil {
+	if p.t == UnlockTypeNil {
 		return errors.New("nil input lock cannot be locked")
 	}
 	err := p.il.Lock(inputIndex, tx, key)
@@ -273,7 +231,7 @@ func (p InputLockProxy) Lock(inputIndex uint64, tx Transaction, key interface{})
 
 // Unlock implements InputLock.Unlock
 func (p InputLockProxy) Unlock(inputIndex uint64, tx Transaction) error {
-	if p.t == InputLockTypeNil {
+	if p.t == UnlockTypeNil {
 		return errors.New("nil input lock cannot be unlocked")
 	}
 	return p.il.Unlock(inputIndex, tx)
@@ -281,7 +239,7 @@ func (p InputLockProxy) Unlock(inputIndex uint64, tx Transaction) error {
 
 // StrictCheck implements InputLock.StrictCheck
 func (p InputLockProxy) StrictCheck() error {
-	if p.t == InputLockTypeNil {
+	if p.t == UnlockTypeNil {
 		return errors.New("nil input lock")
 	}
 	return p.il.StrictCheck()
@@ -325,7 +283,7 @@ var (
 // NewSingleSignatureInputLock creates a new input lock,
 // using the given public key and signature.
 func NewSingleSignatureInputLock(pk SiaPublicKey) InputLockProxy {
-	return NewInputLockProxy(InputLockTypeSingleSignature,
+	return NewInputLockProxy(UnlockTypeSingleSignature,
 		&SingleSignatureInputLock{PublicKey: pk})
 }
 
@@ -386,7 +344,7 @@ func (ss *SingleSignatureInputLock) StrictCheck() error {
 // Prior to the timestamp only the receiver can claim, using the required secret,
 // after te deadline only the sender can claim a fund.
 func NewAtomicSwapInputLock(s, r SiaPublicKey, hs AtomicSwapHashedSecret, tl Timestamp) InputLockProxy {
-	return NewInputLockProxy(InputLockTypeAtomicSwap,
+	return NewInputLockProxy(UnlockTypeAtomicSwap,
 		&AtomicSwapInputLock{
 			Timelock:          tl,
 			PublicKeySender:   s,
@@ -611,29 +569,29 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 }
 
 // _RegisteredInputLocks contains all known/registered unlockers constructors.
-var _RegisteredInputLocks = map[InputLockType]InputLockConstructor{}
+var _RegisteredUnlockTypes = map[UnlockType]InputLockConstructor{}
 
-// RegisterInputLockType registers the given non-nil locker constructor,
-// for the given InputLockType, essentially linking the given locker constructor to the given type.
-func RegisterInputLockType(t InputLockType, ilc InputLockConstructor) {
+// RegisterUnlockType registers the given non-nil locker constructor,
+// for the given UnlockType, essentially linking the given locker constructor to the given type.
+func RegisterUnlockType(t UnlockType, ilc InputLockConstructor) {
 	if ilc == nil {
 		panic("cannot register nil input locker")
 	}
-	_RegisteredInputLocks[t] = ilc
+	_RegisteredUnlockTypes[t] = ilc
 }
 
-// UnregisterInputLockType unregisters the given InputLockType,
-// meaning the given InputLockType will no longer have a matching unlocker constructor.
-func UnregisterInputLockType(t InputLockType) {
-	delete(_RegisteredInputLocks, t)
+// UnregisterUnlockType unregisters the given UnlockType,
+// meaning the given UnlockType will no longer have a matching unlocker constructor.
+func UnregisterUnlockType(t UnlockType) {
+	delete(_RegisteredUnlockTypes, t)
 }
 
 func init() {
 	// standard non-nil input locks
-	RegisterInputLockType(InputLockTypeSingleSignature, func() InputLock {
+	RegisterUnlockType(UnlockTypeSingleSignature, func() InputLock {
 		return new(SingleSignatureInputLock)
 	})
-	RegisterInputLockType(InputLockTypeAtomicSwap, func() InputLock {
+	RegisterUnlockType(UnlockTypeAtomicSwap, func() InputLock {
 		return new(AtomicSwapInputLock)
 	})
 }

@@ -258,16 +258,25 @@ func TestAllAddresses(t *testing.T) {
 	}
 	defer wt.closeWt()
 
-	wt.wallet.keys[types.UnlockHash{1}] = spendableKey{}
-	wt.wallet.keys[types.UnlockHash{5}] = spendableKey{}
-	wt.wallet.keys[types.UnlockHash{0}] = spendableKey{}
-	wt.wallet.keys[types.UnlockHash{2}] = spendableKey{}
-	wt.wallet.keys[types.UnlockHash{4}] = spendableKey{}
-	wt.wallet.keys[types.UnlockHash{3}] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{0})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(0, crypto.Hash{1})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{5})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(0, crypto.Hash{5})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(0, crypto.Hash{0})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{1})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{2})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(0, crypto.Hash{3})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(0, crypto.Hash{2})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(0, crypto.Hash{4})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{3})] = spendableKey{}
+	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{4})] = spendableKey{}
 	addrs := wt.wallet.AllAddresses()
-	for i := range addrs {
-		if addrs[i][0] != byte(i) {
-			t.Error("address sorting failed:", i, addrs[i][0])
+	for i := range addrs[:5] {
+		if addrs[i].Hash[0] != byte(i) {
+			t.Error("address sorting failed:", i, addrs[i].Hash[0])
+		}
+		if addrs[i+6].Hash[0] != byte(i) {
+			t.Error("address sorting failed:", i+6, addrs[i+6].Hash[0])
 		}
 	}
 }

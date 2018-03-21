@@ -1,7 +1,9 @@
 package types
 
 import (
+	"bytes"
 	"encoding/json"
+	"reflect"
 	"sort"
 	"testing"
 
@@ -110,16 +112,69 @@ func TestUnlockHashSliceSorting(t *testing.T) {
 	// To test that byte-order is done correctly, a semi-random second byte is
 	// used that is equal to the first byte * 23 % 7
 	uhs := UnlockHashSlice{
-		UnlockHash{4, 1},
-		UnlockHash{0, 0},
-		UnlockHash{2, 4},
-		UnlockHash{3, 6},
-		UnlockHash{1, 2},
+		UnlockHash{0, crypto.Hash{4, 1}},
+		UnlockHash{0, crypto.Hash{0, 0}},
+		UnlockHash{1, crypto.Hash{1, 2}},
+		UnlockHash{0, crypto.Hash{2, 4}},
+		UnlockHash{0, crypto.Hash{3, 6}},
+		UnlockHash{1, crypto.Hash{0, 0}},
+		UnlockHash{0, crypto.Hash{1, 2}},
+		UnlockHash{1, crypto.Hash{2, 4}},
+		UnlockHash{1, crypto.Hash{4, 1}},
+		UnlockHash{1, crypto.Hash{3, 6}},
 	}
 	sort.Sort(uhs)
 	for i := byte(0); i < 5; i++ {
-		if uhs[i] != (UnlockHash{i, (i * 23) % 7}) {
+		if uhs[i] != (UnlockHash{0, crypto.Hash{i, (i * 23) % 7}}) {
 			t.Error("sorting failed on index", i, uhs[i])
+		}
+		if uhs[i+5] != (UnlockHash{1, crypto.Hash{i, (i * 23) % 7}}) {
+			t.Error("sorting failed on index", i+5, uhs[i+5])
+		}
+	}
+}
+
+func TestUnlockHashSiaMarshalling(t *testing.T) {
+	testCases := []struct {
+		UnlockHash UnlockHash
+		Expected   []byte
+	}{
+		{
+			UnlockHash{0, crypto.Hash{}},
+			[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			UnlockHash{4, crypto.Hash{2}},
+			[]byte{4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			UnlockHash{1, crypto.Hash{4, 2}},
+			[]byte{1, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			UnlockHash{1, crypto.Hash{2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3}},
+			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3},
+		},
+	}
+	for idx, testCase := range testCases {
+		buf := bytes.NewBuffer(nil)
+		err := testCase.UnlockHash.MarshalSia(buf)
+		if err != nil {
+			t.Errorf("error sia-marshalling #%d: %v", idx, err)
+		}
+		if bytes.Compare(testCase.Expected, buf.Bytes()) != 0 {
+			t.Errorf("unexpected marshalled form of the unlock hash: (%v) != (%v)",
+				testCase.Expected, buf.Bytes())
+		}
+		var uh UnlockHash
+		err = uh.UnmarshalSia(buf)
+		if err != nil {
+			t.Errorf("error sia-unmarshalling #%d: %v", idx, err)
+		}
+		if !reflect.DeepEqual(testCase.UnlockHash, uh) {
+			t.Errorf("unexpected unmarshalled form of the unlock hash: (%v) != (%v)",
+				testCase.UnlockHash, uh)
+
 		}
 	}
 }

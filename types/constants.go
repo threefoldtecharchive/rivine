@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/crypto"
 )
 
 var (
@@ -89,10 +90,10 @@ func init() {
 		}
 
 		// Seed for this address:
-		// small rural airport hurdle host leader favorite viable total hold park cable blade wet other cat galaxy giggle bread knife silly tent electric leisure
-		bso.UnlockHash.LoadString("3ff473dab93608bfbbb6fffcc58f791711816bdbf514af1d37bffc41bcfc6567e5528cc17dc4")
+		// carbon boss inject cover mountain fetch fiber fit tornado cloth wing dinosaur proof joy intact fabric thumb rebel borrow poet chair network expire else
+		bso.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e679158b5b6a40c197f")
 		GenesisBlockStakeAllocation = append(GenesisBlockStakeAllocation, bso)
-		co.UnlockHash.LoadString("3ff473dab93608bfbbb6fffcc58f791711816bdbf514af1d37bffc41bcfc6567e5528cc17dc4")
+		co.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e679158b5b6a40c197f")
 		GenesisCoinDistribution = append(GenesisCoinDistribution, co)
 
 	} else if build.Release == "testing" {
@@ -120,12 +121,16 @@ func init() {
 
 		GenesisBlockStakeAllocation = []BlockStakeOutput{
 			{
-				Value:      NewCurrency64(2000),
-				UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
+				Value: NewCurrency64(2000),
+				UnlockHash: NewUnlockHash(
+					UnlockTypeSingleSignature,
+					crypto.Hash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223}),
 			},
 			{
-				Value:      NewCurrency64(7000),
-				UnlockHash: UnlockHash{209, 246, 228, 60, 248, 78, 242, 110, 9, 8, 227, 248, 225, 216, 163, 52, 142, 93, 47, 176, 103, 41, 137, 80, 212, 8, 132, 58, 241, 189, 2, 17},
+				Value: NewCurrency64(7000),
+				UnlockHash: NewUnlockHash(
+					UnlockTypeSingleSignature,
+					crypto.Hash{209, 246, 228, 60, 248, 78, 242, 110, 9, 8, 227, 248, 225, 216, 163, 52, 142, 93, 47, 176, 103, 41, 137, 80, 212, 8, 132, 58, 241, 189, 2, 17}),
 			},
 			{
 				Value:      NewCurrency64(1000),

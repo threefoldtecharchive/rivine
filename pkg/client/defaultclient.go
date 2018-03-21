@@ -91,11 +91,11 @@ func DefaultCLIClient(cfg Config) {
 		Short: fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
 		Long:  fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
 		Run:   Wrap(consensuscmd),
-		PersistentPreRun: Wrap(func() {
+		PersistentPreRun: func(*cobra.Command, []string) {
 			if host, port, _ := net.SplitHostPort(_DefaultClient.httpClient.RootURL); host == "" {
 				_DefaultClient.httpClient.RootURL = net.JoinHostPort("localhost", port)
 			}
-		}),
+		},
 	}
 
 	// create command tree

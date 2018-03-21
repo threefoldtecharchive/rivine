@@ -22,7 +22,7 @@ const (
 	generateAddressAmount = 50
 	// genesisOutputSeed is the mnemonic representation of the genesis seed
 	// We will be using this seed to generate the address(es) to transfer the funds from
-	genesisOutputSeed = "small rural airport hurdle host leader favorite viable total hold park cable blade wet other cat galaxy giggle bread knife silly tent electric leisure"
+	genesisOutputSeed = "carbon boss inject cover mountain fetch fiber fit tornado cloth wing dinosaur proof joy intact fabric thumb rebel borrow poet chair network expire else"
 	// unlockHashType is the string representation expected in the hashtype field when checking the unlock hashes in the explorer api
 	unlockHashType = "unlockhash"
 	// minerPayoutMaturityWindow is the amount of blocks that need to pass before a miner payout can be spend

@@ -179,7 +179,7 @@ func TestAtomicSwapUnlocker(t *testing.T) {
 }
 
 func TestInputLockTypeMarshaling(t *testing.T) {
-	var ut InputLockType
+	var ut UnlockType
 	buffer := bytes.NewBuffer(nil)
 	err := ut.MarshalSia(buffer)
 	if err != nil {
@@ -193,12 +193,12 @@ func TestInputLockTypeMarshaling(t *testing.T) {
 		t.Errorf("error wile unmarshalling: %v", err)
 	}
 
-	ut = InputLockTypeAtomicSwap
+	ut = UnlockTypeAtomicSwap
 	err = ut.MarshalSia(buffer)
 	if err != nil {
 		t.Errorf("error wile marshalling: %v", err)
 	}
-	if bytes.Compare([]byte{byte(InputLockTypeAtomicSwap)}, buffer.Bytes()) != 0 {
+	if bytes.Compare([]byte{byte(UnlockTypeAtomicSwap)}, buffer.Bytes()) != 0 {
 		t.Errorf("invalid buffer: %v", buffer.Bytes())
 	}
 	err = ut.UnmarshalSia(buffer)
@@ -300,7 +300,7 @@ func TestSingleSignatureUnknownEncoding(t *testing.T) {
 	if !reflect.DeepEqual(ul.UnlockHash(), ul3.UnlockHash()) {
 		t.Errorf("UH(%v) != UH(%v)", ul, ul3)
 	}
-	ul3.t = InputLockTypeSingleSignature
+	ul3.t = UnlockTypeSingleSignature
 	err = ul3.MarshalSia(buf)
 	if err != nil {
 		t.Errorf("couldn't marshal ?lock: %v", err)
@@ -311,7 +311,7 @@ func TestSingleSignatureUnknownEncoding(t *testing.T) {
 	if err != nil {
 		t.Errorf("couldn't unmarshal sslock: %v", err)
 	}
-	if ul4.t != InputLockTypeSingleSignature {
+	if ul4.t != UnlockTypeSingleSignature {
 		t.Errorf("wrong input lock type: %v", ul4.t)
 	}
 	if !reflect.DeepEqual(ul, ul4) {
@@ -375,7 +375,7 @@ func TestAtomicSwapUnknownEncoding(t *testing.T) {
 	if !reflect.DeepEqual(ul.UnlockHash(), ul3.UnlockHash()) {
 		t.Errorf("UH(%v) != UH(%v)", ul, ul3)
 	}
-	ul3.t = InputLockTypeAtomicSwap
+	ul3.t = UnlockTypeAtomicSwap
 	err = ul3.MarshalSia(buf)
 	if err != nil {
 		t.Errorf("couldn't marshal ?lock: %v", err)
@@ -386,7 +386,7 @@ func TestAtomicSwapUnknownEncoding(t *testing.T) {
 	if err != nil {
 		t.Errorf("couldn't unmarshal sslock: %v", err)
 	}
-	if ul4.t != InputLockTypeAtomicSwap {
+	if ul4.t != UnlockTypeAtomicSwap {
 		t.Errorf("wrong input lock type: %v", ul4.t)
 	}
 	if !reflect.DeepEqual(ul, ul4) {
@@ -403,7 +403,7 @@ func TestInputLockProxyEncoding(t *testing.T) {
 	if err != nil {
 		t.Errorf("error while decoding a nil-input-porxy: %v", err)
 	}
-	if ul.t != InputLockTypeNil {
+	if ul.t != UnlockTypeNil {
 		t.Errorf("wrong inputLock type: %v", ul.t)
 	}
 
