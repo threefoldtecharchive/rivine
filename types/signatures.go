@@ -57,14 +57,14 @@ func Ed25519PublicKey(pk crypto.PublicKey) SiaPublicKey {
 
 // InputSigHash returns the hash of all fields in a transaction,
 // relevant to an input sig.
-func (t Transaction) InputSigHash(inputIndex uint64) (hash crypto.Hash) {
+func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) (hash crypto.Hash) {
 	h := crypto.NewHash()
 	enc := encoding.NewEncoder(h)
 
-	// TODO:
-	// investigate how we can sign everything, not just this custom stuff
-
 	enc.Encode(inputIndex)
+	if len(extraObjects) > 0 {
+		enc.EncodeAll(extraObjects...)
+	}
 	for _, ci := range t.CoinInputs {
 		enc.EncodeAll(ci.ParentID, ci.Unlocker.UnlockHash())
 	}

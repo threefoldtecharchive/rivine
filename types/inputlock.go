@@ -213,6 +213,10 @@ func (p InputLockProxy) StrictCheck() error {
 	return p.il.StrictCheck()
 }
 
+var (
+	_ InputLock = InputLockProxy{}
+)
+
 // NewSingleSignatureInputLock creates a new input lock,
 // using the given public key and signature.
 func NewSingleSignatureInputLock(pk SiaPublicKey) InputLockProxy {
@@ -277,9 +281,12 @@ func NewAtomicSwapInputLock(s, r SiaPublicKey, hs AtomicSwapHashedSecret, tl Tim
 
 // UnlockHash implements InputLock.UnlockHash
 func (as *AtomicSwapInputLock) UnlockHash() UnlockHash {
-	return UnlockHash(crypto.HashAll(
-		as.Timelock, as.PublicKeyReceiver,
-		as.PublicKeySender, as.HashedSecret))
+	tree := crypto.NewTree()
+	tree.PushObject(as.Timelock)
+	tree.PushObject(as.PublicKeyReceiver)
+	tree.PushObject(as.PublicKeySender)
+	tree.PushObject(as.HashedSecret)
+	return UnlockHash(tree.Root())
 }
 
 // Lock implements InputLock.Lock
@@ -300,9 +307,8 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 			return ErrInvalidPreImageSha256
 		}
 
-		// TODO: integrate secret in sigHash
 		var err error
-		as.Signature, err = signHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, v.SecretKey)
+		as.Signature, err = signHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, v.SecretKey, as.Secret)
 		return err
 
 	case crypto.SecretKey: // refund
@@ -310,7 +316,6 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 			return errors.New("atomic swap contract not yet expired")
 		}
 
-		// TODO: integrate secret in sigHash
 		var err error
 		as.Signature, err = signHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, v)
 		return err
@@ -324,8 +329,7 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 	// prior to our timelock, only the receiver can claim the unspend output
 	if CurrentTimestamp() <= as.Timelock {
-		// TODO: integrate secret in sigHash
-		err := verifyHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, as.Signature)
+		err := verifyHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, as.Signature, as.Secret)
 		if err != nil {
 			return err
 		}
@@ -342,7 +346,6 @@ func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 
 	// after the deadline (timelock),
 	// only the original sender can reclaim the unspend output
-	// TODO: integrate secret in sigHash
 	return verifyHashUsingSiaPublicKey(as.PublicKeySender, inputIndex, tx, as.Signature)
 }
 
@@ -395,14 +398,14 @@ func strictSignatureCheck(pk SiaPublicKey, signature []byte) error {
 	}
 }
 
-func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, key interface{}) ([]byte, error) {
+func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, key interface{}, extraObjects ...interface{}) ([]byte, error) {
 	switch pk.Algorithm {
 	case SignatureEntropy:
 		// Entropy cannot ever be used to sign a transaction.
 		return nil, ErrEntropyKey
 
 	case SignatureEd25519:
-		sigHash := tx.InputSigHash(inputIndex)
+		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
 		sig := crypto.SignHash(sigHash, key.(crypto.SecretKey))
 		return sig[:], nil
 
@@ -415,7 +418,7 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 	return nil, nil
 }
 
-func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte) error {
+func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) error {
 	switch pk.Algorithm {
 	case SignatureEntropy:
 		// Entropy cannot ever be used to sign a transaction.
@@ -434,7 +437,7 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 			return err
 		}
 		cryptoSig := crypto.Signature(edSig)
-		sigHash := tx.InputSigHash(inputIndex)
+		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
 		err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
 		if err != nil {
 			return err
