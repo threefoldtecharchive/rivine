@@ -3,6 +3,7 @@ package types
 import (
 	"bytes"
 	"crypto/sha256"
+	"fmt"
 	"io"
 	"reflect"
 	"testing"
@@ -102,7 +103,9 @@ func TestAtomicSwapUnlocker(t *testing.T) {
 	secret := sha256.Sum256([]byte{1, 2, 3, 4})
 	hashedSecret := sha256.Sum256(secret[:])
 
-	ul := NewAtomicSwapInputLock(Ed25519PublicKey(pk1), Ed25519PublicKey(pk2),
+	ul := NewAtomicSwapInputLock(
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk1)).UnlockHash(),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk2)).UnlockHash(),
 		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+50000)
 
 	err := ul.StrictCheck()
@@ -132,6 +135,7 @@ func TestAtomicSwapUnlocker(t *testing.T) {
 	}
 	ul.il.(*AtomicSwapInputLock).Signature = nil
 	err = ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk1),
 		SecretKey: sk1,
 		Secret:    AtomicSwapSecret{},
 	})
@@ -140,6 +144,7 @@ func TestAtomicSwapUnlocker(t *testing.T) {
 	}
 	ul.il.(*AtomicSwapInputLock).Signature = nil
 	err = ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk2),
 		SecretKey: sk2,
 		Secret:    AtomicSwapSecret{},
 	})
@@ -147,6 +152,7 @@ func TestAtomicSwapUnlocker(t *testing.T) {
 		t.Errorf("should fail, as secret is missing/wrong")
 	}
 	err = ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk2),
 		SecretKey: sk2,
 		Secret:    AtomicSwapSecret{},
 	})
@@ -156,6 +162,7 @@ func TestAtomicSwapUnlocker(t *testing.T) {
 	}
 
 	err = ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk2),
 		SecretKey: sk2,
 		Secret:    secret,
 	})
@@ -230,9 +237,11 @@ func TestAtomicSwapInputLockEncodeDecode(t *testing.T) {
 	hashedSecret = sha256.Sum256(secret[:])
 
 	ul := NewAtomicSwapInputLock(
-		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk)).UnlockHash(),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk2)).UnlockHash(),
 		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+500000)
 	err := ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk2),
 		Secret:    secret,
 		SecretKey: sk2,
 	})
@@ -330,9 +339,11 @@ func TestAtomicSwapUnknownEncoding(t *testing.T) {
 	hashedSecret = sha256.Sum256(secret[:])
 
 	ul := NewAtomicSwapInputLock(
-		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk)).UnlockHash(),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk2)).UnlockHash(),
 		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+500000)
 	err := ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk2),
 		Secret:    secret,
 		SecretKey: sk2,
 	})
@@ -352,6 +363,7 @@ func TestAtomicSwapUnknownEncoding(t *testing.T) {
 		t.Errorf("couldn't unmarshal sslock: %v", err)
 	}
 	if !reflect.DeepEqual(ul, ul2) {
+		fmt.Println(ul.il, ul2.il)
 		t.Errorf("%v != %v", ul, ul2)
 	}
 	if !reflect.DeepEqual(ul.UnlockHash(), ul2.UnlockHash()) {
@@ -444,9 +456,11 @@ func TestInputLockProxyEncoding(t *testing.T) {
 	}
 	sk2, pk2 := crypto.GenerateKeyPairDeterministic(entropy2)
 	ul = NewAtomicSwapInputLock(
-		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk)).UnlockHash(),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk2)).UnlockHash(),
 		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+500000)
 	err = ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk2),
 		Secret:    secret,
 		SecretKey: sk2,
 	})
@@ -476,9 +490,11 @@ func TestAtomicSwapClaim(t *testing.T) {
 	hashedSecret = sha256.Sum256(secret[:])
 
 	ul := NewAtomicSwapInputLock(
-		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk)).UnlockHash(),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk2)).UnlockHash(),
 		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+500000)
 	err := ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		PublicKey: Ed25519PublicKey(pk2),
 		Secret:    secret,
 		SecretKey: sk2,
 	})
@@ -499,9 +515,14 @@ func TestAtomicSwapRefund(t *testing.T) {
 	hashedSecret = sha256.Sum256(secret[:])
 
 	ul := NewAtomicSwapInputLock(
-		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk)).UnlockHash(),
+		NewSingleSignatureInputLock(Ed25519PublicKey(pk2)).UnlockHash(),
 		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()-100)
-	err := ul.Lock(0, Transaction{}, sk)
+	err := ul.Lock(0, Transaction{},
+		AtomicSwapRefundKey{
+			PublicKey: Ed25519PublicKey(pk),
+			SecretKey: sk,
+		})
 	if err != nil {
 		t.Errorf("error while locking InputLock: %v", err)
 	}

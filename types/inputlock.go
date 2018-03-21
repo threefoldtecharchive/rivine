@@ -20,6 +20,7 @@ var (
 // Errors related to atomic swaps
 var (
 	ErrInvalidPreImageSha256 = errors.New("invalid pre-image sha256")
+	ErrInvalidRedeemer       = errors.New("invalid input redeemer")
 )
 
 type (
@@ -108,12 +109,19 @@ type (
 	// AtomicSwapHashedSecret defines the 256 image byte slice,
 	// used as hashed secret within the Atomic Swap protocol/contract.
 	AtomicSwapHashedSecret [sha256.Size]byte
-	// AtomicSwapClaimKey defines the claim (private) key used by
+	// AtomicSwapRefundKey defines the refund key pair used by
+	// the initiator/sender of such a contract.
+	AtomicSwapRefundKey struct {
+		PublicKey SiaPublicKey
+		SecretKey crypto.SecretKey
+	}
+	// AtomicSwapClaimKey defines the claim key pair used by
 	// the participant/receiver of such a contract,
 	// used to lock the contract from their side.
 	AtomicSwapClaimKey struct {
-		Secret    AtomicSwapSecret
+		PublicKey SiaPublicKey
 		SecretKey crypto.SecretKey
+		Secret    AtomicSwapSecret
 	}
 
 	// AtomicSwapInputLock (0x02) is a more advanced unlocker,
@@ -122,24 +130,26 @@ type (
 	// who has to give the secret in order to do so. After the InputLock,
 	// the output can only be claimed by the sender, with no deadline in this phase.
 	AtomicSwapInputLock struct {
-		Timelock                           Timestamp
-		PublicKeySender, PublicKeyReceiver SiaPublicKey
-		HashedSecret                       AtomicSwapHashedSecret
-		Secret                             AtomicSwapSecret
-		Signature                          []byte
+		Timelock         Timestamp
+		Sender, Receiver UnlockHash
+		HashedSecret     AtomicSwapHashedSecret
+		PublicKey        SiaPublicKey
+		Signature        []byte
+		Secret           AtomicSwapSecret
 	}
 	// AtomicSwapCondition defines the condition of an atomic swap contract/input-lock.
 	// Only used for encoding purposes.
 	AtomicSwapCondition struct {
-		PublicKeySender, PublicKeyReceiver SiaPublicKey
-		HashedSecret                       AtomicSwapHashedSecret
-		Timelock                           Timestamp
+		Sender, Receiver UnlockHash
+		HashedSecret     AtomicSwapHashedSecret
+		Timelock         Timestamp
 	}
 	// AtomicSwapFulfillment defines the fulfillment of an atomic swap contract/input-lock.
 	// Only used for encoding purposes.
 	AtomicSwapFulfillment struct {
-		Secret    AtomicSwapSecret
+		PublicKey SiaPublicKey
 		Signature []byte
+		Secret    AtomicSwapSecret
 	}
 )
 
@@ -343,13 +353,13 @@ func (ss *SingleSignatureInputLock) StrictCheck() error {
 // using the given public keys, timelock and timestamp.
 // Prior to the timestamp only the receiver can claim, using the required secret,
 // after te deadline only the sender can claim a fund.
-func NewAtomicSwapInputLock(s, r SiaPublicKey, hs AtomicSwapHashedSecret, tl Timestamp) InputLockProxy {
+func NewAtomicSwapInputLock(s, r UnlockHash, hs AtomicSwapHashedSecret, tl Timestamp) InputLockProxy {
 	return NewInputLockProxy(UnlockTypeAtomicSwap,
 		&AtomicSwapInputLock{
-			Timelock:          tl,
-			PublicKeySender:   s,
-			PublicKeyReceiver: r,
-			HashedSecret:      hs,
+			Timelock:     tl,
+			Sender:       s,
+			Receiver:     r,
+			HashedSecret: hs,
 		})
 }
 
@@ -366,22 +376,24 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 		}
 
 		as.Secret = v.Secret
+		as.PublicKey = v.PublicKey
 		hashedSecret := sha256.Sum256(as.Secret[:])
 		if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
 			return ErrInvalidPreImageSha256
 		}
 
 		var err error
-		as.Signature, err = signHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, v.SecretKey, as.Secret)
+		as.Signature, err = signHashUsingSiaPublicKey(v.PublicKey, inputIndex, tx, v.SecretKey, as.Secret)
 		return err
 
-	case crypto.SecretKey: // refund
+	case AtomicSwapRefundKey: // refund
 		if CurrentTimestamp() <= as.Timelock {
 			return errors.New("atomic swap contract not yet expired")
 		}
+		as.PublicKey = v.PublicKey
 
 		var err error
-		as.Signature, err = signHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, v)
+		as.Signature, err = signHashUsingSiaPublicKey(v.PublicKey, inputIndex, tx, v.SecretKey)
 		return err
 
 	default:
@@ -391,9 +403,19 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 
 // Unlock implements InputLock.Unlock
 func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
+	// create the unlockHash for the given public Key
+	unlockHash := NewSingleSignatureInputLock(as.PublicKey).UnlockHash()
+
 	// prior to our timelock, only the receiver can claim the unspend output
 	if CurrentTimestamp() <= as.Timelock {
-		err := verifyHashUsingSiaPublicKey(as.PublicKeyReceiver, inputIndex, tx, as.Signature, as.Secret)
+		// verify that receiver public key was given
+		if unlockHash.Type != as.Receiver.Type ||
+			bytes.Compare(unlockHash.Hash[:], as.Receiver.Hash[:]) != 0 {
+			return ErrInvalidRedeemer
+		}
+
+		// verify signature
+		err := verifyHashUsingSiaPublicKey(as.PublicKey, inputIndex, tx, as.Signature, as.Secret)
 		if err != nil {
 			return err
 		}
@@ -408,24 +430,31 @@ func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 		return nil
 	}
 
+	// verify that sender public key was given
+	if unlockHash.Type != as.Sender.Type ||
+		bytes.Compare(unlockHash.Hash[:], as.Sender.Hash[:]) != 0 {
+		return ErrInvalidRedeemer
+	}
+
 	// after the deadline (timelock),
 	// only the original sender can reclaim the unspend output
-	return verifyHashUsingSiaPublicKey(as.PublicKeySender, inputIndex, tx, as.Signature)
+	return verifyHashUsingSiaPublicKey(as.PublicKey, inputIndex, tx, as.Signature)
 }
 
 // EncodeCondition implements InputLock.EncodeCondition
 func (as *AtomicSwapInputLock) EncodeCondition() []byte {
 	return encoding.Marshal(AtomicSwapCondition{
-		PublicKeySender:   as.PublicKeySender,
-		PublicKeyReceiver: as.PublicKeyReceiver,
-		Timelock:          as.Timelock,
-		HashedSecret:      as.HashedSecret,
+		Sender:       as.Sender,
+		Receiver:     as.Receiver,
+		Timelock:     as.Timelock,
+		HashedSecret: as.HashedSecret,
 	})
 }
 
 // EncodeFulfillment implements InputLock.EncodeFulfillment
 func (as *AtomicSwapInputLock) EncodeFulfillment() []byte {
 	return encoding.Marshal(AtomicSwapFulfillment{
+		PublicKey: as.PublicKey,
 		Signature: as.Signature,
 		Secret:    as.Secret,
 	})
@@ -439,8 +468,8 @@ func (as *AtomicSwapInputLock) Decode(rf RawInputLockFormat) error {
 		return err
 	}
 	as.Timelock = condition.Timelock
-	as.PublicKeySender = condition.PublicKeySender
-	as.PublicKeyReceiver = condition.PublicKeyReceiver
+	as.Sender = condition.Sender
+	as.Receiver = condition.Receiver
 	as.HashedSecret = condition.HashedSecret
 
 	var fulfillment AtomicSwapFulfillment
@@ -448,53 +477,15 @@ func (as *AtomicSwapInputLock) Decode(rf RawInputLockFormat) error {
 	if err != nil {
 		return err
 	}
+	as.PublicKey = fulfillment.PublicKey
 	as.Signature = fulfillment.Signature
 	as.Secret = fulfillment.Secret
 	return nil
 }
 
-// MarshalSia implements SiaMarshaler.MarshalSia
-func (ac *AtomicSwapCondition) MarshalSia(w io.Writer) error {
-	return encoding.NewEncoder(w).EncodeAll(
-		ac.PublicKeySender, ac.PublicKeyReceiver,
-		ac.HashedSecret, ac.Timelock)
-}
-
-// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
-func (ac *AtomicSwapCondition) UnmarshalSia(r io.Reader) error {
-	return encoding.NewDecoder(r).DecodeAll(
-		&ac.PublicKeySender, &ac.PublicKeyReceiver,
-		&ac.HashedSecret, &ac.Timelock)
-}
-
-// MarshalSia implements SiaMarshaler.MarshalSia
-func (af *AtomicSwapFulfillment) MarshalSia(w io.Writer) error {
-	return encoding.NewEncoder(w).EncodeAll(
-		af.Secret, af.Signature)
-}
-
-// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
-func (af *AtomicSwapFulfillment) UnmarshalSia(r io.Reader) error {
-	return encoding.NewDecoder(r).DecodeAll(
-		&af.Secret, &af.Signature)
-}
-
-var (
-	_ encoding.SiaMarshaler   = (*AtomicSwapCondition)(nil)
-	_ encoding.SiaMarshaler   = (*AtomicSwapFulfillment)(nil)
-	_ encoding.SiaUnmarshaler = (*AtomicSwapCondition)(nil)
-	_ encoding.SiaUnmarshaler = (*AtomicSwapFulfillment)(nil)
-)
-
 // StrictCheck implements InputLock.StrictCheck
 func (as *AtomicSwapInputLock) StrictCheck() error {
-	// prior to our timelock, only the receiver can claim the unspend output
-	if CurrentTimestamp() <= as.Timelock {
-		return strictSignatureCheck(as.PublicKeyReceiver, as.Signature)
-	}
-	// after the deadline (timelock),
-	// only the original sender can reclaim the unspend output
-	return strictSignatureCheck(as.PublicKeySender, as.Signature)
+	return strictSignatureCheck(as.PublicKey, as.Signature)
 }
 
 func strictSignatureCheck(pk SiaPublicKey, signature []byte) error {
