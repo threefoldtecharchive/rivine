@@ -15,63 +15,63 @@ var (
 		Use:   "gateway",
 		Short: "Perform gateway actions",
 		Long:  "View and manage the gateway's connected peers.",
-		Run:   wrap(Gatewaycmd),
+		Run:   Wrap(gatewaycmd),
 	}
 
 	gatewayConnectCmd = &cobra.Command{
 		Use:   "connect [address]",
 		Short: "Connect to a peer",
 		Long:  "Connect to a peer and add it to the node list.",
-		Run:   wrap(Gatewayconnectcmd),
+		Run:   Wrap(gatewayconnectcmd),
 	}
 
 	gatewayDisconnectCmd = &cobra.Command{
 		Use:   "disconnect [address]",
 		Short: "Disconnect from a peer",
 		Long:  "Disconnect from a peer. Does not remove the peer from the node list.",
-		Run:   wrap(Gatewaydisconnectcmd),
+		Run:   Wrap(gatewaydisconnectcmd),
 	}
 
 	gatewayAddressCmd = &cobra.Command{
 		Use:   "address",
 		Short: "Print the gateway address",
 		Long:  "Print the network address of the gateway.",
-		Run:   wrap(Gatewayaddresscmd),
+		Run:   Wrap(gatewayaddresscmd),
 	}
 
 	gatewayListCmd = &cobra.Command{
 		Use:   "list",
 		Short: "View a list of peers",
 		Long:  "View the current peer list.",
-		Run:   wrap(Gatewaylistcmd),
+		Run:   Wrap(gatewaylistcmd),
 	}
 )
 
-// Gatewayconnectcmd is the handler for the command `siac gateway add [address]`.
+// gatewayconnectcmd is the handler for the command `siac gateway add [address]`.
 // Adds a new peer to the peer list.
-func Gatewayconnectcmd(addr string) {
-	err := Post("/gateway/connect/"+addr, "")
+func gatewayconnectcmd(addr string) {
+	err := _DefaultClient.httpClient.Post("/gateway/connect/"+addr, "")
 	if err != nil {
 		Die("Could not add peer:", err)
 	}
 	fmt.Println("Added", addr, "to peer list.")
 }
 
-// Gatewaydisconnectcmd is the handler for the command `siac gateway remove [address]`.
+// gatewaydisconnectcmd is the handler for the command `siac gateway remove [address]`.
 // Removes a peer from the peer list.
-func Gatewaydisconnectcmd(addr string) {
-	err := Post("/gateway/disconnect/"+addr, "")
+func gatewaydisconnectcmd(addr string) {
+	err := _DefaultClient.httpClient.Post("/gateway/disconnect/"+addr, "")
 	if err != nil {
 		Die("Could not remove peer:", err)
 	}
 	fmt.Println("Removed", addr, "from peer list.")
 }
 
-// Gatewayaddresscmd is the handler for the command `siac gateway address`.
+// gatewayaddresscmd is the handler for the command `siac gateway address`.
 // Prints the gateway's network address.
-func Gatewayaddresscmd() {
+func gatewayaddresscmd() {
 	var info api.GatewayGET
-	err := GetAPI("/gateway", &info)
+	err := _DefaultClient.httpClient.GetAPI("/gateway", &info)
 	if err != nil {
 		Die("Could not get gateway address:", err)
 	}
@@ -80,9 +80,9 @@ func Gatewayaddresscmd() {
 
 // Gatewaycmd is the handler for the command `siac gateway`.
 // Prints the gateway's network address and number of peers.
-func Gatewaycmd() {
+func gatewaycmd() {
 	var info api.GatewayGET
-	err := GetAPI("/gateway", &info)
+	err := _DefaultClient.httpClient.GetAPI("/gateway", &info)
 	if err != nil {
 		Die("Could not get gateway address:", err)
 	}
@@ -92,9 +92,9 @@ func Gatewaycmd() {
 
 // Gatewaylistcmd is the handler for the command `siac gateway list`.
 // Prints a list of all peers.
-func Gatewaylistcmd() {
+func gatewaylistcmd() {
 	var info api.GatewayGET
-	err := GetAPI("/gateway", &info)
+	err := _DefaultClient.httpClient.GetAPI("/gateway", &info)
 	if err != nil {
 		Die("Could not get peer list:", err)
 	}

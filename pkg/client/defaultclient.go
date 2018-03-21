@@ -1,29 +1,14 @@
 package client
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 	"reflect"
 	"strings"
 
-	"github.com/bgentry/speakeasy"
-	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/build"
 	"github.com/spf13/cobra"
-)
-
-// flags
-var (
-	addr string // override default API address
-)
-
-var (
-	// ClientName sets the client name for some of the command help messages
-	ClientName = "rivine"
 )
 
 // exit codes
@@ -33,163 +18,26 @@ const (
 	exitCodeUsage   = 64 // EX_USAGE in sysexits.h
 )
 
-// Non2xx returns true for non-success HTTP status codes.
-func Non2xx(code int) bool {
-	return code < 200 || code > 299
+// Config defines the configuration for the default (CLI) client.
+type Config struct {
+	Address string
+	Name    string
+	Version build.ProtocolVersion
 }
 
-// DecodeError returns the api.Error from a API response. This method should
-// only be called if the response's status code is non-2xx. The error returned
-// may not be of type api.Error in the event of an error unmarshalling the
-// JSON.
-func DecodeError(resp *http.Response) error {
-	var apiErr api.Error
-	err := json.NewDecoder(resp.Body).Decode(&apiErr)
-	if err != nil {
-		return err
+// DefaultConfig creates the default configuration for the default (CLI) client.
+func DefaultConfig() Config {
+	return Config{
+		Address: "localhost:23110",
+		Name:    "Rivine",
+		Version: build.Version,
 	}
-	return apiErr
 }
 
-// ApiGet wraps a GET request with a status code check, such that if the GET does
-// not return 2xx, the error will be read and returned. When no error is returned,
-// the response's body isn't closed, otherwise it is.
-func ApiGet(call string) (*http.Response, error) {
-	if host, port, _ := net.SplitHostPort(addr); host == "" {
-		addr = net.JoinHostPort("localhost", port)
-	}
-	resp, err := api.HttpGET("http://" + addr + call)
-	if err != nil {
-		return nil, errors.New("no response from daemon")
-	}
-	// check error code
-	if resp.StatusCode == http.StatusUnauthorized {
-		resp.Body.Close()
-		// Prompt for password and retry request with authentication.
-		password, err := speakeasy.Ask("API password: ")
-		if err != nil {
-			return nil, err
-		}
-		resp, err = api.HttpGETAuthenticated("http://"+addr+call, password)
-		if err != nil {
-			return nil, errors.New("no response from daemon - authentication failed")
-		}
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
-		return nil, errors.New("API call not recognized: " + call)
-	}
-	if Non2xx(resp.StatusCode) {
-		err := DecodeError(resp)
-		resp.Body.Close()
-		return nil, err
-	}
-	return resp, nil
-}
-
-// GetAPI makes a GET API call and decodes the response. An error is returned
-// if the response status is not 2xx.
-func GetAPI(call string, obj interface{}) error {
-	resp, err := ApiGet(call)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNoContent {
-		return errors.New("expecting a response, but API returned status code 204 No Content")
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(obj)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Get makes an API call and discards the response. An error is returned if the
-// response status is not 2xx.
-func Get(call string) error {
-	resp, err := ApiGet(call)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
-}
-
-// ApiPost wraps a POST request with a status code check, such that if the POST
-// does not return 2xx, the error will be read and returned. When no error is returned,
-// the response's body isn't closed, otherwise it is.
-func ApiPost(call, vals string) (*http.Response, error) {
-	if host, port, _ := net.SplitHostPort(addr); host == "" {
-		addr = net.JoinHostPort("localhost", port)
-	}
-
-	resp, err := api.HttpPOST("http://"+addr+call, vals)
-	if err != nil {
-		return nil, errors.New("no response from daemon")
-	}
-	// check error code
-	if resp.StatusCode == http.StatusUnauthorized {
-		resp.Body.Close()
-		// Prompt for password and retry request with authentication.
-		password, err := speakeasy.Ask("API password: ")
-		if err != nil {
-			return nil, err
-		}
-		resp, err = api.HttpPOSTAuthenticated("http://"+addr+call, vals, password)
-		if err != nil {
-			return nil, errors.New("no response from daemon - authentication failed")
-		}
-	}
-	if resp.StatusCode == http.StatusNotFound {
-		resp.Body.Close()
-		return nil, errors.New("API call not recognized: " + call)
-	}
-	if Non2xx(resp.StatusCode) {
-		err := DecodeError(resp)
-		resp.Body.Close()
-		return nil, err
-	}
-	return resp, nil
-}
-
-// PostResp makes a POST API call and decodes the response. An error is
-// returned if the response status is not 2xx.
-func PostResp(call, vals string, obj interface{}) error {
-	resp, err := ApiPost(call, vals)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNoContent {
-		return errors.New("expecting a response, but API returned status code 204 No Content")
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(obj)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Post makes an API call and discards the response. An error is returned if
-// the response status is not 2xx.
-func Post(call, vals string) error {
-	resp, err := ApiPost(call, vals)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
-}
-
-// wrap wraps a generic command with a check that the command has been
+// Wrap wraps a generic command with a check that the command has been
 // passed the correct number of arguments. The command must take only strings
 // as arguments.
-func wrap(fn interface{}) func(*cobra.Command, []string) {
+func Wrap(fn interface{}) func(*cobra.Command, []string) {
 	fnVal, fnType := reflect.ValueOf(fn), reflect.TypeOf(fn)
 	if fnType.Kind() != reflect.Func {
 		panic("wrapped function has wrong type signature")
@@ -220,18 +68,34 @@ func Die(args ...interface{}) {
 	os.Exit(exitCodeGeneral)
 }
 
-// Version prints the client version and exits
-func Version() {
-	println(fmt.Sprintf("%s Client v", strings.Title(ClientName)) + build.Version.String())
+// clientVersion prints the client version and exits
+func clientVersion() {
+	println(fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String())
 }
 
-// DefaultClient parses the arguments using cobra with the default rivine setup
-func DefaultClient() {
+var _DefaultClient struct {
+	name       string
+	version    build.ProtocolVersion
+	httpClient HTTPClient
+}
+
+// DefaultCLIClient creates a new client using the given params as the default config,
+// and an optional flag-based system to overrride some.
+func DefaultCLIClient(cfg Config) {
+	_DefaultClient.name = cfg.Name
+	_DefaultClient.httpClient.RootURL = cfg.Address
+	_DefaultClient.version = cfg.Version
+
 	root := &cobra.Command{
 		Use:   os.Args[0],
-		Short: fmt.Sprintf("%s Client v", strings.Title(ClientName)) + build.Version.String(),
-		Long:  fmt.Sprintf("%s Client v", strings.Title(ClientName)) + build.Version.String(),
-		Run:   wrap(Consensuscmd),
+		Short: fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
+		Long:  fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
+		Run:   Wrap(consensuscmd),
+		PersistentPreRun: Wrap(func() {
+			if host, port, _ := net.SplitHostPort(_DefaultClient.httpClient.RootURL); host == "" {
+				_DefaultClient.httpClient.RootURL = net.JoinHostPort("localhost", port)
+			}
+		}),
 	}
 
 	// create command tree
@@ -239,7 +103,7 @@ func DefaultClient() {
 		Use:   "version",
 		Short: "Print version information",
 		Long:  "Print version information.",
-		Run:   wrap(Version),
+		Run:   Wrap(clientVersion),
 	})
 
 	root.AddCommand(stopCmd)
@@ -281,9 +145,11 @@ func DefaultClient() {
 	)
 
 	// parse flags
-	root.PersistentFlags().StringVarP(&addr, "addr", "a", "localhost:23110", fmt.Sprintf("which host/port to communicate with (i.e. the host/port %sd is listening on)", ClientName))
+	root.PersistentFlags().StringVarP(&_DefaultClient.httpClient.RootURL, "addr", "a",
+		_DefaultClient.httpClient.RootURL, fmt.Sprintf(
+			"which host/port to communicate with (i.e. the host/port %sd is listening on)",
+			_DefaultClient.name))
 
-	// run
 	if err := root.Execute(); err != nil {
 		// Since no commands return errors (all commands set Command.Run instead of
 		// Command.RunE), Command.Execute() should only return an error on an

@@ -7,10 +7,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/types"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -18,22 +17,22 @@ var (
 		Use:   "consensus",
 		Short: "Print the current state of consensus",
 		Long:  "Print the current state of consensus such as current block, block height, and target.",
-		Run:   wrap(Consensuscmd),
+		Run:   Wrap(consensuscmd),
 	}
 
 	consensusTransactionCmd = &cobra.Command{
 		Use:   "transaction <shortID>",
 		Short: "Get an existing transaction",
 		Long:  "Get an existing transaction from the blockchain, using its given shortID.",
-		Run:   wrap(Consensustransactioncmd),
+		Run:   Wrap(consensustransactioncmd),
 	}
 )
 
 // Consensuscmd is the handler for the command `rivinec consensus`.
 // Prints the current state of consensus.
-func Consensuscmd() {
+func consensuscmd() {
 	var cg api.ConsensusGET
-	err := GetAPI("/consensus", &cg)
+	err := _DefaultClient.httpClient.GetAPI("/consensus", &cg)
 	if err != nil {
 		Die("Could not get current consensus state:", err)
 	}
@@ -68,13 +67,13 @@ func EstimatedHeightAt(t time.Time) types.BlockHeight {
 
 // Consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
 // Prints the transaction found for the given shortID.
-func Consensustransactioncmd(shortID string) {
+func consensustransactioncmd(shortID string) {
 	if !consensusShortIDRegexp.MatchString(shortID) {
 		Die("invalid shortID: ", shortID)
 	}
 
 	var txn api.ConsensusGetTransaction
-	err := GetAPI("/consensus/transactions/"+shortID, &txn)
+	err := _DefaultClient.httpClient.GetAPI("/consensus/transactions/"+shortID, &txn)
 	if err != nil {
 		Die("failed to get transaction: ", err, "; shortID: ", shortID)
 	}
