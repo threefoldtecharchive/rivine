@@ -22,7 +22,7 @@ const (
 	generateAddressAmount = 50
 	// genesisOutputSeed is the mnemonic representation of the genesis seed
 	// We will be using this seed to generate the address(es) to transfer the funds from
-	genesisOutputSeed = "across knife thirsty puck itches hazard enmity fainted pebbles unzip echo queen rarest aphid bugs yanks okay abbey eskimos dove orange nouns august ailments inline rebel glass tyrant acumen"
+	genesisOutputSeed = "recall view document apology stone tattoo job farm pilot favorite mango topic thing dilemma dawn width marble proud pen meadow sing museum lucky present"
 	// unlockHashType is the string representation expected in the hashtype field when checking the unlock hashes in the explorer api
 	unlockHashType = "unlockhash"
 	// minerPayoutMaturityWindow is the amount of blocks that need to pass before a miner payout can be spend
@@ -54,7 +54,7 @@ func main() {
 		panic(err)
 	}
 	// First convert the seed from the mnemonic form to the byte form
-	seed, err := modules.SeedFromMnemonicAndPassphrase(genesisOutputSeed, gatewayPass)
+	seed, err := modules.InitialSeedFromMnemonic(genesisOutputSeed)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to decode seed: %s", err))
 	}

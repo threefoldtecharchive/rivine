@@ -121,7 +121,7 @@ Run 'wallet send --help' to see a list of available units.`,
 	}
 
 	walletRegisterDataCmd = &cobra.Command{
-		Use:   "registerdata [dest] [data]",
+		Use:   "registerdata [namespace] [data] [dest]",
 		Short: "Register data on the blockchain",
 		Long:  "Register data on the blockcahin by sending a minimal transaction to the destination address, and including the data in the transaction",
 		Run:   wrap(Walletregisterdatacmd),
@@ -271,9 +271,10 @@ func Walletsendblockstakescmd(amount, dest string) {
 
 // Walletregisterdatacmd registers data on the blockchain by making a minimal transaction to the designated address
 // and includes the data in the transaction
-func Walletregisterdatacmd(dest, data string) {
-	// / At the moment, we need to prepend the non sia prefix for the transaction to be accepted by the transactionpool
-	dataBytes := append(modules.PrefixNonSia[:], []byte(data)...)
+func Walletregisterdatacmd(namespace, data, dest string) {
+	// At the moment, we need to prepend the non sia prefix for the transaction to be accepted by the transactionpool
+	dataBytes := append(modules.PrefixNonSia[:], []byte(namespace)...)
+	dataBytes = append(dataBytes, []byte(data)...)
 	encodedData := base64.StdEncoding.EncodeToString(dataBytes)
 	err := Post("/wallet/data", fmt.Sprintf("destination=%s&data=%s", dest, encodedData))
 	if err != nil {
