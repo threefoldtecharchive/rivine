@@ -34,6 +34,7 @@ type processedBlock struct {
 	CoinOutputDiffs        []modules.CoinOutputDiff
 	BlockStakeOutputDiffs  []modules.BlockStakeOutputDiff
 	DelayedCoinOutputDiffs []modules.DelayedCoinOutputDiff
+	TxIDDiffs              []modules.TransactionIDDiff
 
 	ConsensusChecksum crypto.Hash
 }

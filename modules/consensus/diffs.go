@@ -66,6 +66,15 @@ func commitBlockStakeOutputDiff(tx *bolt.Tx, sfod modules.BlockStakeOutputDiff, 
 	}
 }
 
+// commitTxIDMapDiff applies or reverts a transaction ID mapping diff
+func commitTxIDMapDiff(tx *bolt.Tx, tidmod modules.TransactionIDDiff, dir modules.DiffDirection) {
+	if tidmod.Direction == dir {
+		addTxnIDMapping(tx, tidmod.LongID, tidmod.ShortID)
+	} else {
+		removeTxnIDMapping(tx, tidmod.LongID)
+	}
+}
+
 // commitDelayedCoinOutputDiff applies or reverts a delayedCoinOutputDiff.
 func commitDelayedCoinOutputDiff(tx *bolt.Tx, dscod modules.DelayedCoinOutputDiff, dir modules.DiffDirection) {
 	if dscod.Direction == dir {

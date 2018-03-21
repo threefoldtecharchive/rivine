@@ -139,6 +139,14 @@ type (
 		MaturityHeight types.BlockHeight
 	}
 
+	// TransactionIDDiff represents the addition or removal of a mapping between a transactions
+	// long ID ands its short ID
+	TransactionIDDiff struct {
+		Direction DiffDirection
+		LongID    types.TransactionID
+		ShortID   types.TransactionShortID
+	}
+
 	// A ConsensusSet accepts blocks and builds an understanding of network
 	// consensus.
 	ConsensusSet interface {
@@ -162,6 +170,11 @@ type (
 		// the blockchain, using a given shortID.
 		// If that transaction does not exist, false is returned.
 		TransactionAtShortID(shortID types.TransactionShortID) (types.Transaction, bool)
+
+		// TransactionAtID allows you to fetch a transaction from a block within
+		// the blockchain, using a given transaction ID. If that transaction
+		// does not exist, false is returned
+		TransactionAtID(types.TransactionID) (types.Transaction, types.TransactionShortID, bool)
 
 		// ChildTarget returns the target required to extend the current heaviest
 		// fork. This function is typically used by miners looking to extend the

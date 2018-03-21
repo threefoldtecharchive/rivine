@@ -82,6 +82,17 @@ func applyBlockStakeOutputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction
 	}
 }
 
+// applyTransactionIDMapping applies a transaction id mapping to the consensus set
+func applyTransactionIDMapping(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
+	tidmod := modules.TransactionIDDiff{
+		Direction: modules.DiffApply,
+		LongID:    t.ID(),
+		ShortID:   types.NewTransactionShortID(pb.Height, uint16(len(pb.TxIDDiffs))),
+	}
+	pb.TxIDDiffs = append(pb.TxIDDiffs, tidmod)
+	commitTxIDMapDiff(tx, tidmod, modules.DiffApply)
+}
+
 // applyTransaction applies the contents of a transaction to the ConsensusSet.
 // This produces a set of diffs, which are stored in the blockNode containing
 // the transaction. No verification is done by this function.
@@ -90,4 +101,5 @@ func applyTransaction(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 	applyCoinOutputs(tx, pb, t)
 	applyBlockStakeInputs(tx, pb, t)
 	applyBlockStakeOutputs(tx, pb, t)
+	applyTransactionIDMapping(tx, pb, t)
 }
