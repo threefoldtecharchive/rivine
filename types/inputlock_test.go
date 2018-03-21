@@ -467,3 +467,46 @@ func TestInputLockProxyEncoding(t *testing.T) {
 		t.Errorf("%v != %v", ul, ul3)
 	}
 }
+
+func TestAtomicSwapClaim(t *testing.T) {
+	_, pk := crypto.GenerateKeyPair()
+	sk2, pk2 := crypto.GenerateKeyPair()
+
+	var secret, hashedSecret [sha256.Size]byte
+	hashedSecret = sha256.Sum256(secret[:])
+
+	ul := NewAtomicSwapInputLock(
+		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()+500000)
+	err := ul.Lock(0, Transaction{}, AtomicSwapClaimKey{
+		Secret:    secret,
+		SecretKey: sk2,
+	})
+	if err != nil {
+		t.Errorf("error while locking InputLock: %v", err)
+	}
+	err = ul.Unlock(0, Transaction{})
+	if err != nil {
+		t.Errorf("failed to claim (redeem) input: %v", err)
+	}
+}
+
+func TestAtomicSwapRefund(t *testing.T) {
+	sk, pk := crypto.GenerateKeyPair()
+	_, pk2 := crypto.GenerateKeyPair()
+
+	var secret, hashedSecret [sha256.Size]byte
+	hashedSecret = sha256.Sum256(secret[:])
+
+	ul := NewAtomicSwapInputLock(
+		Ed25519PublicKey(pk), Ed25519PublicKey(pk2),
+		AtomicSwapHashedSecret(hashedSecret), CurrentTimestamp()-100)
+	err := ul.Lock(0, Transaction{}, sk)
+	if err != nil {
+		t.Errorf("error while locking InputLock: %v", err)
+	}
+	err = ul.Unlock(0, Transaction{})
+	if err != nil {
+		t.Errorf("failed to refund input: %v", err)
+	}
+}

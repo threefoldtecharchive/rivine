@@ -404,7 +404,7 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 	switch v := key.(type) {
 	case AtomicSwapClaimKey: // claim
 		if CurrentTimestamp() > as.Timelock {
-			return errors.New("atomic swap contract expired")
+			return errors.New("atomic swap contract expired already")
 		}
 
 		as.Secret = v.Secret
