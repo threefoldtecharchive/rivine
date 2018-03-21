@@ -23,7 +23,7 @@ var (
 		Long: `Generate a new address, send coins to another wallet, or view info about the wallet.
 
 Units:
-The smallest unit of coins is the hasting. One coin is 10^24 hastings. Other supported units are:
+The following units are supported:
   p (pico,  10^-12)
   n (nano,  10^-9 )
   u (micro, 10^-6 )
@@ -106,7 +106,7 @@ By default the wallet encryption / unlock password is the same as the generated 
 		Short: "Send coins to an address",
 		Long: `Send coins to an address. 'dest' must be a 76-byte hexadecimal address.
 'amount' can be specified in units, e.g. 1.23K. Run 'wallet --help' for a list of units.
-If no unit is supplied, hastings will be assumed.
+A unit must be supplied
 
 A miner fee of 10 C is levied on all transactions.`,
 		Run: wrap(Walletsendsiacoinscmd),
