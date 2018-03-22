@@ -76,6 +76,13 @@ type (
 		AllSeeds           []string `json:"allseeds"`
 	}
 
+	// WalletKeyGet contains the public and private key used by the wallet.
+	WalletKeyGet struct {
+		AlgorithmSpecifier types.Specifier `json:"specifier"`
+		PublicKey          types.Key       `json:"publickey"`
+		SecretKey          types.Key       `json:"secretkey"`
+	}
+
 	// WalletTransactionGETid contains the transaction returned by a call to
 	// /wallet/transaction/$(id)
 	WalletTransactionGETid struct {
@@ -290,6 +297,30 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 		PrimarySeed:        primarySeedStr,
 		AddressesRemaining: int(modules.PublicKeysPerSeed - progress),
 		AllSeeds:           allSeedsStrs,
+	})
+}
+
+// walletKeyHandler handles API calls to /wallet/key/:unlockhash.
+func (api *API) walletKeyHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	strUH := ps.ByName("unlockhash")
+	var uh types.UnlockHash
+	err := uh.LoadString(strUH)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/key/" + strUH + " : " + err.Error()},
+			http.StatusBadRequest)
+		return
+	}
+
+	pk, sk, err := api.wallet.GetKey(uh)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/key/" + strUH + " : " + err.Error()},
+			http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, WalletKeyGet{
+		AlgorithmSpecifier: pk.Algorithm,
+		PublicKey:          pk.Key,
+		SecretKey:          sk,
 	})
 }
 

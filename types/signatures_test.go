@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -61,6 +62,36 @@ func TestSortedUnique(t *testing.T) {
 	bothFlaws := []uint64{2, 3, 4, 5, 6, 6, 4}
 	if sortedUnique(bothFlaws, 7) {
 		t.Error("Sorted unique accetped array with multiple flaws")
+	}
+}
+
+func TestKeyStringify(t *testing.T) {
+	testCases := []struct {
+		Key    Key
+		String string
+	}{
+		{Key{}, ""},
+		{Key{0}, "00"},
+		{Key{42}, "2a"},
+		{Key{255}, "ff"},
+		{Key{0, 255, 0}, "00ff00"},
+		{Key{1, 2, 3}, "010203"},
+		{Key{2, 5, 5}, "020505"},
+		{Key{0, 0, 0, 0}, "00000000"},
+	}
+	for index, testCase := range testCases {
+		str := testCase.Key.String()
+		if str != testCase.String {
+			t.Errorf("stringification went wrong: %q != %q", str, testCase.String)
+		}
+		var k Key
+		err := k.LoadString(str)
+		if err != nil {
+			t.Errorf("destringification of #%d went wrong: %v", index, err)
+		}
+		if !reflect.DeepEqual(k, testCase.Key) {
+			t.Errorf("destringification of #%d went wrong: %v != %v", index, k, testCase.Key)
+		}
 	}
 }
 

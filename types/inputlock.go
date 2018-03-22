@@ -100,7 +100,7 @@ type (
 	// The spender will need to proof ownership of that public key by providing a correct signature.
 	SingleSignatureInputLock struct {
 		PublicKey SiaPublicKey
-		Signature []byte
+		Signature Key
 	}
 
 	// AtomicSwapSecret defines the 256 pre-image byte slice,
@@ -113,14 +113,14 @@ type (
 	// the initiator/sender of such a contract.
 	AtomicSwapRefundKey struct {
 		PublicKey SiaPublicKey
-		SecretKey crypto.SecretKey
+		SecretKey Key
 	}
 	// AtomicSwapClaimKey defines the claim key pair used by
 	// the participant/receiver of such a contract,
 	// used to lock the contract from their side.
 	AtomicSwapClaimKey struct {
 		PublicKey SiaPublicKey
-		SecretKey crypto.SecretKey
+		SecretKey Key
 		Secret    AtomicSwapSecret
 	}
 
@@ -130,7 +130,7 @@ type (
 	// who has to give the secret in order to do so. After the InputLock,
 	// the output can only be claimed by the sender, with no deadline in this phase.
 	AtomicSwapInputLock struct {
-		Timelock         Timestamp
+		TimeLock         Timestamp
 		Sender, Receiver UnlockHash
 		HashedSecret     AtomicSwapHashedSecret
 		PublicKey        SiaPublicKey
@@ -142,7 +142,7 @@ type (
 	AtomicSwapCondition struct {
 		Sender, Receiver UnlockHash
 		HashedSecret     AtomicSwapHashedSecret
-		Timelock         Timestamp
+		TimeLock         Timestamp
 	}
 	// AtomicSwapFulfillment defines the fulfillment of an atomic swap contract/input-lock.
 	// Only used for encoding purposes.
@@ -353,13 +353,13 @@ func (ss *SingleSignatureInputLock) StrictCheck() error {
 // using the given public keys, timelock and timestamp.
 // Prior to the timestamp only the receiver can claim, using the required secret,
 // after te deadline only the sender can claim a fund.
-func NewAtomicSwapInputLock(s, r UnlockHash, hs AtomicSwapHashedSecret, tl Timestamp) InputLockProxy {
+func NewAtomicSwapInputLock(condition AtomicSwapCondition) InputLockProxy {
 	return NewInputLockProxy(UnlockTypeAtomicSwap,
 		&AtomicSwapInputLock{
-			Timelock:     tl,
-			Sender:       s,
-			Receiver:     r,
-			HashedSecret: hs,
+			TimeLock:     condition.TimeLock,
+			Sender:       condition.Sender,
+			Receiver:     condition.Receiver,
+			HashedSecret: condition.HashedSecret,
 		})
 }
 
@@ -371,7 +371,7 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 
 	switch v := key.(type) {
 	case AtomicSwapClaimKey: // claim
-		if CurrentTimestamp() > as.Timelock {
+		if CurrentTimestamp() > as.TimeLock {
 			return errors.New("atomic swap contract expired already")
 		}
 
@@ -387,7 +387,7 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 		return err
 
 	case AtomicSwapRefundKey: // refund
-		if CurrentTimestamp() <= as.Timelock {
+		if CurrentTimestamp() <= as.TimeLock {
 			return errors.New("atomic swap contract not yet expired")
 		}
 		as.PublicKey = v.PublicKey
@@ -407,7 +407,7 @@ func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 	unlockHash := NewSingleSignatureInputLock(as.PublicKey).UnlockHash()
 
 	// prior to our timelock, only the receiver can claim the unspend output
-	if CurrentTimestamp() <= as.Timelock {
+	if CurrentTimestamp() <= as.TimeLock {
 		// verify that receiver public key was given
 		if unlockHash.Type != as.Receiver.Type ||
 			bytes.Compare(unlockHash.Hash[:], as.Receiver.Hash[:]) != 0 {
@@ -446,7 +446,7 @@ func (as *AtomicSwapInputLock) EncodeCondition() []byte {
 	return encoding.Marshal(AtomicSwapCondition{
 		Sender:       as.Sender,
 		Receiver:     as.Receiver,
-		Timelock:     as.Timelock,
+		TimeLock:     as.TimeLock,
 		HashedSecret: as.HashedSecret,
 	})
 }
@@ -467,7 +467,7 @@ func (as *AtomicSwapInputLock) Decode(rf RawInputLockFormat) error {
 	if err != nil {
 		return err
 	}
-	as.Timelock = condition.Timelock
+	as.TimeLock = condition.TimeLock
 	as.Sender = condition.Sender
 	as.Receiver = condition.Receiver
 	as.HashedSecret = condition.HashedSecret
@@ -512,8 +512,26 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 		return nil, ErrEntropyKey
 
 	case SignatureEd25519:
+		// decode the ed-secretKey
+		var edSK crypto.SecretKey
+		switch k := key.(type) {
+		case crypto.SecretKey:
+			edSK = k
+		case Key:
+			if len(k) != crypto.SecretKeySize {
+				return nil, errors.New("invalid secret key size")
+			}
+			copy(edSK[:], k)
+		case []byte:
+			if len(k) != crypto.SecretKeySize {
+				return nil, errors.New("invalid secret key size")
+			}
+			copy(edSK[:], k)
+		default:
+			return nil, fmt.Errorf("%T is an unknown secret key size", key)
+		}
 		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
-		sig := crypto.SignHash(sigHash, key.(crypto.SecretKey))
+		sig := crypto.SignHash(sigHash, edSK)
 		return sig[:], nil
 
 	default:
@@ -525,30 +543,23 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 	return nil, nil
 }
 
-func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) error {
+func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) (err error) {
 	switch pk.Algorithm {
 	case SignatureEntropy:
 		// Entropy cannot ever be used to sign a transaction.
-		return ErrEntropyKey
+		err = ErrEntropyKey
 
 	case SignatureEd25519:
 		// Decode the public key and signature.
-		var edPK crypto.PublicKey
-		err := encoding.Unmarshal([]byte(pk.Key), &edPK)
-		if err != nil {
-			return err
-		}
-		var edSig [crypto.SignatureSize]byte
-		err = encoding.Unmarshal(sig, &edSig)
-		if err != nil {
-			return err
-		}
+		var (
+			edPK  crypto.PublicKey
+			edSig crypto.Signature
+		)
+		copy(edPK[:], pk.Key)
+		copy(edSig[:], sig)
 		cryptoSig := crypto.Signature(edSig)
 		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
 		err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
-		if err != nil {
-			return err
-		}
 
 	default:
 		// If the identifier is not recognized, assume that the signature
@@ -556,7 +567,7 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 		// forking.
 	}
 
-	return nil
+	return
 }
 
 // _RegisteredInputLocks contains all known/registered unlockers constructors.

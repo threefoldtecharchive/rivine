@@ -106,7 +106,7 @@ func (pv *ProtocolVersion) String() string {
 }
 
 // MarshalJSON implements json.Marshaler.MarshalJSON
-func (pv *ProtocolVersion) MarshalJSON() ([]byte, error) {
+func (pv ProtocolVersion) MarshalJSON() ([]byte, error) {
 	return json.Marshal(pv.String())
 }
 

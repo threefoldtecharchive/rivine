@@ -8,8 +8,8 @@ package types
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/rivine/rivine/crypto"
@@ -42,8 +42,12 @@ type (
 	// the protocol via a soft-fork.
 	SiaPublicKey struct {
 		Algorithm Specifier `json:"algorithm"`
-		Key       []byte    `json:"key"`
+		Key       Key       `json:"key"`
 	}
+
+	// Key defines any kind of raw binary key,
+	// which can be turned into a string, and loaded from a string.
+	Key []byte
 )
 
 // Ed25519PublicKey returns pk as a SiaPublicKey, denoting its algorithm as
@@ -134,23 +138,51 @@ func (t *Transaction) validSignatures(currentHeight BlockHeight) (err error) {
 }
 
 // LoadString is the inverse of SiaPublicKey.String().
-func (spk *SiaPublicKey) LoadString(s string) {
+func (spk *SiaPublicKey) LoadString(s string) error {
 	parts := strings.Split(s, ":")
 	if len(parts) != 2 {
-		return
+		return errors.New("invalid public key string")
 	}
-	var err error
-	spk.Key, err = hex.DecodeString(parts[1])
+	err := spk.Key.LoadString(parts[1])
 	if err != nil {
-		spk.Key = nil
-		return
+		return err
 	}
 	copy(spk.Algorithm[:], []byte(parts[0]))
+	return nil
 }
 
 // String defines how to print a SiaPublicKey - hex is used to keep things
 // compact during logging. The key type prefix and lack of a checksum help to
 // separate it from a sia address.
 func (spk *SiaPublicKey) String() string {
-	return spk.Algorithm.String() + ":" + fmt.Sprintf("%x", spk.Key)
+	return spk.Algorithm.String() + ":" + spk.Key.String()
+}
+
+// String turns this raw binary key into a hex-formatted string.
+func (k Key) String() string {
+	return hex.EncodeToString([]byte(k))
+}
+
+// LoadString loads a raw binary key from a hex-formatted string.
+func (k *Key) LoadString(str string) error {
+	b, err := hex.DecodeString(str)
+	if err != nil {
+		return err
+	}
+	*k = Key(b)
+	return nil
+}
+
+// MarshalJSON marshals a binary key as a hex string.
+func (k Key) MarshalJSON() ([]byte, error) {
+	return json.Marshal(k.String())
+}
+
+// UnmarshalJSON decodes the json string of the binary key.
+func (k *Key) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	return k.LoadString(str)
 }

@@ -352,14 +352,22 @@ func (s Specifier) String() string {
 	return string(s[:i])
 }
 
+// LoadString loads a stringified specifier into the specifier type
+func (s *Specifier) LoadString(str string) error {
+	if len(str) > SpecifierLen {
+		return errors.New("invalid specifier")
+	}
+	copy(s[:], str[:])
+	return nil
+}
+
 // UnmarshalJSON decodes the json string of the specifier.
 func (s *Specifier) UnmarshalJSON(b []byte) error {
 	var str string
 	if err := json.Unmarshal(b, &str); err != nil {
 		return err
 	}
-	copy(s[:], str)
-	return nil
+	return s.LoadString(str)
 }
 
 // MarshalJSON marshals an id as a hex string.
