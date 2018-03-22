@@ -35,16 +35,22 @@ func TestUnlockHashJSONMarshalling(t *testing.T) {
 
 	// Corrupt the checksum.
 	old := marUH[36]
-	if old < 102 {
-		marUH[36]++
-	} else {
-		marUH[36] = 97
-	}
+	marUH[36] = increaseHexByte(old)
 	err = umarUH.UnmarshalJSON(marUH)
 	if err != ErrInvalidUnlockHashChecksum {
 		t.Error("expecting an invalid checksum:", err)
 	}
+
+	// ensure the checksum is correct once again
 	marUH[36] = old
+	umarUH = UnlockHash{}
+	err = json.Unmarshal(marUH, &umarUH)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if umarUH != uh {
+		t.Error("Marshalled and unmarshalled unlock hash are not equivalent")
+	}
 
 	// Try an input that's not correct hex.
 	marUH[7] += 100
@@ -84,12 +90,23 @@ func TestUnlockHashStringMarshalling(t *testing.T) {
 
 	// Corrupt the checksum.
 	byteMarUH := []byte(marUH)
-	byteMarUH[36]++
+	old := byteMarUH[36]
+	byteMarUH[36] = increaseHexByte(old)
 	err = umarUH.LoadString(string(byteMarUH))
 	if err != ErrInvalidUnlockHashChecksum {
 		t.Error("expecting an invalid checksum:", err)
 	}
-	byteMarUH[36]--
+	byteMarUH[36] = old
+
+	// unmarshal again, to be sure it now works, once again
+	umarUH = UnlockHash{}
+	err = umarUH.LoadString(marUH)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if umarUH != uh {
+		t.Error("Marshalled and unmarshalled unlock hash are not equivalent")
+	}
 
 	// Try an input that's not correct hex.
 	byteMarUH[7] += 100
@@ -103,6 +120,37 @@ func TestUnlockHashStringMarshalling(t *testing.T) {
 	err = umarUH.LoadString(string(byteMarUH[2:]))
 	if err != ErrUnlockHashWrongLen {
 		t.Error("Got wrong error:", err)
+	}
+}
+
+func increaseHexByte(b byte) byte {
+	v := int(b)
+	v -= 86 // hex -> integer-1
+	if v < 0 {
+		v += 39 // correction for 0-9
+	}
+	// hex-module
+	v %= 16
+	if v < 10 {
+		// byte -> hex(0-9)
+		return byte(v + 48)
+	}
+	// byte -> hex(a-f)
+	return byte(v + 87)
+}
+
+func TestIncreaseHexByte(t *testing.T) {
+	testCases := "0123456789abcdef"
+	for i := range testCases[:] {
+		a := testCases[i]
+		b := increaseHexByte(a)
+		e := testCases[(i+1)%16]
+		if a == b {
+			t.Errorf("no increase happened for increaseHexByte(#%d): %d", i, a)
+		}
+		if b != e {
+			t.Errorf("unexpected result for increaseHexByte(#%d): %d != %d", i, b, e)
+		}
 	}
 }
 
