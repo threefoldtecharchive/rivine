@@ -23,6 +23,15 @@ var (
 	ErrInvalidRedeemer       = errors.New("invalid input redeemer")
 )
 
+const (
+	// AtomicSwapSecretLen is the required/fixed length
+	// of an atomic swap secret, the pre-image of an hashed secret.
+	AtomicSwapSecretLen = sha256.Size
+	// AtomicSwapHashedSecretLen is the required/fixed length
+	// of an atomic swap hashed secret, the post-image of a secret.
+	AtomicSwapHashedSecretLen = sha256.Size
+)
+
 type (
 	// RawInputLockFormat defines the binary format of a condition-fullfilment pair,
 	// used internally of an input lock.

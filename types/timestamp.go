@@ -12,6 +12,15 @@ type (
 	TimestampSlice []Timestamp
 )
 
+func (t Timestamp) String() string {
+	return time.Unix(int64(t), 0).String()
+}
+
+// CurrentTimestamp returns the offset based on the current time as a Timestamp.
+func OffsetTimestamp(offset time.Duration) Timestamp {
+	return Timestamp(time.Now().Add(offset).Unix())
+}
+
 // CurrentTimestamp returns the current time as a Timestamp.
 func CurrentTimestamp() Timestamp {
 	return Timestamp(time.Now().Unix())

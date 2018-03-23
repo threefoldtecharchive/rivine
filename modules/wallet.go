@@ -328,10 +328,9 @@ type (
 		StartTransaction() TransactionBuilder
 
 		// SendCoins is a tool for sending coins from the wallet to an
-		// address. Sending money usually results in multiple transactions. The
-		// transactions are automatically given to the transaction pool, and
+		// address. The transaction is automatically given to the transaction pool, and
 		// are also returned to the caller.
-		SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) ([]types.Transaction, error)
+		SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) (types.Transaction, error)
 
 		// SendBlockStakes is a tool for sending blockstakes from the wallet to an
 		// address. Sending money usually results in multiple transactions. The

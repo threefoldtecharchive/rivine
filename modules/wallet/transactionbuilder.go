@@ -357,7 +357,7 @@ func (tb *transactionBuilder) ViewAdded() (newParents, coinInputs, blockstakeInp
 }
 
 // RegisterTransaction takes a transaction and its parents and returns a
-// TransactionBuilder which can be used to expand the transaction. The most
+// transactionBuilder which can be used to expand the transaction. The most
 // typical call is 'RegisterTransaction(types.Transaction{}, nil)', which
 // registers a new transaction without parents.
 func (w *Wallet) RegisterTransaction(t types.Transaction, parents []types.Transaction) modules.TransactionBuilder {
