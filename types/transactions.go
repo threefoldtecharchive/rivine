@@ -76,12 +76,12 @@ type (
 	// but transactions cannot spend outputs that they create or otherwise be
 	// self-dependent.
 	Transaction struct {
-		CoinInputs        []CoinInput        `json:"coininputs"`
-		CoinOutputs       []CoinOutput       `json:"coinoutputs"`
-		BlockStakeInputs  []BlockStakeInput  `json:"blockstakeinputs"`
-		BlockStakeOutputs []BlockStakeOutput `json:"blockstakeoutputs"`
-		MinerFees         []Currency         `json:"minerfees"`
-		ArbitraryData     []byte             `json:"arbitrarydata"`
+		CoinInputs        []CoinInput
+		CoinOutputs       []CoinOutput
+		BlockStakeInputs  []BlockStakeInput
+		BlockStakeOutputs []BlockStakeOutput
+		MinerFees         []Currency
+		ArbitraryData     []byte
 
 		_VersionNumber TransactionVersion
 	}
@@ -237,21 +237,89 @@ func (t *Transaction) UnmarshalSia(r io.Reader) error {
 	)
 }
 
+// util structs to support some kind of json OneOf feature
+// as to make sure our data can support whatever versions we support
+type (
+	jsonTransaction struct {
+		Version TransactionVersion `json:"version"`
+		Data    json.RawMessage    `json:"data"`
+	}
+	jsonTransactionVersionOne struct {
+		CoinInputs        []CoinInput        `json:"coininputs"`
+		CoinOutputs       []CoinOutput       `json:"coinoutputs,omitempty"`
+		BlockstakeInputs  []BlockStakeInput  `json:"blockstakeinputs,omitempty"`
+		BlockStakeOutputs []BlockStakeOutput `json:"blockstakeoutputs,omitempty"`
+		MinerFees         []Currency         `json:"minerfees"`
+		ArbitraryData     []byte             `json:"arbitrarydata,omitempty"`
+	}
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (t Transaction) MarshalJSON() ([]byte, error) {
+	data, err := json.Marshal(jsonTransactionVersionOne{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockstakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(jsonTransaction{
+		Version: TransactionVersionOne,
+		Data:    data,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (t *Transaction) UnmarshalJSON(b []byte) error {
+	var rawTx jsonTransaction
+	err := json.Unmarshal(b, &rawTx)
+	if err != nil {
+		return err
+	}
+	if rawTx.Version != TransactionVersionOne {
+		return errors.New("invalid transaction version")
+	}
+	var data jsonTransactionVersionOne
+	err = json.Unmarshal(rawTx.Data[:], &data)
+	if err != nil {
+		return err
+	}
+	t.CoinInputs = data.CoinInputs
+	t.CoinOutputs = data.CoinOutputs
+	t.BlockStakeInputs = data.BlockstakeInputs
+	t.BlockStakeOutputs = data.BlockStakeOutputs
+	t.MinerFees = data.MinerFees
+	t.ArbitraryData = data.ArbitraryData
+	return nil
+}
+
+var (
+	_ json.Marshaler   = Transaction{}
+	_ json.Unmarshaler = (*Transaction)(nil)
+)
+
 // MarshalSia implements SiaMarshaler.MarshalSia
 func (v TransactionVersion) MarshalSia(w io.Writer) error {
-	return encoding.NewEncoder(w).Encode(byte(v))
+	_, err := w.Write([]byte{byte(v)})
+	return err
 }
 
 // UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
 func (v *TransactionVersion) UnmarshalSia(r io.Reader) error {
-	var bv byte
-	err := encoding.NewDecoder(r).Decode(&bv)
-	if err != nil {
-		return err
-	}
-	*v = TransactionVersion(bv)
-	return nil
+	var bv [1]byte
+	_, err := io.ReadFull(r, bv[:])
+	*v = TransactionVersion(bv[0])
+	return err
 }
+
+var (
+	_ encoding.SiaMarshaler   = TransactionVersion(0)
+	_ encoding.SiaUnmarshaler = (*TransactionVersion)(nil)
+)
 
 // NewTransactionShortID creates a new Transaction ShortID,
 // combining a blockheight together with a transaction index.
@@ -402,12 +470,12 @@ func (oid *OutputID) UnmarshalJSON(b []byte) error {
 
 // MarshalJSON marshals an id as a hex string.
 func (scoid CoinOutputID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(scoid.String())
+	return crypto.Hash(scoid).MarshalJSON()
 }
 
 // String prints the id in hex.
 func (scoid CoinOutputID) String() string {
-	return fmt.Sprintf("%x", scoid[:])
+	return crypto.Hash(scoid).String()
 }
 
 // UnmarshalJSON decodes the json hex string of the id.
@@ -417,12 +485,12 @@ func (scoid *CoinOutputID) UnmarshalJSON(b []byte) error {
 
 // MarshalJSON marshals an id as a hex string.
 func (bsoid BlockStakeOutputID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(bsoid.String())
+	return crypto.Hash(bsoid).MarshalJSON()
 }
 
 // String prints the id in hex.
 func (bsoid BlockStakeOutputID) String() string {
-	return fmt.Sprintf("%x", bsoid[:])
+	return crypto.Hash(bsoid).String()
 }
 
 // UnmarshalJSON decodes the json hex string of the id.

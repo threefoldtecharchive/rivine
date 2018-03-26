@@ -202,12 +202,12 @@ func (w *Wallet) AllAddresses() []types.UnlockHash {
 
 // GetKey gets the pub/priv key pair,
 // which is linked to the given unlock hash (address).
-func (w *Wallet) GetKey(address types.UnlockHash) (types.SiaPublicKey, types.Key, error) {
+func (w *Wallet) GetKey(address types.UnlockHash) (types.SiaPublicKey, types.ByteSlice, error) {
 	sp, found := w.keys[address]
 	if !found {
-		return types.SiaPublicKey{}, types.Key{}, errUnknownAddress
+		return types.SiaPublicKey{}, types.ByteSlice{}, errUnknownAddress
 	}
-	return types.Ed25519PublicKey(sp.PublicKey), types.Key(sp.SecretKey[:]), nil
+	return types.Ed25519PublicKey(sp.PublicKey), types.ByteSlice(sp.SecretKey[:]), nil
 }
 
 // GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an

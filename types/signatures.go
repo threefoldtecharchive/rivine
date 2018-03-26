@@ -41,13 +41,14 @@ type (
 	// algorithms will always verify, which allows new algorithms to be added to
 	// the protocol via a soft-fork.
 	SiaPublicKey struct {
-		Algorithm Specifier `json:"algorithm"`
-		Key       Key       `json:"key"`
+		Algorithm Specifier
+		Key       ByteSlice
 	}
 
-	// Key defines any kind of raw binary key,
-	// which can be turned into a string, and loaded from a string.
-	Key []byte
+	// ByteSlice defines any kind of raw binary value,
+	// in-memory defined as a byte slice,
+	// and JSON-encoded in hexadecimal form.
+	ByteSlice []byte
 )
 
 // Ed25519PublicKey returns pk as a SiaPublicKey, denoting its algorithm as
@@ -139,7 +140,7 @@ func (t *Transaction) validSignatures(currentHeight BlockHeight) (err error) {
 
 // LoadString is the inverse of SiaPublicKey.String().
 func (spk *SiaPublicKey) LoadString(s string) error {
-	parts := strings.Split(s, ":")
+	parts := strings.SplitN(s, ":", 2)
 	if len(parts) != 2 {
 		return errors.New("invalid public key string")
 	}
@@ -158,31 +159,50 @@ func (spk *SiaPublicKey) String() string {
 	return spk.Algorithm.String() + ":" + spk.Key.String()
 }
 
-// String turns this raw binary key into a hex-formatted string.
-func (k Key) String() string {
-	return hex.EncodeToString([]byte(k))
+// MarshalJSON marshals a byte slice as a hex string.
+func (spk SiaPublicKey) MarshalJSON() ([]byte, error) {
+	return json.Marshal(spk.String())
 }
 
-// LoadString loads a raw binary key from a hex-formatted string.
-func (k *Key) LoadString(str string) error {
-	b, err := hex.DecodeString(str)
-	if err != nil {
-		return err
-	}
-	*k = Key(b)
-	return nil
-}
-
-// MarshalJSON marshals a binary key as a hex string.
-func (k Key) MarshalJSON() ([]byte, error) {
-	return json.Marshal(k.String())
-}
-
-// UnmarshalJSON decodes the json string of the binary key.
-func (k *Key) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON decodes the json string of the byte slice.
+func (spk *SiaPublicKey) UnmarshalJSON(b []byte) error {
 	var str string
 	if err := json.Unmarshal(b, &str); err != nil {
 		return err
 	}
-	return k.LoadString(str)
+	return spk.LoadString(str)
 }
+
+// String turns this byte slice into a hex-formatted string.
+func (bs ByteSlice) String() string {
+	return hex.EncodeToString([]byte(bs))
+}
+
+// LoadString loads a  byte slice from a hex-formatted string.
+func (bs *ByteSlice) LoadString(str string) error {
+	b, err := hex.DecodeString(str)
+	if err != nil {
+		return err
+	}
+	*bs = ByteSlice(b)
+	return nil
+}
+
+// MarshalJSON marshals a byte slice as a hex string.
+func (bs ByteSlice) MarshalJSON() ([]byte, error) {
+	return json.Marshal(bs.String())
+}
+
+// UnmarshalJSON decodes the json string of the byte slice.
+func (bs *ByteSlice) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	return bs.LoadString(str)
+}
+
+var (
+	_ json.Marshaler   = ByteSlice{}
+	_ json.Unmarshaler = (*ByteSlice)(nil)
+)

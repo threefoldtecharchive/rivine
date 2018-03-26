@@ -95,8 +95,8 @@ type (
 	// WalletKeyGet contains the public and private key used by the wallet.
 	WalletKeyGet struct {
 		AlgorithmSpecifier types.Specifier `json:"specifier"`
-		PublicKey          types.Key       `json:"publickey"`
-		SecretKey          types.Key       `json:"secretkey"`
+		PublicKey          types.ByteSlice `json:"publickey"`
+		SecretKey          types.ByteSlice `json:"secretkey"`
 	}
 
 	// WalletTransactionGETid contains the transaction returned by a call to

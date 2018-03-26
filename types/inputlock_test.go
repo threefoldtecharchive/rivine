@@ -3,6 +3,8 @@ package types
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"reflect"
@@ -541,5 +543,108 @@ func TestAtomicSwapRefund(t *testing.T) {
 	err = ul.Unlock(0, Transaction{})
 	if err != nil {
 		t.Errorf("failed to refund input: %v", err)
+	}
+}
+
+func TestInputLockProxyJSONEncoding(t *testing.T) { // utility funcs
+	hbs := func(str string) []byte { // hexStr -> byte slice
+		bs, _ := hex.DecodeString(str)
+		return bs
+	}
+	hs := func(str string) (hash crypto.Hash) { // hbs -> crypto.Hash
+		copy(hash[:], hbs(str))
+		return
+	}
+
+	// test cases
+	testCases := []struct {
+		JSONEncoded            string
+		ExpectedInputLockProxy InputLockProxy
+		// alternative JSON Output
+		OutputJSONEncoded string
+	}{
+		// nil input lock
+		{`{}`, InputLockProxy{}, ``},
+		{`{"type":0}`, InputLockProxy{}, `{}`},
+		{`{"type":0,"condition":null,"fulfillment":null}`, InputLockProxy{}, `{}`},
+		// single signature input lock
+		{
+			`{"type":1,"condition":{"publickey":"ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"},"fulfillment":{"signature":"abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"}}`,
+			InputLockProxy{
+				t: UnlockTypeSingleSignature,
+				il: &SingleSignatureInputLock{
+					PublicKey: SiaPublicKey{
+						Algorithm: SignatureEd25519,
+						Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+					},
+					Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
+				},
+			},
+			``,
+		},
+		// atomic swap input lock
+		{
+			`{"type":2,"condition":{"sender":"010123456789012345678901234567890101234567890123456789012345678901dec8f8544d34","receiver":"01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a","hashedsecret":"abc543defabc543defabc543defabc543defabc543defabc543defabc543defa","timelock":1522068743},"fulfillment":{"publickey":"ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","signature":"abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab","secret":"def789def789def789def789def789dedef789def789def789def789def789de"}}`,
+			InputLockProxy{
+				t: UnlockTypeAtomicSwap,
+				il: &AtomicSwapInputLock{
+					Sender: UnlockHash{
+						Type: UnlockTypeSingleSignature,
+						Hash: hs("0123456789012345678901234567890101234567890123456789012345678901"),
+					},
+					Receiver: UnlockHash{
+						Type: UnlockTypeSingleSignature,
+						Hash: hs("abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0"),
+					},
+					HashedSecret: AtomicSwapHashedSecret(hs("abc543defabc543defabc543defabc543defabc543defabc543defabc543defa")),
+					TimeLock:     1522068743,
+					PublicKey: SiaPublicKey{
+						Algorithm: SignatureEd25519,
+						Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+					},
+					Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
+					Secret:    AtomicSwapSecret(hs("def789def789def789def789def789dedef789def789def789def789def789de")),
+				},
+			},
+			``,
+		},
+		// unknown input lock
+		{
+			`{"type":42,"condition":"Y29uZGl0aW9u","fulfillment":"ZnVsZmlsbG1lbnQ="}`,
+			InputLockProxy{
+				t: 42,
+				il: &UnknownInputLock{
+					Condition:   []byte("condition"),
+					Fulfillment: []byte("fulfillment"),
+				},
+			},
+			``,
+		},
+	}
+	for idx, testCase := range testCases {
+		var il InputLockProxy
+		err := json.Unmarshal([]byte(testCase.JSONEncoded), &il)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		if !reflect.DeepEqual(testCase.ExpectedInputLockProxy, il) {
+			t.Errorf("#%d: %v != %v", idx, testCase.ExpectedInputLockProxy, il)
+			continue
+		}
+		b, err := json.Marshal(il)
+		if err != nil {
+			t.Error(idx, err)
+		}
+		jsonEncoded := string(b)
+		if testCase.OutputJSONEncoded == "" {
+			if testCase.JSONEncoded != jsonEncoded {
+				t.Errorf("#%d: %v != %v", idx, testCase.JSONEncoded, jsonEncoded)
+			}
+		} else {
+			if testCase.OutputJSONEncoded != jsonEncoded {
+				t.Errorf("#%d: %v != %v", idx, testCase.OutputJSONEncoded, jsonEncoded)
+			}
+		}
 	}
 }

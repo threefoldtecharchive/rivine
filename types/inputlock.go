@@ -3,6 +3,8 @@ package types
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -109,7 +111,15 @@ type (
 	// The spender will need to proof ownership of that public key by providing a correct signature.
 	SingleSignatureInputLock struct {
 		PublicKey SiaPublicKey
-		Signature Key
+		Signature ByteSlice
+	}
+	// single-signature related
+	// json util structs
+	singleSignatureCondition struct {
+		PublicKey SiaPublicKey `json:"publickey"`
+	}
+	singleSignatureFulfillment struct {
+		Signature ByteSlice `json:"signature"`
 	}
 
 	// AtomicSwapSecret defines the 256 pre-image byte slice,
@@ -122,14 +132,14 @@ type (
 	// the initiator/sender of such a contract.
 	AtomicSwapRefundKey struct {
 		PublicKey SiaPublicKey
-		SecretKey Key
+		SecretKey ByteSlice
 	}
 	// AtomicSwapClaimKey defines the claim key pair used by
 	// the participant/receiver of such a contract,
 	// used to lock the contract from their side.
 	AtomicSwapClaimKey struct {
 		PublicKey SiaPublicKey
-		SecretKey Key
+		SecretKey ByteSlice
 		Secret    AtomicSwapSecret
 	}
 
@@ -143,22 +153,23 @@ type (
 		Sender, Receiver UnlockHash
 		HashedSecret     AtomicSwapHashedSecret
 		PublicKey        SiaPublicKey
-		Signature        []byte
+		Signature        ByteSlice
 		Secret           AtomicSwapSecret
 	}
 	// AtomicSwapCondition defines the condition of an atomic swap contract/input-lock.
 	// Only used for encoding purposes.
 	AtomicSwapCondition struct {
-		Sender, Receiver UnlockHash
-		HashedSecret     AtomicSwapHashedSecret
-		TimeLock         Timestamp
+		Sender       UnlockHash             `json:"sender"`
+		Receiver     UnlockHash             `json:"receiver"`
+		HashedSecret AtomicSwapHashedSecret `json:"hashedsecret"`
+		TimeLock     Timestamp              `json:"timelock"`
 	}
 	// AtomicSwapFulfillment defines the fulfillment of an atomic swap contract/input-lock.
 	// Only used for encoding purposes.
 	AtomicSwapFulfillment struct {
-		PublicKey SiaPublicKey
-		Signature []byte
-		Secret    AtomicSwapSecret
+		PublicKey SiaPublicKey     `json:"publickey"`
+		Signature ByteSlice        `json:"signature"`
+		Secret    AtomicSwapSecret `json:"secret"`
 	}
 )
 
@@ -225,6 +236,158 @@ func (p *InputLockProxy) UnmarshalSia(r io.Reader) error {
 var (
 	_ encoding.SiaMarshaler   = InputLockProxy{}
 	_ encoding.SiaUnmarshaler = (*InputLockProxy)(nil)
+)
+
+// jsonInputLockProxy is a util struct
+// in order to help us decode (and encode) input locks as JSON
+// in a sane manner
+//
+// IMPORTANT: unknown types's condition and fulfillment have to be base64 byte slices!!!
+type jsonInputLockProxy struct {
+	Type        UnlockType      `json:"type,omitempty"`
+	Condition   json.RawMessage `json:"condition,omitempty"`
+	Fulfillment json.RawMessage `json:"fulfillment,omitempty"`
+}
+
+// MarshalJSON implements json.Marshaler.MarshalJSON
+func (p InputLockProxy) MarshalJSON() ([]byte, error) {
+	var (
+		err          error
+		rawInputLock = jsonInputLockProxy{Type: p.t}
+	)
+
+	switch p.t {
+	case UnlockTypeNil:
+		// nothing to do related to condition and signature
+
+	case UnlockTypeSingleSignature:
+		il := p.il.(*SingleSignatureInputLock)
+		rawInputLock.Condition, err = json.Marshal(singleSignatureCondition{
+			PublicKey: il.PublicKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+		rawInputLock.Fulfillment, err = json.Marshal(singleSignatureFulfillment{
+			Signature: il.Signature,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+	case UnlockTypeAtomicSwap:
+		il := p.il.(*AtomicSwapInputLock)
+		rawInputLock.Condition, err = json.Marshal(AtomicSwapCondition{
+			Sender:       il.Sender,
+			Receiver:     il.Receiver,
+			TimeLock:     il.TimeLock,
+			HashedSecret: il.HashedSecret,
+		})
+		if err != nil {
+			return nil, err
+		}
+		rawInputLock.Fulfillment, err = json.Marshal(AtomicSwapFulfillment{
+			PublicKey: il.PublicKey,
+			Signature: il.Signature,
+			Secret:    il.Secret,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+	default:
+		// forward-compatibility
+		il := p.il.(*UnknownInputLock)
+		rawInputLock.Condition, err = json.Marshal(il.Condition)
+		if err != nil {
+			return nil, err
+		}
+		rawInputLock.Fulfillment, err = json.Marshal(il.Fulfillment)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+	return json.Marshal(rawInputLock)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.UnmarshalJSON
+func (p *InputLockProxy) UnmarshalJSON(b []byte) error {
+	var rawInputLock jsonInputLockProxy
+	err := json.Unmarshal(b, &rawInputLock)
+	if err != nil {
+		return err
+	}
+	switch rawInputLock.Type {
+	case UnlockTypeNil:
+		p.il = nil
+
+	case UnlockTypeSingleSignature:
+		var (
+			condition   singleSignatureCondition
+			fulfillment singleSignatureFulfillment
+		)
+		err = json.Unmarshal(rawInputLock.Condition[:], &condition)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(rawInputLock.Fulfillment[:], &fulfillment)
+		if err != nil {
+			return err
+		}
+		p.il = &SingleSignatureInputLock{
+			PublicKey: condition.PublicKey,
+			Signature: fulfillment.Signature,
+		}
+
+	case UnlockTypeAtomicSwap:
+		var (
+			condition   AtomicSwapCondition
+			fulfillment AtomicSwapFulfillment
+		)
+		err = json.Unmarshal(rawInputLock.Condition[:], &condition)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(rawInputLock.Fulfillment[:], &fulfillment)
+		if err != nil {
+			return err
+		}
+		p.il = &AtomicSwapInputLock{
+			TimeLock:     condition.TimeLock,
+			Sender:       condition.Sender,
+			Receiver:     condition.Receiver,
+			HashedSecret: condition.HashedSecret,
+			PublicKey:    fulfillment.PublicKey,
+			Signature:    fulfillment.Signature,
+			Secret:       fulfillment.Secret,
+		}
+
+	default:
+		var (
+			condition, fulfillment []byte
+		)
+		err = json.Unmarshal(rawInputLock.Condition[:], &condition)
+		if err != nil {
+			return err
+		}
+		err = json.Unmarshal(rawInputLock.Fulfillment[:], &fulfillment)
+		if err != nil {
+			return err
+		}
+		p.il = &UnknownInputLock{
+			Condition:   condition,
+			Fulfillment: fulfillment,
+		}
+	}
+
+	p.t = rawInputLock.Type
+	return nil
+}
+
+var (
+	_ json.Marshaler   = InputLockProxy{}
+	_ json.Unmarshaler = (*InputLockProxy)(nil)
 )
 
 // UnlockHash implements InputLock.UnlockHash
@@ -358,6 +521,78 @@ func (ss *SingleSignatureInputLock) StrictCheck() error {
 	return strictSignatureCheck(ss.PublicKey, ss.Signature)
 }
 
+// String turns this hashed secret into a hex-formatted string.
+func (hs AtomicSwapHashedSecret) String() string {
+	return hex.EncodeToString(hs[:])
+}
+
+// LoadString loads a hashed secret from a hex-formatted string.
+func (hs *AtomicSwapHashedSecret) LoadString(str string) error {
+	n, err := hex.Decode(hs[:], []byte(str))
+	if err != nil {
+		return err
+	}
+	if n != AtomicSwapHashedSecretLen {
+		return errors.New("invalid (atomic-swap) hashed secret length")
+	}
+	return nil
+}
+
+// MarshalJSON marshals a hashed secret as a hex string.
+func (hs AtomicSwapHashedSecret) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hs.String())
+}
+
+// UnmarshalJSON decodes the json string of the hashed secret.
+func (hs *AtomicSwapHashedSecret) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	return hs.LoadString(str)
+}
+
+var (
+	_ json.Marshaler   = AtomicSwapHashedSecret{}
+	_ json.Unmarshaler = (*AtomicSwapHashedSecret)(nil)
+)
+
+// String turns this secret into a hex-formatted string.
+func (s AtomicSwapSecret) String() string {
+	return hex.EncodeToString(s[:])
+}
+
+// LoadString loads a secret from a hex-formatted string.
+func (s *AtomicSwapSecret) LoadString(str string) error {
+	n, err := hex.Decode(s[:], []byte(str))
+	if err != nil {
+		return err
+	}
+	if n != AtomicSwapSecretLen {
+		return errors.New("invalid (atomic-swap) secret length")
+	}
+	return nil
+}
+
+// MarshalJSON marshals a secret as a hex string.
+func (s AtomicSwapSecret) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}
+
+// UnmarshalJSON decodes the json string of the secret.
+func (s *AtomicSwapSecret) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	return s.LoadString(str)
+}
+
+var (
+	_ json.Marshaler   = AtomicSwapSecret{}
+	_ json.Unmarshaler = (*AtomicSwapSecret)(nil)
+)
+
 // NewAtomicSwapInputLock creates a new input lock as part of an atomic swap,
 // using the given public keys, timelock and timestamp.
 // Prior to the timestamp only the receiver can claim, using the required secret,
@@ -392,7 +627,7 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 		}
 
 		var err error
-		as.Signature, err = signHashUsingSiaPublicKey(v.PublicKey, inputIndex, tx, v.SecretKey, as.Secret)
+		as.Signature, err = signHashUsingSiaPublicKey(v.PublicKey, inputIndex, tx, v.SecretKey, as.PublicKey, as.Secret)
 		return err
 
 	case AtomicSwapRefundKey: // refund
@@ -402,7 +637,7 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 		as.PublicKey = v.PublicKey
 
 		var err error
-		as.Signature, err = signHashUsingSiaPublicKey(v.PublicKey, inputIndex, tx, v.SecretKey)
+		as.Signature, err = signHashUsingSiaPublicKey(v.PublicKey, inputIndex, tx, v.SecretKey, as.PublicKey)
 		return err
 
 	default:
@@ -424,7 +659,7 @@ func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 		}
 
 		// verify signature
-		err := verifyHashUsingSiaPublicKey(as.PublicKey, inputIndex, tx, as.Signature, as.Secret)
+		err := verifyHashUsingSiaPublicKey(as.PublicKey, inputIndex, tx, as.Signature, as.PublicKey, as.Secret)
 		if err != nil {
 			return err
 		}
@@ -447,7 +682,7 @@ func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 
 	// after the deadline (timelock),
 	// only the original sender can reclaim the unspend output
-	return verifyHashUsingSiaPublicKey(as.PublicKey, inputIndex, tx, as.Signature)
+	return verifyHashUsingSiaPublicKey(as.PublicKey, inputIndex, tx, as.Signature, as.PublicKey)
 }
 
 // EncodeCondition implements InputLock.EncodeCondition
@@ -526,7 +761,7 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 		switch k := key.(type) {
 		case crypto.SecretKey:
 			edSK = k
-		case Key:
+		case ByteSlice:
 			if len(k) != crypto.SecretKeySize {
 				return nil, errors.New("invalid secret key size")
 			}

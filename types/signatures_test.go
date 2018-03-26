@@ -65,32 +65,32 @@ func TestSortedUnique(t *testing.T) {
 	}
 }
 
-func TestKeyStringify(t *testing.T) {
+func TestByteSliceStringify(t *testing.T) {
 	testCases := []struct {
-		Key    Key
-		String string
+		ByteSlice ByteSlice
+		String    string
 	}{
-		{Key{}, ""},
-		{Key{0}, "00"},
-		{Key{42}, "2a"},
-		{Key{255}, "ff"},
-		{Key{0, 255, 0}, "00ff00"},
-		{Key{1, 2, 3}, "010203"},
-		{Key{2, 5, 5}, "020505"},
-		{Key{0, 0, 0, 0}, "00000000"},
+		{ByteSlice{}, ""},
+		{ByteSlice{0}, "00"},
+		{ByteSlice{42}, "2a"},
+		{ByteSlice{255}, "ff"},
+		{ByteSlice{0, 255, 0}, "00ff00"},
+		{ByteSlice{1, 2, 3}, "010203"},
+		{ByteSlice{2, 5, 5}, "020505"},
+		{ByteSlice{0, 0, 0, 0}, "00000000"},
 	}
 	for index, testCase := range testCases {
-		str := testCase.Key.String()
+		str := testCase.ByteSlice.String()
 		if str != testCase.String {
 			t.Errorf("stringification went wrong: %q != %q", str, testCase.String)
 		}
-		var k Key
-		err := k.LoadString(str)
+		var bs ByteSlice
+		err := bs.LoadString(str)
 		if err != nil {
 			t.Errorf("destringification of #%d went wrong: %v", index, err)
 		}
-		if !reflect.DeepEqual(k, testCase.Key) {
-			t.Errorf("destringification of #%d went wrong: %v != %v", index, k, testCase.Key)
+		if !reflect.DeepEqual(bs, testCase.ByteSlice) {
+			t.Errorf("destringification of #%d went wrong: %v != %v", index, bs, testCase.ByteSlice)
 		}
 	}
 }
