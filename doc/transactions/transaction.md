@@ -19,12 +19,16 @@ This works very similar to change money you get in a supermarket by paying too m
 Besides the inputs, outputs and minerfees, one can also optionally attach some arbtirary binary
 data to a transaction, which isn't of any meaning to the blockchain itself.
 
+Should you read this document as part of an effort of developing your own light wallet client
+that supports a rivine-based blockchain, you might also want to checkout
+[the offline transaction example](/doc/examples/offline_transaction/offline_transaction.go).
+
 ## Relevant Source Files
 
 For those interested, this document explains logic
 implemented in the Golang reference Rivine implementation, and covers following source files:
 
-+ [/types/transaction.go](/types/transaction.go)
++ [/types/transactions.go](/types/transactions.go)
 + [/types/inputlock.go](/types/inputlock.go)
 + [/types/unlockhash.go](/types/unlockhash.go)
 + [/types/signatures.go](/types/signatures.go)
