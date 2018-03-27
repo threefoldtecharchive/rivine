@@ -1,16 +1,16 @@
 #! /usr/bin/env bash
 
 testpass="test123"
-genesisoutputseed="across knife thirsty puck itches hazard enmity fainted pebbles unzip echo queen rarest aphid bugs yanks okay abbey eskimos dove orange nouns august ailments inline rebel glass tyrant acumen"
+genesisoutputseed="recall view document apology stone tattoo job farm pilot favorite mango topic thing dilemma dawn width marble proud pen meadow sing museum lucky present"
 network_name="rivnet"
 
 # Check if the test network exists and create it if it does not
 docker network inspect $network_name &> /dev/null
 if [ $? -ne 0 ]; then
-    echo "Network does not exist yet, create it"
+    echo "$network_name network does not exist yet, creating it"
     docker network create $network_name
 else 
-    echo "Network already exists, skip creation"
+    echo "$network_name network already exists"
 fi
 
 # Ensure that we have the testnet dockers build
@@ -18,7 +18,9 @@ docker build -t rivine_testnet ../../../. -f ./Dockerfile_testnet
 
 
 # Now run 2 which will (well could, only one will have the blockstakes to do so) create the blocks
+docker rm -f r1
 docker run -d --name r1 --net=$network_name rivine_testnet
+docker rm -f r2
 docker run -d --name r2 --net=$network_name rivine_testnet
 
 # Connect the dockers
@@ -26,10 +28,16 @@ docker exec r1 rivinec gateway connect "r2:23112"
  
 
 # Create a wallet
-echo "$testpass" | docker exec -i r1 rivinec wallet init -p
+docker exec -i r1 rivinec wallet init << EOF
+$testpass
+$testpass
+EOF
 echo "$testpass" | docker exec -i r1 rivinec wallet unlock
 
-echo "$testpass" | docker exec -i r2 rivinec wallet init -p
+echo "$testpass" | docker exec -i r2 rivinec wallet init << EOF
+$testpass
+$testpass
+EOF
 echo "$testpass" | docker exec -i r2 rivinec wallet unlock
 
 # Save an address for later
@@ -52,6 +60,7 @@ echo "$testpass" | docker exec -i r1 rivinec wallet unlock
 # Start a gateway daemon, without wallet or blockcreator modules
 
 # So piping the password to the docker to ensure that the http api listens on none localhost addresses causes some issues.
+docker rm -f r3
 docker run -d -i --name r3 --net=$network_name rivine_testnet --disable-api-security --authenticate-api --no-bootstrap -M cgte --api-addr :23110
 # Do some serious monkey business to get the gateway running
 echo $testpass | docker attach r3

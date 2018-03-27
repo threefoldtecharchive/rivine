@@ -489,6 +489,9 @@ types:
       200:
         description: |
           Succesfully created transaction
+        body:
+          application/json:
+            transactionid: string
         400:
           description: |
             error decoding the supplied transaction.

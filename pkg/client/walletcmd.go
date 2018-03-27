@@ -21,7 +21,7 @@ var (
 		Long: `Generate a new address, send coins to another wallet, or view info about the wallet.
 
 Units:
-The smallest unit of coins is the hasting. One coin is 10^24 hastings. Other supported units are:
+The following units are supported:
   p (pico,  10^-12)
   n (nano,  10^-9 )
   u (micro, 10^-6 )
@@ -100,18 +100,18 @@ By default the wallet encryption / unlock password is the same as the generated 
 	}
 
 	walletSendSiacoinsCmd = &cobra.Command{
-		Use:   "coins [amount] [dest]",
+		Use:   "coins <amount> <dest>",
 		Short: "Send coins to an address",
 		Long: `Send coins to an address. 'dest' must be a 76-byte hexadecimal address.
 'amount' can be specified in units, e.g. 1.23K. Run 'wallet --help' for a list of units.
-If no unit is supplied, hastings will be assumed.
+A unit must be supplied
 
 A miner fee of 10 C is levied on all transactions.`,
 		Run: Wrap(walletsendsiacoinscmd),
 	}
 
 	walletSendSiafundsCmd = &cobra.Command{
-		Use:   "blockstakes [amount] [dest]",
+		Use:   "blockstakes <amount> <dest>",
 		Short: "Send blockstakes",
 		Long: `Send blockstakes to an address.
 Run 'wallet send --help' to see a list of available units.`,
@@ -119,7 +119,7 @@ Run 'wallet send --help' to see a list of available units.`,
 	}
 
 	walletRegisterDataCmd = &cobra.Command{
-		Use:   "registerdata [dest] [data]",
+		Use:   "registerdata <namespace> <data> <dest>",
 		Short: "Register data on the blockchain",
 		Long:  "Register data on the blockcahin by sending a minimal transaction to the destination address, and including the data in the transaction",
 		Run:   Wrap(walletregisterdatacmd),
@@ -269,9 +269,9 @@ func walletsendblockstakescmd(amount, dest string) {
 
 // walletregisterdatacmd registers data on the blockchain by making a minimal transaction to the designated address
 // and includes the data in the transaction
-func walletregisterdatacmd(dest, data string) {
+func walletregisterdatacmd(namespace, dest, data string) {
 	// / At the moment, we need to prepend the non sia prefix for the transaction to be accepted by the transactionpool
-	encodedData := base64.StdEncoding.EncodeToString([]byte(data))
+	encodedData := base64.StdEncoding.EncodeToString([]byte(namespace + data))
 	err := _DefaultClient.httpClient.Post("/wallet/data",
 		fmt.Sprintf("destination=%s&data=%s", dest, encodedData))
 	if err != nil {
