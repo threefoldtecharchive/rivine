@@ -290,8 +290,12 @@ Provide an externally constructed and signed transaction to the transactionpool.
 ```
 
 ###### Response
-standard success or error response. See
-[#standard-responses](#standard-responses).
+
+```javascript
+{
+    "transactionid": String
+}
+```
 
 
 Wallet
