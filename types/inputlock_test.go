@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"testing"
 
@@ -98,6 +99,41 @@ func TestSingleSignatureUnlockerBadTransaction(t *testing.T) {
 	}
 }
 
+func TestSingleSignatureUnlockerUnknownKeyType(t *testing.T) {
+	pk := SiaPublicKey{
+		Algorithm: Specifier{'f', 'o', 'o'},
+		Key:       ByteSlice{},
+	}
+	var sk [128]byte
+	ul := NewSingleSignatureInputLock(pk)
+
+	err := ul.StrictCheck()
+	if err == nil {
+		t.Error("error was expected, nil received")
+	}
+
+	uh1 := ul.UnlockHash()
+	uh2 := ul.UnlockHash()
+	if uh1.String() != uh2.String() {
+		t.Error("inconsistent unlock hashes:", uh1, uh2)
+	}
+
+	err = ul.Unlock(0, Transaction{})
+	if err != nil {
+		t.Error("signing algo is unknown, should always work, but failed: ", err)
+	}
+
+	err = ul.Lock(0, Transaction{}, sk)
+	if err == nil {
+		t.Error("locking should always fail for an unknown type")
+	}
+
+	err = ul.Unlock(0, Transaction{})
+	if err != nil {
+		t.Error("signing algo is unknown, should still always work, but failed: ", err)
+	}
+}
+
 func TestAtomicSwapUnlocker(t *testing.T) {
 	sk1, pk1 := crypto.GenerateKeyPair()
 	sk2, pk2 := crypto.GenerateKeyPair()
@@ -186,6 +222,38 @@ func TestAtomicSwapUnlocker(t *testing.T) {
 	uh3 := ul.UnlockHash()
 	if uh1.String() != uh3.String() {
 		t.Error("inconsistent unlock hashes:", uh1, uh3)
+	}
+}
+
+func TestUnknownUnlocker(t *testing.T) {
+	ul := NewInputLockProxy(UnlockType(math.MaxUint8), new(UnknownInputLock))
+
+	// strict check should always fail for unknown types
+	err := ul.StrictCheck()
+	if err == nil {
+		t.Error("error was expected, nil received")
+	}
+
+	// unlock hashes should work
+	uh1 := ul.UnlockHash()
+	uh2 := ul.UnlockHash()
+	if uh1.String() != uh2.String() {
+		t.Error("inconsistent unlock hashes:", uh1, uh2)
+	}
+
+	// unlocking should always work, as to support future soft-forks
+	err = ul.Unlock(0, Transaction{})
+	if err != nil {
+		t.Error("unlocking an unknown type should always work, but it failed now:", err)
+	}
+
+	// locking should always fail for an unknown type,
+	// as that doesn't make any sense.
+	// Only our own wallet module ever locks input locks,
+	// hence there is no valid reason why we would try to do so using an unknown type.
+	err = ul.Lock(0, Transaction{}, crypto.SecretKey{})
+	if err == nil {
+		t.Error("should fail, as locking isn't supported for unknown types")
 	}
 }
 

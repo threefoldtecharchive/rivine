@@ -17,6 +17,16 @@ import (
 var (
 	ErrInvalidInputLockType  = errors.New("invalid input lock type")
 	ErrUnlockConditionLocked = errors.New("unlock condition is already locked")
+
+	// ErrUnknownUnlockType is an error returned in case
+	// one tries to lock an input lock of unknown type
+	ErrUnknownUnlockType = errors.New("unknown unlock type")
+
+	// ErrUnknownSignAlgorithmType is an error returned in case
+	// one tries to sign using an unknown signing algorithm type.
+	//
+	// NOTE That verification of unknown signing algorithm types does always succeed!
+	ErrUnknownSignAlgorithmType = errors.New("unknown signature algorithm type")
 )
 
 // Errors related to atomic swaps
@@ -445,7 +455,7 @@ func (u *UnknownInputLock) Decode(rf RawInputLockFormat) error {
 
 // Lock implements InputLock.Lock
 func (u *UnknownInputLock) Lock(_ uint64, _ Transaction, _ interface{}) error {
-	return nil // locking does nothing for an unknown type
+	return ErrUnknownUnlockType // locking an unkown type is never valid
 }
 
 // Unlock implements InputLock.Unlock
@@ -779,12 +789,8 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 		return sig[:], nil
 
 	default:
-		// If the identifier is not recognized, assume that the signature
-		// is valid. This allows more signature types to be added via soft
-		// forking.
+		return nil, ErrUnknownSignAlgorithmType
 	}
-
-	return nil, nil
 }
 
 func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) (err error) {

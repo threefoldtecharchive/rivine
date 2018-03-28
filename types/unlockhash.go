@@ -57,11 +57,6 @@ const (
 	// who has to give the secret in order to do so. After the InputLock,
 	// the output can only be claimed by the sender, with no deadline in this phas
 	UnlockTypeAtomicSwap
-
-	// MaxStandardUnlockType can be used to define your own
-	// UnlockType without having to hardcode the final standard
-	// unlock type, while still preventing any possible type overwrite.
-	MaxStandardUnlockType = UnlockTypeSingleSignature
 )
 
 // NewUnlockHash creates a new unlock hash
