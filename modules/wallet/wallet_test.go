@@ -401,6 +401,17 @@ func (css *consensusSetStub) TransactionAtShortID(shortID types.TransactionShort
 	return block.Transactions[txSeqID], true
 }
 
+func (css *consensusSetStub) TransactionAtID(id types.TransactionID) (types.Transaction, types.TransactionShortID, bool) {
+	for i, b := range css.blocks {
+		for j, t := range b.Transactions {
+			if t.ID() == id {
+				return t, types.NewTransactionShortID(types.BlockHeight(i), uint16(j)), true
+			}
+		}
+	}
+	return types.Transaction{}, 0, false
+}
+
 func (css *consensusSetStub) ChildTarget(id types.BlockID) (types.Target, bool) {
 	// TODO: return a more sensible value if required
 	return types.Target{}, false

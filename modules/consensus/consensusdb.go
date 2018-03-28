@@ -52,6 +52,10 @@ var (
 	// BlockStakeOutputs is a database bucket that contains all of the unspent
 	// blockstake outputs.
 	BlockStakeOutputs = []byte("BlockStakeOutputs")
+
+	// TransactionIDMap is a database bucket that containsall of the present
+	// transaction IDs linked to their short ID
+	TransactionIDMap = []byte("TransactionIDMap")
 )
 
 // createConsensusObjects initialzes the consensus portions of the database.
@@ -64,6 +68,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 		Consistency,
 		CoinOutputs,
 		BlockStakeOutputs,
+		TransactionIDMap,
 	}
 	for _, bucket := range buckets {
 		_, err := tx.CreateBucket(bucket)
@@ -324,6 +329,43 @@ func removeBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
+}
+
+// addTxnIDMapping adds a transaction ID mapping to the database.
+func addTxnIDMapping(tx *bolt.Tx, longID types.TransactionID, shortID types.TransactionShortID) {
+	txIDMapBucket := tx.Bucket(TransactionIDMap)
+	// Sanity check - should not be adding an item already in the db.
+	if build.DEBUG && txIDMapBucket.Get(longID[:]) != nil {
+		panic("repeat transaction id mapping")
+	}
+	err := txIDMapBucket.Put(longID[:], encoding.Marshal(shortID))
+	if build.DEBUG && err != nil {
+		panic(err)
+	}
+}
+
+// removeTxnIDMappng removes a transaction ID mapping from the database.
+func removeTxnIDMapping(tx *bolt.Tx, longID types.TransactionID) {
+	txIDMapBucket := tx.Bucket(TransactionIDMap)
+	if build.DEBUG && txIDMapBucket.Get(longID[:]) == nil {
+		panic("nil txID mapping")
+	}
+	err := txIDMapBucket.Delete(longID[:])
+	if build.DEBUG && err != nil {
+		panic(err)
+	}
+}
+
+// getTransactionShortID returns a transaction short ID from
+// a regular transaction ID
+func getTransactionShortID(tx *bolt.Tx, id types.TransactionID) (types.TransactionShortID, error) {
+	shortIDBytes := tx.Bucket(TransactionIDMap).Get(id[:])
+	if shortIDBytes == nil {
+		return types.TransactionShortID(0), errNilItem
+	}
+	var shortID types.TransactionShortID
+	err := encoding.Unmarshal(shortIDBytes, &shortID)
+	return shortID, err
 }
 
 // addDCO adds a delayed coin output to the consensus set.

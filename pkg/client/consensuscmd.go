@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -67,25 +66,19 @@ func EstimatedHeightAt(t time.Time) types.BlockHeight {
 }
 
 // Consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
-// Prints the transaction found for the given shortID.
-func Consensustransactioncmd(shortID string) {
-	if !consensusShortIDRegexp.MatchString(shortID) {
-		Die("invalid shortID: ", shortID)
-	}
-
+// Prints the transaction found for the given id. If the ID is a long transaction ID, it also
+// prints the short transaction ID for future reference
+func Consensustransactioncmd(id string) {
 	var txn api.ConsensusGetTransaction
-	err := GetAPI("/consensus/transactions/"+shortID, &txn)
+
+	err := GetAPI("/consensus/transactions/"+id, &txn)
 	if err != nil {
-		Die("failed to get transaction: ", err, "; shortID: ", shortID)
+		Die("failed to get transaction:", err, "; ID:", id)
 	}
 
 	encoder := json.NewEncoder(os.Stdout)
 	err = encoder.Encode(txn)
 	if err != nil {
-		Die("failed to encode transaction: ", err, "; shortID: ", shortID)
+		Die("failed to encode transaction:", err, "; ID:", id)
 	}
 }
-
-var (
-	consensusShortIDRegexp = regexp.MustCompile("^[0-9]{1,8}$")
-)

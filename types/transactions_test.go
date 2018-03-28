@@ -1,7 +1,10 @@
 package types
 
 import (
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/rivine/rivine/crypto"
@@ -109,4 +112,89 @@ func TestTransactionShortID(t *testing.T) {
 			t.Errorf("transaction seq ID (%v) != %v", tsid, testCase.TxSequenceID)
 		}
 	}
+}
+
+func TestOutputIDStringJSONEncoding(t *testing.T) {
+	testIDStringJSONEncoding(t, func(h *[crypto.HashSize]byte) idEncoder {
+		if h == nil {
+			return new(OutputID)
+		}
+		return (*OutputID)(h)
+	})
+}
+
+func TestTransactionIDStringJSONEncoding(t *testing.T) {
+	testIDStringJSONEncoding(t, func(h *[crypto.HashSize]byte) idEncoder {
+		if h == nil {
+			return new(TransactionID)
+		}
+		return (*TransactionID)(h)
+	})
+}
+
+func TestCoinOutputIDStringJSONEncoding(t *testing.T) {
+	testIDStringJSONEncoding(t, func(h *[crypto.HashSize]byte) idEncoder {
+		if h == nil {
+			return new(CoinOutputID)
+		}
+		return (*CoinOutputID)(h)
+	})
+}
+
+func TestBlockStakeOutputIDStringJSONEncoding(t *testing.T) {
+	testIDStringJSONEncoding(t, func(h *[crypto.HashSize]byte) idEncoder {
+		if h == nil {
+			return new(BlockStakeOutputID)
+		}
+		return (*BlockStakeOutputID)(h)
+	})
+}
+
+func testIDStringJSONEncoding(t *testing.T, f func(*[crypto.HashSize]byte) idEncoder) {
+	for i := 0; i < 128; i++ {
+		// generate fresh id
+		var s [crypto.HashSize]byte
+		rand.Read(s[:])
+		inputID := f(&s)
+
+		// test string encoding
+		str := inputID.String()
+		if len(str) == 0 {
+			t.Errorf("#%d: string length is 0", i)
+			continue
+		}
+		outputID := f(nil)
+		err := outputID.LoadString(str)
+		if err != nil {
+			t.Error(i, err)
+			continue
+		}
+		if !reflect.DeepEqual(inputID, outputID) {
+			t.Errorf("%d => %v != %v", i, inputID, outputID)
+		}
+
+		// test JSON encoding
+		bs, err := inputID.MarshalJSON()
+		if err != nil {
+			t.Error(i, err)
+			continue
+		}
+		outputID = f(nil)
+		err = outputID.UnmarshalJSON(bs)
+		if err != nil {
+			t.Error(i, err)
+			continue
+		}
+		if !reflect.DeepEqual(inputID, outputID) {
+			t.Errorf("%d => %v != %v", i, inputID, outputID)
+		}
+	}
+}
+
+type idEncoder interface {
+	json.Marshaler
+	json.Unmarshaler
+
+	fmt.Stringer
+	LoadString(string) error
 }
