@@ -8,7 +8,6 @@ package types
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/rivine/rivine/crypto"
@@ -438,14 +437,19 @@ func (s *Specifier) UnmarshalJSON(b []byte) error {
 	return s.LoadString(str)
 }
 
-// MarshalJSON marshals an id as a hex string.
-func (tid TransactionID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(tid.String())
-}
-
 // String prints the id in hex.
 func (tid TransactionID) String() string {
-	return fmt.Sprintf("%x", tid[:])
+	return crypto.Hash(tid).String()
+}
+
+// LoadString loads the given transaction ID from a hex string
+func (tid *TransactionID) LoadString(str string) error {
+	return (*crypto.Hash)(tid).LoadString(str)
+}
+
+// MarshalJSON marshals an id as a hex string.
+func (tid TransactionID) MarshalJSON() ([]byte, error) {
+	return crypto.Hash(tid).MarshalJSON()
 }
 
 // UnmarshalJSON decodes the json hex string of the id.
@@ -453,47 +457,62 @@ func (tid *TransactionID) UnmarshalJSON(b []byte) error {
 	return (*crypto.Hash)(tid).UnmarshalJSON(b)
 }
 
-// MarshalJSON marshals an id as a hex string.
-func (oid OutputID) MarshalJSON() ([]byte, error) {
-	return json.Marshal(oid.String())
-}
-
-// String prints the id in hex.
+// String prints the output id in hex.
 func (oid OutputID) String() string {
-	return fmt.Sprintf("%x", oid[:])
+	return crypto.Hash(oid).String()
 }
 
-// UnmarshalJSON decodes the json hex string of the id.
+// LoadString loads the given output id from a hex string
+func (oid *OutputID) LoadString(str string) error {
+	return (*crypto.Hash)(oid).LoadString(str)
+}
+
+// MarshalJSON marshals an output id as a hex string.
+func (oid OutputID) MarshalJSON() ([]byte, error) {
+	return crypto.Hash(oid).MarshalJSON()
+}
+
+// UnmarshalJSON decodes the json hex string of the output id.
 func (oid *OutputID) UnmarshalJSON(b []byte) error {
 	return (*crypto.Hash)(oid).UnmarshalJSON(b)
 }
 
-// MarshalJSON marshals an id as a hex string.
-func (scoid CoinOutputID) MarshalJSON() ([]byte, error) {
-	return crypto.Hash(scoid).MarshalJSON()
+// String prints the coin output id in hex.
+func (coid CoinOutputID) String() string {
+	return crypto.Hash(coid).String()
 }
 
-// String prints the id in hex.
-func (scoid CoinOutputID) String() string {
-	return crypto.Hash(scoid).String()
+// LoadString loads the given coin output id from a hex string
+func (coid *CoinOutputID) LoadString(str string) error {
+	return (*crypto.Hash)(coid).LoadString(str)
 }
 
-// UnmarshalJSON decodes the json hex string of the id.
-func (scoid *CoinOutputID) UnmarshalJSON(b []byte) error {
-	return (*crypto.Hash)(scoid).UnmarshalJSON(b)
+// MarshalJSON marshals an coin output id as a hex string.
+func (coid CoinOutputID) MarshalJSON() ([]byte, error) {
+	return crypto.Hash(coid).MarshalJSON()
 }
 
-// MarshalJSON marshals an id as a hex string.
-func (bsoid BlockStakeOutputID) MarshalJSON() ([]byte, error) {
-	return crypto.Hash(bsoid).MarshalJSON()
+// UnmarshalJSON decodes the json hex string of the coin output id.
+func (coid *CoinOutputID) UnmarshalJSON(b []byte) error {
+	return (*crypto.Hash)(coid).UnmarshalJSON(b)
 }
 
-// String prints the id in hex.
+// String prints the blockstake output id in hex.
 func (bsoid BlockStakeOutputID) String() string {
 	return crypto.Hash(bsoid).String()
 }
 
-// UnmarshalJSON decodes the json hex string of the id.
+// LoadString loads the given blockstake output id from a hex string
+func (bsoid *BlockStakeOutputID) LoadString(str string) error {
+	return (*crypto.Hash)(bsoid).LoadString(str)
+}
+
+// MarshalJSON marshals an blockstake output id as a hex string.
+func (bsoid BlockStakeOutputID) MarshalJSON() ([]byte, error) {
+	return crypto.Hash(bsoid).MarshalJSON()
+}
+
+// UnmarshalJSON decodes the json hex string of the blockstake output id.
 func (bsoid *BlockStakeOutputID) UnmarshalJSON(b []byte) error {
 	return (*crypto.Hash)(bsoid).UnmarshalJSON(b)
 }

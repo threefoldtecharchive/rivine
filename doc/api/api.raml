@@ -431,15 +431,18 @@ types:
           Succesfully retrieved consensus
         body:
           type: Consensus
-  /transactions/{shortid}:
+  /transactions/shortid/{shortid}:
     description: |
-      Fetches an existing transaction from a block within the blockchain, using a given shortID.
+      Fetches an existing transaction from a block within the blockchain, using a given shortID or regular ID.
+      If the regular ID is used, the short ID will be returned for future reference
     responses:
       200:
         description: |
           Succesfully retrieved transaction
         body:
-          type: Transaction
+          type: TransactionExternal
+          properties:
+            shortid?: string
       204:
         description: |
           Succesfully lookup, no transaction available for the given short ID

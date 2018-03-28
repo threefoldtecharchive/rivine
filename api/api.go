@@ -158,7 +158,7 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 	// Consensus API Calls
 	if api.cs != nil {
 		router.GET("/consensus", api.consensusHandler)
-		router.GET("/consensus/transactions/:shortid", api.consensusGetTransactionHandler)
+		router.GET("/consensus/transactions/:id", api.consensusGetTransactionHandler)
 	}
 
 	// Explorer API Calls

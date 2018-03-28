@@ -248,6 +248,24 @@ func (cs *ConsensusSet) TransactionAtShortID(shortID types.TransactionShortID) (
 	return block.Transactions[txSeqID], true
 }
 
+// TransactionAtID allows you to fetch a transaction from a block within the blockchain,
+// using a given transaction ID. If that transaction does not exist, false is returned
+func (cs *ConsensusSet) TransactionAtID(id types.TransactionID) (types.Transaction, types.TransactionShortID, bool) {
+	var txnShortID types.TransactionShortID
+	var exists bool
+	_ = cs.db.View(func(tx *bolt.Tx) error {
+		shortID, err := getTransactionShortID(tx, id)
+		if err != nil {
+			return err
+		}
+		txnShortID = shortID
+		return nil
+	})
+
+	txn, exists := cs.TransactionAtShortID(txnShortID)
+	return txn, txnShortID, exists
+}
+
 // ChildTarget returns the target for the child of a block.
 func (cs *ConsensusSet) ChildTarget(id types.BlockID) (target types.Target, exists bool) {
 	// A call to a closed database can cause undefined behavior.

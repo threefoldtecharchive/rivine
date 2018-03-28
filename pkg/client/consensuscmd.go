@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"regexp"
 	"time"
 
 	"github.com/rivine/rivine/api"
@@ -65,26 +64,20 @@ func EstimatedHeightAt(t time.Time) types.BlockHeight {
 	return types.BlockHeight(estimatedHeight + 0.5) // round to the nearest block
 }
 
-// Consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
-// Prints the transaction found for the given shortID.
-func consensustransactioncmd(shortID string) {
-	if !consensusShortIDRegexp.MatchString(shortID) {
-		Die("invalid shortID: ", shortID)
-	}
-
+// consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
+// Prints the transaction found for the given id. If the ID is a long transaction ID, it also
+// prints the short transaction ID for future reference
+func consensustransactioncmd(id string) {
 	var txn api.ConsensusGetTransaction
-	err := _DefaultClient.httpClient.GetAPI("/consensus/transactions/"+shortID, &txn)
+
+	err := _DefaultClient.httpClient.GetAPI("/consensus/transactions/"+id, &txn)
 	if err != nil {
-		Die("failed to get transaction: ", err, "; shortID: ", shortID)
+		Die("failed to get transaction:", err, "; ID:", id)
 	}
 
 	encoder := json.NewEncoder(os.Stdout)
 	err = encoder.Encode(txn)
 	if err != nil {
-		Die("failed to encode transaction: ", err, "; shortID: ", shortID)
+		Die("failed to encode transaction:", err, "; ID:", id)
 	}
 }
-
-var (
-	consensusShortIDRegexp = regexp.MustCompile("^[0-9]{1,8}$")
-)
