@@ -44,7 +44,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 			target, exists := e.cs.ChildTarget(block.ParentID)
 			if !exists {
-				target = e.chainCts.RootTarget
+				target = e.rootTarget
 			}
 			dbRemoveBlockTarget(tx, bid, target)
 
@@ -92,7 +92,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			tbid := types.TransactionID(bid)
 
 			// special handling for genesis block
-			if bid == e.chainCts.GenesisID {
+			if bid == e.genesisBlockID {
 				e.dbAddGenesisBlock(tx)
 				continue
 			}
@@ -103,7 +103,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 			target, exists := e.cs.ChildTarget(block.ParentID)
 			if !exists {
-				target = e.chainCts.RootTarget
+				target = e.rootTarget
 			}
 			dbAddBlockTarget(tx, bid, target)
 
@@ -215,7 +215,7 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 	// update fields
 	bf.BlockID = block.ID()
 	bf.Height++
-	bf.Difficulty = target.Difficulty()
+	bf.Difficulty = target.Difficulty(e.chainCts.RootDepth)
 	bf.Target = target
 	bf.Timestamp = block.Timestamp
 	//TODO rivine
@@ -246,11 +246,13 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 			if !exists {
 				panic(fmt.Sprint("ConsensusSet is missing target of known block", b.ParentID))
 			}
-			totalDifficulty = totalDifficulty.AddDifficulties(target)
+			totalDifficulty = totalDifficulty.AddDifficulties(
+				target, e.chainCts.RootDepth)
 			oldestTimestamp = b.Timestamp
 		}
 		secondsPassed := bf.Timestamp - oldestTimestamp
-		EstimatedActiveBS = totalDifficulty.Difficulty().Div64(uint64(secondsPassed))
+		EstimatedActiveBS = totalDifficulty.Difficulty(
+			e.chainCts.RootDepth).Div64(uint64(secondsPassed))
 	}
 	bf.EstimatedActiveBS = EstimatedActiveBS
 
@@ -272,18 +274,18 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 
 // Special handling for the genesis block. No other functions are called on it.
 func (e *Explorer) dbAddGenesisBlock(tx *bolt.Tx) {
-	id := e.chainCts.GenesisID
+	id := e.genesisBlockID
 	dbAddBlockID(tx, id, 0)
-	txid := e.chainCts.GenesisBlock.Transactions[0].ID()
+	txid := e.genesisBlock.Transactions[0].ID()
 	dbAddTransactionID(tx, txid, 0)
 	for i, sco := range e.chainCts.GenesisCoinDistribution {
-		scoid := e.chainCts.GenesisBlock.Transactions[0].CoinOutputID(uint64(i))
+		scoid := e.genesisBlock.Transactions[0].CoinOutputID(uint64(i))
 		dbAddCoinOutputID(tx, scoid, txid)
 		dbAddUnlockHash(tx, sco.UnlockHash, txid)
 		dbAddCoinOutput(tx, scoid, sco)
 	}
 	for i, sfo := range e.chainCts.GenesisBlockStakeAllocation {
-		sfoid := e.chainCts.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
+		sfoid := e.genesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
 		dbAddBlockStakeOutputID(tx, sfoid, txid)
 		dbAddUnlockHash(tx, sfo.UnlockHash, txid)
 		dbAddBlockStakeOutput(tx, sfoid, sfo)
@@ -292,14 +294,14 @@ func (e *Explorer) dbAddGenesisBlock(tx *bolt.Tx) {
 		BlockFacts: modules.BlockFacts{
 			BlockID:               id,
 			Height:                0,
-			Difficulty:            e.chainCts.RootTarget.Difficulty(),
-			Target:                e.chainCts.RootTarget,
+			Difficulty:            e.rootTarget.Difficulty(e.rootTarget),
+			Target:                e.rootTarget,
 			TotalCoins:            types.NewCurrency64(0), //TODO rivine
 			TransactionCount:      1,
 			BlockStakeOutputCount: uint64(len(e.chainCts.GenesisBlockStakeAllocation)),
 			CoinOutputCount:       uint64(len(e.chainCts.GenesisCoinDistribution)),
 		},
-		Timestamp: e.chainCts.GenesisBlock.Timestamp,
+		Timestamp: e.genesisBlock.Timestamp,
 	})
 }
 

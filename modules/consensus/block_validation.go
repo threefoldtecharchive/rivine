@@ -37,27 +37,13 @@ type stdBlockValidator struct {
 	cs        *ConsensusSet
 }
 
-// NewBlockValidator creates a new stdBlockValidator with default settings.
-func NewBlockValidator(consensusSet *ConsensusSet) stdBlockValidator {
+// newBlockValidator creates a new stdBlockValidator with default settings.
+func newBlockValidator(consensusSet *ConsensusSet) stdBlockValidator {
 	return stdBlockValidator{
 		clock:     types.StdClock{},
 		marshaler: stdMarshaler{},
 		cs:        consensusSet,
 	}
-}
-
-// checkMinerPayouts checks a block creator payouts to the block's subsidy and
-// returns true if they are equal.
-func checkMinerPayouts(b types.Block) bool {
-	// Add up the payouts and check that all values are legal.
-	var payoutSum types.Currency
-	for _, payout := range b.MinerPayouts {
-		if payout.Value.IsZero() {
-			return false
-		}
-		payoutSum = payoutSum.Add(payout.Value)
-	}
-	return b.CalculateSubsidy().Equals(payoutSum)
 }
 
 // checkTarget returns true if the block's ID meets the given target.
@@ -139,7 +125,7 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	}
 
 	// Verify that the miner payouts are valid.
-	if !checkMinerPayouts(b) {
+	if !bv.checkMinerPayouts(b) {
 		return errBadMinerPayouts
 	}
 
@@ -150,4 +136,18 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 		return errFutureTimestamp
 	}
 	return nil
+}
+
+// checkMinerPayouts checks a block creator payouts to the block's subsidy and
+// returns true if they are equal.
+func (bv stdBlockValidator) checkMinerPayouts(b types.Block) bool {
+	// Add up the payouts and check that all values are legal.
+	var payoutSum types.Currency
+	for _, payout := range b.MinerPayouts {
+		if payout.Value.IsZero() {
+			return false
+		}
+		payoutSum = payoutSum.Add(payout.Value)
+	}
+	return b.CalculateSubsidy(bv.cs.chainCts.BlockCreatorFee).Equals(payoutSum)
 }

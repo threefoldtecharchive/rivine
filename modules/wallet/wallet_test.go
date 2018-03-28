@@ -37,7 +37,6 @@ type walletTester struct {
 func createWalletTester(name string) (*walletTester, error) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
-	chainCts.Calculate()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
@@ -108,7 +107,6 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 	}
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
-	chainCts.Calculate()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
@@ -172,7 +170,6 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 func createBlankWalletTester(name string) (*walletTester, error) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
-	chainCts.Calculate()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
@@ -227,7 +224,6 @@ func (wt *walletTester) closeWt() {
 func TestNilInputs(t *testing.T) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
-	chainCts.Calculate()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
@@ -287,7 +283,6 @@ func TestCloseWallet(t *testing.T) {
 	}
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
-	chainCts.Calculate()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
@@ -313,10 +308,9 @@ func TestCloseWallet(t *testing.T) {
 
 func newConsensusSetStub() *consensusSetStub {
 	chainCts := types.DefaultChainConstants()
-	chainCts.Calculate()
 	return &consensusSetStub{
 		blocks: []types.Block{
-			chainCts.GenesisBlock,
+			chainCts.GenesisBlock(),
 		},
 		subscribers: make(map[modules.ConsensusSetSubscriber]struct{}),
 	}

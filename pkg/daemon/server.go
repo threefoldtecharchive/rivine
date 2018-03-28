@@ -251,10 +251,10 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 		TargetWindow:          srv.chainCts.TargetWindow,
 		MedianTimestampWindow: srv.chainCts.MedianTimestampWindow,
 		FutureThreshold:       srv.chainCts.FutureThreshold,
-		BlockStakeCount:       srv.chainCts.GenesisBlockStakeCount,
+		BlockStakeCount:       srv.chainCts.GenesisBlockStakeCount(),
 		MaturityDelay:         srv.chainCts.MaturityDelay,
 
-		RootTarget: srv.chainCts.RootTarget,
+		RootTarget: srv.chainCts.RootTarget(),
 		RootDepth:  srv.chainCts.RootDepth,
 
 		MaxAdjustmentUp:   srv.chainCts.MaxAdjustmentUp,

@@ -89,7 +89,7 @@ func (cs *ConsensusSet) checkBlockStakeCount(tx *bolt.Tx) {
 	if err != nil {
 		manageErr(tx, err)
 	}
-	if !total.Equals(cs.chainCts.GenesisBlockStakeCount) {
+	if !total.Equals(cs.genesisBlockStakeCount) {
 		manageErr(tx, errors.New("wrong number if blockstakes in the consensus set"))
 	}
 }

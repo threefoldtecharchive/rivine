@@ -19,8 +19,9 @@ type BlockCreator struct {
 	tpool  modules.TransactionPool
 	wallet modules.Wallet
 
-	bcInfo   types.BlockchainInfo
-	chainCts types.ChainConstants
+	bcInfo    types.BlockchainInfo
+	chainCts  types.ChainConstants
+	genesisID types.BlockID
 
 	// Cache the synced state of the consensus set to avoid unnecessarily locking it
 	csSynced bool
@@ -89,8 +90,9 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 		tpool:  tpool,
 		wallet: w,
 
-		bcInfo:   bcInfo,
-		chainCts: chainCts,
+		bcInfo:    bcInfo,
+		chainCts:  chainCts,
+		genesisID: chainCts.GenesisBlockID(),
 
 		unsolvedBlock: &types.Block{},
 

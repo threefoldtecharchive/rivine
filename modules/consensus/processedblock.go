@@ -42,16 +42,16 @@ type processedBlock struct {
 // 'cmp'. 'cmp' is expected to be the current block node. "Sufficient" means
 // that the weight of 'bn' exceeds the weight of 'cmp' by:
 //		(the target of 'cmp' * 'Surpass Threshold')
-func (pb *processedBlock) heavierThan(cmp *processedBlock) bool {
-	requirement := cmp.Depth.AddDifficulties(cmp.ChildTarget.MulDifficulty(SurpassThreshold))
+func (pb *processedBlock) heavierThan(cmp *processedBlock, rootDepth types.Target) bool {
+	requirement := cmp.Depth.AddDifficulties(cmp.ChildTarget.MulDifficulty(SurpassThreshold, rootDepth), rootDepth)
 	return requirement.Cmp(pb.Depth) > 0 // Inversed, because the smaller target is actually heavier.
 }
 
 // childDepth returns the depth of a blockNode's child nodes. The depth is the
 // "sum" of the current depth and current difficulty. See target.Add for more
 // detailed information.
-func (pb *processedBlock) childDepth() types.Target {
-	return pb.Depth.AddDifficulties(pb.ChildTarget)
+func (pb *processedBlock) childDepth(rootDepth types.Target) types.Target {
+	return pb.Depth.AddDifficulties(pb.ChildTarget, rootDepth)
 }
 
 // targetAdjustmentBase returns the magnitude that the target should be
@@ -115,7 +115,8 @@ func (cs *ConsensusSet) setChildTarget(blockMap *bolt.Bucket, pb *processedBlock
 	}
 	adjustment := cs.clampTargetAdjustment(cs.targetAdjustmentBase(blockMap, pb))
 	adjustedRatTarget := new(big.Rat).Mul(parent.ChildTarget.Rat(), adjustment)
-	pb.ChildTarget = types.RatToTarget(adjustedRatTarget)
+	pb.ChildTarget = types.RatToTarget(
+		adjustedRatTarget, cs.chainCts.RootDepth)
 }
 
 // newChild creates a blockNode from a block and adds it to the parent's set of
@@ -126,7 +127,7 @@ func (cs *ConsensusSet) newChild(tx *bolt.Tx, pb *processedBlock, b types.Block)
 	child := &processedBlock{
 		Block:  b,
 		Height: pb.Height + 1,
-		Depth:  pb.childDepth(),
+		Depth:  pb.childDepth(cs.chainCts.RootDepth),
 	}
 	blockMap := tx.Bucket(BlockMap)
 	cs.setChildTarget(blockMap, child)

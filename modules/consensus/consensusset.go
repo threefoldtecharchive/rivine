@@ -93,8 +93,9 @@ type ConsensusSet struct {
 	persistDir string
 	tg         sync.ThreadGroup
 
-	bcInfo   types.BlockchainInfo
-	chainCts types.ChainConstants
+	bcInfo                 types.BlockchainInfo
+	chainCts               types.ChainConstants
+	genesisBlockStakeCount types.Currency
 }
 
 // New returns a new ConsensusSet, containing at least the genesis block. If
@@ -106,13 +107,14 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		return nil, errNilGateway
 	}
 
+	genesisBlock := chainCts.GenesisBlock()
 	// Create the ConsensusSet object.
 	cs := &ConsensusSet{
 		gateway: gateway,
 
 		blockRoot: processedBlock{
-			Block:       chainCts.GenesisBlock,
-			ChildTarget: chainCts.RootTarget,
+			Block:       genesisBlock,
+			ChildTarget: chainCts.RootTarget(),
 			Depth:       chainCts.RootDepth,
 
 			DiffsGenerated: true,
@@ -125,15 +127,16 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 
 		persistDir: persistDir,
 
-		bcInfo:   bcInfo,
-		chainCts: chainCts,
+		bcInfo:                 bcInfo,
+		chainCts:               chainCts,
+		genesisBlockStakeCount: chainCts.GenesisBlockStakeCount(),
 	}
 
-	cs.blockValidator = NewBlockValidator(cs)
+	cs.blockValidator = newBlockValidator(cs)
 
 	// Create the diffs for the genesis blockstake outputs.
-	for i, siafundOutput := range chainCts.GenesisBlock.Transactions[0].BlockStakeOutputs {
-		sfid := chainCts.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
+	for i, siafundOutput := range genesisBlock.Transactions[0].BlockStakeOutputs {
+		sfid := genesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
 		sfod := modules.BlockStakeOutputDiff{
 			Direction:        modules.DiffApply,
 			ID:               sfid,
@@ -142,8 +145,8 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		cs.blockRoot.BlockStakeOutputDiffs = append(cs.blockRoot.BlockStakeOutputDiffs, sfod)
 	}
 	// Create the diffs for the genesis coin outputs.
-	for i, coinOutput := range chainCts.GenesisBlock.Transactions[0].CoinOutputs {
-		sfid := chainCts.GenesisBlock.Transactions[0].CoinOutputID(uint64(i))
+	for i, coinOutput := range genesisBlock.Transactions[0].CoinOutputs {
+		sfid := genesisBlock.Transactions[0].CoinOutputID(uint64(i))
 		cod := modules.CoinOutputDiff{
 			Direction:  modules.DiffApply,
 			ID:         sfid,

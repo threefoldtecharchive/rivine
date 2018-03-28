@@ -161,8 +161,9 @@ type Gateway struct {
 	// Unique ID
 	id gatewayID
 
-	bcInfo   types.BlockchainInfo
-	chainCts types.ChainConstants
+	bcInfo         types.BlockchainInfo
+	chainCts       types.ChainConstants
+	genesisBlockID types.BlockID
 }
 
 type gatewayID [8]byte
@@ -213,8 +214,9 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 
 		persistDir: persistDir,
 
-		bcInfo:   bcInfo,
-		chainCts: chainCts,
+		bcInfo:         bcInfo,
+		chainCts:       chainCts,
+		genesisBlockID: chainCts.GenesisBlockID(),
 	}
 
 	// Set Unique GatewayID

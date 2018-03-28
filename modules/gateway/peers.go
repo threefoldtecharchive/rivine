@@ -289,7 +289,7 @@ func acceptableVersionHeader(ours, theirs versionHeader) error {
 func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID, wantConn bool) (remoteVersion build.ProtocolVersion, err error) {
 	ours := versionHeader{
 		Version:   version,
-		GenesisID: g.chainCts.GenesisID,
+		GenesisID: g.genesisBlockID,
 		UniqueID:  uniqueID,
 		WantConn:  wantConn,
 	}
@@ -336,7 +336,7 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 
 	ours := versionHeader{
 		Version:   version,
-		GenesisID: g.chainCts.GenesisID,
+		GenesisID: g.genesisBlockID,
 		UniqueID:  uniqueID,
 		WantConn:  true,
 	}

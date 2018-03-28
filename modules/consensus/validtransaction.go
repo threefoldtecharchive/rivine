@@ -79,10 +79,10 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 
 // validTransaction checks that all fields are valid within the current
 // consensus state. If not an error is returned.
-func validTransaction(tx *bolt.Tx, t types.Transaction) error {
+func validTransaction(tx *bolt.Tx, t types.Transaction, blockSizeLimit uint64) error {
 	// StandaloneValid will check things like signatures and properties that
 	// should be inherent to the transaction. (storage proof rules, etc.)
-	err := t.StandaloneValid(blockHeight(tx))
+	err := t.StandaloneValid(blockHeight(tx), blockSizeLimit)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 	err = cs.db.Update(func(tx *bolt.Tx) error {
 		diffHolder.Height = blockHeight(tx)
 		for _, txn := range txns {
-			err := validTransaction(tx, txn)
+			err := validTransaction(tx, txn, cs.chainCts.BlockSizeLimit)
 			if err != nil {
 				return err
 			}

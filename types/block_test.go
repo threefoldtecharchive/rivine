@@ -1,6 +1,7 @@
 package types
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/rivine/rivine/crypto"
@@ -34,6 +35,8 @@ func TestBlockHeader(t *testing.T) {
 
 // TestBlockID probes the ID function of the block type.
 func TestBlockID(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	// Create a bunch of different blocks and check that all of them have
 	// unique ids.
 	var b Block
@@ -70,6 +73,8 @@ func TestBlockID(t *testing.T) {
 // TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 // TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
 func TestHeaderID(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	// Create a bunch of different blocks and check that all of them have
 	// unique ids.
 	var blocks []Block
@@ -109,13 +114,14 @@ func TestHeaderID(t *testing.T) {
 // TestBlockCalculateSubsidy probes the CalculateSubsidy function of the block
 // type.
 func TestBlockCalculateSubsidy(t *testing.T) {
+	blockCreationFee := NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)).Mul64(1)
 	// All tests are done at height = 0.
-	coinbase := cts.BlockCreatorFee
+	coinbase := blockCreationFee
 
 	// Calculate the subsidy on a block with 0 fees at height 0. Result should
 	// be 300,000.
 	var b Block
-	if b.CalculateSubsidy().Cmp(coinbase) != 0 {
+	if b.CalculateSubsidy(blockCreationFee).Cmp(coinbase) != 0 {
 		t.Error("subsidy is miscalculated for an empty block")
 	}
 
@@ -125,7 +131,7 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		MinerFees: []Currency{NewCurrency64(123)},
 	}
 	b.Transactions = append(b.Transactions, txn)
-	if b.CalculateSubsidy().Cmp(expected) != 0 {
+	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
 		t.Error("subsidy is miscalculated for a block with a single transaction")
 	}
 
@@ -134,7 +140,7 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		ArbitraryData: [][]byte{{'6'}},
 	}
 	b.Transactions = append(b.Transactions, txn)
-	if b.CalculateSubsidy().Cmp(expected) != 0 {
+	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
 		t.Error("subsidy is miscalculated with empty transactions.")
 	}
 
@@ -148,7 +154,7 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		},
 	}
 	b.Transactions = append(b.Transactions, txn)
-	if b.CalculateSubsidy().Cmp(expected) != 0 {
+	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
 		t.Error("subsidy is miscalculated for a block with a single transaction")
 	}
 
@@ -157,7 +163,7 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		ArbitraryData: [][]byte{{'7'}},
 	}
 	b.Transactions = append([]Transaction{txn}, b.Transactions...)
-	if b.CalculateSubsidy().Cmp(expected) != 0 {
+	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
 		t.Error("subsidy is miscalculated with empty transactions.")
 	}
 }
@@ -165,6 +171,8 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 // TestBlockMinerPayoutID probes the MinerPayout function of the block type.
 // TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestBlockMinerPayoutID(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	// Create a block with 2 miner payouts, and check that each payout has a
 	// different id, and that the id is dependent on the block id.
 	var ids []CoinOutputID
@@ -191,6 +199,8 @@ func TestBlockMinerPayoutID(t *testing.T) {
 // TestBlockEncodes probes the MarshalSia and UnmarshalSia methods of the
 // Block type.
 func TestBlockEncoding(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	b := Block{
 		MinerPayouts: []CoinOutput{
 			{Value: cts.BlockCreatorFee},

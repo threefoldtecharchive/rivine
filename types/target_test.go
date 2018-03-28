@@ -9,16 +9,18 @@ import (
 
 // TestTargetAdd probes the Add function of the target type.
 func TestTargetAdd(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	var target3, target5, target10 Target
 	target3[crypto.HashSize-1] = 3
 	target5[crypto.HashSize-1] = 5
 	target10[crypto.HashSize-1] = 10
 
-	expect5 := target10.AddDifficulties(target10)
+	expect5 := target10.AddDifficulties(target10, cts.RootDepth)
 	if expect5 != target5 {
 		t.Error("Target.Add not working as expected")
 	}
-	expect3 := target10.AddDifficulties(target5)
+	expect3 := target10.AddDifficulties(target5, cts.RootDepth)
 	if expect3 != target3 {
 		t.Error("Target.Add not working as expected")
 	}
@@ -45,6 +47,8 @@ func TestTargetCmp(t *testing.T) {
 // TODO: target.Difficulty() has been changed to return a new Difficutly type: https://github.com/rivine/rivine/commit/6c00f3be7798c017b84434a97f8b1cd895bf734a#diff-3e315e2069bf2cb7e545291ccc110377
 // Need to rework test to compile and work with the new type
 func TestTargetDifficulty(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	var target1, target2, target3 Target
 	target2[crypto.HashSize-1] = 1
 	target3[crypto.HashSize-1] = 2
@@ -53,13 +57,13 @@ func TestTargetDifficulty(t *testing.T) {
 	expDifficulty2 := NewDifficulty(cts.RootDepth.Int())
 	expDifficulty3 := NewDifficulty(cts.RootDepth.Int()).Div64(2)
 
-	if difficulty := target1.Difficulty(); difficulty.Cmp(expDifficulty1) != 0 {
+	if difficulty := target1.Difficulty(cts.RootDepth); difficulty.Cmp(expDifficulty1) != 0 {
 		t.Errorf("Expected difficulty %v, got %v", expDifficulty1, difficulty)
 	}
-	if difficulty := target2.Difficulty(); difficulty.Cmp(expDifficulty2) != 0 {
+	if difficulty := target2.Difficulty(cts.RootDepth); difficulty.Cmp(expDifficulty2) != 0 {
 		t.Errorf("Expected difficulty %v, got %v", expDifficulty2, difficulty)
 	}
-	if difficulty := target3.Difficulty(); difficulty.Cmp(expDifficulty3) != 0 {
+	if difficulty := target3.Difficulty(cts.RootDepth); difficulty.Cmp(expDifficulty3) != 0 {
 		t.Errorf("Expected difficulty %v, got %v", expDifficulty3, difficulty)
 	}
 }
@@ -77,10 +81,12 @@ func TestTargetInt(t *testing.T) {
 
 // TestTargetIntToTarget probes the IntToTarget function of the target type.
 func TestTargetIntToTarget(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	var target Target
 	target[crypto.HashSize-1] = 5
 	b := big.NewInt(5)
-	if IntToTarget(b) != target {
+	if IntToTarget(b, cts.RootDepth) != target {
 		t.Error("IntToTarget not working as expected")
 	}
 }
@@ -101,6 +107,8 @@ func TestTargetInverse(t *testing.T) {
 
 // TestTargetMul probes the Mul function of the target type.
 func TestTargetMul(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	var target2, target6, target10, target14, target20 Target
 	target2[crypto.HashSize-1] = 2
 	target6[crypto.HashSize-1] = 6
@@ -110,21 +118,21 @@ func TestTargetMul(t *testing.T) {
 
 	// Multiplying the difficulty of a target at '10' by 5 will yield a target
 	// of '2'. Similar math follows for the remaining checks.
-	expect2 := target10.MulDifficulty(big.NewRat(5, 1))
+	expect2 := target10.MulDifficulty(big.NewRat(5, 1), cts.RootDepth)
 	if expect2 != target2 {
 		t.Error(expect2)
 		t.Error(target2)
 		t.Error("Target.Mul did not work as expected")
 	}
-	expect6 := target10.MulDifficulty(big.NewRat(3, 2))
+	expect6 := target10.MulDifficulty(big.NewRat(3, 2), cts.RootDepth)
 	if expect6 != target6 {
 		t.Error("Target.Mul did not work as expected")
 	}
-	expect14 := target10.MulDifficulty(big.NewRat(7, 10))
+	expect14 := target10.MulDifficulty(big.NewRat(7, 10), cts.RootDepth)
 	if expect14 != target14 {
 		t.Error("Target.Mul did not work as expected")
 	}
-	expect20 := target10.MulDifficulty(big.NewRat(1, 2))
+	expect20 := target10.MulDifficulty(big.NewRat(1, 2), cts.RootDepth)
 	if expect20 != target20 {
 		t.Error("Target.Mul did not work as expected")
 	}
@@ -147,8 +155,10 @@ func TestTargetRat(t *testing.T) {
 // TestTargetOverflow checks that IntToTarget will return a maximum target if
 // there is an overflow.
 func TestTargetOverflow(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	largeInt := new(big.Int).Lsh(big.NewInt(1), 260)
-	expectRoot := IntToTarget(largeInt)
+	expectRoot := IntToTarget(largeInt, cts.RootDepth)
 	if expectRoot != cts.RootDepth {
 		t.Error("IntToTarget does not properly handle overflows")
 	}
@@ -160,6 +170,7 @@ func TestTargetNegativeIntToTarget(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
+	cts := DefaultChainConstants()
 
 	// In debug mode, attempting to create a negative target should trigger a
 	// panic.
@@ -170,7 +181,7 @@ func TestTargetNegativeIntToTarget(t *testing.T) {
 		}
 	}()
 	b := big.NewInt(-3)
-	_ = IntToTarget(b)
+	_ = IntToTarget(b, cts.RootDepth)
 }
 
 // TestTargetNegativeRatToTarget tries to create a negative target using
@@ -189,5 +200,6 @@ func TestTargetNegativeRatToTarget(t *testing.T) {
 		}
 	}()
 	r := big.NewRat(3, -5)
-	_ = RatToTarget(r)
+	cts := DefaultChainConstants()
+	_ = RatToTarget(r, cts.RootDepth)
 }

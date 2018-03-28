@@ -132,7 +132,6 @@ func TestNew(t *testing.T) {
 
 	bcInfo := types.DefaultBlockchainInfo()
 	cts := types.DefaultChainConstants()
-	cts.Calculate()
 	if _, err := New("", false, "", bcInfo, cts, nil); err == nil {
 		t.Fatal("expecting persistDir error, got nil")
 	}

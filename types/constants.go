@@ -9,17 +9,11 @@ package types
 import (
 	"errors"
 	"math/big"
-)
 
-// The chain constants are a global var here since some of the functions in the types package use them
-var (
-	cts ChainConstants
+	"github.com/rivine/rivine/build"
 )
 
 // ChainConstants is a utility struct which groups together the chain configuration
-// RootTarget, GenesisBlockStakeCount, GenesisCoinCount, GenesisBlock, GenesisID, and StartDifficulty, although exposed,
-// should not be set manually. Instead, you should rely on the "Calculate()" function to fill
-// these in.
 type ChainConstants struct {
 	// BlockSizeLimit is the maximum size a single block can have, in bytes
 	BlockSizeLimit uint64
@@ -30,9 +24,7 @@ type ChainConstants struct {
 	// MaturityDelay is the amount of blocks for which a miner payout must "mature" before it
 	// gets added to the consensus set. Until this time has passed, a miner payout cannot be spend
 	MaturityDelay BlockHeight
-	// GenesisTimestamp is the unix timestamp of the genesis block
-	GenesisTimestamp      Timestamp
-	RootTarget            Target
+
 	MedianTimestampWindow uint64
 
 	// TargetWindow is the amount of blocks to go back to adjust the difficulty of the network.
@@ -69,33 +61,15 @@ type ChainConstants struct {
 	// all the other rewards such as collected transaction fees.
 	BlockCreatorFee Currency
 
-	// OneCoin is the size of a "coin", expressed in hastings (the smallest unit of currency on the chain)
-	OneCoin Currency
-
+	// GenesisTimestamp is the unix timestamp of the genesis block
+	GenesisTimestamp Timestamp
 	// GenesisBlockStakeAllocation are the blockstake outputs of the genesis block
 	GenesisBlockStakeAllocation []BlockStakeOutput
-	// GenesisBlockStakeCount is the amount of blockstake created in the genesis block,
-	// I.E. it is the sum of the Value's of GenesisBlockStakeAllocation
-	GenesisBlockStakeCount Currency
 	// GenesisCoinDistribution are the coin outputs of the genesis block
 	GenesisCoinDistribution []CoinOutput
-	// GenesisCoinCount is the amount of hastings created in the genesis block,
-	// I.E. it is the sum of the Value's of GenesisCoinDistribution
-	GenesisCoinCount Currency
 
-	// GenesisBlock is the first block of the blockchain
-	GenesisBlock Block
-	// GenesisID is the block ID of the genesis block
-	GenesisID BlockID
-
-	// StartDifficulty is the initial difficulty for the proof of blockstake protocol
-	// when the chain is started
-	StartDifficulty Difficulty
-}
-
-// SetConstants sets the chain constants for the types package
-func SetConstants(c ChainConstants) {
-	cts = c
+	// OneCoin is the size of a "coin", making it possible to split a coin up if wanted
+	OneCoin Currency
 }
 
 // DefaultChainConstants provide sane defaults for a new chain. Not all constants
@@ -106,9 +80,105 @@ func SetConstants(c ChainConstants) {
 // Likewise, don't set RootTarget, GenesisBlockStakeCount, GenesisCoinCount, GenesisBlock, GenesisID, and StartDifficulty as these should be calculated
 // By the Calculate method
 func DefaultChainConstants() ChainConstants {
+	oneCoin := NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
+
+	if build.Release == "dev" {
+		// 'dev' settings are for small developer testnets, usually on the same
+		// computer. Settings are slow enough that a small team of developers
+		// can coordinate their actions over a the developer testnets, but fast
+		// enough that there isn't much time wasted on waiting for things to
+		// happen.
+		cts := ChainConstants{
+			BlockSizeLimit:  2e6,
+			RootDepth:       Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			BlockCreatorFee: oneCoin.Mul64(10),
+			// 12 seconds, slow enough for developers to see
+			// ~each block, fast enough that blocks don't waste time
+			BlockFrequency: 12,
+			// 120 seconds before a delayed output matters
+			// as it's expressed in units of blocks
+			MaturityDelay:         10,
+			MedianTimestampWindow: 11,
+			// difficulity is adjusted based on prior 20 blocks
+			TargetWindow: 20,
+			// Difficulty adjusts quickly.
+			MaxAdjustmentUp: big.NewRat(120, 100),
+			// Difficulty adjusts quickly.
+			MaxAdjustmentDown:      big.NewRat(100, 120),
+			FutureThreshold:        2 * 60, // 2 minutes
+			ExtremeFutureThreshold: 4 * 60, // 4 minutees
+			// Number of blocks to take in history to calculate the stakemodifier
+			StakeModifierDelay: 2000,
+			// Block stake aging if unspent block stake is not at index 0
+			BlockStakeAging:  uint64(1 << 10),
+			OneCoin:          oneCoin,
+			GenesisTimestamp: Timestamp(1424139000),
+		}
+
+		// Seed for the addres given below twice:
+		// recall view document apology stone tattoo job farm pilot favorite mango topic thing dilemma dawn width marble proud pen meadow sing museum lucky present
+		bso := BlockStakeOutput{
+			Value:      NewCurrency64(1000000),
+			UnlockHash: UnlockHash{},
+		}
+		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
+		co := CoinOutput{
+			Value: oneCoin.Mul64(1000),
+		}
+		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
+
+		return cts
+	}
+
+	if build.Release == "testing" {
+		// 'testing' settings are for automatic testing, and create much faster
+		// environments than a human can interact with.
+		return ChainConstants{
+			BlockSizeLimit:         2e6,
+			RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			BlockCreatorFee:        oneCoin.Mul64(100),
+			BlockFrequency:         1, // ASFAP
+			MaturityDelay:          3,
+			MedianTimestampWindow:  11,
+			GenesisTimestamp:       CurrentTimestamp() - 1e6,
+			TargetWindow:           200,
+			MaxAdjustmentUp:        big.NewRat(10001, 10000),
+			MaxAdjustmentDown:      big.NewRat(9999, 10000),
+			FutureThreshold:        3, // 3 seconds
+			ExtremeFutureThreshold: 6, // seconds
+			StakeModifierDelay:     20,
+			BlockStakeAging:        uint64(1 << 10),
+			OneCoin:                oneCoin,
+			GenesisBlockStakeAllocation: []BlockStakeOutput{
+				{
+					Value:      NewCurrency64(2000),
+					UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
+				},
+				{
+					Value:      NewCurrency64(7000),
+					UnlockHash: UnlockHash{209, 246, 228, 60, 248, 78, 242, 110, 9, 8, 227, 248, 225, 216, 163, 52, 142, 93, 47, 176, 103, 41, 137, 80, 212, 8, 132, 58, 241, 189, 2, 17},
+				},
+				{
+					Value:      NewCurrency64(1000),
+					UnlockHash: UnlockConditions{}.UnlockHash(),
+				},
+			},
+			GenesisCoinDistribution: []CoinOutput{
+				{
+					Value:      oneCoin.Mul64(1000),
+					UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
+				},
+			},
+		}
+	}
+
+	// assume standard net (same as explicit 'standard' build tag)
 	cts := ChainConstants{
 		BlockSizeLimit:         2e6,
 		RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		BlockCreatorFee:        oneCoin.Mul64(10),
 		BlockFrequency:         600,
 		MaturityDelay:          144,
 		MedianTimestampWindow:  11,
@@ -119,19 +189,42 @@ func DefaultChainConstants() ChainConstants {
 		ExtremeFutureThreshold: 5 * 60 * 60, // 5 hours.
 		StakeModifierDelay:     2000,
 		BlockStakeAging:        1 << 17, // 2^16s < 1 day < 2^17s
-		OneCoin:                NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
+		OneCoin:                oneCoin,
+		GenesisTimestamp:       Timestamp(1496322000),
 	}
-	// BlockCreatorFee must be set here since it references the onecoin variable
-	cts.BlockCreatorFee = cts.OneCoin.Mul64(10)
+	bso := BlockStakeOutput{
+		Value:      NewCurrency64(1000000),
+		UnlockHash: UnlockHash{},
+	}
+	bso.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
+	cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
+	co := CoinOutput{
+		Value: oneCoin.Mul64(100 * 1000 * 1000),
+	}
+	co.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
+	cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
 	return cts
 }
 
-// Calculate sets the GenesisBlock, GenesisID, GenesisBlockStakeCount and GenesisCoinCount.
-// StartDifficulty and RootTarget are also set. If they need to be changed to be different (e.g.) for
-// "pre-mining", this must be done after invoking this method
-func (c *ChainConstants) Calculate() {
-	// Create the genesis block.
-	c.GenesisBlock = Block{
+// Validate does a sanity check on some of the constants to see if proper initialization is done
+func (c *ChainConstants) Validate() error {
+	if len(c.GenesisCoinDistribution) == 0 {
+		return errors.New("Invalid genesis coin distribution")
+	}
+	if len(c.GenesisBlockStakeAllocation) == 1 {
+		return errors.New("Invalid genesis blockstake allocation")
+	}
+	// Genesis timestamp should not be too far in the past. The reference timestamp is the timestamp of the bitcoin genesis block,
+	// as it's pretty safe to assume no blockchain was created before this (Saturday, January 3, 2009 6:15:05 PM GMT)
+	if c.GenesisTimestamp < Timestamp(1231006505) {
+		return errors.New("Invalid genesis timestamp")
+	}
+	return nil
+}
+
+// GenesisBlock returns the genesis block based on the blockchain config
+func (c *ChainConstants) GenesisBlock() Block {
+	return Block{
 		Timestamp: c.GenesisTimestamp,
 		Transactions: []Transaction{
 			{
@@ -140,51 +233,48 @@ func (c *ChainConstants) Calculate() {
 			},
 		},
 	}
-	// Calculate the genesis ID.
-	c.GenesisID = c.GenesisBlock.ID()
+}
 
-	// Reset blockstake and currency count to avoid issues if this function is called twice by accident
-	c.GenesisBlockStakeCount = ZeroCurrency
-	c.GenesisCoinCount = ZeroCurrency
-	for _, bso := range c.GenesisBlockStakeAllocation {
-		c.GenesisBlockStakeCount = c.GenesisBlockStakeCount.Add(bso.Value)
-	}
-	for _, co := range c.GenesisCoinDistribution {
-		c.GenesisCoinCount = c.GenesisCoinCount.Add(co.Value)
-	}
+// GenesisBlockID returns the ID of the genesis Block
+func (c *ChainConstants) GenesisBlockID() BlockID {
+	return c.GenesisBlock().ID()
+}
 
-	//Calculate start difficulty
-	c.StartDifficulty = NewDifficulty(big.NewInt(0).Mul(big.NewInt(int64(c.BlockFrequency)), c.GenesisBlockStakeCount.Big()))
+// GenesisBlockStakeCount computes and returns the total amount of
+// block stakes allocated in the genesis block.
+func (c *ChainConstants) GenesisBlockStakeCount() (bsc Currency) {
+	for _, bs := range c.GenesisBlockStakeAllocation {
+		bsc = bsc.Add(bs.Value)
+	}
+	return
+}
+
+// GenesisCoinCount computes and returns the total amount of coins
+// distributed in the genesis block.
+func (c *ChainConstants) GenesisCoinCount() (cc Currency) {
+	for _, coin := range c.GenesisCoinDistribution {
+		cc = cc.Add(coin.Value)
+	}
+	return
+}
+
+// StartDifficulty computes the start difficulty based on the set block frequency,
+// and the computer genesis block stake count.
+func (c *ChainConstants) StartDifficulty() Difficulty {
+	startDifficulty := NewDifficulty(
+		big.NewInt(0).Mul(big.NewInt(int64(c.BlockFrequency)),
+			c.GenesisBlockStakeCount().Big()))
 	// Add a check for a zero difficulty to avoid zero division. If the startDifficulty is zero, just
 	// set it to something positive. It doesn't really matter what as there can be no block creation anyway
 	// due to the lack of blockstake.
-	if c.StartDifficulty.Cmp(Difficulty{}) == 0 {
-		c.StartDifficulty = Difficulty{i: *big.NewInt(1)}
+	if startDifficulty.Cmp(Difficulty{}) == 0 {
+		return Difficulty{i: *big.NewInt(1)}
 	}
-	c.RootTarget = NewTargetWithDepth(c.StartDifficulty, c.RootDepth)
+	return startDifficulty
 }
 
-// CheckChainConstants does a sanity check on some of the constants to see if proper initialization is done
-func (c *ChainConstants) CheckChainConstants() error {
-	if c.GenesisCoinDistribution == nil || len(c.GenesisCoinDistribution) < 1 {
-		return errors.New("Invalid genesis coin distribution")
-	}
-	if c.GenesisCoinCount.IsZero() {
-		return errors.New("Invalid genesis coin count")
-	}
-	if c.GenesisBlockStakeAllocation == nil || len(c.GenesisBlockStakeAllocation) < 1 {
-		return errors.New("Invalid genesis blockstake allocation")
-	}
-	if c.GenesisBlockStakeCount.IsZero() {
-		return errors.New("Invalid genesis blockstake count")
-	}
-	// Genesis timestamp should not be too far in the past. The reference timestamp is the timestamp of the bitcoin genesis block,
-	// as it's pretty safe to assume no blockchain was created before this (Saturday, January 3, 2009 6:15:05 PM GMT)
-	if c.GenesisTimestamp < Timestamp(1231006505) {
-		return errors.New("Invalid genesis timestamp")
-	}
-	if c.RootTarget == Target([32]byte{}) {
-		return errors.New("Invalid root target")
-	}
-	return nil
+// RootTarget computes the new target, based on the root depth and
+// the computed start difficulty
+func (c *ChainConstants) RootTarget() Target {
+	return NewTarget(c.StartDifficulty(), c.RootDepth)
 }

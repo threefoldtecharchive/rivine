@@ -315,7 +315,6 @@ func TestConnectRejectsVersions(t *testing.T) {
 		t.SkipNow()
 	}
 	cts := types.DefaultChainConstants()
-	cts.Calculate()
 	g := newTestingGateway(t)
 	defer g.Close()
 	// Setup a listener that mocks Gateway.acceptConn, but sends the
@@ -346,13 +345,13 @@ func TestConnectRejectsVersions(t *testing.T) {
 			version:   build.Version,
 			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
 			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
-			genesisID: cts.GenesisID,
+			genesisID: cts.GenesisBlockID(),
 		},
 		{
 			version:      build.Version,
 			msg:          "Connect should not succeed when peer is connecting to itself",
 			uniqueID:     g.id,
-			genesisID:    cts.GenesisID,
+			genesisID:    cts.GenesisBlockID(),
 			errWant:      errOurAddress,
 			localErrWant: errOurAddress,
 		},
