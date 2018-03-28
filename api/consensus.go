@@ -95,7 +95,7 @@ func (api *API) getTransactionByShortID(shortID string) (types.Transaction, erro
 // It also returns the short id for future reference
 func (api *API) getTransactionByLongID(longid string) (types.Transaction, types.TransactionShortID, error) {
 	var txID types.TransactionID
-	err := txID.UnmarshalJSON([]byte("\"" + longid + "\""))
+	err := txID.LoadString(longid)
 	if err != nil {
 		return types.Transaction{}, types.TransactionShortID(0), err
 	}
