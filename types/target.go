@@ -28,9 +28,9 @@ var (
 // 'y' are added together. Note that the difficulty is the inverse of the
 // target. The sum is defined by:
 //		sum(x, y) = 1/(1/x + 1/y)
-func (x Target) AddDifficulties(y Target) (t Target) {
+func (x Target) AddDifficulties(y Target, rootDepth Target) (t Target) {
 	sumDifficulty := new(big.Rat).Add(x.Inverse(), y.Inverse())
-	return RatToTarget(new(big.Rat).Inv(sumDifficulty))
+	return RatToTarget(new(big.Rat).Inv(sumDifficulty), rootDepth)
 }
 
 // Cmp compares the difficulties of two targets. Note that the difficulty is
@@ -43,16 +43,16 @@ func (x Target) Cmp(y Target) int {
 }
 
 // Difficulty returns the difficulty associated with a given target.
-func (t Target) Difficulty() Difficulty {
+func (t Target) Difficulty(rootDepth Target) Difficulty {
 	if t == (Target{}) {
-		return NewDifficulty(RootDepth.Int())
+		return NewDifficulty(rootDepth.Int())
 	}
-	return NewDifficulty(new(big.Int).Div(RootDepth.Int(), t.Int()))
+	return NewDifficulty(new(big.Int).Div(rootDepth.Int(), t.Int()))
 }
 
-// NewTarget makes a new target from a given difficulty
-func NewTarget(difficulty Difficulty) Target {
-	return IntToTarget(new(big.Int).Div(RootDepth.Int(), difficulty.Big()))
+// NewTarget makes a new target from a given difficulty with a given root depth
+func NewTarget(difficulty Difficulty, depth Target) Target {
+	return IntToTarget(new(big.Int).Div(depth.Int(), difficulty.Big()), depth)
 }
 
 // Int converts a Target to a big.Int.
@@ -61,7 +61,7 @@ func (t Target) Int() *big.Int {
 }
 
 // IntToTarget converts a big.Int to a Target. Negative inputs trigger a panic.
-func IntToTarget(i *big.Int) (t Target) {
+func IntToTarget(i *big.Int, rootDepth Target) (t Target) {
 	// Check for negatives.
 	if i.Sign() < 0 {
 		if build.DEBUG {
@@ -70,7 +70,7 @@ func IntToTarget(i *big.Int) (t Target) {
 	} else {
 		// In the event of overflow, return the maximum.
 		if i.BitLen() > 256 {
-			return RootDepth
+			return rootDepth
 		}
 		b := i.Bytes()
 		offset := len(t[:]) - len(b)
@@ -86,10 +86,10 @@ func (t Target) Inverse() *big.Rat {
 
 // Mul multiplies the difficulty of a target by y. The product is defined by:
 //		y / x
-func (x Target) MulDifficulty(y *big.Rat) (t Target) {
+func (x Target) MulDifficulty(y *big.Rat, rootDepth Target) (t Target) {
 	product := new(big.Rat).Mul(y, x.Inverse())
 	product = product.Inv(product)
-	return RatToTarget(product)
+	return RatToTarget(product, rootDepth)
 }
 
 // Rat converts a Target to a big.Rat.
@@ -98,14 +98,14 @@ func (t Target) Rat() *big.Rat {
 }
 
 // RatToTarget converts a big.Rat to a Target.
-func RatToTarget(r *big.Rat) (t Target) {
+func RatToTarget(r *big.Rat, rootDepth Target) (t Target) {
 	if r.Num().Sign() < 0 {
 		if build.DEBUG {
 			panic(ErrNegativeTarget)
 		}
 	} else {
 		i := new(big.Int).Div(r.Num(), r.Denom())
-		t = IntToTarget(i)
+		t = IntToTarget(i, rootDepth)
 	}
 	return
 }
@@ -114,7 +114,7 @@ func RatToTarget(r *big.Rat) (t Target) {
 // is subtracted from the target with difficulty 'y'. Note that the difficulty
 // is the inverse of the target. The difference is defined by:
 //		sum(x, y) = 1/(1/x - 1/y)
-func (x Target) SubtractDifficulties(y Target) (t Target) {
+func (x Target) SubtractDifficulties(y Target, rootDepth Target) (t Target) {
 	sumDifficulty := new(big.Rat).Sub(x.Inverse(), y.Inverse())
-	return RatToTarget(new(big.Rat).Inv(sumDifficulty))
+	return RatToTarget(new(big.Rat).Inv(sumDifficulty), rootDepth)
 }

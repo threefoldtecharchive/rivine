@@ -15,7 +15,7 @@ func (bc *BlockCreator) ProcessConsensusChange(cc modules.ConsensusChange) {
 	for _, block := range cc.RevertedBlocks {
 		// Only doing the block check if the height is above zero saves hashing
 		// and saves a nontrivial amount of time during IBD.
-		if bc.persist.Height > 0 || block.ID() != types.GenesisID {
+		if bc.persist.Height > 0 || block.ID() != bc.genesisID {
 			bc.persist.Height--
 		} else if bc.persist.Height != 0 {
 			// Sanity check - if the current block is the genesis block, the
@@ -27,7 +27,7 @@ func (bc *BlockCreator) ProcessConsensusChange(cc modules.ConsensusChange) {
 	for _, block := range cc.AppliedBlocks {
 		// Only doing the block check if the height is above zero saves hashing
 		// and saves a nontrivial amount of time during IBD.
-		if bc.persist.Height > 0 || block.ID() != types.GenesisID {
+		if bc.persist.Height > 0 || block.ID() != bc.genesisID {
 			bc.persist.Height++
 		} else if bc.persist.Height != 0 {
 			// Sanity check - if the current block is the genesis block, the
@@ -64,7 +64,7 @@ func (bc *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransac
 	// Add transactions to the block until the block size limit is reached.
 	// Transactions are assumed to be in a sensible order.
 	var i int
-	remainingSize := int(types.BlockSizeLimit - 5e3) //check this 5k for the first extra
+	remainingSize := int(bc.chainCts.BlockSizeLimit - 5e3) //check this 5k for the first extra
 	for i = range unconfirmedTransactions {
 		remainingSize -= len(encoding.Marshal(unconfirmedTransactions[i]))
 		if remainingSize < 0 {

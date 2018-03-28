@@ -37,27 +37,13 @@ type stdBlockValidator struct {
 	cs        *ConsensusSet
 }
 
-// NewBlockValidator creates a new stdBlockValidator with default settings.
-func NewBlockValidator(consensusSet *ConsensusSet) stdBlockValidator {
+// newBlockValidator creates a new stdBlockValidator with default settings.
+func newBlockValidator(consensusSet *ConsensusSet) stdBlockValidator {
 	return stdBlockValidator{
 		clock:     types.StdClock{},
 		marshaler: stdMarshaler{},
 		cs:        consensusSet,
 	}
-}
-
-// checkMinerPayouts checks a block creator payouts to the block's subsidy and
-// returns true if they are equal.
-func checkMinerPayouts(b types.Block) bool {
-	// Add up the payouts and check that all values are legal.
-	var payoutSum types.Currency
-	for _, payout := range b.MinerPayouts {
-		if payout.Value.IsZero() {
-			return false
-		}
-		payoutSum = payoutSum.Add(payout.Value)
-	}
-	return b.CalculateSubsidy().Equals(payoutSum)
 }
 
 // checkTarget returns true if the block's ID meets the given target.
@@ -119,14 +105,14 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	// with the first index, then block stake can only be used to solve blocks
 	// after its aging is older than types.BlockStakeAging (more than 1 day)
 	if ubsu.TransactionIndex != 0 || ubsu.OutputIndex != 0 {
-		BlockStakeAge := blockatheight.Header().Timestamp + types.Timestamp(types.BlockStakeAging)
+		BlockStakeAge := blockatheight.Header().Timestamp + types.Timestamp(bv.cs.chainCts.BlockStakeAging)
 		if BlockStakeAge > types.Timestamp(b.Header().Timestamp) {
 			return errBlockStakeAgeNotMet
 		}
 	}
 
 	// Check that the block is below the size limit.
-	if uint64(len(bv.marshaler.Marshal(b))) > types.BlockSizeLimit {
+	if uint64(len(bv.marshaler.Marshal(b))) > bv.cs.chainCts.BlockSizeLimit {
 		return errLargeBlock
 	}
 
@@ -134,20 +120,34 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	// future and extreme future because there is an assumption that by the time
 	// the extreme future arrives, this block will no longer be a part of the
 	// longest fork because it will have been ignored by all of the miners.
-	if b.Timestamp > bv.clock.Now()+types.ExtremeFutureThreshold {
+	if b.Timestamp > bv.clock.Now()+bv.cs.chainCts.ExtremeFutureThreshold {
 		return errExtremeFutureTimestamp
 	}
 
 	// Verify that the miner payouts are valid.
-	if !checkMinerPayouts(b) {
+	if !bv.checkMinerPayouts(b) {
 		return errBadMinerPayouts
 	}
 
 	// Check if the block is in the near future, but too far to be acceptable.
 	// This is the last check because it's an expensive check, and not worth
 	// performing if the payouts are incorrect.
-	if b.Timestamp > bv.clock.Now()+types.FutureThreshold {
+	if b.Timestamp > bv.clock.Now()+bv.cs.chainCts.FutureThreshold {
 		return errFutureTimestamp
 	}
 	return nil
+}
+
+// checkMinerPayouts checks a block creator payouts to the block's subsidy and
+// returns true if they are equal.
+func (bv stdBlockValidator) checkMinerPayouts(b types.Block) bool {
+	// Add up the payouts and check that all values are legal.
+	var payoutSum types.Currency
+	for _, payout := range b.MinerPayouts {
+		if payout.Value.IsZero() {
+			return false
+		}
+		payoutSum = payoutSum.Add(payout.Value)
+	}
+	return b.CalculateSubsidy(bv.cs.chainCts.BlockCreatorFee).Equals(payoutSum)
 }

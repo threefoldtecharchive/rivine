@@ -128,7 +128,7 @@ func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.
 
 		if relevant {
 			BCcountLast1000++
-			BCfeeLast1000 = BCfeeLast1000.Add(block.CalculateSubsidy())
+			BCfeeLast1000 = BCfeeLast1000.Add(block.CalculateSubsidy(w.chainCts.BlockCreatorFee))
 		}
 		if BlockHeightCounter == 0 {
 			BlockCount++

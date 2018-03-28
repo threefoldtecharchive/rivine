@@ -45,7 +45,7 @@ func BenchmarkStandaloneValid(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := txn.StandaloneValid(10)
+		err := txn.StandaloneValid(10, DefaultChainConstants().BlockSizeLimit)
 		if err != nil {
 			b.Fatal(err)
 		}

@@ -451,22 +451,24 @@ func TestCurrencyUint64(t *testing.T) {
 // TestCurrencyUnsafeDecode tests that decoding into an existing Currency
 // value does not overwrite its contents.
 func TestCurrencyUnsafeDecode(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	// Scan
-	backup := OneCoin.Mul64(1)
-	c := OneCoin
+	backup := cts.CurrencyUnits.OneCoin.Mul64(1)
+	c := cts.CurrencyUnits.OneCoin
 	_, err := fmt.Sscan("7", &c)
 	if err != nil {
 		t.Error(err)
-	} else if !OneCoin.Equals(backup) {
-		t.Errorf("Scan changed value of OneCoin: %v -> %v", backup, OneCoin)
+	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
+		t.Errorf("Scan changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
 	}
 
 	// UnmarshalSia
-	c = OneCoin
+	c = cts.CurrencyUnits.OneCoin
 	err = encoding.Unmarshal(encoding.Marshal(NewCurrency64(7)), &c)
 	if err != nil {
 		t.Error(err)
-	} else if !OneCoin.Equals(backup) {
-		t.Errorf("UnmarshalSia changed value of OneCoin: %v -> %v", backup, OneCoin)
+	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
+		t.Errorf("UnmarshalSia changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
 	}
 }

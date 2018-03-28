@@ -7,16 +7,16 @@ import (
 // TestTransactionFitsInABlock probes the fitsInABlock method of the
 // Transaction type.
 func TestTransactionFitsInABlock(t *testing.T) {
-	// Try a transaction that will fit in a block, followed by one that won't.
-	data := make([]byte, BlockSizeLimit/2)
+	blockSizeLimit := DefaultChainConstants().BlockSizeLimit
+	data := make([]byte, blockSizeLimit/2)
 	txn := Transaction{ArbitraryData: [][]byte{data}}
-	err := txn.fitsInABlock()
+	err := txn.fitsInABlock(blockSizeLimit)
 	if err != nil {
 		t.Error(err)
 	}
-	data = make([]byte, BlockSizeLimit)
+	data = make([]byte, blockSizeLimit)
 	txn.ArbitraryData[0] = data
-	err = txn.fitsInABlock()
+	err = txn.fitsInABlock(blockSizeLimit)
 	if err != ErrTransactionTooLarge {
 		t.Error(err)
 	}
@@ -139,17 +139,19 @@ func TestTransactionValidUnlockConditions(t *testing.T) {
 // TestTransactionStandaloneValid probes the StandaloneValid method of the
 // Transaction type.
 func TestTransactionStandaloneValid(t *testing.T) {
+	cts := DefaultChainConstants()
+
 	// Build a working transaction.
 	var txn Transaction
-	err := txn.StandaloneValid(0)
+	err := txn.StandaloneValid(0, cts.BlockSizeLimit)
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Violate fitsInABlock.
-	data := make([]byte, BlockSizeLimit)
+	data := make([]byte, cts.BlockSizeLimit)
 	txn.ArbitraryData = [][]byte{data}
-	err = txn.StandaloneValid(0)
+	err = txn.StandaloneValid(0, cts.BlockSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger fitsInABlock error")
 	}
@@ -157,7 +159,7 @@ func TestTransactionStandaloneValid(t *testing.T) {
 
 	// Violate noRepeats
 	txn.CoinInputs = []CoinInput{{}, {}}
-	err = txn.StandaloneValid(0)
+	err = txn.StandaloneValid(0, cts.BlockSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger noRepeats error")
 	}
@@ -165,7 +167,7 @@ func TestTransactionStandaloneValid(t *testing.T) {
 
 	// Violate followsMinimumValues
 	txn.CoinOutputs = []CoinOutput{{}}
-	err = txn.StandaloneValid(0)
+	err = txn.StandaloneValid(0, cts.BlockSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger followsMinimumValues error")
 	}
@@ -174,7 +176,7 @@ func TestTransactionStandaloneValid(t *testing.T) {
 	// Violate validUnlockConditions
 	txn.CoinInputs = []CoinInput{{}}
 	txn.CoinInputs[0].UnlockConditions.Timelock = 1
-	err = txn.StandaloneValid(0)
+	err = txn.StandaloneValid(0, cts.BlockSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger validUnlockConditions error")
 	}
@@ -182,7 +184,7 @@ func TestTransactionStandaloneValid(t *testing.T) {
 
 	// Violate validSignatures
 	txn.TransactionSignatures = []TransactionSignature{{}}
-	err = txn.StandaloneValid(0)
+	err = txn.StandaloneValid(0, cts.BlockSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger validSignatures error")
 	}

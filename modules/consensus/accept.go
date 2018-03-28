@@ -108,7 +108,7 @@ func (cs *ConsensusSet) validateHeader(tx dbTx, h types.BlockHeader) error {
 	// future and extreme future because there is an assumption that by the time
 	// the extreme future arrives, this block will no longer be a part of the
 	// longest fork because it will have been ignored by all of the miners.
-	if h.Timestamp > types.CurrentTimestamp()+types.ExtremeFutureThreshold {
+	if h.Timestamp > types.CurrentTimestamp()+cs.chainCts.ExtremeFutureThreshold {
 		return errExtremeFutureTimestamp
 	}
 
@@ -144,7 +144,8 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 		// not extend the current blockchain, however the changes from newChild
 		// should be committed (which means 'nil' must be returned). A flag is
 		// set to indicate that modules.ErrNonExtending should be returned.
-		nonExtending = !newNode.heavierThan(currentNode)
+		nonExtending = !newNode.heavierThan(
+			currentNode, cs.chainCts.RootDepth)
 		if nonExtending {
 			return nil
 		}
@@ -228,7 +229,7 @@ func (cs *ConsensusSet) managedAcceptBlock(b types.Block) error {
 			// a new block to the cache.
 			if err == errFutureTimestamp {
 				go func() {
-					time.Sleep(time.Duration(b.Timestamp-(types.CurrentTimestamp()+types.FutureThreshold)) * time.Second)
+					time.Sleep(time.Duration(b.Timestamp-(types.CurrentTimestamp()+cs.chainCts.FutureThreshold)) * time.Second)
 					err := cs.managedAcceptBlock(b)
 					if err != nil {
 						cs.log.Debugln("WARN: failed to accept a future block:", err)

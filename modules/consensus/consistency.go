@@ -75,7 +75,7 @@ func consensusChecksum(tx *bolt.Tx) crypto.Hash {
 
 // checkBlockStakeCount checks that the number of siafunds countable within the
 // consensus set equal the expected number of BlockStakeOutputs for the block height.
-func checkBlockStakeCount(tx *bolt.Tx) {
+func (cs *ConsensusSet) checkBlockStakeCount(tx *bolt.Tx) {
 	var total types.Currency
 	err := tx.Bucket(BlockStakeOutputs).ForEach(func(_, siafundOutputBytes []byte) error {
 		var sfo types.BlockStakeOutput
@@ -89,7 +89,7 @@ func checkBlockStakeCount(tx *bolt.Tx) {
 	if err != nil {
 		manageErr(tx, err)
 	}
-	if !total.Equals(types.GenesisBlockStakeCount) {
+	if !total.Equals(cs.genesisBlockStakeCount) {
 		manageErr(tx, errors.New("wrong number if blockstakes in the consensus set"))
 	}
 }
@@ -135,7 +135,7 @@ func (cs *ConsensusSet) checkConsistency(tx *bolt.Tx) {
 		return
 	}
 	cs.checkingConsistency = true
-	checkBlockStakeCount(tx)
+	cs.checkBlockStakeCount(tx)
 	if build.DEBUG {
 		cs.checkRevertApply(tx)
 	}

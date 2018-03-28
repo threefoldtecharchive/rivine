@@ -29,14 +29,15 @@ type (
 		managers map[Namespace]*namespaceManager
 		mu       sync.Mutex // Add some protection to the map
 
-		bcInfo types.BlockchainInfo
+		bcInfo   types.BlockchainInfo
+		chainCts types.ChainConstants
 	}
 )
 
 // New creates a new DataStore from a consensus set and a Database.
 // If the connection opts specify an unknown driver, initialization fails
 // and an error is returned. Currently only `redis` is supported
-func New(cs modules.ConsensusSet, db Database, persistDir string, bcInfo types.BlockchainInfo) (*DataStore, error) {
+func New(cs modules.ConsensusSet, db Database, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*DataStore, error) {
 	// Check that we have a valid consensus set
 	if cs == nil {
 		return nil, errNilCS
@@ -51,9 +52,10 @@ func New(cs modules.ConsensusSet, db Database, persistDir string, bcInfo types.B
 	}
 
 	ds := &DataStore{
-		cs:     cs,
-		db:     db,
-		bcInfo: bcInfo,
+		cs:       cs,
+		db:       db,
+		bcInfo:   bcInfo,
+		chainCts: chainCts,
 	}
 
 	if err := ds.initLogger(persistDir); err != nil {
@@ -76,7 +78,7 @@ func New(cs modules.ConsensusSet, db Database, persistDir string, bcInfo types.B
 			ds.log.Severe("Failed to load manager - namespace: ", err)
 			continue
 		}
-		mgr, err := newNamespaceManagerFromSerializedState(ns, cs, db, ds.log, sb)
+		mgr, err := ds.newNamespaceManagerFromSerializedState(ns, sb)
 		if err != nil {
 			ds.log.Severe("Failed to load manager - state: ", err)
 			continue
@@ -151,7 +153,7 @@ func (ds *DataStore) messageCollector(ch <-chan *SubEvent) {
 				ds.log.Debugln("Removing duplicate namespace manager")
 				eNsm.close()
 			}
-			nsm := newNamespaceManager(ev.Namespace, ds.cs, ds.db, ds.log, ev.Start)
+			nsm := ds.newNamespaceManager(ev.Namespace, ev.Start)
 			if err := nsm.save(); err != nil {
 				ds.log.Severe("Failed to save namespace manager during initializtion: ", err)
 				return
