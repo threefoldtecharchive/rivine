@@ -227,7 +227,7 @@ var (
 	// rediscoverIPIntervalSuccess is the time that has to pass after a
 	// successful IP discovery before we rediscover the IP.
 	rediscoverIPIntervalSuccess = build.Select(build.Var{
-		Standard: 6 * time.Hour,
+		Standard: 3 * time.Hour,
 		Dev:      10 * time.Minute,
 		Testing:  30 * time.Second,
 	}).(time.Duration)
@@ -235,8 +235,8 @@ var (
 	// rediscoverIPIntervalFailure is the time that has to pass after a failed
 	// IP discovery before we try again.
 	rediscoverIPIntervalFailure = build.Select(build.Var{
-		Standard: 30 * time.Minute,
-		Dev:      5 * time.Minute,
+		Standard: 15 * time.Minute,
+		Dev:      1 * time.Minute,
 		Testing:  10 * time.Second,
 	}).(time.Duration)
 
