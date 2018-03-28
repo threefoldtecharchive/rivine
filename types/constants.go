@@ -68,8 +68,20 @@ type ChainConstants struct {
 	// GenesisCoinDistribution are the coin outputs of the genesis block
 	GenesisCoinDistribution []CoinOutput
 
+	CurrencyUnits CurrencyUnits
+}
+
+// CurrencyUnits defines the units used for the different kind of currencies.
+type CurrencyUnits struct {
 	// OneCoin is the size of a "coin", making it possible to split a coin up if wanted
 	OneCoin Currency
+}
+
+// DefaultCurrencyUnits provides sane defaults for currency units
+func DefaultCurrencyUnits() CurrencyUnits {
+	return CurrencyUnits{
+		OneCoin: NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
+	}
 }
 
 // DefaultChainConstants provide sane defaults for a new chain. Not all constants
@@ -80,7 +92,7 @@ type ChainConstants struct {
 // Likewise, don't set RootTarget, GenesisBlockStakeCount, GenesisCoinCount, GenesisBlock, GenesisID, and StartDifficulty as these should be calculated
 // By the Calculate method
 func DefaultChainConstants() ChainConstants {
-	oneCoin := NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil))
+	currencyUnits := DefaultCurrencyUnits()
 
 	if build.Release == "dev" {
 		// 'dev' settings are for small developer testnets, usually on the same
@@ -91,7 +103,7 @@ func DefaultChainConstants() ChainConstants {
 		cts := ChainConstants{
 			BlockSizeLimit:  2e6,
 			RootDepth:       Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-			BlockCreatorFee: oneCoin.Mul64(10),
+			BlockCreatorFee: currencyUnits.OneCoin.Mul64(10),
 			// 12 seconds, slow enough for developers to see
 			// ~each block, fast enough that blocks don't waste time
 			BlockFrequency: 12,
@@ -111,7 +123,7 @@ func DefaultChainConstants() ChainConstants {
 			StakeModifierDelay: 2000,
 			// Block stake aging if unspent block stake is not at index 0
 			BlockStakeAging:  uint64(1 << 10),
-			OneCoin:          oneCoin,
+			CurrencyUnits:    currencyUnits,
 			GenesisTimestamp: Timestamp(1424139000),
 		}
 
@@ -124,7 +136,7 @@ func DefaultChainConstants() ChainConstants {
 		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
 		cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
 		co := CoinOutput{
-			Value: oneCoin.Mul64(1000),
+			Value: currencyUnits.OneCoin.Mul64(1000),
 		}
 		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
 		cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
@@ -138,7 +150,7 @@ func DefaultChainConstants() ChainConstants {
 		return ChainConstants{
 			BlockSizeLimit:         2e6,
 			RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-			BlockCreatorFee:        oneCoin.Mul64(100),
+			BlockCreatorFee:        currencyUnits.OneCoin.Mul64(100),
 			BlockFrequency:         1, // ASFAP
 			MaturityDelay:          3,
 			MedianTimestampWindow:  11,
@@ -150,7 +162,7 @@ func DefaultChainConstants() ChainConstants {
 			ExtremeFutureThreshold: 6, // seconds
 			StakeModifierDelay:     20,
 			BlockStakeAging:        uint64(1 << 10),
-			OneCoin:                oneCoin,
+			CurrencyUnits:          currencyUnits,
 			GenesisBlockStakeAllocation: []BlockStakeOutput{
 				{
 					Value:      NewCurrency64(2000),
@@ -167,7 +179,7 @@ func DefaultChainConstants() ChainConstants {
 			},
 			GenesisCoinDistribution: []CoinOutput{
 				{
-					Value:      oneCoin.Mul64(1000),
+					Value:      currencyUnits.OneCoin.Mul64(1000),
 					UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
 				},
 			},
@@ -178,7 +190,7 @@ func DefaultChainConstants() ChainConstants {
 	cts := ChainConstants{
 		BlockSizeLimit:         2e6,
 		RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-		BlockCreatorFee:        oneCoin.Mul64(10),
+		BlockCreatorFee:        currencyUnits.OneCoin.Mul64(10),
 		BlockFrequency:         600,
 		MaturityDelay:          144,
 		MedianTimestampWindow:  11,
@@ -189,7 +201,7 @@ func DefaultChainConstants() ChainConstants {
 		ExtremeFutureThreshold: 5 * 60 * 60, // 5 hours.
 		StakeModifierDelay:     2000,
 		BlockStakeAging:        1 << 17, // 2^16s < 1 day < 2^17s
-		OneCoin:                oneCoin,
+		CurrencyUnits:          currencyUnits,
 		GenesisTimestamp:       Timestamp(1496322000),
 	}
 	bso := BlockStakeOutput{
@@ -199,7 +211,7 @@ func DefaultChainConstants() ChainConstants {
 	bso.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
 	cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
 	co := CoinOutput{
-		Value: oneCoin.Mul64(100 * 1000 * 1000),
+		Value: currencyUnits.OneCoin.Mul64(100 * 1000 * 1000),
 	}
 	co.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
 	cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)

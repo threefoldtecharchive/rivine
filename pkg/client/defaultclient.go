@@ -26,7 +26,7 @@ var (
 	// ClientName sets the client name for some of the command help messages
 	ClientName = "rivine"
 
-	oneCoin types.Currency
+	currencyUnits types.CurrencyUnits
 )
 
 // exit codes
@@ -229,8 +229,8 @@ func Version() {
 }
 
 // DefaultClient parses the arguments using cobra with the default rivine setup
-func DefaultClient(oc types.Currency) {
-	oneCoin = oc
+func DefaultClient(cu types.CurrencyUnits) {
+	currencyUnits = cu
 	root := &cobra.Command{
 		Use:   os.Args[0],
 		Short: fmt.Sprintf("%s Client v", strings.Title(ClientName)) + build.Version.String(),
@@ -295,4 +295,8 @@ func DefaultClient(oc types.Currency) {
 		// Command.SilenceUsage is false) and we should exit with exitCodeUsage.
 		os.Exit(exitCodeUsage)
 	}
+}
+
+func init() {
+	currencyUnits = types.DefaultCurrencyUnits()
 }

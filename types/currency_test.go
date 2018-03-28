@@ -454,21 +454,21 @@ func TestCurrencyUnsafeDecode(t *testing.T) {
 	cts := DefaultChainConstants()
 
 	// Scan
-	backup := cts.OneCoin.Mul64(1)
-	c := cts.OneCoin
+	backup := cts.CurrencyUnits.OneCoin.Mul64(1)
+	c := cts.CurrencyUnits.OneCoin
 	_, err := fmt.Sscan("7", &c)
 	if err != nil {
 		t.Error(err)
-	} else if !cts.OneCoin.Equals(backup) {
-		t.Errorf("Scan changed value of OneCoin: %v -> %v", backup, cts.OneCoin)
+	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
+		t.Errorf("Scan changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
 	}
 
 	// UnmarshalSia
-	c = cts.OneCoin
+	c = cts.CurrencyUnits.OneCoin
 	err = encoding.Unmarshal(encoding.Marshal(NewCurrency64(7)), &c)
 	if err != nil {
 		t.Error(err)
-	} else if !cts.OneCoin.Equals(backup) {
-		t.Errorf("UnmarshalSia changed value of OneCoin: %v -> %v", backup, cts.OneCoin)
+	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
+		t.Errorf("UnmarshalSia changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
 	}
 }

@@ -260,7 +260,7 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 		MaxAdjustmentUp:   srv.chainCts.MaxAdjustmentUp,
 		MaxAdjustmentDown: srv.chainCts.MaxAdjustmentDown,
 
-		OneCoin: srv.chainCts.OneCoin,
+		OneCoin: srv.chainCts.CurrencyUnits.OneCoin,
 	}
 
 	api.WriteJSON(w, sc)

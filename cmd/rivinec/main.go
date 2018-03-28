@@ -8,5 +8,5 @@ import (
 func main() {
 	// The name defaults to rivine if it isn't specified but set it again to make sure
 	client.ClientName = "rivine"
-	client.DefaultClient(types.NewCurrency64(1000000000000).Mul64(1000000000000))
+	client.DefaultClient(types.DefaultCurrencyUnits())
 }
