@@ -90,8 +90,6 @@ func DefaultCurrencyUnits() CurrencyUnits {
 // allows some santiy checking later
 // GenesisTimestamp, GenesisBlockStakeAllocation, and GenesisCoinDistribution aren't set as there is no such thing as a "sane default" for these variables
 // since they are really chain specific
-// Likewise, don't set RootTarget, GenesisBlockStakeCount, GenesisCoinCount, GenesisBlock, GenesisID, and StartDifficulty as these should be calculated
-// By the Calculate method
 func DefaultChainConstants() ChainConstants {
 	currencyUnits := DefaultCurrencyUnits()
 

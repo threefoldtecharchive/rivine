@@ -21,19 +21,21 @@ const (
 
 // Config defines the configuration for the default (CLI) client.
 type Config struct {
-	Address       string
-	Name          string
-	Version       build.ProtocolVersion
-	CurrencyUnits types.CurrencyUnits
+	Address          string
+	Name             string
+	Version          build.ProtocolVersion
+	CurrencyCoinUnit string
+	CurrencyUnits    types.CurrencyUnits
 }
 
 // DefaultConfig creates the default configuration for the default (CLI) client.
 func DefaultConfig() Config {
 	return Config{
-		Address:       "localhost:23110",
-		Name:          "Rivine",
-		Version:       build.Version,
-		CurrencyUnits: types.DefaultCurrencyUnits(),
+		Address:          "localhost:23110",
+		Name:             "Rivine",
+		Version:          build.Version,
+		CurrencyCoinUnit: "ROC",
+		CurrencyUnits:    types.DefaultCurrencyUnits(),
 	}
 }
 
@@ -85,6 +87,7 @@ var (
 	}
 
 	_CurrencyUnits     types.CurrencyUnits
+	_CurrencyCoinUnit  string
 	_CurrencyConvertor CurrencyConvertor
 )
 
@@ -94,6 +97,7 @@ func DefaultCLIClient(cfg Config) {
 	_DefaultClient.name = cfg.Name
 	_DefaultClient.httpClient.RootURL = cfg.Address
 	_DefaultClient.version = cfg.Version
+	_CurrencyCoinUnit = cfg.CurrencyCoinUnit
 	_CurrencyUnits = cfg.CurrencyUnits
 
 	var err error

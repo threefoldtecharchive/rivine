@@ -266,7 +266,7 @@ func walletsendsiacoinscmd(amount, dest string) {
 	if err != nil {
 		Die("Could not send coins:", err)
 	}
-	fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinString(hastings), dest)
+	fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(hastings), dest)
 }
 
 // walletsendblockstakescmd sends siafunds to a destination address.
@@ -303,7 +303,7 @@ func walletblockstakestatcmd() {
 	fmt.Printf("%v of last %v Blocks created (theoretically %v)\n", bsstat.TotalBCLast1000, bsstat.BlockCount, bsstat.TotalBCLast1000t)
 
 	fmt.Printf("containing %v fee \n",
-		_CurrencyConvertor.ToCoinString(bsstat.TotalFeeLast1000))
+		_CurrencyConvertor.ToCoinStringWithUnit(bsstat.TotalFeeLast1000))
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.AlignRight|tabwriter.Debug)
 	fmt.Fprintln(w, "state\t#BlockStake\tUTXO hash\t")
@@ -340,9 +340,9 @@ Unlock the wallet to view balance
 	unconfirmedBalance := status.ConfirmedCoinBalance.Add(status.UnconfirmedIncomingCoins).Sub(status.UnconfirmedOutgoingCoins)
 	var delta string
 	if unconfirmedBalance.Cmp(status.ConfirmedCoinBalance) >= 0 {
-		delta = "+ " + _CurrencyConvertor.ToCoinString(unconfirmedBalance.Sub(status.ConfirmedCoinBalance))
+		delta = "+ " + _CurrencyConvertor.ToCoinStringWithUnit(unconfirmedBalance.Sub(status.ConfirmedCoinBalance))
 	} else {
-		delta = "- " + _CurrencyConvertor.ToCoinString(status.ConfirmedCoinBalance.Sub(unconfirmedBalance))
+		delta = "- " + _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance.Sub(unconfirmedBalance))
 	}
 
 	fmt.Printf(`Wallet status:
@@ -350,7 +350,7 @@ Unlock the wallet to view balance
 Confirmed Balance:   %v
 Unconfirmed Delta:   %v
 BlockStakes:         %v BS
-`, encStatus, _CurrencyConvertor.ToCoinString(status.ConfirmedCoinBalance), delta,
+`, encStatus, _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance), delta,
 		status.BlockStakeBalance)
 }
 

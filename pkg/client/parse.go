@@ -130,28 +130,36 @@ func (cc CurrencyConvertor) ToCoinString(c types.Currency) string {
 	return str
 }
 
+// ToCoinStringWithUnit turns the in-memory currency unit,
+// into a string version of the default currency unit.
+// This can never fail, as the only thing it can do is make a number smaller.
+// It also adds the unit of the coin behind the coin.
+func (cc CurrencyConvertor) ToCoinStringWithUnit(c types.Currency) string {
+	return cc.ToCoinString(c) + " " + _CurrencyCoinUnit
+}
+
 // CoinArgDescription is used to print a helpful arg description message,
 // for this convertor.
 func (cc CurrencyConvertor) CoinArgDescription(argName string) string {
 	if cc.precision < 1 {
 		return fmt.Sprintf(
-			"argument %s has to be a positive natural number (no digits after comma are allowed)",
-			argName)
+			"argument %s (expressed in default unit %s) has to be a positive natural number (no digits after comma are allowed)",
+			argName, _CurrencyCoinUnit)
 	}
 	return fmt.Sprintf(
-		"argument %s can (only) have up to %d digits after comma and has to be positive",
-		argName, cc.precision)
+		"argument %s (expressed in default unit %s) can (only) have up to %d digits after comma and has to be positive",
+		argName, _CurrencyCoinUnit, cc.precision)
 }
 
 // CoinHelp is used to print a help message,
 // for this convertor.
 func (cc CurrencyConvertor) CoinHelp() string {
 	if cc.precision < 1 {
-		return `coins are expressed in their default unit,
+		return fmt.Sprintf(`coins are expressed in their default unit (%s),
 which value has to be expressed as a positive natural number
-(no digits after comma are allowed)`
+(no digits after comma are allowed)`, _CurrencyCoinUnit)
 	}
-	return fmt.Sprintf(`coins are expressed in their default unit, which value can be expressed as a floating point value,
+	return fmt.Sprintf(`coins are expressed in their default unit (%s), which value can be expressed as a floating point value,
 but it can (only) have up to %d digits after comma and it has to be positive`,
-		cc.precision)
+		_CurrencyCoinUnit, cc.precision)
 }
