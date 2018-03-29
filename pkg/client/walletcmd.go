@@ -270,7 +270,6 @@ func walletsendblockstakescmd(amount, dest string) {
 // walletregisterdatacmd registers data on the blockchain by making a minimal transaction to the designated address
 // and includes the data in the transaction
 func walletregisterdatacmd(namespace, dest, data string) {
-	// / At the moment, we need to prepend the non sia prefix for the transaction to be accepted by the transactionpool
 	encodedData := base64.StdEncoding.EncodeToString([]byte(namespace + data))
 	err := _DefaultClient.httpClient.Post("/wallet/data",
 		fmt.Sprintf("destination=%s&data=%s", dest, encodedData))

@@ -108,7 +108,12 @@ func (uh UnlockHash) MarshalJSON() ([]byte, error) {
 // that has been encoded to a hex string.
 func (uh *UnlockHash) UnmarshalJSON(b []byte) error {
 	// Check the length of b.
-	if len(b) != (crypto.HashSize+UnlockHashChecksumSize)*2+4 {
+	// total length is 39, 1 byte for the (unlock) type,
+	// 32 for the hash itself and 6 for the (partial) checksum of the hash.
+	// This amount gets multiplied by 2, as the unlock hash is hex encoded,
+	// and on top of that we require 2 extra bytes for the double quote characters.
+	// wrapping the hex-encoded unlockhash string, as it is a JSON-string.
+	if len(b) != (1+crypto.HashSize+UnlockHashChecksumSize)*2+2 {
 		return ErrUnlockHashWrongLen
 	}
 	return uh.LoadString(string(b[1 : len(b)-1]))
@@ -128,7 +133,10 @@ func (uh UnlockHash) String() string {
 // fails the checksum.
 func (uh *UnlockHash) LoadString(strUH string) error {
 	// Check the length of strUH.
-	if len(strUH) != 2+crypto.HashSize*2+UnlockHashChecksumSize*2 {
+	// total length is 39, 1 byte for the (unlock) type,
+	// 32 for the hash itself and 6 for the (partial) checksum of the hash.
+	// This amount gets multiplied by 2, as the unlock hash is hex encoded.
+	if len(strUH) != (1+crypto.HashSize+UnlockHashChecksumSize)*2 {
 		return ErrUnlockHashWrongLen
 	}
 

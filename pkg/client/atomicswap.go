@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/rivine/rivine/api"
@@ -40,15 +42,13 @@ func newContractUnlockHash(condition types.AtomicSwapCondition) types.UnlockHash
 	return types.NewAtomicSwapInputLock(condition).UnlockHash()
 }
 
-func atomicswapcreatecmd(amount, dest, src string) {
+func atomicswapcreatecmd(amountStr, dest, src string) {
 	var (
-		err       error
-		hastings  string
 		condition types.AtomicSwapCondition
 		secret    types.AtomicSwapSecret
 	)
 
-	hastings, err = ParseCurrency(amount)
+	amount, err := scanAmount(amountStr)
 	if err != nil {
 		Die("Could not parse amount:", err)
 	}
@@ -82,7 +82,7 @@ func atomicswapcreatecmd(amount, dest, src string) {
 	unlockHash := types.NewAtomicSwapInputLock(condition).UnlockHash()
 	body, err := json.Marshal(api.WalletTransactionPOST{
 		UnlockHash: unlockHash,
-		Amount:     hastings,
+		Amount:     amount,
 	})
 	if err != nil {
 		Die("Couldn't create/marshal JSOn body:", err)
@@ -107,6 +107,21 @@ func atomicswapcreatecmd(amount, dest, src string) {
 	if secret != (types.AtomicSwapSecret{}) {
 		fmt.Printf("  \tSecret: %s\n", hex.EncodeToString(secret[:]))
 	}
+}
+
+// scanAmount scans a types.Currency from a string.
+func scanAmount(amount string) (types.Currency, error) {
+	hastings, err := ParseCurrency(amount)
+	if err != nil {
+		return types.Currency{}, err
+	}
+	// use SetString manually to ensure that amount does not contain
+	// multiple values, which would confuse fmt.Scan
+	i, ok := new(big.Int).SetString(hastings, 10)
+	if !ok {
+		return types.Currency{}, errors.New("couldn't set hastings string")
+	}
+	return types.NewCurrency(i), nil
 }
 
 func init() {

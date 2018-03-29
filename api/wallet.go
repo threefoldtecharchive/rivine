@@ -63,7 +63,7 @@ type (
 	// using available inputs in the wallet.
 	WalletTransactionPOST struct {
 		UnlockHash types.UnlockHash `json:"unlockhash"`
-		Amount     string           `json:"amount"`
+		Amount     types.Currency   `json:"amount"`
 		Data       string           `json:"data,omitempty"`
 	}
 
@@ -347,13 +347,8 @@ func (api *API) walletTransactionCreateHandler(w http.ResponseWriter, req *http.
 		WriteError(w, Error{"error decoding the supplied transaction output: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
-	amount, ok := scanAmount(body.Amount)
-	if !ok {
-		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/transaction"}, http.StatusBadRequest)
-		return
-	}
 
-	tx, err := api.wallet.SendCoins(amount, body.UnlockHash, []byte(body.Data))
+	tx, err := api.wallet.SendCoins(body.Amount, body.UnlockHash, []byte(body.Data))
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/transaction: " + err.Error()}, http.StatusInternalServerError)
 		return
