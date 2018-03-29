@@ -225,9 +225,8 @@ from addresses in the wallet.
 
 ###### Query String Parameters
 ```
-// Number of hastings being sent. A hasting is the smallest unit in Rivine. There
-// are 10^24 hastings in a coin.
-amount      // hastings
+// Number of coins being send, expressend in the smallest unit
+amount  
 
 // Address that is receiving the coins.
 destination // address
@@ -278,12 +277,12 @@ destination // address
 #### /wallet/data [POST]
 
 Registers data on the blockchain. A transaction is created which sends the
-minimal amount of 1 hasting to the provided address. The data provided is added
+minimal required amount of coin outputs to the provided address. The data provided is added
 as arbitrary data in the transaction
 
 ###### Query String Parameters
 ```
-// Address that is receiving the 1 hasting sent in the transaction
+// Address that is receiving the minimal required coin outputs sent in the transaction
 destination     // address
 
 // The base64 encoded representation of the data

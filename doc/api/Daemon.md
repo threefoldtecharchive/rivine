@@ -52,12 +52,12 @@ returns the set of constants in use.
   "maturitydelay": 144, // blocks
 
   // Number of coins given to the miner of the first block. Note that elsewhere
-  // in the API currency is typically returned in hastings and as a bignum.
+  // in the API currency is typically returned in smallest-coin-unit and as a bignum.
   // This is not the case here.
   "initialcoinbase": 300000, // Coins.
   // Minimum number of coins paid out to the miner of a block (the coinbase
   // decreases with each block). Note that elsewhere in the API currency is
-  // typically returned in hastings and as a bignum. This is not the case
+  // typically returned in smallest-coin-unit and as a bignum. This is not the case
   // here.
   "minimumcoinbase": 30000, // Coins
 
@@ -71,7 +71,7 @@ returns the set of constants in use.
   // Smallest allowed ratio between the old difficulty and the new difficulty.
   "maxadjustmentdown": "2/5",
 
-  // Number of Hastings in one coin.
+  // Number of smallest coin unit in one coin.
   "onecoin": "1000000000000000000000000" // hastings per coin
 }
 ```
