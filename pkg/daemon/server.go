@@ -39,20 +39,26 @@ type (
 
 	// SiaConstants is a struct listing all of the constants in use.
 	SiaConstants struct {
-		GenesisTimestamp      types.Timestamp   `json:"genesistimestamp"`
-		BlockSizeLimit        uint64            `json:"blocksizelimit"`
-		BlockFrequency        types.BlockHeight `json:"blockfrequency"`
-		TargetWindow          types.BlockHeight `json:"targetwindow"`
-		MedianTimestampWindow uint64            `json:"mediantimestampwindow"`
-		FutureThreshold       types.Timestamp   `json:"futurethreshold"`
-		BlockStakeCount       types.Currency    `json:"blockstakecount"`
+		GenesisTimestamp       types.Timestamp   `json:"genesistimestamp"`
+		BlockSizeLimit         uint64            `json:"blocksizelimit"`
+		BlockFrequency         types.BlockHeight `json:"blockfrequency"`
+		FutureThreshold        types.Timestamp   `json:"futurethreshold"`
+		ExtremeFutureThreshold types.Timestamp   `json:"extremefuturethreshold"`
+		BlockStakeCount        types.Currency    `json:"blockstakecount"`
+
+		BlockStakeAging       uint64         `json:"blockstakeaging"`
+		BlockCreatorFee       types.Currency `json:"blockcreatorfee"`
+		MinimumTransactionFee types.Currency `json:"minimumtransactionfee"`
+
 		MaturityDelay         types.BlockHeight `json:"maturitydelay"`
+		MedianTimestampWindow uint64            `json:"mediantimestampwindow"`
 
 		RootTarget types.Target `json:"roottarget"`
 		RootDepth  types.Target `json:"rootdepth"`
 
-		MaxAdjustmentUp   *big.Rat `json:"maxadjustmentup"`
-		MaxAdjustmentDown *big.Rat `json:"maxadjustmentdown"`
+		TargetWindow      types.BlockHeight `json:"targetwindow"`
+		MaxAdjustmentUp   *big.Rat          `json:"maxadjustmentup"`
+		MaxAdjustmentDown *big.Rat          `json:"maxadjustmentdown"`
 
 		OneCoin types.Currency `json:"onecoin"`
 	}
@@ -245,18 +251,24 @@ func (srv *Server) daemonUpdateHandlerPOST(w http.ResponseWriter, _ *http.Reques
 // debugConstantsHandler prints a json file containing all of the constants.
 func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	sc := SiaConstants{
-		GenesisTimestamp:      srv.chainCts.GenesisTimestamp,
-		BlockSizeLimit:        srv.chainCts.BlockSizeLimit,
-		BlockFrequency:        srv.chainCts.BlockFrequency,
-		TargetWindow:          srv.chainCts.TargetWindow,
-		MedianTimestampWindow: srv.chainCts.MedianTimestampWindow,
-		FutureThreshold:       srv.chainCts.FutureThreshold,
-		BlockStakeCount:       srv.chainCts.GenesisBlockStakeCount(),
+		GenesisTimestamp:       srv.chainCts.GenesisTimestamp,
+		BlockSizeLimit:         srv.chainCts.BlockSizeLimit,
+		BlockFrequency:         srv.chainCts.BlockFrequency,
+		FutureThreshold:        srv.chainCts.FutureThreshold,
+		ExtremeFutureThreshold: srv.chainCts.ExtremeFutureThreshold,
+		BlockStakeCount:        srv.chainCts.GenesisBlockStakeCount(),
+
+		BlockStakeAging:       srv.chainCts.BlockStakeAging,
+		BlockCreatorFee:       srv.chainCts.BlockCreatorFee,
+		MinimumTransactionFee: srv.chainCts.MinimumTransactionFee,
+
 		MaturityDelay:         srv.chainCts.MaturityDelay,
+		MedianTimestampWindow: srv.chainCts.MedianTimestampWindow,
 
 		RootTarget: srv.chainCts.RootTarget(),
 		RootDepth:  srv.chainCts.RootDepth,
 
+		TargetWindow:      srv.chainCts.TargetWindow,
 		MaxAdjustmentUp:   srv.chainCts.MaxAdjustmentUp,
 		MaxAdjustmentDown: srv.chainCts.MaxAdjustmentDown,
 

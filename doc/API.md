@@ -103,26 +103,23 @@ returns the set of constants in use.
 ###### JSON Response [(with comments)](/doc/api/Daemon.md#json-response)
 ```javascript
 {
-  "genesistimestamp":      1257894000, // Unix time
-  "blocksizelimit":        2000000,    // bytes
-  "blockfrequency":        600,        // seconds per block
-  "targetwindow":          1000,       // blocks
-  "mediantimestampwindow": 11,         // blocks
-  "futurethreshold":       10800,      // seconds
-  "siafundcount":          "10000",
-  "siafundportion":        "39/1000",
-  "maturitydelay":         144,        // blocks
-
-  "initialcoinbase": 300000, // Coins (see note in Daemon.md)
-  "minimumcoinbase": 30000,  // Coins (see note in Daemon.md)
-
-  "roottarget": [0,0,0,0,32,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  "rootdepth":  [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255],
-
-  "maxadjustmentup":   "5/2",
-  "maxadjustmentdown": "2/5",
-
-  "onecoin": "1000000000" // how many of the smallest unit fit in one coin
+	"genesistimestamp": 1424139000,
+	"blocksizelimit": 2000000,
+	"blockfrequency": 12,
+	"futurethreshold": 120,
+	"extremefuturethreshold": 240,
+	"blockstakecount": "1000000",
+	"blockstakeaging": 1024,
+	"blockcreatorfee": "10000000000",
+	"minimumtransactionfee": "1000000000",
+	"maturitydelay": 10,
+	"mediantimestampwindow": 11,
+	"roottarget": [0, 0, 1, 101, 233, 248, 15, 41, 33, 25, 228, 101, 254, 240, 196, 178, 4, 130, 212, 234, 96, 234, 180, 205, 138, 241, 24, 148, 218, 166, 98, 142],
+	"rootdepth": [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+	"targetwindow": 20,
+	"maxadjustmentup": "6/5",
+	"maxadjustmentdown": "5/6",
+	"onecoin": "1000000000"
 }
 ```
 
