@@ -122,7 +122,7 @@ returns the set of constants in use.
   "maxadjustmentup":   "5/2",
   "maxadjustmentdown": "2/5",
 
-  "onecoin": "1000000000000000000000000" // how many of the smallest unit fit in one coin
+  "onecoin": "1000000000" // how many of the smallest unit fit in one coin
 }
 ```
 

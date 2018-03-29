@@ -314,5 +314,5 @@ func (tp *TransactionPool) relayTransactionSet(conn modules.PeerConn) error {
 }
 
 func (tp *TransactionPool) transactionMinFee() types.Currency {
-	return tp.chainCts.CurrencyUnits.OneCoin.Mul64(1)
+	return tp.chainCts.MinimumTransactionFee
 }

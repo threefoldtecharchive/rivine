@@ -127,16 +127,7 @@ func (tp *TransactionPool) FeeEstimation() (min, max types.Currency) {
 	// TODO: The fee estimation tool should look at the recent blocks and use
 	// them to guage what sort of fee should be required, as opposed to just
 	// guessing blindly.
-	//
-	// TODO: The current minimum has been reduced significantly to account for
-	// legacy renters that are not correctly adding transaction fees. The
-	// minimum has been set to 1 siacoin per kb (or 1/1000 SC per byte), but
-	// really should look more like 10 SC per kb. But, legacy renters are using
-	// a much lower value, which means hosts would be incompatible if the
-	// minimum recommended were set to 10. The value has been set to 1, which
-	// should be okay temporarily while the renters are given time to upgrade.
-	return tp.chainCts.CurrencyUnits.OneCoin.Mul64(1).Div64(1e3),
-		tp.chainCts.CurrencyUnits.OneCoin.Mul64(25).Div64(1e3)
+	return tp.chainCts.MinimumTransactionFee, tp.chainCts.MinimumTransactionFee
 }
 
 // TransactionList returns a list of all transactions in the transaction pool.

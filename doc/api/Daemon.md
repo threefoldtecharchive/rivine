@@ -72,7 +72,7 @@ returns the set of constants in use.
   "maxadjustmentdown": "2/5",
 
   // Number of smallest coin unit in one coin.
-  "onecoin": "1000000000000000000000000" // hastings per coin
+  "onecoin": "1000000000" // hastings per coin
 }
 ```
 

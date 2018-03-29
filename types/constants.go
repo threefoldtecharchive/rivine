@@ -62,6 +62,10 @@ type ChainConstants struct {
 	// all the other rewards such as collected transaction fees.
 	BlockCreatorFee Currency
 
+	// MinimumTransactionFee is the minimum amount of hastings you need to pay
+	// in order to get your transaction to be accepted by block creators.
+	MinimumTransactionFee Currency
+
 	// GenesisTimestamp is the unix timestamp of the genesis block
 	GenesisTimestamp Timestamp
 	// GenesisBlockStakeAllocation are the blockstake outputs of the genesis block
@@ -100,9 +104,10 @@ func DefaultChainConstants() ChainConstants {
 		// enough that there isn't much time wasted on waiting for things to
 		// happen.
 		cts := ChainConstants{
-			BlockSizeLimit:  2e6,
-			RootDepth:       Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-			BlockCreatorFee: currencyUnits.OneCoin.Mul64(10),
+			BlockSizeLimit:        2e6,
+			RootDepth:             Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			BlockCreatorFee:       currencyUnits.OneCoin.Mul64(10),
+			MinimumTransactionFee: currencyUnits.OneCoin.Mul64(1),
 			// 12 seconds, slow enough for developers to see
 			// ~each block, fast enough that blocks don't waste time
 			BlockFrequency: 12,
@@ -149,6 +154,7 @@ func DefaultChainConstants() ChainConstants {
 			BlockSizeLimit:         2e6,
 			RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 			BlockCreatorFee:        currencyUnits.OneCoin.Mul64(100),
+			MinimumTransactionFee:  currencyUnits.OneCoin.Mul64(1),
 			BlockFrequency:         1, // ASFAP
 			MaturityDelay:          3,
 			MedianTimestampWindow:  11,
@@ -198,6 +204,7 @@ func DefaultChainConstants() ChainConstants {
 		BlockSizeLimit:         2e6,
 		RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		BlockCreatorFee:        currencyUnits.OneCoin.Mul64(10),
+		MinimumTransactionFee:  currencyUnits.OneCoin.Mul64(1),
 		BlockFrequency:         600,
 		MaturityDelay:          144,
 		MedianTimestampWindow:  11,

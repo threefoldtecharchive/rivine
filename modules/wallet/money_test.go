@@ -48,12 +48,12 @@ func TestSendCoins(t *testing.T) {
 		t.Fatal(err)
 	}
 	cs.addTransactionAsBlock(addr,
-		wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(1).Add(types.NewCurrency64(5000)))
+		wt.wallet.chainCts.MinimumTransactionFee.Mul64(1).Add(types.NewCurrency64(5000)))
 
 	// Send 5000 hastings. The wallet will automatically add a fee. Outgoing
 	// unconfirmed siacoins - incoming unconfirmed coins should equal 5000 +
 	// fee.
-	tpoolFee := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(1) // TODO change
+	tpoolFee := wt.wallet.chainCts.MinimumTransactionFee.Mul64(1)
 	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.UnlockHash{}, nil)
 	if err != nil {
 		t.Fatal(err)

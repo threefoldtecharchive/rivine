@@ -67,7 +67,7 @@ func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []
 	}
 	defer w.tg.Done()
 
-	tpoolFee := w.chainCts.CurrencyUnits.OneCoin.Mul64(1) // TODO: better fee algo.
+	tpoolFee := w.chainCts.MinimumTransactionFee.Mul64(1) // TODO better fee algo
 	output := types.CoinOutput{
 		Value:      amount,
 		UnlockHash: dest,
@@ -104,7 +104,7 @@ func (w *Wallet) SendBlockStakes(amount types.Currency, dest types.UnlockHash) (
 		return nil, err
 	}
 	defer w.tg.Done()
-	tpoolFee := w.chainCts.CurrencyUnits.OneCoin.Mul64(1) // TODO: better fee algo.
+	tpoolFee := w.chainCts.MinimumTransactionFee.Mul64(1) // TODO better fee algo
 	output := types.BlockStakeOutput{
 		Value:      amount,
 		UnlockHash: dest,
