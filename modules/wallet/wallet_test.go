@@ -222,6 +222,10 @@ func (wt *walletTester) closeWt() {
 
 // TestNilInputs tries starting the wallet using nil inputs.
 func TestNilInputs(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
