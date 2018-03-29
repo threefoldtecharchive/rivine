@@ -45,7 +45,7 @@ func (g *Gateway) pingNode(addr modules.NetAddress) (err error) {
 	defer conn.Close()
 
 	wantConn := false
-	_, err = connectHandshake(conn, build.Version, g.id, wantConn)
+	_, err = g.connectHandshake(conn, build.Version, g.id, wantConn)
 	return err
 }
 

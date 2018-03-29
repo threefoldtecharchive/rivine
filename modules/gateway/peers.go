@@ -125,7 +125,7 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	addr := modules.NetAddress(conn.RemoteAddr().String())
 	g.log.Debugf("INFO: %v wants to connect", addr)
 
-	remoteVersion, err := acceptConnHandshake(conn, build.Version, g.id)
+	remoteVersion, err := g.acceptConnHandshake(conn, build.Version, g.id)
 	if err != nil {
 		g.log.Debugf("INFO: %v wanted to connect but version handshake failed: %v", addr, err)
 		conn.Close()
@@ -286,10 +286,10 @@ func acceptableVersionHeader(ours, theirs versionHeader) error {
 // connectHandshake performs the version handshake and should be called
 // on the side making the connection request. The remote version is only
 // returned if err == nil.
-func connectHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID, wantConn bool) (remoteVersion build.ProtocolVersion, err error) {
+func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID, wantConn bool) (remoteVersion build.ProtocolVersion, err error) {
 	ours := versionHeader{
 		Version:   version,
-		GenesisID: types.GenesisID,
+		GenesisID: g.genesisBlockID,
 		UniqueID:  uniqueID,
 		WantConn:  wantConn,
 	}
@@ -326,7 +326,7 @@ func connectHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gat
 // acceptConnHandshake performs the version header handshake and should be
 // called on the side accepting a connection request. The remote version is
 // only returned if err == nil.
-func acceptConnHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID) (remoteVersion build.ProtocolVersion, err error) {
+func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID) (remoteVersion build.ProtocolVersion, err error) {
 	var theirs versionHeader
 	// Read remote version.
 	if err = encoding.ReadObject(conn, &theirs, EncodedVersionHeaderLength); err != nil {
@@ -336,7 +336,7 @@ func acceptConnHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID 
 
 	ours := versionHeader{
 		Version:   version,
-		GenesisID: types.GenesisID,
+		GenesisID: g.genesisBlockID,
 		UniqueID:  uniqueID,
 		WantConn:  true,
 	}
@@ -426,7 +426,7 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 	}
 
 	// Perform peer initialization.
-	remoteVersion, err := connectHandshake(conn, build.Version, g.id, true)
+	remoteVersion, err := g.connectHandshake(conn, build.Version, g.id, true)
 	if err != nil {
 		conn.Close()
 		return err

@@ -73,12 +73,13 @@ type (
 		mu         demotemutex.DemoteMutex
 		persistDir string
 
-		bcInfo types.BlockchainInfo
+		bcInfo   types.BlockchainInfo
+		chainCts types.ChainConstants
 	}
 )
 
 // New creates a transaction pool that is ready to receive transactions.
-func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo types.BlockchainInfo) (*TransactionPool, error) {
+func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*TransactionPool, error) {
 	// Check that the input modules are non-nil.
 	if cs == nil {
 		return nil, errNilCS
@@ -98,7 +99,8 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 
 		persistDir: persistDir,
 
-		bcInfo: bcInfo,
+		bcInfo:   bcInfo,
+		chainCts: chainCts,
 	}
 
 	// Open the tpool database.
@@ -133,7 +135,8 @@ func (tp *TransactionPool) FeeEstimation() (min, max types.Currency) {
 	// a much lower value, which means hosts would be incompatible if the
 	// minimum recommended were set to 10. The value has been set to 1, which
 	// should be okay temporarily while the renters are given time to upgrade.
-	return types.OneCoin.Mul64(1).Div64(1e3), types.OneCoin.Mul64(25).Div64(1e3)
+	return tp.chainCts.CurrencyUnits.OneCoin.Mul64(1).Div64(1e3),
+		tp.chainCts.CurrencyUnits.OneCoin.Mul64(25).Div64(1e3)
 }
 
 // TransactionList returns a list of all transactions in the transaction pool.

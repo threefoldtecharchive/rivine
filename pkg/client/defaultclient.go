@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
 )
 
@@ -20,17 +21,19 @@ const (
 
 // Config defines the configuration for the default (CLI) client.
 type Config struct {
-	Address string
-	Name    string
-	Version build.ProtocolVersion
+	Address       string
+	Name          string
+	Version       build.ProtocolVersion
+	CurrencyUnits types.CurrencyUnits
 }
 
 // DefaultConfig creates the default configuration for the default (CLI) client.
 func DefaultConfig() Config {
 	return Config{
-		Address: "localhost:23110",
-		Name:    "Rivine",
-		Version: build.Version,
+		Address:       "localhost:23110",
+		Name:          "Rivine",
+		Version:       build.Version,
+		CurrencyUnits: types.DefaultCurrencyUnits(),
 	}
 }
 
@@ -73,11 +76,16 @@ func clientVersion() {
 	println(fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String())
 }
 
-var _DefaultClient struct {
-	name       string
-	version    build.ProtocolVersion
-	httpClient HTTPClient
-}
+// hidden globals :()
+var (
+	_DefaultClient struct {
+		name       string
+		version    build.ProtocolVersion
+		httpClient HTTPClient
+	}
+
+	_CurrencyUnits types.CurrencyUnits
+)
 
 // DefaultCLIClient creates a new client using the given params as the default config,
 // and an optional flag-based system to overrride some.
@@ -85,6 +93,7 @@ func DefaultCLIClient(cfg Config) {
 	_DefaultClient.name = cfg.Name
 	_DefaultClient.httpClient.RootURL = cfg.Address
 	_DefaultClient.version = cfg.Version
+	_CurrencyUnits = cfg.CurrencyUnits
 
 	root := &cobra.Command{
 		Use:   os.Args[0],
@@ -162,4 +171,8 @@ func DefaultCLIClient(cfg Config) {
 		// Command.SilenceUsage is false) and we should exit with exitCodeUsage.
 		os.Exit(exitCodeUsage)
 	}
+}
+
+func init() {
+	_CurrencyUnits = types.DefaultCurrencyUnits()
 }

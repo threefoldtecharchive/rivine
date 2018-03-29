@@ -112,7 +112,8 @@ func TestIntegrationPreEncryption(t *testing.T) {
 	// Create a second wallet using the same directory - make sure that if any
 	// files have been created, the wallet is still being treated as new.
 	w1, err := New(wt.cs, wt.tpool,
-		filepath.Join(wt.persistDir, modules.WalletDir), types.DefaultBlockchainInfo())
+		filepath.Join(wt.persistDir, modules.WalletDir),
+		types.DefaultBlockchainInfo(), types.DefaultChainConstants())
 	if err != nil {
 		t.Fatal(err)
 	}

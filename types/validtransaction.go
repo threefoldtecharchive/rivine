@@ -22,10 +22,10 @@ var (
 // fitsInABlock checks if the transaction is likely to fit in a block.
 // Currently there is no limitation on transaction size other than it must fit
 // in a block.
-func (t Transaction) fitsInABlock() error {
+func (t Transaction) fitsInABlock(blockSizeLimit uint64) error {
 	// Check that the transaction will fit inside of a block, leaving 5kb for
 	// overhead.
-	if uint64(len(encoding.Marshal(t))) > BlockSizeLimit-5e3 {
+	if uint64(len(encoding.Marshal(t))) > blockSizeLimit-5e3 {
 		return ErrTransactionTooLarge
 	}
 	return nil
@@ -84,8 +84,8 @@ func (t Transaction) noRepeats() error {
 // context, for example if the same output is spent twice in the same
 // transaction. StandaloneValid will not check that all outputs being spent are
 // legal outputs, as it has no confirmed or unconfirmed set to look at.
-func (t Transaction) StandaloneValid(currentHeight BlockHeight) (err error) {
-	err = t.fitsInABlock()
+func (t Transaction) StandaloneValid(currentHeight BlockHeight, blockSizeLimit uint64) (err error) {
+	err = t.fitsInABlock(blockSizeLimit)
 	if err != nil {
 		return
 	}

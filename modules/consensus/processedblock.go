@@ -43,16 +43,16 @@ type processedBlock struct {
 // 'cmp'. 'cmp' is expected to be the current block node. "Sufficient" means
 // that the weight of 'bn' exceeds the weight of 'cmp' by:
 //		(the target of 'cmp' * 'Surpass Threshold')
-func (pb *processedBlock) heavierThan(cmp *processedBlock) bool {
-	requirement := cmp.Depth.AddDifficulties(cmp.ChildTarget.MulDifficulty(SurpassThreshold))
+func (pb *processedBlock) heavierThan(cmp *processedBlock, rootDepth types.Target) bool {
+	requirement := cmp.Depth.AddDifficulties(cmp.ChildTarget.MulDifficulty(SurpassThreshold, rootDepth), rootDepth)
 	return requirement.Cmp(pb.Depth) > 0 // Inversed, because the smaller target is actually heavier.
 }
 
 // childDepth returns the depth of a blockNode's child nodes. The depth is the
 // "sum" of the current depth and current difficulty. See target.Add for more
 // detailed information.
-func (pb *processedBlock) childDepth() types.Target {
-	return pb.Depth.AddDifficulties(pb.ChildTarget)
+func (pb *processedBlock) childDepth(rootDepth types.Target) types.Target {
+	return pb.Depth.AddDifficulties(pb.ChildTarget, rootDepth)
 }
 
 // targetAdjustmentBase returns the magnitude that the target should be
@@ -64,7 +64,7 @@ func (cs *ConsensusSet) targetAdjustmentBase(blockMap *bolt.Bucket, pb *processe
 	var windowSize types.BlockHeight
 	parent := pb.Block.ParentID
 	current := pb.Block.ID()
-	for windowSize = 0; windowSize < types.TargetWindow && parent != (types.BlockID{}); windowSize++ {
+	for windowSize = 0; windowSize < cs.chainCts.TargetWindow && parent != (types.BlockID{}); windowSize++ {
 		current = parent
 		parentID, _ := pb.Block.UnmarshalBlockHeadersParentIDAndTS(blockMap.Get(parent[:]))
 		parent = parentID
@@ -81,7 +81,7 @@ func (cs *ConsensusSet) targetAdjustmentBase(blockMap *bolt.Bucket, pb *processe
 	// during the calculation. The big.Rat is just the int representation of a
 	// target.
 	timePassed := pb.Block.Timestamp - timestamp
-	expectedTimePassed := types.BlockFrequency * windowSize
+	expectedTimePassed := cs.chainCts.BlockFrequency * windowSize
 	return big.NewRat(int64(timePassed), int64(expectedTimePassed))
 }
 
@@ -90,11 +90,11 @@ func (cs *ConsensusSet) targetAdjustmentBase(blockMap *bolt.Bucket, pb *processe
 // ensures that raising and lowering the difficulty requires a minimum amount
 // of total work, which prevents certain classes of difficulty adjusting
 // attacks.
-func clampTargetAdjustment(base *big.Rat) *big.Rat {
-	if base.Cmp(types.MaxAdjustmentUp) > 0 {
-		return types.MaxAdjustmentUp
-	} else if base.Cmp(types.MaxAdjustmentDown) < 0 {
-		return types.MaxAdjustmentDown
+func (cs *ConsensusSet) clampTargetAdjustment(base *big.Rat) *big.Rat {
+	if base.Cmp(cs.chainCts.MaxAdjustmentUp) > 0 {
+		return cs.chainCts.MaxAdjustmentUp
+	} else if base.Cmp(cs.chainCts.MaxAdjustmentDown) < 0 {
+		return cs.chainCts.MaxAdjustmentDown
 	}
 	return base
 }
@@ -110,13 +110,14 @@ func (cs *ConsensusSet) setChildTarget(blockMap *bolt.Bucket, pb *processedBlock
 		panic(err)
 	}
 
-	if pb.Height%(types.TargetWindow/2) != 0 {
+	if pb.Height%(cs.chainCts.TargetWindow/2) != 0 {
 		pb.ChildTarget = parent.ChildTarget
 		return
 	}
-	adjustment := clampTargetAdjustment(cs.targetAdjustmentBase(blockMap, pb))
+	adjustment := cs.clampTargetAdjustment(cs.targetAdjustmentBase(blockMap, pb))
 	adjustedRatTarget := new(big.Rat).Mul(parent.ChildTarget.Rat(), adjustment)
-	pb.ChildTarget = types.RatToTarget(adjustedRatTarget)
+	pb.ChildTarget = types.RatToTarget(
+		adjustedRatTarget, cs.chainCts.RootDepth)
 }
 
 // newChild creates a blockNode from a block and adds it to the parent's set of
@@ -127,7 +128,7 @@ func (cs *ConsensusSet) newChild(tx *bolt.Tx, pb *processedBlock, b types.Block)
 	child := &processedBlock{
 		Block:  b,
 		Height: pb.Height + 1,
-		Depth:  pb.childDepth(),
+		Depth:  pb.childDepth(cs.chainCts.RootDepth),
 	}
 	blockMap := tx.Bucket(BlockMap)
 	cs.setChildTarget(blockMap, child)

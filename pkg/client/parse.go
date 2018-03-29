@@ -31,7 +31,7 @@ func ParsePeriod(period string) (string, error) {
 // units. The unit used will be the largest unit that results in a value
 // greater than 1. The value is rounded to 4 significant digits.
 func CurrencyUnits(c types.Currency) string {
-	pico := types.OneCoin.Div64(1e12)
+	pico := _CurrencyUnits.OneCoin.Div64(1e12)
 	if c.Cmp(pico) < 0 {
 		return c.String() + " H"
 	}

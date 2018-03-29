@@ -35,26 +35,35 @@ type (
 	// An Explorer contains a more comprehensive view of the blockchain,
 	// including various statistics and metrics.
 	Explorer struct {
-		cs         modules.ConsensusSet
-		db         *persist.BoltDatabase
-		persistDir string
-		bcInfo     types.BlockchainInfo
+		cs             modules.ConsensusSet
+		db             *persist.BoltDatabase
+		persistDir     string
+		bcInfo         types.BlockchainInfo
+		chainCts       types.ChainConstants
+		rootTarget     types.Target
+		genesisBlock   types.Block
+		genesisBlockID types.BlockID
 	}
 )
 
 // New creates the internal data structures, and subscribes to
 // consensus for changes to the blockchain
-func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo) (*Explorer, error) {
+func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*Explorer, error) {
 	// Check that input modules are non-nil
 	if cs == nil {
 		return nil, errNilCS
 	}
 
 	// Initialize the explorer.
+	genesisBlock := chainCts.GenesisBlock()
 	e := &Explorer{
-		cs:         cs,
-		persistDir: persistDir,
-		bcInfo:     bcInfo,
+		cs:             cs,
+		persistDir:     persistDir,
+		bcInfo:         bcInfo,
+		chainCts:       chainCts,
+		rootTarget:     chainCts.RootTarget(),
+		genesisBlock:   genesisBlock,
+		genesisBlockID: genesisBlock.ID(),
 	}
 
 	// Initialize the persistent structures, including the database.

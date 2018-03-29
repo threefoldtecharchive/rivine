@@ -12,32 +12,6 @@ const (
 	GatewayDir = "gateway"
 )
 
-var (
-	// BootstrapPeers is a list of peers that can be used to find other peers -
-	// when a client first connects to the network, the only options for
-	// finding peers are either manual entry of peers or to use a hardcoded
-	// bootstrap point. While the bootstrap point could be a central service,
-	// it can also be a list of peers that are known to be stable. We have
-	// chosen to hardcode known-stable peers.
-	BootstrapPeers = func() []NetAddress {
-		switch build.Release {
-		case "dev":
-			return nil
-		case "standard":
-			return []NetAddress{
-				"136.243.144.132:23112",
-				"[2a01:4f8:171:1303::2]:23112",
-				"bootstrap2.rivine.io:23112",
-				"bootstrap3.rivine.io:23112",
-			}
-		case "testing":
-			return nil
-		default:
-			panic("unrecognized build.Release constant in BootstrapPeers")
-		}
-	}()
-)
-
 type (
 	// Peer contains all the info necessary to Broadcast to a peer.
 	Peer struct {

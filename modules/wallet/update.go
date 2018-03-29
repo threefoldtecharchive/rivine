@@ -104,7 +104,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 			}
 			minerPT.Outputs = append(minerPT.Outputs, modules.ProcessedOutput{
 				FundType:       types.SpecifierMinerPayout,
-				MaturityHeight: w.consensusSetHeight + types.MaturityDelay,
+				MaturityHeight: w.consensusSetHeight + w.chainCts.MaturityDelay,
 				WalletAddress:  exists,
 				RelatedAddress: mp.UnlockHash,
 				Value:          mp.Value,

@@ -44,7 +44,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 			target, exists := e.cs.ChildTarget(block.ParentID)
 			if !exists {
-				target = types.RootTarget
+				target = e.rootTarget
 			}
 			dbRemoveBlockTarget(tx, bid, target)
 
@@ -92,8 +92,8 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			tbid := types.TransactionID(bid)
 
 			// special handling for genesis block
-			if bid == types.GenesisID {
-				dbAddGenesisBlock(tx)
+			if bid == e.genesisBlockID {
+				e.dbAddGenesisBlock(tx)
 				continue
 			}
 
@@ -103,7 +103,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 			target, exists := e.cs.ChildTarget(block.ParentID)
 			if !exists {
-				target = types.RootTarget
+				target = e.rootTarget
 			}
 			dbAddBlockTarget(tx, bid, target)
 
@@ -143,7 +143,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 			// calculate and add new block facts, if possible
 			if tx.Bucket(bucketBlockFacts).Get(encoding.Marshal(block.ParentID)) != nil {
-				facts := dbCalculateBlockFacts(tx, e.cs, block)
+				facts := e.dbCalculateBlockFacts(tx, block)
 				dbAddBlockFacts(tx, facts)
 			}
 		}
@@ -198,6 +198,112 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 	if err != nil {
 		build.Critical("explorer update failed:", err)
 	}
+}
+
+func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFacts {
+	// get the parent block facts
+	var bf blockFacts
+	err := dbGetAndDecode(bucketBlockFacts, block.ParentID, &bf)(tx)
+	assertNil(err)
+
+	// get target
+	target, exists := e.cs.ChildTarget(block.ParentID)
+	if !exists {
+		panic(fmt.Sprint("ConsensusSet is missing target of known block", block.ParentID))
+	}
+
+	// update fields
+	bf.BlockID = block.ID()
+	bf.Height++
+	bf.Difficulty = target.Difficulty(e.chainCts.RootDepth)
+	bf.Target = target
+	bf.Timestamp = block.Timestamp
+	//TODO rivine
+	bf.TotalCoins = types.NewCurrency64(0)
+
+	// calculate maturity timestamp
+	var maturityTimestamp types.Timestamp
+	if bf.Height > e.chainCts.MaturityDelay {
+		oldBlock, exists := e.cs.BlockAtHeight(bf.Height - e.chainCts.MaturityDelay)
+		if !exists {
+			panic(fmt.Sprint("ConsensusSet is missing block at height", bf.Height-e.chainCts.MaturityDelay))
+		}
+		maturityTimestamp = oldBlock.Timestamp
+	}
+	bf.MaturityTimestamp = maturityTimestamp
+
+	// calculate hashrate by averaging last 'ActiveBSEstimationBlocks' blocks
+	var EstimatedActiveBS types.Difficulty
+	if bf.Height > ActiveBSEstimationBlocks {
+		var totalDifficulty = bf.Target
+		var oldestTimestamp types.Timestamp
+		for i := types.BlockHeight(1); i < ActiveBSEstimationBlocks; i++ {
+			b, exists := e.cs.BlockAtHeight(bf.Height - i)
+			if !exists {
+				panic(fmt.Sprint("ConsensusSet is missing block at height", bf.Height-i))
+			}
+			target, exists := e.cs.ChildTarget(b.ParentID)
+			if !exists {
+				panic(fmt.Sprint("ConsensusSet is missing target of known block", b.ParentID))
+			}
+			totalDifficulty = totalDifficulty.AddDifficulties(
+				target, e.chainCts.RootDepth)
+			oldestTimestamp = b.Timestamp
+		}
+		secondsPassed := bf.Timestamp - oldestTimestamp
+		EstimatedActiveBS = totalDifficulty.Difficulty(
+			e.chainCts.RootDepth).Div64(uint64(secondsPassed))
+	}
+	bf.EstimatedActiveBS = EstimatedActiveBS
+
+	bf.MinerPayoutCount += uint64(len(block.MinerPayouts))
+	bf.TransactionCount += uint64(len(block.Transactions))
+	for _, txn := range block.Transactions {
+		bf.CoinInputCount += uint64(len(txn.CoinInputs))
+		bf.CoinOutputCount += uint64(len(txn.CoinOutputs))
+		bf.BlockStakeInputCount += uint64(len(txn.BlockStakeInputs))
+		bf.BlockStakeOutputCount += uint64(len(txn.BlockStakeOutputs))
+		bf.MinerFeeCount += uint64(len(txn.MinerFees))
+		if size := len(txn.ArbitraryData); size > 0 {
+			bf.ArbitraryDataTotalSize += uint64(size)
+			bf.ArbitraryDataCount++
+		}
+	}
+
+	return bf
+}
+
+// Special handling for the genesis block. No other functions are called on it.
+func (e *Explorer) dbAddGenesisBlock(tx *bolt.Tx) {
+	id := e.genesisBlockID
+	dbAddBlockID(tx, id, 0)
+	txid := e.genesisBlock.Transactions[0].ID()
+	dbAddTransactionID(tx, txid, 0)
+	for i, sco := range e.chainCts.GenesisCoinDistribution {
+		scoid := e.genesisBlock.Transactions[0].CoinOutputID(uint64(i))
+		dbAddCoinOutputID(tx, scoid, txid)
+		dbAddUnlockHash(tx, sco.UnlockHash, txid)
+		dbAddCoinOutput(tx, scoid, sco)
+	}
+	for i, sfo := range e.chainCts.GenesisBlockStakeAllocation {
+		sfoid := e.genesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
+		dbAddBlockStakeOutputID(tx, sfoid, txid)
+		dbAddUnlockHash(tx, sfo.UnlockHash, txid)
+		dbAddBlockStakeOutput(tx, sfoid, sfo)
+	}
+	dbAddBlockFacts(tx, blockFacts{
+		BlockFacts: modules.BlockFacts{
+			BlockID:               id,
+			Height:                0,
+			Difficulty:            e.rootTarget.Difficulty(e.rootTarget),
+			Target:                e.rootTarget,
+			TotalCoins:            types.NewCurrency64(0), //TODO rivine
+			TransactionCount:      1,
+			BlockStakeOutputCount: uint64(len(e.chainCts.GenesisBlockStakeAllocation)),
+			CoinOutputCount:       uint64(len(e.chainCts.GenesisCoinDistribution)),
+		},
+		Timestamp: e.genesisBlock.Timestamp,
+	})
 }
 
 // helper functions
@@ -313,108 +419,4 @@ func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.Transaction
 	if bucketIsEmpty(bucket) {
 		tx.Bucket(bucketUnlockHashes).DeleteBucket(encoding.Marshal(uh))
 	}
-}
-
-func dbCalculateBlockFacts(tx *bolt.Tx, cs modules.ConsensusSet, block types.Block) blockFacts {
-	// get the parent block facts
-	var bf blockFacts
-	err := dbGetAndDecode(bucketBlockFacts, block.ParentID, &bf)(tx)
-	assertNil(err)
-
-	// get target
-	target, exists := cs.ChildTarget(block.ParentID)
-	if !exists {
-		panic(fmt.Sprint("ConsensusSet is missing target of known block", block.ParentID))
-	}
-
-	// update fields
-	bf.BlockID = block.ID()
-	bf.Height++
-	bf.Difficulty = target.Difficulty()
-	bf.Target = target
-	bf.Timestamp = block.Timestamp
-	//TODO rivine
-	bf.TotalCoins = types.NewCurrency64(0)
-
-	// calculate maturity timestamp
-	var maturityTimestamp types.Timestamp
-	if bf.Height > types.MaturityDelay {
-		oldBlock, exists := cs.BlockAtHeight(bf.Height - types.MaturityDelay)
-		if !exists {
-			panic(fmt.Sprint("ConsensusSet is missing block at height", bf.Height-types.MaturityDelay))
-		}
-		maturityTimestamp = oldBlock.Timestamp
-	}
-	bf.MaturityTimestamp = maturityTimestamp
-
-	// calculate hashrate by averaging last 'ActiveBSEstimationBlocks' blocks
-	var EstimatedActiveBS types.Difficulty
-	if bf.Height > ActiveBSEstimationBlocks {
-		var totalDifficulty = bf.Target
-		var oldestTimestamp types.Timestamp
-		for i := types.BlockHeight(1); i < ActiveBSEstimationBlocks; i++ {
-			b, exists := cs.BlockAtHeight(bf.Height - i)
-			if !exists {
-				panic(fmt.Sprint("ConsensusSet is missing block at height", bf.Height-i))
-			}
-			target, exists := cs.ChildTarget(b.ParentID)
-			if !exists {
-				panic(fmt.Sprint("ConsensusSet is missing target of known block", b.ParentID))
-			}
-			totalDifficulty = totalDifficulty.AddDifficulties(target)
-			oldestTimestamp = b.Timestamp
-		}
-		secondsPassed := bf.Timestamp - oldestTimestamp
-		EstimatedActiveBS = totalDifficulty.Difficulty().Div64(uint64(secondsPassed))
-	}
-	bf.EstimatedActiveBS = EstimatedActiveBS
-
-	bf.MinerPayoutCount += uint64(len(block.MinerPayouts))
-	bf.TransactionCount += uint64(len(block.Transactions))
-	for _, txn := range block.Transactions {
-		bf.CoinInputCount += uint64(len(txn.CoinInputs))
-		bf.CoinOutputCount += uint64(len(txn.CoinOutputs))
-		bf.BlockStakeInputCount += uint64(len(txn.BlockStakeInputs))
-		bf.BlockStakeOutputCount += uint64(len(txn.BlockStakeOutputs))
-		bf.MinerFeeCount += uint64(len(txn.MinerFees))
-		if size := len(txn.ArbitraryData); size > 0 {
-			bf.ArbitraryDataTotalSize += uint64(size)
-			bf.ArbitraryDataCount++
-		}
-	}
-
-	return bf
-}
-
-// Special handling for the genesis block. No other functions are called on it.
-func dbAddGenesisBlock(tx *bolt.Tx) {
-	id := types.GenesisID
-	dbAddBlockID(tx, id, 0)
-	txid := types.GenesisBlock.Transactions[0].ID()
-	dbAddTransactionID(tx, txid, 0)
-	for i, sco := range types.GenesisCoinDistribution {
-		scoid := types.GenesisBlock.Transactions[0].CoinOutputID(uint64(i))
-		dbAddCoinOutputID(tx, scoid, txid)
-		dbAddUnlockHash(tx, sco.UnlockHash, txid)
-		dbAddCoinOutput(tx, scoid, sco)
-	}
-	for i, sfo := range types.GenesisBlockStakeAllocation {
-		sfoid := types.GenesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
-		dbAddBlockStakeOutputID(tx, sfoid, txid)
-		dbAddUnlockHash(tx, sfo.UnlockHash, txid)
-		dbAddBlockStakeOutput(tx, sfoid, sfo)
-	}
-	dbAddBlockFacts(tx, blockFacts{
-		BlockFacts: modules.BlockFacts{
-			BlockID:               id,
-			Height:                0,
-			Difficulty:            types.RootTarget.Difficulty(),
-			Target:                types.RootTarget,
-			TotalCoins:            types.NewCurrency64(0), //TODO rivine
-			TransactionCount:      1,
-			BlockStakeOutputCount: uint64(len(types.GenesisBlockStakeAllocation)),
-			CoinOutputCount:       uint64(len(types.GenesisCoinDistribution)),
-		},
-		Timestamp: types.GenesisBlock.Timestamp,
-	})
 }

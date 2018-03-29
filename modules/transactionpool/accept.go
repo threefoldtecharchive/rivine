@@ -35,8 +35,6 @@ var (
 	errFullTransactionPool = errors.New("transaction pool cannot accept more transactions")
 	errLowMinerFees        = errors.New("transaction set needs more miner fees to be accepted")
 	errEmptySet            = errors.New("transaction set is empty")
-
-	TransactionMinFee = types.OneCoin.Mul64(1)
 )
 
 // relatedObjectIDs determines all of the object ids related to a transaction.
@@ -84,7 +82,7 @@ func (tp *TransactionPool) checkMinerFees(ts []types.Transaction) error {
 				feeSum = feeSum.Add(fee)
 			}
 		}
-		feeRequired := TransactionMinFee.Mul64(uint64(len(ts)))
+		feeRequired := tp.transactionMinFee().Mul64(uint64(len(ts)))
 		if feeSum.Cmp(feeRequired) < 0 {
 			return errLowMinerFees
 		}
@@ -308,9 +306,13 @@ func (tp *TransactionPool) AcceptTransactionSet(ts []types.Transaction) error {
 // other peers.
 func (tp *TransactionPool) relayTransactionSet(conn modules.PeerConn) error {
 	var ts []types.Transaction
-	err := encoding.ReadObject(conn, &ts, types.BlockSizeLimit)
+	err := encoding.ReadObject(conn, &ts, tp.chainCts.BlockSizeLimit)
 	if err != nil {
 		return err
 	}
 	return tp.AcceptTransactionSet(ts)
+}
+
+func (tp *TransactionPool) transactionMinFee() types.Currency {
+	return tp.chainCts.CurrencyUnits.OneCoin.Mul64(1)
 }
