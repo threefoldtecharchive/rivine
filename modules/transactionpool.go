@@ -39,13 +39,6 @@ var (
 	// potentially illegal transactions in the event of a soft-fork.
 	ErrInvalidArbPrefix = errors.New("transaction contains non-standard arbitrary data")
 
-	// PrefixNonSia defines the prefix that should be appended to any
-	// transactions that use the arbitrary data for reasons outside of the
-	// standard Sia protocol. This will prevent these transactions from being
-	// rejected by the IsStandard set of rules, but also means that the data
-	// will never be used within the formal Sia protocol.
-	PrefixNonSia = types.Specifier{'N', 'o', 'n', 'S', 'i', 'a'}
-
 	// TransactionPoolDir is the name of the directory that is used to store
 	// the transaction pool's persistent data.
 	TransactionPoolDir = "transactionpool"

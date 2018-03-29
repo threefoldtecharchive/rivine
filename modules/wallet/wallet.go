@@ -28,6 +28,7 @@ const (
 var (
 	errNilConsensusSet = errors.New("wallet cannot initialize with a nil consensus set")
 	errNilTpool        = errors.New("wallet cannot initialize with a nil transaction pool")
+	errUnknownAddress  = errors.New("given wallet address is not known")
 )
 
 // spendableKey is a set of secret keys plus the corresponding unlock
@@ -36,8 +37,18 @@ var (
 // addresses that are to be used in 'FundSiacoins' or 'FundSiafunds' in the
 // transaction builder must conform to this form of spendable key.
 type spendableKey struct {
-	UnlockConditions types.UnlockConditions
-	SecretKeys       []crypto.SecretKey
+	PublicKey crypto.PublicKey
+	SecretKey crypto.SecretKey
+}
+
+func (sk spendableKey) WipeSecret() spendableKey {
+	crypto.SecureWipe(sk.SecretKey[:])
+	return sk
+}
+
+func (sk spendableKey) UnlockHash() types.UnlockHash {
+	epk := types.Ed25519PublicKey(sk.PublicKey)
+	return types.NewSingleSignatureInputLock(epk).UnlockHash()
 }
 
 // Wallet is an object that tracks balances, creates keys and addresses,
@@ -189,6 +200,16 @@ func (w *Wallet) AllAddresses() []types.UnlockHash {
 	}
 	sort.Sort(addrs)
 	return addrs
+}
+
+// GetKey gets the pub/priv key pair,
+// which is linked to the given unlock hash (address).
+func (w *Wallet) GetKey(address types.UnlockHash) (types.SiaPublicKey, types.ByteSlice, error) {
+	sp, found := w.keys[address]
+	if !found {
+		return types.SiaPublicKey{}, types.ByteSlice{}, errUnknownAddress
+	}
+	return types.Ed25519PublicKey(sp.PublicKey), types.ByteSlice(sp.SecretKey[:]), nil
 }
 
 // GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an

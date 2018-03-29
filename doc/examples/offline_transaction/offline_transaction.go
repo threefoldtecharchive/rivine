@@ -22,7 +22,7 @@ const (
 	generateAddressAmount = 50
 	// genesisOutputSeed is the mnemonic representation of the genesis seed
 	// We will be using this seed to generate the address(es) to transfer the funds from
-	genesisOutputSeed = "recall view document apology stone tattoo job farm pilot favorite mango topic thing dilemma dawn width marble proud pen meadow sing museum lucky present"
+	genesisOutputSeed = "carbon boss inject cover mountain fetch fiber fit tornado cloth wing dinosaur proof joy intact fabric thumb rebel borrow poet chair network expire else"
 	// unlockHashType is the string representation expected in the hashtype field when checking the unlock hashes in the explorer api
 	unlockHashType = "unlockhash"
 	// minerPayoutMaturityWindow is the amount of blocks that need to pass before a miner payout can be spend
@@ -117,7 +117,11 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 			break
 		}
 		// Append the input
-		inputs = append(inputs, types.CoinInput{ParentID: id, UnlockConditions: w.keys[utxo.UnlockHash].UnlockConditions})
+		inputs = append(inputs, types.CoinInput{
+			ParentID: id,
+			Unlocker: types.NewSingleSignatureInputLock(
+				types.Ed25519PublicKey(w.keys[utxo.UnlockHash].PublicKey)),
+		})
 		// And update the value in the transaction
 		inputValue = inputValue.Add(utxo.Value)
 	}
@@ -171,13 +175,18 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 
 // signTxn signs a transaction
 func (w *MyWallet) signTxn(txn *types.Transaction) error {
-	// We will sign the whole transaction
-	coveredFields := types.CoveredFields{WholeTransaction: true}
-	// Add a signature for every input
-	for _, input := range txn.CoinInputs {
-		// input := tb.transaction.CoinInputs[inputIndex]
-		key := w.keys[input.UnlockConditions.UnlockHash()]
-		_, err := addSignatures(txn, coveredFields, input.UnlockConditions, crypto.Hash(input.ParentID), key)
+	// sign/lock every coin input
+	for idx, input := range txn.CoinInputs {
+		key := w.keys[input.Unlocker.UnlockHash()]
+		err := input.Unlocker.Lock(uint64(idx), *txn, key.SecretKey)
+		if err != nil {
+			return err
+		}
+	}
+	// sign/lock every blockstake input
+	for idx, input := range txn.BlockStakeInputs {
+		key := w.keys[input.Unlocker.UnlockHash()]
+		err := input.Unlocker.Lock(uint64(idx), *txn, key.SecretKey)
 		if err != nil {
 			return err
 		}
@@ -222,7 +231,7 @@ func NewWallet(seed modules.Seed) *MyWallet {
 	// Create the adress -> key map
 	for i := 0; i < generateAddressAmount; i++ {
 		key := generateSpendableKey(w.seed, uint64(i))
-		w.keys[key.UnlockConditions.UnlockHash()] = key
+		w.keys[key.UnlockHash()] = key
 	}
 	return &w
 }
@@ -337,8 +346,12 @@ func RivineRequest(method string, endpoint string, body io.Reader) (*http.Respon
 // matched to the corresponding public keys in the unlock conditions.
 // Copied since the type is not exported
 type spendableKey struct {
-	UnlockConditions types.UnlockConditions
-	SecretKeys       []crypto.SecretKey
+	PublicKey crypto.PublicKey
+	SecretKey crypto.SecretKey
+}
+
+func (sk spendableKey) UnlockHash() types.UnlockHash {
+	return types.NewSingleSignatureInputLock(types.Ed25519PublicKey(sk.PublicKey)).UnlockHash()
 }
 
 // generateSpendableKey creates the keys and unlock conditions a given index of a
@@ -348,64 +361,7 @@ func generateSpendableKey(seed modules.Seed, index uint64) spendableKey {
 	entropy := crypto.HashAll(seed, index)
 	sk, pk := crypto.GenerateKeyPairDeterministic(entropy)
 	return spendableKey{
-		UnlockConditions: generateUnlockConditions(pk),
-		SecretKeys:       []crypto.SecretKey{sk},
+		PublicKey: pk,
+		SecretKey: sk,
 	}
-}
-
-// generateUnlockConditions provides the unlock conditions that would be
-// automatically generated from the input public key. Copied as the function is not exported
-func generateUnlockConditions(pk crypto.PublicKey) types.UnlockConditions {
-	return types.UnlockConditions{
-		PublicKeys: []types.SiaPublicKey{{
-			Algorithm: types.SignatureEd25519,
-			Key:       pk[:],
-		}},
-		SignaturesRequired: 1,
-	}
-}
-
-// addSignatures will sign a transaction using a spendable key, with support
-// for multisig spendable keys. Because of the restricted input, the function
-// is compatible with both coin inputs and blockstake inputs.
-// Copied as the function is not exported
-func addSignatures(txn *types.Transaction, cf types.CoveredFields, uc types.UnlockConditions, parentID crypto.Hash, spendKey spendableKey) (newSigIndices []int, err error) {
-	// Try to find the matching secret key for each public key - some public
-	// keys may not have a match. Some secret keys may be used multiple times,
-	// which is why public keys are used as the outer loop.
-	totalSignatures := uint64(0)
-	for i, siaPubKey := range uc.PublicKeys {
-		// Search for the matching secret key to the public key.
-		for j := range spendKey.SecretKeys {
-			pubKey := spendKey.SecretKeys[j].PublicKey()
-			if bytes.Compare(siaPubKey.Key, pubKey[:]) != 0 {
-				continue
-			}
-
-			// Found the right secret key, add a signature.
-			sig := types.TransactionSignature{
-				ParentID:       parentID,
-				CoveredFields:  cf,
-				PublicKeyIndex: uint64(i),
-			}
-			newSigIndices = append(newSigIndices, len(txn.TransactionSignatures))
-			txn.TransactionSignatures = append(txn.TransactionSignatures, sig)
-			sigIndex := len(txn.TransactionSignatures) - 1
-			sigHash := txn.SigHash(sigIndex)
-			encodedSig := crypto.SignHash(sigHash, spendKey.SecretKeys[j])
-			txn.TransactionSignatures[sigIndex].Signature = encodedSig[:]
-
-			// Count that the signature has been added, and break out of the
-			// secret key loop.
-			totalSignatures++
-			break
-		}
-
-		// If there are enough signatures to satisfy the unlock conditions,
-		// break out of the outer loop.
-		if totalSignatures == uc.SignaturesRequired {
-			break
-		}
-	}
-	return newSigIndices, nil
 }

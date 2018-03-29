@@ -11,6 +11,7 @@ import (
 	"math/big"
 
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/crypto"
 )
 
 // ChainConstants is a utility struct which groups together the chain configuration
@@ -89,8 +90,6 @@ func DefaultCurrencyUnits() CurrencyUnits {
 // allows some santiy checking later
 // GenesisTimestamp, GenesisBlockStakeAllocation, and GenesisCoinDistribution aren't set as there is no such thing as a "sane default" for these variables
 // since they are really chain specific
-// Likewise, don't set RootTarget, GenesisBlockStakeCount, GenesisCoinCount, GenesisBlock, GenesisID, and StartDifficulty as these should be calculated
-// By the Calculate method
 func DefaultChainConstants() ChainConstants {
 	currencyUnits := DefaultCurrencyUnits()
 
@@ -126,19 +125,18 @@ func DefaultChainConstants() ChainConstants {
 			CurrencyUnits:    currencyUnits,
 			GenesisTimestamp: Timestamp(1424139000),
 		}
-
 		// Seed for the addres given below twice:
-		// recall view document apology stone tattoo job farm pilot favorite mango topic thing dilemma dawn width marble proud pen meadow sing museum lucky present
+		// carbon boss inject cover mountain fetch fiber fit tornado cloth wing dinosaur proof joy intact fabric thumb rebel borrow poet chair network expire else
 		bso := BlockStakeOutput{
 			Value:      NewCurrency64(1000000),
 			UnlockHash: UnlockHash{},
 		}
-		bso.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		bso.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e679158b5b6a40c197f")
 		cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
 		co := CoinOutput{
 			Value: currencyUnits.OneCoin.Mul64(1000),
 		}
-		co.UnlockHash.LoadString("e66bbe9638ae0e998641dc9faa0180c15a1071b1767784cdda11ad3c1d309fa692667931be66")
+		co.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e679158b5b6a40c197f")
 		cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
 
 		return cts
@@ -165,22 +163,31 @@ func DefaultChainConstants() ChainConstants {
 			CurrencyUnits:          currencyUnits,
 			GenesisBlockStakeAllocation: []BlockStakeOutput{
 				{
-					Value:      NewCurrency64(2000),
-					UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
+					Value: NewCurrency64(2000),
+					UnlockHash: UnlockHash{
+						Type: UnlockTypeSingleSignature,
+						Hash: crypto.Hash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
+					},
 				},
 				{
-					Value:      NewCurrency64(7000),
-					UnlockHash: UnlockHash{209, 246, 228, 60, 248, 78, 242, 110, 9, 8, 227, 248, 225, 216, 163, 52, 142, 93, 47, 176, 103, 41, 137, 80, 212, 8, 132, 58, 241, 189, 2, 17},
+					Value: NewCurrency64(7000),
+					UnlockHash: UnlockHash{
+						Type: UnlockTypeSingleSignature,
+						Hash: crypto.Hash{209, 246, 228, 60, 248, 78, 242, 110, 9, 8, 227, 248, 225, 216, 163, 52, 142, 93, 47, 176, 103, 41, 137, 80, 212, 8, 132, 58, 241, 189, 2, 17},
+					},
 				},
 				{
 					Value:      NewCurrency64(1000),
-					UnlockHash: UnlockConditions{}.UnlockHash(),
+					UnlockHash: UnlockHash{},
 				},
 			},
 			GenesisCoinDistribution: []CoinOutput{
 				{
-					Value:      currencyUnits.OneCoin.Mul64(1000),
-					UnlockHash: UnlockHash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
+					Value: currencyUnits.OneCoin.Mul64(1000),
+					UnlockHash: UnlockHash{
+						Type: UnlockTypeSingleSignature,
+						Hash: crypto.Hash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
+					},
 				},
 			},
 		}
@@ -223,7 +230,7 @@ func (c *ChainConstants) Validate() error {
 	if len(c.GenesisCoinDistribution) == 0 {
 		return errors.New("Invalid genesis coin distribution")
 	}
-	if len(c.GenesisBlockStakeAllocation) == 1 {
+	if len(c.GenesisBlockStakeAllocation) == 0 {
 		return errors.New("Invalid genesis blockstake allocation")
 	}
 	// Genesis timestamp should not be too far in the past. The reference timestamp is the timestamp of the bitcoin genesis block,

@@ -6,10 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/types"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -17,22 +16,22 @@ var (
 		Use:   "consensus",
 		Short: "Print the current state of consensus",
 		Long:  "Print the current state of consensus such as current block, block height, and target.",
-		Run:   wrap(Consensuscmd),
+		Run:   Wrap(consensuscmd),
 	}
 
 	consensusTransactionCmd = &cobra.Command{
 		Use:   "transaction <shortID>",
 		Short: "Get an existing transaction",
 		Long:  "Get an existing transaction from the blockchain, using its given shortID.",
-		Run:   wrap(Consensustransactioncmd),
+		Run:   Wrap(consensustransactioncmd),
 	}
 )
 
 // Consensuscmd is the handler for the command `rivinec consensus`.
 // Prints the current state of consensus.
-func Consensuscmd() {
+func consensuscmd() {
 	var cg api.ConsensusGET
-	err := GetAPI("/consensus", &cg)
+	err := _DefaultClient.httpClient.GetAPI("/consensus", &cg)
 	if err != nil {
 		Die("Could not get current consensus state:", err)
 	}
@@ -65,13 +64,13 @@ func EstimatedHeightAt(t time.Time) types.BlockHeight {
 	return types.BlockHeight(estimatedHeight + 0.5) // round to the nearest block
 }
 
-// Consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
+// consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
 // Prints the transaction found for the given id. If the ID is a long transaction ID, it also
 // prints the short transaction ID for future reference
-func Consensustransactioncmd(id string) {
+func consensustransactioncmd(id string) {
 	var txn api.ConsensusGetTransaction
 
-	err := GetAPI("/consensus/transactions/"+id, &txn)
+	err := _DefaultClient.httpClient.GetAPI("/consensus/transactions/"+id, &txn)
 	if err != nil {
 		Die("failed to get transaction:", err, "; ID:", id)
 	}

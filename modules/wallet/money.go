@@ -1,6 +1,8 @@
 package wallet
 
 import (
+	"strconv"
+
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/types"
 )
@@ -59,9 +61,9 @@ func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoi
 // SendCoins creates a transaction sending 'amount' to 'dest'. If data is provided,
 // it is added as arbitrary data to the transaction. The transaction
 // is submitted to the transaction pool and is also returned.
-func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) ([]types.Transaction, error) {
+func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) (types.Transaction, error) {
 	if err := w.tg.Add(); err != nil {
-		return nil, err
+		return types.Transaction{}, err
 	}
 	defer w.tg.Done()
 
@@ -74,22 +76,25 @@ func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []
 	txnBuilder := w.StartTransaction()
 	err := txnBuilder.FundCoins(amount.Add(tpoolFee))
 	if err != nil {
-		return nil, err
+		return types.Transaction{}, err
 	}
 	txnBuilder.AddMinerFee(tpoolFee)
 	txnBuilder.AddCoinOutput(output)
-	if data != nil {
-		txnBuilder.AddArbitraryData(data)
+	if len(data) != 0 {
+		txnBuilder.SetArbitraryData(data)
 	}
-	txnSet, err := txnBuilder.Sign(true)
+	txnSet, err := txnBuilder.Sign()
 	if err != nil {
-		return nil, err
+		return types.Transaction{}, err
+	}
+	if len(txnSet) == 0 {
+		panic("unexpected txnSet length: " + strconv.Itoa(len(txnSet)))
 	}
 	err = w.tpool.AcceptTransactionSet(txnSet)
 	if err != nil {
-		return nil, err
+		return types.Transaction{}, err
 	}
-	return txnSet, nil
+	return txnSet[0], nil
 }
 
 // SendBlockStakes creates a transaction sending 'amount' to 'dest'. The transaction
@@ -116,7 +121,7 @@ func (w *Wallet) SendBlockStakes(amount types.Currency, dest types.UnlockHash) (
 	}
 	txnBuilder.AddMinerFee(tpoolFee)
 	txnBuilder.AddBlockStakeOutput(output)
-	txnSet, err := txnBuilder.Sign(true)
+	txnSet, err := txnBuilder.Sign()
 	if err != nil {
 		return nil, err
 	}

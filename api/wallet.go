@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -57,10 +58,25 @@ type (
 		PrimarySeed string `json:"primaryseed"`
 	}
 
+	// WalletTransactionPOST contains the unlockhash and amount of money to send,
+	// during a POST call to /wallet/transaction, funding the output,
+	// using available inputs in the wallet.
+	WalletTransactionPOST struct {
+		UnlockHash types.UnlockHash `json:"unlockhash"`
+		Amount     types.Currency   `json:"amount"`
+		Data       string           `json:"data,omitempty"`
+	}
+
+	// WalletTransactionPOSTResponse contains the ID of the transaction
+	// that was created as a result of a POST call to /wallet/transaction.
+	WalletTransactionPOSTResponse struct {
+		TransactionID types.TransactionID `json:"transactionid"`
+	}
+
 	// WalletCoinsPOST contains the transaction sent in the POST call to
 	// /wallet/siafunds.
 	WalletCoinsPOST struct {
-		TransactionIDs []types.TransactionID `json:"transactionids"`
+		TransactionID types.TransactionID `json:"transactionid"`
 	}
 
 	// WalletBlockStakesPOST contains the transaction sent in the POST call to
@@ -74,6 +90,13 @@ type (
 		PrimarySeed        string   `json:"primaryseed"`
 		AddressesRemaining int      `json:"addressesremaining"`
 		AllSeeds           []string `json:"allseeds"`
+	}
+
+	// WalletKeyGet contains the public and private key used by the wallet.
+	WalletKeyGet struct {
+		AlgorithmSpecifier types.Specifier `json:"specifier"`
+		PublicKey          types.ByteSlice `json:"publickey"`
+		SecretKey          types.ByteSlice `json:"secretkey"`
 	}
 
 	// WalletTransactionGETid contains the transaction returned by a call to
@@ -159,13 +182,13 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 
 // walletAddressHandler handles API calls to /wallet/address.
 func (api *API) walletAddressHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	unlockConditions, err := api.wallet.NextAddress()
+	unlockHash, err := api.wallet.NextAddress()
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/addresses: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 	WriteJSON(w, WalletAddressGET{
-		Address: unlockConditions.UnlockHash(),
+		Address: unlockHash,
 	})
 }
 
@@ -293,6 +316,48 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 	})
 }
 
+// walletKeyHandler handles API calls to /wallet/key/:unlockhash.
+func (api *API) walletKeyHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	strUH := ps.ByName("unlockhash")
+	var uh types.UnlockHash
+	err := uh.LoadString(strUH)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/key/" + strUH + " : " + err.Error()},
+			http.StatusBadRequest)
+		return
+	}
+
+	pk, sk, err := api.wallet.GetKey(uh)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/key/" + strUH + " : " + err.Error()},
+			http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, WalletKeyGet{
+		AlgorithmSpecifier: pk.Algorithm,
+		PublicKey:          pk.Key,
+		SecretKey:          sk,
+	})
+}
+
+// walletTransactionCreateHandler handles API calls to POST /wallet/transaction.
+func (api *API) walletTransactionCreateHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var body WalletTransactionPOST
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied transaction output: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	tx, err := api.wallet.SendCoins(body.Amount, body.UnlockHash, []byte(body.Data))
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/transaction: " + err.Error()}, http.StatusInternalServerError)
+		return
+	}
+	WriteJSON(w, WalletTransactionPOSTResponse{
+		TransactionID: tx.ID(),
+	})
+}
+
 // walletSiacoinsHandler handles API calls to /wallet/coins.
 func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	amount, ok := scanAmount(req.FormValue("amount"))
@@ -306,17 +371,13 @@ func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ h
 		return
 	}
 
-	txns, err := api.wallet.SendCoins(amount, dest, nil)
+	tx, err := api.wallet.SendCoins(amount, dest, nil)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
-	var txids []types.TransactionID
-	for _, txn := range txns {
-		txids = append(txids, txn.ID())
-	}
 	WriteJSON(w, WalletCoinsPOST{
-		TransactionIDs: txids,
+		TransactionID: tx.ID(),
 	})
 }
 
@@ -359,19 +420,15 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: Failed to decode arbitrary data"}, http.StatusBadRequest)
 	}
-	// Since zero outputs are not allowed, just send 1 hasting, the minimal amount.
+	// Since zero outputs are not allowed, just send one of the smallest unit, the minimal amount.
 	// The transaction fee should be much higher anyway
-	txns, err := api.wallet.SendCoins(types.NewCurrency64(1), dest, data)
+	tx, err := api.wallet.SendCoins(types.NewCurrency64(1), dest, data)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
-	var txids []types.TransactionID
-	for _, txn := range txns {
-		txids = append(txids, txn.ID())
-	}
 	WriteJSON(w, WalletCoinsPOST{
-		TransactionIDs: txids,
+		TransactionID: tx.ID(),
 	})
 }
 

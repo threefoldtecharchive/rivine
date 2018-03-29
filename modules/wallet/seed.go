@@ -42,11 +42,8 @@ type (
 func generateSpendableKey(seed modules.Seed, index uint64) spendableKey {
 	sk, pk := crypto.GenerateKeyPairDeterministic(crypto.HashAll(seed, index))
 	return spendableKey{
-		UnlockConditions: types.UnlockConditions{
-			PublicKeys:         []types.SiaPublicKey{types.Ed25519PublicKey(pk)},
-			SignaturesRequired: 1,
-		},
-		SecretKeys: []crypto.SecretKey{sk},
+		PublicKey: pk,
+		SecretKey: sk,
 	}
 }
 
@@ -99,7 +96,7 @@ func (w *Wallet) integrateSeed(seed modules.Seed) {
 	for i := uint64(0); i < modules.PublicKeysPerSeed; i++ {
 		// Generate the key and check it is new to the wallet.
 		spendableKey := generateSpendableKey(seed, i)
-		w.keys[spendableKey.UnlockConditions.UnlockHash()] = spendableKey
+		w.keys[spendableKey.UnlockHash()] = spendableKey
 	}
 	w.seeds = append(w.seeds, seed)
 }
@@ -154,7 +151,7 @@ func (w *Wallet) createSeed(masterKey crypto.TwofishKey, seed modules.Seed) erro
 	// seed/wallet file in multiple places.
 	for i := uint64(0); i < modules.WalletSeedPreloadDepth; i++ {
 		spendableKey := generateSpendableKey(seed, i)
-		w.keys[spendableKey.UnlockConditions.UnlockHash()] = spendableKey
+		w.keys[spendableKey.UnlockHash()] = spendableKey
 	}
 	return w.saveSettingsSync()
 }
@@ -169,7 +166,7 @@ func (w *Wallet) initPrimarySeed(masterKey crypto.TwofishKey) error {
 	// in multiple places.
 	for i := uint64(0); i < w.persist.PrimarySeedProgress+modules.WalletSeedPreloadDepth; i++ {
 		spendableKey := generateSpendableKey(seed, i)
-		w.keys[spendableKey.UnlockConditions.UnlockHash()] = spendableKey
+		w.keys[spendableKey.UnlockHash()] = spendableKey
 	}
 	w.primarySeed = seed
 	w.seeds = append(w.seeds, seed)
@@ -193,23 +190,23 @@ func (w *Wallet) initAuxiliarySeeds(masterKey crypto.TwofishKey) error {
 }
 
 // nextPrimarySeedAddress fetches the next address from the primary seed.
-func (w *Wallet) nextPrimarySeedAddress() (types.UnlockConditions, error) {
+func (w *Wallet) nextPrimarySeedAddress() (types.UnlockHash, error) {
 	// Check that the wallet has been unlocked.
 	if !w.unlocked {
-		return types.UnlockConditions{}, modules.ErrLockedWallet
+		return types.UnlockHash{}, modules.ErrLockedWallet
 	}
 
 	// Integrate the next key into the wallet, and return the unlock
 	// conditions. Because the wallet preloads keys, the progress used is
 	// 'PrimarySeedProgress+modules.WalletSeedPreloadDepth'.
 	spendableKey := generateSpendableKey(w.primarySeed, w.persist.PrimarySeedProgress+modules.WalletSeedPreloadDepth)
-	w.keys[spendableKey.UnlockConditions.UnlockHash()] = spendableKey
+	w.keys[spendableKey.UnlockHash()] = spendableKey
 	w.persist.PrimarySeedProgress++
 	err := w.saveSettingsSync()
 	if err != nil {
-		return types.UnlockConditions{}, err
+		return types.UnlockHash{}, err
 	}
-	return spendableKey.UnlockConditions, nil
+	return spendableKey.UnlockHash(), nil
 }
 
 // AllSeeds returns a list of all seeds known to and used by the wallet.
@@ -234,9 +231,9 @@ func (w *Wallet) PrimarySeed() (modules.Seed, uint64, error) {
 
 // NextAddress returns an unlock hash that is ready to receive siacoins or
 // siafunds. The address is generated using the primary address seed.
-func (w *Wallet) NextAddress() (types.UnlockConditions, error) {
+func (w *Wallet) NextAddress() (types.UnlockHash, error) {
 	if err := w.tg.Add(); err != nil {
-		return types.UnlockConditions{}, err
+		return types.UnlockHash{}, err
 	}
 	defer w.tg.Done()
 	w.mu.Lock()

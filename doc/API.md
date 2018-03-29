@@ -69,7 +69,7 @@ Units
 
 Unless otherwise specified, all parameters should be specified in their
 smallest possible unit. For example, size should always be specified in bytes
-and Coins should be specified in hastings. JSON values returned by the API
+and Coins should be specified in the smallest (integer) currency value unit. JSON values returned by the API
 will also use the smallest possible unit, unless otherwise specified.
 
 If a numbers is returned as a string in JSON, it should be treated as an
@@ -122,7 +122,7 @@ returns the set of constants in use.
   "maxadjustmentup":   "5/2",
   "maxadjustmentdown": "2/5",
 
-  "onecoin": "1000000000000000000000000" // hastings per coin
+  "onecoin": "1000000000000000000000000" // how many of the smallest unit fit in one coin
 }
 ```
 
@@ -335,9 +335,9 @@ locked or unlocked.
   "encrypted": true,
   "unlocked":  true,
 
-  "confirmedcoinbalance":     "123456", // hastings, big int
-  "unconfirmedoutgoingsiacoins": "0",      // hastings, big int
-  "unconfirmedincomingsiacoins": "789",    // hastings, big int
+  "confirmedcoinbalance":     "123456", // expressed in smallest coin unit, big int
+  "unconfirmedoutgoingsiacoins": "0",      // expressed in smallest coin unit, big int
+  "unconfirmedincomingsiacoins": "789",    // expressed in smallest coin units, big int
 
   "blockstakebalance":      "1",    // blockstakes, big int
 }
@@ -447,7 +447,7 @@ addresses in the wallet.
 
 ###### Query String Parameters [(with comments)](/doc/api/Wallet.md#query-string-parameters-5)
 ```
-amount      // hastings
+amount      // expressed in the smallest coin unit
 destination // address
 ```
 
@@ -491,13 +491,12 @@ destination // address
 
 #### /wallet/data [POST]
 
-Registers data on the blockchain. A transaction is created which sends the
-minimal amount of 1 hasting to the provided address. The data provided is added
+Registers data on the blockchain. A transaction is created which sends the one of the smallest unit, as it is required as the minimum, to the provided address. The data provided is added
 as arbitrary data in the transaction
 
 ###### Query String Parameters
 ```
-// Address that is receiving the 1 hasting sent in the transaction
+// Address that is receiving the minimal coin output, one of the smallest unit, that can be sent in the transaction
 destination     // address
 
 // The base64 encoded representation of the data
@@ -568,7 +567,7 @@ gets the transaction associated with a specific transaction id.
         "fundtype":       "siacoin input",
         "walletaddress":  false,
         "relatedaddress": "1234567890abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789ab",
-        "value":          "1234", // hastings or blockstakes, depending on fundtype, big int
+        "value":          "1234", // smallest-coin-unit or blockstakes, depending on fundtype, big int
       }
     ],
     "outputs": [
@@ -577,7 +576,7 @@ gets the transaction associated with a specific transaction id.
         "maturityheight": 50000,
         "walletaddress":  false,
         "relatedaddress": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        "value":          "1234", // hastings or blockstakes, depending on fundtype, big int
+        "value":          "1234", // smallest-coin-unit or blockstakes, depending on fundtype, big int
       }
     ]
   }

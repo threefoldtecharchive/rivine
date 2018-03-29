@@ -4,6 +4,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
@@ -46,7 +47,7 @@ func TestSendCoins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cs.addTransactionAsBlock(addr.UnlockHash(),
+	cs.addTransactionAsBlock(addr,
 		wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(1).Add(types.NewCurrency64(5000)))
 
 	// Send 5000 hastings. The wallet will automatically add a fee. Outgoing
@@ -95,7 +96,7 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = cs.addTransactionAsBlock(addr.UnlockHash(),
+	err = cs.addTransactionAsBlock(addr,
 		wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(1).Add(reasonableCoins))
 	if err != nil {
 		t.Fatal(err)
@@ -127,7 +128,7 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{1}, nil)
+	_, err = wt.wallet.SendCoins(halfPlus, types.NewUnlockHash(0, crypto.Hash{1}), nil)
 	if err != modules.ErrIncompleteTransactions {
 		t.Error("wallet appears to be reusing outputs when building transactions: ", err)
 	}
@@ -151,7 +152,7 @@ func TestIntegrationSpendUnconfirmed(t *testing.T) {
 		t.Error("unexpected error: ", err)
 	}
 	someMore := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(75e3)
-	_, err = wt.wallet.SendCoins(someMore, types.UnlockHash{1}, nil)
+	_, err = wt.wallet.SendCoins(someMore, types.NewUnlockHash(types.UnlockTypeSingleSignature, crypto.Hash{1}), nil)
 	if err != nil {
 		t.Error("wallet appears to be struggling to spend unconfirmed outputs")
 	}

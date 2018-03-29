@@ -37,7 +37,7 @@ func validCoins(tx *bolt.Tx, t types.Transaction) error {
 		if build.DEBUG && err != nil {
 			panic(err)
 		}
-		if sci.UnlockConditions.UnlockHash() != sco.UnlockHash {
+		if sci.Unlocker.UnlockHash() != sco.UnlockHash {
 			return errWrongUnlockConditions
 		}
 
@@ -62,7 +62,7 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 		}
 
 		// Check the unlock conditions match the unlock hash.
-		if sfi.UnlockConditions.UnlockHash() != sfo.UnlockHash {
+		if sfi.Unlocker.UnlockHash() != sfo.UnlockHash {
 			return errWrongUnlockConditions
 		}
 

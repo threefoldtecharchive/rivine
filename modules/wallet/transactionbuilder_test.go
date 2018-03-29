@@ -146,11 +146,11 @@ func TestDoubleSignError(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = b.AddMinerFee(txnFund)
-	txnSet, err := b.Sign(true)
+	txnSet, err := b.Sign()
 	if err != nil {
 		t.Fatal(err)
 	}
-	txnSet2, err := b.Sign(true)
+	txnSet2, err := b.Sign()
 	if err != errBuilderAlreadySigned {
 		t.Error("the wrong error is being returned after a double call to sign")
 	}

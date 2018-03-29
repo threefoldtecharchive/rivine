@@ -9,23 +9,23 @@ import (
 var (
 	stopCmd = &cobra.Command{
 		Use:   "stop",
-		Short: fmt.Sprintf("Stop the %s daemon", ClientName),
-		Long:  fmt.Sprintf("Stop the %s daemon.", ClientName),
-		Run:   wrap(Stopcmd),
+		Short: fmt.Sprintf("Stop the %s daemon", _DefaultClient.name),
+		Long:  fmt.Sprintf("Stop the %s daemon.", _DefaultClient.name),
+		Run:   Wrap(stopcmd),
 	}
 
 	updateCmd = &cobra.Command{
 		Use:   "update",
-		Short: fmt.Sprintf("Update %s", ClientName),
-		Long:  fmt.Sprintf("Check for (and/or download) available updates for %s.", ClientName),
-		Run:   wrap(Updatecmd),
+		Short: fmt.Sprintf("Update %s", _DefaultClient.name),
+		Long:  fmt.Sprintf("Check for (and/or download) available updates for %s.", _DefaultClient.name),
+		Run:   Wrap(updatecmd),
 	}
 
 	updateCheckCmd = &cobra.Command{
 		Use:   "check",
 		Short: "Check for available updates",
 		Long:  "Check for available updates.",
-		Run:   wrap(Updatecheckcmd),
+		Run:   Wrap(updatecheckcmd),
 	}
 )
 
@@ -36,17 +36,17 @@ type updateInfo struct {
 
 // Stopcmd is the handler for the command `siac stop`.
 // Stops the daemon.
-func Stopcmd() {
-	err := Post("/daemon/stop", "")
+func stopcmd() {
+	err := _DefaultClient.httpClient.Post("/daemon/stop", "")
 	if err != nil {
 		Die("Could not stop daemon:", err)
 	}
-	fmt.Printf("%s daemon stopped.\n", ClientName)
+	fmt.Printf("%s daemon stopped.\n", _DefaultClient.name)
 }
 
-func Updatecmd() {
+func updatecmd() {
 	var update updateInfo
-	err := GetAPI("/daemon/update", &update)
+	err := _DefaultClient.httpClient.GetAPI("/daemon/update", &update)
 	if err != nil {
 		fmt.Println("Could not check for update:", err)
 		return
@@ -56,23 +56,23 @@ func Updatecmd() {
 		return
 	}
 
-	err = Post("/daemon/update", "")
+	err = _DefaultClient.httpClient.Post("/daemon/update", "")
 	if err != nil {
 		fmt.Println("Could not apply update:", err)
 		return
 	}
-	fmt.Printf("Updated to version %s! Restart %s now.\n", update.Version, ClientName)
+	fmt.Printf("Updated to version %s! Restart %s now.\n", update.Version, _DefaultClient.name)
 }
 
-func Updatecheckcmd() {
+func updatecheckcmd() {
 	var update updateInfo
-	err := GetAPI("/daemon/update", &update)
+	err := _DefaultClient.httpClient.GetAPI("/daemon/update", &update)
 	if err != nil {
 		fmt.Println("Could not check for update:", err)
 		return
 	}
 	if update.Available {
-		fmt.Printf("A new release (v%s) is available! Run '%s update' to install it.\n", update.Version, ClientName)
+		fmt.Printf("A new release (v%s) is available! Run '%s update' to install it.\n", update.Version, _DefaultClient.name)
 	} else {
 		fmt.Println("Up to date.")
 	}

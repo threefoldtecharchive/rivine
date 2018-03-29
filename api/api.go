@@ -193,6 +193,8 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 		router.POST("/wallet/lock", RequirePassword(api.walletLockHandler, requiredPassword))
 		router.POST("/wallet/seed", RequirePassword(api.walletSeedHandler, requiredPassword))
 		router.GET("/wallet/seeds", RequirePassword(api.walletSeedsHandler, requiredPassword))
+		router.GET("/wallet/key/:unlockhash", RequirePassword(api.walletKeyHandler, requiredPassword))
+		router.POST("/wallet/transaction", RequirePassword(api.walletTransactionCreateHandler, requiredPassword))
 		router.POST("/wallet/coins", RequirePassword(api.walletCoinsHandler, requiredPassword))
 		router.POST("/wallet/blockstakes", RequirePassword(api.walletBlockStakesHandler, requiredPassword))
 		router.POST("/wallet/data", RequirePassword(api.walletDataHandler, requiredPassword))

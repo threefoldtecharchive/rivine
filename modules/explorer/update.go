@@ -63,7 +63,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbRemoveCoinOutputID(tx, sci.ParentID, txid)
-					dbRemoveUnlockHash(tx, sci.UnlockConditions.UnlockHash(), txid)
+					dbRemoveUnlockHash(tx, sci.Unlocker.UnlockHash(), txid)
 				}
 				for k, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(k))
@@ -73,7 +73,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
-					dbRemoveUnlockHash(tx, sfi.UnlockConditions.UnlockHash(), txid)
+					dbRemoveUnlockHash(tx, sfi.Unlocker.UnlockHash(), txid)
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
@@ -123,7 +123,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbAddCoinOutputID(tx, sci.ParentID, txid)
-					dbAddUnlockHash(tx, sci.UnlockConditions.UnlockHash(), txid)
+					dbAddUnlockHash(tx, sci.Unlocker.UnlockHash(), txid)
 				}
 				for j, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(j))
@@ -132,7 +132,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
-					dbAddUnlockHash(tx, sfi.UnlockConditions.UnlockHash(), txid)
+					dbAddUnlockHash(tx, sfi.Unlocker.UnlockHash(), txid)
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
@@ -264,9 +264,10 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 		bf.BlockStakeInputCount += uint64(len(txn.BlockStakeInputs))
 		bf.BlockStakeOutputCount += uint64(len(txn.BlockStakeOutputs))
 		bf.MinerFeeCount += uint64(len(txn.MinerFees))
-		bf.ArbitraryDataCount += uint64(len(txn.ArbitraryData))
-		bf.TransactionSignatureCount += uint64(len(txn.TransactionSignatures))
-
+		if size := len(txn.ArbitraryData); size > 0 {
+			bf.ArbitraryDataTotalSize += uint64(size)
+			bf.ArbitraryDataCount++
+		}
 	}
 
 	return bf

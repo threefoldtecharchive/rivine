@@ -141,7 +141,7 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) {
 	if ind != 0 {
 		// should not happen //TODO: not right error
 	}
-	txnSet, err := t.Sign(true)
+	txnSet, err := t.Sign()
 	if err != nil {
 		// should not happen //TODO: not right error
 	}

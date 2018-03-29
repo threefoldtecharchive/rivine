@@ -67,8 +67,8 @@ Example:
 user@hostname:~$ rivinec wallet status
 Wallet status:
 Encrypted, Unlocked
-Confirmed Balance:   61516458.00 SC
-Unconfirmed Balance: 64516461.00 SC
+Confirmed Balance:   61516458.00 ROC
+Unconfirmed Balance: 64516461.00 ROC
 Exact:               61516457999999999999999999999999 H
 ```
 
@@ -76,9 +76,8 @@ Exact:               61516457999999999999999999999999 H
 coins to.
 
 * `rivinec wallet send [amount] [dest]` Sends `amount` coins to
-`dest`. `amount` is in the form XXXXUU where an X is a number and U is
-a unit, for example MS, S, mS, ps, etc. If no unit is given hastings
-is assumed. `dest` must be a valid coin address.
+`dest`. `amount` is in the form X[.X] is a number expressed in a one coin unit,
+which has a limited precision as indicated by the OneCoin config variable.
 
 * `rivinec wallet lock` locks a wallet. After calling, the wallet must be unlocked
 using the encryption password in order to use it further

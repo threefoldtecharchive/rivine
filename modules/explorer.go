@@ -14,24 +14,24 @@ type (
 	// BlockFacts returns a bunch of statistics about the consensus set as they
 	// were at a specific block.
 	BlockFacts struct {
-		BlockID           types.BlockID     `json:"blockid"`
-		Difficulty        types.Difficulty  `json:"difficulty"`
-		EstimatedActiveBS types.Difficulty  `json:"estimatedactivebs"`
-		Height            types.BlockHeight `json:"height"`
-		MaturityTimestamp types.Timestamp   `json:"maturitytimestamp"`
-		Target            types.Target      `json:"target"`
-		TotalCoins        types.Currency    `json:"totalcoins"`
+		BlockID                types.BlockID     `json:"blockid"`
+		Difficulty             types.Difficulty  `json:"difficulty"`
+		EstimatedActiveBS      types.Difficulty  `json:"estimatedactivebs"`
+		Height                 types.BlockHeight `json:"height"`
+		MaturityTimestamp      types.Timestamp   `json:"maturitytimestamp"`
+		Target                 types.Target      `json:"target"`
+		TotalCoins             types.Currency    `json:"totalcoins"`
+		ArbitraryDataTotalSize uint64            `json:"arbitrarydatatotalsize"`
 
 		// Transaction type counts.
-		MinerPayoutCount          uint64 `json:"minerpayoutcount"`
-		TransactionCount          uint64 `json:"transactioncount"`
-		CoinInputCount            uint64 `json:"coininputcount"`
-		CoinOutputCount           uint64 `json:"coinoutputcount"`
-		BlockStakeInputCount      uint64 `json:"blockstakeinputcount"`
-		BlockStakeOutputCount     uint64 `json:"blockstakeoutputcount"`
-		MinerFeeCount             uint64 `json:"minerfeecount"`
-		ArbitraryDataCount        uint64 `json:"arbitrarydatacount"`
-		TransactionSignatureCount uint64 `json:"transactionsignaturecount"`
+		MinerPayoutCount      uint64 `json:"minerpayoutcount"`
+		TransactionCount      uint64 `json:"transactioncount"`
+		CoinInputCount        uint64 `json:"coininputcount"`
+		CoinOutputCount       uint64 `json:"coinoutputcount"`
+		BlockStakeInputCount  uint64 `json:"blockstakeinputcount"`
+		BlockStakeOutputCount uint64 `json:"blockstakeoutputcount"`
+		MinerFeeCount         uint64 `json:"minerfeecount"`
+		ArbitraryDataCount    uint64 `json:"arbitrarydatacount"`
 	}
 
 	// Explorer tracks the blockchain and provides tools for gathering

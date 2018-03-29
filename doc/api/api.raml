@@ -8,7 +8,7 @@ documentation:
   - title: Units
     content: |
       Unless otherwise specified, all parameters should be specified in their smallest possible unit.
-      For example, size should always be specified in bytes and Coins should be specified in hastings.
+      For example, size should always be specified in bytes and Coins should be specified in the smallest coin unit.
       JSON values returned by the API will also use the smallest possible unit, unless otherwise specified.
       If a numbers is returned as a string in JSON, it should be treated as an arbitrary-precision number (bignum),
       and it should be parsed with your language's corresponding bignum library.
@@ -231,13 +231,13 @@ types:
       confirmedcoinbalance:
         type: integer
         description: |
-          Number of coins, in hastings, available to the wallet as of the most
+          Number of coins, in smallest-coin-unit, available to the wallet as of the most
           recent block in the blockchain.
 
       unconfirmedoutgoingcoins:
         type: integer
         description: |
-          Number of coins, in hastings, that are leaving the wallet according
+          Number of coins, in smallest-coin-unit, that are leaving the wallet according
           to the set of unconfirmed transactions. Often this number appears
           inflated, because outputs are frequently larger than the number of coins
           being sent, and there is a refund. These coins are counted as outgoing,
@@ -247,7 +247,7 @@ types:
       unconfirmedincomingcoins:
         type: integer
         description: |
-          Number of coins, in hastings, are entering the wallet according to
+          Number of coins, in smallest-coin-unit, are entering the wallet according to
           the set of unconfirmed transactions. This number is often inflated by
           outgoing coins, because outputs are frequently larger than the amount
           being sent. The refund will be included in the unconfirmed incoming
@@ -625,8 +625,7 @@ types:
         amount:
           type: integer
           description: |
-            // Number of hastings being sent. A hasting is the smallest unit in rivine. There
-            // are 10^24 hastings in a rivine.
+            // Number of coins being sent, expressed in the smallest unit.
           required: true
         destination:
           type: string
@@ -660,8 +659,7 @@ types:
         amount:
           type: integer
           description: |
-            // Number of hastings being sent. A hasting is the smallest unit in rivine. There
-            // are 10^24 hastings in a rivine.
+            // Number of blockstakes being send
           required: true
         destination:
           type: string
@@ -689,13 +687,13 @@ types:
     post:
       description: |
         Registers data on the blockchain. A transaction is created which sends the
-        minimal amount of 1 hasting to the provided address. The data provided is added
+        minimal amount of coins required to the provided address. The data provided is added
         as arbitrary data in the transaction
       queryParameters:
         destination:
           type: string
           description: |
-            Address that is receiving the 1 hasting sent in the transaction.
+            Address that is receiving the minimal amount of coin outputs sent in the transaction.
           required: true
         data:
           type: string

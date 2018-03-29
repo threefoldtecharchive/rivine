@@ -8,8 +8,8 @@ package types
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/rivine/rivine/crypto"
@@ -33,95 +33,22 @@ var (
 	ErrPublicKeyOveruse          = errors.New("public key was used multiple times while signing transaction")
 	ErrSortedUniqueViolation     = errors.New("sorted unique violation")
 	ErrUnlockHashWrongLen        = errors.New("marshalled unlock hash is the wrong length")
-	ErrWholeTransactionViolation = errors.New("covered fields violation")
-
-	// FullCoveredFields is a covered fileds object where the
-	// 'WholeTransaction' field has been set to true. The primary purpose of
-	// this variable is syntactic sugar.
-	FullCoveredFields = CoveredFields{WholeTransaction: true}
 )
 
 type (
-	// CoveredFields indicates which fields in a transaction have been covered by
-	// the signature. (Note that the signature does not sign the fields
-	// themselves, but rather their combined hash; see SigHash.) Each slice
-	// corresponds to a slice in the Transaction type, indicating which indices of
-	// the slice have been signed. The indices must be valid, i.e. within the
-	// bounds of the slice. In addition, they must be sorted and unique.
-	//
-	// As a convenience, a signature of the entire transaction can be indicated by
-	// the 'WholeTransaction' field. If 'WholeTransaction' == true, all other
-	// fields must be empty (except for the Signatures field, since a signature
-	// cannot sign itself).
-	CoveredFields struct {
-		WholeTransaction      bool     `json:"wholetransaction"`
-		CoinInputs            []uint64 `json:"coininputs"`
-		CoinOutputs           []uint64 `json:"coinoutputs"`
-		BlockStakeInputs      []uint64 `json:"blockstakeinputs"`
-		BlockStakeOutputs     []uint64 `json:"blockstakeoutputs"`
-		MinerFees             []uint64 `json:"minerfees"`
-		ArbitraryData         []uint64 `json:"arbitrarydata"`
-		TransactionSignatures []uint64 `json:"transactionsignatures"`
-	}
-
 	// A SiaPublicKey is a public key prefixed by a Specifier. The Specifier
 	// indicates the algorithm used for signing and verification. Unrecognized
 	// algorithms will always verify, which allows new algorithms to be added to
 	// the protocol via a soft-fork.
 	SiaPublicKey struct {
-		Algorithm Specifier `json:"algorithm"`
-		Key       []byte    `json:"key"`
+		Algorithm Specifier
+		Key       ByteSlice
 	}
 
-	// A TransactionSignature is a signature that is included in the transaction.
-	// The signature should correspond to a public key in one of the
-	// UnlockConditions of the transaction. This key is specified first by
-	// 'ParentID', which specifies the UnlockConditions, and then
-	// 'PublicKeyIndex', which indicates the key in the UnlockConditions. There
-	// are three types that use UnlockConditions: SiacoinInputs, SiafundInputs,
-	// and FileContractTerminations. Each of these types also references a
-	// ParentID, and this is the hash that 'ParentID' must match. The 'Timelock'
-	// prevents the signature from being used until a certain height.
-	// 'CoveredFields' indicates which parts of the transaction are being signed;
-	// see CoveredFields.
-	TransactionSignature struct {
-		ParentID       crypto.Hash   `json:"parentid"`
-		PublicKeyIndex uint64        `json:"publickeyindex"`
-		Timelock       BlockHeight   `json:"timelock"`
-		CoveredFields  CoveredFields `json:"coveredfields"`
-		Signature      []byte        `json:"signature"`
-	}
-
-	// UnlockConditions are a set of conditions which must be met to execute
-	// certain actions, such as spending a SiacoinOutput or terminating a
-	// FileContract.
-	//
-	// The simplest requirement is that the block containing the UnlockConditions
-	// must have a height >= 'Timelock'.
-	//
-	// 'PublicKeys' specifies the set of keys that can be used to satisfy the
-	// UnlockConditions; of these, at least 'SignaturesRequired' unique keys must sign
-	// the transaction. The keys that do not need to use the same cryptographic
-	// algorithm.
-	//
-	// If 'SignaturesRequired' == 0, the UnlockConditions are effectively "anyone can
-	// unlock." If 'SignaturesRequired' > len('PublicKeys'), then the UnlockConditions
-	// cannot be fulfilled under any circumstances.
-	UnlockConditions struct {
-		Timelock           BlockHeight    `json:"timelock"`
-		PublicKeys         []SiaPublicKey `json:"publickeys"`
-		SignaturesRequired uint64         `json:"signaturesrequired"`
-	}
-
-	// Each input has a list of public keys and a required number of signatures.
-	// inputSignatures keeps track of which public keys have been used and how many
-	// more signatures are needed.
-	inputSignatures struct {
-		remainingSignatures uint64
-		possibleKeys        []SiaPublicKey
-		usedKeys            map[uint64]struct{}
-		index               int
-	}
+	// ByteSlice defines any kind of raw binary value,
+	// in-memory defined as a byte slice,
+	// and JSON-encoded in hexadecimal form.
+	ByteSlice []byte
 )
 
 // Ed25519PublicKey returns pk as a SiaPublicKey, denoting its algorithm as
@@ -133,64 +60,28 @@ func Ed25519PublicKey(pk crypto.PublicKey) SiaPublicKey {
 	}
 }
 
-// UnlockHash calculates the root hash of a Merkle tree of the
-// UnlockConditions object. The leaves of this tree are formed by taking the
-// hash of the timelock, the hash of the public keys (one leaf each), and the
-// hash of the number of signatures. The keys are put in the middle because
-// Timelock and SignaturesRequired are both low entropy fields; they can bee
-// protected by having random public keys next to them.
-func (uc UnlockConditions) UnlockHash() UnlockHash {
-	tree := crypto.NewTree()
-	tree.PushObject(uc.Timelock)
-	for i := range uc.PublicKeys {
-		tree.PushObject(uc.PublicKeys[i])
-	}
-	tree.PushObject(uc.SignaturesRequired)
-	return UnlockHash(tree.Root())
-}
-
-// SigHash returns the hash of the fields in a transaction covered by a given
-// signature. See CoveredFields for more details.
-func (t Transaction) SigHash(i int) (hash crypto.Hash) {
-	cf := t.TransactionSignatures[i].CoveredFields
+// InputSigHash returns the hash of all fields in a transaction,
+// relevant to an input sig.
+func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) (hash crypto.Hash) {
 	h := crypto.NewHash()
 	enc := encoding.NewEncoder(h)
-	if cf.WholeTransaction {
-		enc.EncodeAll(
-			t.CoinInputs,
-			t.CoinOutputs,
-			t.BlockStakeInputs,
-			t.BlockStakeOutputs,
-			t.MinerFees,
-			t.ArbitraryData,
-			t.TransactionSignatures[i].ParentID,
-			t.TransactionSignatures[i].PublicKeyIndex,
-			t.TransactionSignatures[i].Timelock,
-		)
-	} else {
-		for _, input := range cf.CoinInputs {
-			enc.Encode(t.CoinInputs[input])
-		}
-		for _, output := range cf.CoinOutputs {
-			enc.Encode(t.CoinOutputs[output])
-		}
-		for _, blockstakeInput := range cf.BlockStakeInputs {
-			enc.Encode(t.BlockStakeInputs[blockstakeInput])
-		}
-		for _, blockstakeOutput := range cf.BlockStakeOutputs {
-			enc.Encode(t.BlockStakeOutputs[blockstakeOutput])
-		}
-		for _, minerFee := range cf.MinerFees {
-			enc.Encode(t.MinerFees[minerFee])
-		}
-		for _, arbData := range cf.ArbitraryData {
-			enc.Encode(t.ArbitraryData[arbData])
-		}
-	}
 
-	for _, sig := range cf.TransactionSignatures {
-		enc.Encode(t.TransactionSignatures[sig])
+	enc.Encode(inputIndex)
+	if len(extraObjects) > 0 {
+		enc.EncodeAll(extraObjects...)
 	}
+	for _, ci := range t.CoinInputs {
+		enc.EncodeAll(ci.ParentID, ci.Unlocker.UnlockHash())
+	}
+	enc.Encode(t.CoinOutputs)
+	for _, bsi := range t.BlockStakeInputs {
+		enc.EncodeAll(bsi.ParentID, bsi.Unlocker.UnlockHash())
+	}
+	enc.EncodeAll(
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+	)
 
 	h.Sum(hash[:0])
 	return
@@ -216,180 +107,102 @@ func sortedUnique(elems []uint64, max int) bool {
 	return true
 }
 
-// validCoveredFields makes sure that all covered fields objects in the
-// signatures follow the rules. This means that if 'WholeTransaction' is set to
-// true, all fields except for 'Signatures' must be empty. All fields must be
-// sorted numerically, and there can be no repeats.
-func (t Transaction) validCoveredFields() error {
-	for _, sig := range t.TransactionSignatures {
-		// convenience variables
-		cf := sig.CoveredFields
-		fieldMaxs := []struct {
-			field []uint64
-			max   int
-		}{
-			{cf.CoinInputs, len(t.CoinInputs)},
-			{cf.CoinOutputs, len(t.CoinOutputs)},
-			{cf.BlockStakeInputs, len(t.BlockStakeInputs)},
-			{cf.BlockStakeOutputs, len(t.BlockStakeOutputs)},
-			{cf.MinerFees, len(t.MinerFees)},
-			{cf.ArbitraryData, len(t.ArbitraryData)},
-			{cf.TransactionSignatures, len(t.TransactionSignatures)},
-		}
-
-		// Check that all fields are empty if 'WholeTransaction' is set, except
-		// for the Signatures field which isn't affected.
-		if cf.WholeTransaction {
-			// 'WholeTransaction' does not check signatures.
-			for _, fieldMax := range fieldMaxs[:len(fieldMaxs)-1] {
-				if len(fieldMax.field) != 0 {
-					return ErrWholeTransactionViolation
-				}
-			}
-		}
-
-		// Check that all fields are sorted, and without repeat values, and
-		// that all elements point to objects that exists within the
-		// transaction. If there are repeats, it means a transaction is trying
-		// to sign the same object twice. This is unncecessary, and opens up a
-		// DoS vector where the transaction asks the verifier to verify many GB
-		// of data.
-		for _, fieldMax := range fieldMaxs {
-			if !sortedUnique(fieldMax.field, fieldMax.max) {
-				return ErrSortedUniqueViolation
-			}
-		}
-	}
-
-	return nil
-}
-
 // validSignatures checks the validaty of all signatures in a transaction.
-func (t *Transaction) validSignatures(currentHeight BlockHeight) error {
-	// Check that all covered fields objects follow the rules.
-	err := t.validCoveredFields()
-	if err != nil {
-		return err
-	}
-
-	// Create the inputSignatures object for each input.
-	sigMap := make(map[crypto.Hash]*inputSignatures)
-	for i, input := range t.CoinInputs {
-		id := crypto.Hash(input.ParentID)
-		_, exists := sigMap[id]
-		if exists {
-			return ErrDoubleSpend
+func (t *Transaction) validSignatures(currentHeight BlockHeight) (err error) {
+	spendCoins := make(map[CoinOutputID]struct{})
+	for index, ci := range t.CoinInputs {
+		if _, found := spendCoins[ci.ParentID]; found {
+			err = ErrDoubleSpend
+			return
 		}
-
-		sigMap[id] = &inputSignatures{
-			remainingSignatures: input.UnlockConditions.SignaturesRequired,
-			possibleKeys:        input.UnlockConditions.PublicKeys,
-			usedKeys:            make(map[uint64]struct{}),
-			index:               i,
-		}
-	}
-	for i, input := range t.BlockStakeInputs {
-		id := crypto.Hash(input.ParentID)
-		_, exists := sigMap[id]
-		if exists {
-			return ErrDoubleSpend
-		}
-
-		sigMap[id] = &inputSignatures{
-			remainingSignatures: input.UnlockConditions.SignaturesRequired,
-			possibleKeys:        input.UnlockConditions.PublicKeys,
-			usedKeys:            make(map[uint64]struct{}),
-			index:               i,
+		spendCoins[ci.ParentID] = struct{}{}
+		err = ci.Unlocker.Unlock(uint64(index), *t)
+		if err != nil {
+			return
 		}
 	}
 
-	// Check all of the signatures for validity.
-	for i, sig := range t.TransactionSignatures {
-		// Check that sig corresponds to an entry in sigMap.
-		inSig, exists := sigMap[crypto.Hash(sig.ParentID)]
-		if !exists || inSig.remainingSignatures == 0 {
-			return ErrFrivolousSignature
+	spendBlockStakes := make(map[BlockStakeOutputID]struct{})
+	for index, bsi := range t.BlockStakeInputs {
+		if _, found := spendBlockStakes[bsi.ParentID]; found {
+			err = ErrDoubleSpend
+			return
 		}
-		// Check that sig's key hasn't already been used.
-		_, exists = inSig.usedKeys[sig.PublicKeyIndex]
-		if exists {
-			return ErrPublicKeyOveruse
-		}
-		// Check that the public key index refers to an existing public key.
-		if sig.PublicKeyIndex >= uint64(len(inSig.possibleKeys)) {
-			return ErrInvalidPubKeyIndex
-		}
-		// Check that the timelock has expired.
-		if sig.Timelock > currentHeight {
-			return ErrPrematureSignature
-		}
-
-		// Check that the signature verifies. Multiple signature schemes are
-		// supported.
-		publicKey := inSig.possibleKeys[sig.PublicKeyIndex]
-		switch publicKey.Algorithm {
-		case SignatureEntropy:
-			// Entropy cannot ever be used to sign a transaction.
-			return ErrEntropyKey
-
-		case SignatureEd25519:
-			// Decode the public key and signature.
-			var edPK crypto.PublicKey
-			err := encoding.Unmarshal([]byte(publicKey.Key), &edPK)
-			if err != nil {
-				return err
-			}
-			var edSig [crypto.SignatureSize]byte
-			err = encoding.Unmarshal([]byte(sig.Signature), &edSig)
-			if err != nil {
-				return err
-			}
-			cryptoSig := crypto.Signature(edSig)
-
-			sigHash := t.SigHash(i)
-			err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
-			if err != nil {
-				return err
-			}
-
-		default:
-			// If the identifier is not recognized, assume that the signature
-			// is valid. This allows more signature types to be added via soft
-			// forking.
-		}
-
-		inSig.usedKeys[sig.PublicKeyIndex] = struct{}{}
-		inSig.remainingSignatures--
-	}
-
-	// Check that all inputs have been sufficiently signed.
-	for _, reqSigs := range sigMap {
-		if reqSigs.remainingSignatures != 0 {
-			return ErrMissingSignatures
+		spendBlockStakes[bsi.ParentID] = struct{}{}
+		err = bsi.Unlocker.Unlock(uint64(index), *t)
+		if err != nil {
+			return
 		}
 	}
 
-	return nil
+	return
 }
 
 // LoadString is the inverse of SiaPublicKey.String().
-func (spk *SiaPublicKey) LoadString(s string) {
-	parts := strings.Split(s, ":")
+func (spk *SiaPublicKey) LoadString(s string) error {
+	parts := strings.SplitN(s, ":", 2)
 	if len(parts) != 2 {
-		return
+		return errors.New("invalid public key string")
 	}
-	var err error
-	spk.Key, err = hex.DecodeString(parts[1])
+	err := spk.Key.LoadString(parts[1])
 	if err != nil {
-		spk.Key = nil
-		return
+		return err
 	}
 	copy(spk.Algorithm[:], []byte(parts[0]))
+	return nil
 }
 
 // String defines how to print a SiaPublicKey - hex is used to keep things
 // compact during logging. The key type prefix and lack of a checksum help to
 // separate it from a sia address.
 func (spk *SiaPublicKey) String() string {
-	return spk.Algorithm.String() + ":" + fmt.Sprintf("%x", spk.Key)
+	return spk.Algorithm.String() + ":" + spk.Key.String()
 }
+
+// MarshalJSON marshals a byte slice as a hex string.
+func (spk SiaPublicKey) MarshalJSON() ([]byte, error) {
+	return json.Marshal(spk.String())
+}
+
+// UnmarshalJSON decodes the json string of the byte slice.
+func (spk *SiaPublicKey) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	return spk.LoadString(str)
+}
+
+// String turns this byte slice into a hex-formatted string.
+func (bs ByteSlice) String() string {
+	return hex.EncodeToString([]byte(bs))
+}
+
+// LoadString loads a  byte slice from a hex-formatted string.
+func (bs *ByteSlice) LoadString(str string) error {
+	b, err := hex.DecodeString(str)
+	if err != nil {
+		return err
+	}
+	*bs = ByteSlice(b)
+	return nil
+}
+
+// MarshalJSON marshals a byte slice as a hex string.
+func (bs ByteSlice) MarshalJSON() ([]byte, error) {
+	return json.Marshal(bs.String())
+}
+
+// UnmarshalJSON decodes the json string of the byte slice.
+func (bs *ByteSlice) UnmarshalJSON(b []byte) error {
+	var str string
+	if err := json.Unmarshal(b, &str); err != nil {
+		return err
+	}
+	return bs.LoadString(str)
+}
+
+var (
+	_ json.Marshaler   = ByteSlice{}
+	_ json.Unmarshaler = (*ByteSlice)(nil)
+)

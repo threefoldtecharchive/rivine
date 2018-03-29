@@ -113,7 +113,7 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("AllSeeds returned the wrong seed")
 	}
 
-	unlockConditions, err := wt.wallet.NextAddress()
+	addr, err := wt.wallet.NextAddress()
 	if err != nil {
 		t.Errorf("next address couldn't be created: %v", err)
 	}
@@ -123,7 +123,7 @@ func TestLoadSeed(t *testing.T) {
 		t.Error("fresh wallet should not have a balance")
 	}
 
-	err = cs.addTransactionAsBlock(unlockConditions.UnlockHash(), types.NewCurrency64(1000))
+	err = cs.addTransactionAsBlock(addr, types.NewCurrency64(1000))
 	if err != nil {
 		t.Errorf("failed to add transaction as block: %v", err)
 	}

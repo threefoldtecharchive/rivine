@@ -28,7 +28,14 @@ var (
 	SpecifierBlockStakeOutput = Specifier{'b', 'l', 's', 't', 'a', 'k', 'e', ' ', 'o', 'u', 't', 'p', 'u', 't'}
 	SpecifierMinerFee         = Specifier{'m', 'i', 'n', 'e', 'r', ' ', 'f', 'e', 'e'}
 
-	ErrTransactionIDWrongLen = errors.New("input has wrong length to be an encoded transaction id")
+	ErrInvalidTransactionVersion = errors.New("invalid transaction version")
+	ErrTransactionIDWrongLen     = errors.New("input has wrong length to be an encoded transaction id")
+)
+
+const (
+	// TransactionVersionOne defines the initial (and currently only)
+	// version format. Any other version number is concidered invalid.
+	TransactionVersionOne TransactionVersion = iota
 )
 
 type (
@@ -43,6 +50,12 @@ type (
 	// contained in the type. By prepending the data with Specifier, we can
 	// guarantee that distinct types will never produce the same hash.
 	Specifier [SpecifierLen]byte
+
+	// TransactionVersion defines the format version of a transaction.
+	// Currently only one format exists and it is identified by 0x01 (TransactionVersionOne).
+	// However in the future we might wish to support one or multiple new formats,
+	// which will be identifable during encoding/decoding by this version number.
+	TransactionVersion byte
 
 	// IDs are used to refer to a type without revealing its contents. They
 	// are constructed by hashing specific fields of the type, along with a
@@ -62,23 +75,24 @@ type (
 	// but transactions cannot spend outputs that they create or otherwise be
 	// self-dependent.
 	Transaction struct {
-		CoinInputs            []CoinInput            `json:"coininputs"`
-		CoinOutputs           []CoinOutput           `json:"coinoutputs"`
-		BlockStakeInputs      []BlockStakeInput      `json:"blockstakeinputs"`
-		BlockStakeOutputs     []BlockStakeOutput     `json:"blockstakeoutputs"`
-		MinerFees             []Currency             `json:"minerfees"`
-		ArbitraryData         [][]byte               `json:"arbitrarydata"`
-		TransactionSignatures []TransactionSignature `json:"transactionsignatures"`
+		CoinInputs        []CoinInput
+		CoinOutputs       []CoinOutput
+		BlockStakeInputs  []BlockStakeInput
+		BlockStakeOutputs []BlockStakeOutput
+		MinerFees         []Currency
+		ArbitraryData     []byte
+
+		_VersionNumber TransactionVersion
 	}
 
-	// A SiacoinInput consumes a SiacoinOutput and adds the siacoins to the set of
-	// siacoins that can be spent in the transaction. The ParentID points to the
+	// A CoinInput consumes a CoinInput and adds the coins to the set of
+	// coins that can be spent in the transaction. The ParentID points to the
 	// output that is getting consumed, and the UnlockConditions contain the rules
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
 	CoinInput struct {
-		ParentID         CoinOutputID     `json:"parentid"`
-		UnlockConditions UnlockConditions `json:"unlockconditions"`
+		ParentID CoinOutputID   `json:"parentid"`
+		Unlocker InputLockProxy `json:"unlocker"`
 	}
 
 	// A CoinOutput holds a volume of siacoins. Outputs must be spent
@@ -96,8 +110,8 @@ type (
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
 	BlockStakeInput struct {
-		ParentID         BlockStakeOutputID `json:"parentid"`
-		UnlockConditions UnlockConditions   `json:"unlockconditions"`
+		ParentID BlockStakeOutputID `json:"parentid"`
+		Unlocker InputLockProxy     `json:"unlocker"`
 	}
 
 	// A BlockStakeOutput holds a volume of blockstakes. Outputs must be spent
@@ -188,6 +202,123 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 
 	return
 }
+
+// MarshalSia implements the encoding.SiaMarshaler interface.
+func (t Transaction) MarshalSia(w io.Writer) error {
+	return encoding.NewEncoder(w).EncodeAll(
+		t._VersionNumber,
+		t.CoinInputs,
+		t.CoinOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+	)
+}
+
+// UnmarshalSia implements the encoding.SiaUnmarshaler interface.
+func (t *Transaction) UnmarshalSia(r io.Reader) error {
+	decoder := encoding.NewDecoder(r)
+	err := decoder.Decode(&t._VersionNumber)
+	if err != nil {
+		return err
+	}
+	if t._VersionNumber != TransactionVersionOne {
+		return ErrInvalidTransactionVersion
+	}
+	return decoder.DecodeAll(
+		&t.CoinInputs,
+		&t.CoinOutputs,
+		&t.BlockStakeInputs,
+		&t.BlockStakeOutputs,
+		&t.MinerFees,
+		&t.ArbitraryData,
+	)
+}
+
+// util structs to support some kind of json OneOf feature
+// as to make sure our data can support whatever versions we support
+type (
+	jsonTransaction struct {
+		Version TransactionVersion `json:"version"`
+		Data    json.RawMessage    `json:"data"`
+	}
+	jsonTransactionVersionOne struct {
+		CoinInputs        []CoinInput        `json:"coininputs"`
+		CoinOutputs       []CoinOutput       `json:"coinoutputs,omitempty"`
+		BlockstakeInputs  []BlockStakeInput  `json:"blockstakeinputs,omitempty"`
+		BlockStakeOutputs []BlockStakeOutput `json:"blockstakeoutputs,omitempty"`
+		MinerFees         []Currency         `json:"minerfees"`
+		ArbitraryData     []byte             `json:"arbitrarydata,omitempty"`
+	}
+)
+
+// MarshalJSON implements the json.Marshaler interface.
+func (t Transaction) MarshalJSON() ([]byte, error) {
+	data, err := json.Marshal(jsonTransactionVersionOne{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockstakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(jsonTransaction{
+		Version: TransactionVersionOne,
+		Data:    data,
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (t *Transaction) UnmarshalJSON(b []byte) error {
+	var rawTx jsonTransaction
+	err := json.Unmarshal(b, &rawTx)
+	if err != nil {
+		return err
+	}
+	if rawTx.Version != TransactionVersionOne {
+		return errors.New("invalid transaction version")
+	}
+	var data jsonTransactionVersionOne
+	err = json.Unmarshal(rawTx.Data[:], &data)
+	if err != nil {
+		return err
+	}
+	t.CoinInputs = data.CoinInputs
+	t.CoinOutputs = data.CoinOutputs
+	t.BlockStakeInputs = data.BlockstakeInputs
+	t.BlockStakeOutputs = data.BlockStakeOutputs
+	t.MinerFees = data.MinerFees
+	t.ArbitraryData = data.ArbitraryData
+	return nil
+}
+
+var (
+	_ json.Marshaler   = Transaction{}
+	_ json.Unmarshaler = (*Transaction)(nil)
+)
+
+// MarshalSia implements SiaMarshaler.MarshalSia
+func (v TransactionVersion) MarshalSia(w io.Writer) error {
+	_, err := w.Write([]byte{byte(v)})
+	return err
+}
+
+// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
+func (v *TransactionVersion) UnmarshalSia(r io.Reader) error {
+	var bv [1]byte
+	_, err := io.ReadFull(r, bv[:])
+	*v = TransactionVersion(bv[0])
+	return err
+}
+
+var (
+	_ encoding.SiaMarshaler   = TransactionVersion(0)
+	_ encoding.SiaUnmarshaler = (*TransactionVersion)(nil)
+)
 
 // NewTransactionShortID creates a new Transaction ShortID,
 // combining a blockheight together with a transaction index.
@@ -288,14 +419,22 @@ func (s Specifier) String() string {
 	return string(s[:i])
 }
 
+// LoadString loads a stringified specifier into the specifier type
+func (s *Specifier) LoadString(str string) error {
+	if len(str) > SpecifierLen {
+		return errors.New("invalid specifier")
+	}
+	copy(s[:], str[:])
+	return nil
+}
+
 // UnmarshalJSON decodes the json string of the specifier.
 func (s *Specifier) UnmarshalJSON(b []byte) error {
 	var str string
 	if err := json.Unmarshal(b, &str); err != nil {
 		return err
 	}
-	copy(s[:], str)
-	return nil
+	return s.LoadString(str)
 }
 
 // String prints the id in hex.
