@@ -85,37 +85,37 @@ func TestParseCoinStringInvalidStrings(t *testing.T) {
 	}
 }
 
-func TestParseCoinStringToCoinString_E0(t *testing.T) {
+func TestParseCoinStringToCoinSmallValueString_E0(t *testing.T) {
 	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	testParseCoinStringToCoinString(t, cc)
+	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
-func TestParseCoinStringToCoinString_E9(t *testing.T) {
+func TestParseCoinStringToCoinSmallValueString_E9(t *testing.T) {
 	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	testParseCoinStringToCoinString(t, cc)
+	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
-func TestParseCoinStringToCoinString_E24(t *testing.T) {
+func TestParseCoinStringToCoinSmallValueString_E24(t *testing.T) {
 	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	testParseCoinStringToCoinString(t, cc)
+	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
-func testParseCoinStringToCoinString(t *testing.T, cc CurrencyConvertor) {
+func testParseCoinStringToCoinSmallValueString(t *testing.T, cc CurrencyConvertor) {
 	for i := uint(0); i < cc.precision; i++ {
 		var str string
 		if i == 0 {
@@ -133,6 +133,65 @@ func testParseCoinStringToCoinString(t *testing.T, cc CurrencyConvertor) {
 		}
 		expected := types.NewCurrency(big.NewInt(10).Add(new(big.Int),
 			big.NewInt(10).Exp(big.NewInt(10), big.NewInt(int64(cc.precision-i)), nil)))
+		if expected.Cmp(c) != 0 {
+			t.Errorf("#%d: %v != %v", i, expected, c)
+			continue
+		}
+
+		outStr := cc.ToCoinString(c)
+		outStr2 := cc.ToCoinString(expected)
+		if outStr != outStr2 {
+			t.Errorf("#%d: %v != %v", i, outStr, outStr2)
+			continue
+		}
+		if outStr != str {
+			t.Errorf("#%d: %v != %v", i, outStr, str)
+		}
+	}
+}
+
+func TestParseCoinStringToCoinBigValueString_E0(t *testing.T) {
+	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testParseCoinStringToCoinBigValueString(t, cc)
+}
+
+func TestParseCoinStringToCoinBigValueString_E9(t *testing.T) {
+	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testParseCoinStringToCoinBigValueString(t, cc)
+}
+
+func TestParseCoinStringToCoinBigValueString_E24(t *testing.T) {
+	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	testParseCoinStringToCoinBigValueString(t, cc)
+}
+
+func testParseCoinStringToCoinBigValueString(t *testing.T, cc CurrencyConvertor) {
+	for i := uint(0); i < cc.precision; i++ {
+		str := "1"
+		str += strings.Repeat("0", int(i))
+
+		c, err := cc.ParseCoinString(str)
+		if err != nil {
+			t.Error(i, err)
+			continue
+		}
+		expected := types.NewCurrency(big.NewInt(10).Add(new(big.Int),
+			big.NewInt(10).Exp(big.NewInt(10), big.NewInt(int64(cc.precision+i)), nil)))
 		if expected.Cmp(c) != 0 {
 			t.Errorf("#%d: %v != %v", i, expected, c)
 			continue
