@@ -84,7 +84,8 @@ var (
 		httpClient HTTPClient
 	}
 
-	_CurrencyUnits types.CurrencyUnits
+	_CurrencyUnits     types.CurrencyUnits
+	_CurrencyConvertor CurrencyConvertor
 )
 
 // DefaultCLIClient creates a new client using the given params as the default config,
@@ -94,6 +95,12 @@ func DefaultCLIClient(cfg Config) {
 	_DefaultClient.httpClient.RootURL = cfg.Address
 	_DefaultClient.version = cfg.Version
 	_CurrencyUnits = cfg.CurrencyUnits
+
+	var err error
+	_CurrencyConvertor, err = NewCurrencyConvertor(_CurrencyUnits)
+	if err != nil {
+		Die("couldn't create currency convertor:", err)
+	}
 
 	root := &cobra.Command{
 		Use:   os.Args[0],
@@ -120,6 +127,7 @@ func DefaultCLIClient(cfg Config) {
 	root.AddCommand(updateCmd)
 	updateCmd.AddCommand(updateCheckCmd)
 
+	createWalletCommands()
 	root.AddCommand(walletCmd)
 	walletCmd.AddCommand(
 		walletAddressCmd,

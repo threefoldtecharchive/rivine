@@ -27,68 +27,131 @@ func ParsePeriod(period string) (string, error) {
 	return fmt.Sprint(blocks), nil
 }
 
-// CurrencyUnits converts a types.Currency to a string with human-readable
-// units. The unit used will be the largest unit that results in a value
-// greater than 1. The value is rounded to 4 significant digits.
-func CurrencyUnits(c types.Currency) string {
-	pico := _CurrencyUnits.OneCoin.Div64(1e12)
-	if c.Cmp(pico) < 0 {
-		return c.String() + " H"
-	}
-
-	// iterate until we find a unit greater than c
-	mag := pico
-	unit := ""
-	for _, unit = range []string{"p", "n", "u", "m", "C", "K", "M", "G", "T"} {
-		if c.Cmp(mag.Mul64(1e3)) < 0 {
-			break
-		} else if unit != "T" {
-			// don't want to perform this multiply on the last iter; that
-			// would give us 1.235 TS instead of 1235 TS
-			mag = mag.Mul64(1e3)
-		}
-	}
-
-	num := new(big.Rat).SetInt(c.Big())
-	denom := new(big.Rat).SetInt(mag.Big())
-	res, _ := new(big.Rat).Mul(num, denom.Inv(denom)).Float64()
-
-	return fmt.Sprintf("%.4g %s", res, unit)
-}
-
-// ParseCurrency converts a siacoin amount to base units.
-func ParseCurrency(amount string) (string, error) {
-	units := []string{"p", "n", "u", "m", "C", "K", "M", "G", "T"}
-	for i, unit := range units {
-		if strings.HasSuffix(amount, unit) {
-			// scan into big.Rat
-			r, ok := new(big.Rat).SetString(strings.TrimSuffix(amount, unit))
-			if !ok {
-				return "", errors.New("malformed amount")
-			}
-			// convert units
-			exp := 24 + 3*(int64(i)-4)
-			mag := new(big.Int).Exp(big.NewInt(10), big.NewInt(exp), nil)
-			r.Mul(r, new(big.Rat).SetInt(mag))
-			// r must be an integer at this point
-			if !r.IsInt() {
-				return "", errors.New("non-integer number of hastings")
-			}
-			return r.RatString(), nil
-		}
-	}
-	// check for hastings separately
-	if strings.HasSuffix(amount, "H") {
-		return strings.TrimSuffix(amount, "H"), nil
-	}
-
-	return "", errors.New("amount is missing units; run 'wallet --help' for a list of units")
-}
-
 // YesNo returns "Yes" if b is true, and "No" if b is false.
 func YesNo(b bool) string {
 	if b {
 		return "Yes"
 	}
 	return "No"
+}
+
+// CurrencyConvertor is used to parse a currency in it's default unit,
+// and turn it into its in-memory smallest unit. Simiarly it allow you to
+// turn the in-memory smallest unit into a string version of the default init.
+type CurrencyConvertor struct {
+	scalar    *big.Int
+	precision uint // amount of zeros after the comma
+}
+
+// NewCurrencyConvertor creates a new currency convertor
+// using the given currency units.
+//
+// See CurrencyConvertor for more information.
+func NewCurrencyConvertor(units types.CurrencyUnits) (CurrencyConvertor, error) {
+	oneCoinStr := units.OneCoin.String()
+	precision := uint(len(oneCoinStr) - 1)
+	return CurrencyConvertor{
+		scalar:    units.OneCoin.Big(),
+		precision: precision,
+	}, nil
+}
+
+// ParseCoinString parses the given string assumed to be in the default unit,
+// and parses it into an in-memory currency unit of the smallest unit.
+// It will fail if the given string is invalid or too precise.
+func (cc CurrencyConvertor) ParseCoinString(str string) (types.Currency, error) {
+	initialParts := strings.SplitN(str, ".", 2)
+	if len(initialParts) == 1 {
+		// a round number, simply multiply and go
+		i, ok := big.NewInt(0).SetString(initialParts[0], 10)
+		if !ok {
+			return types.Currency{}, errors.New("invalid round currency coin amount")
+		}
+		if i.Cmp(big.NewInt(0)) == -1 {
+			return types.Currency{}, errors.New("invalid round currency coin amount: cannot be negative")
+		}
+		return types.NewCurrency(i.Mul(i, cc.scalar)), nil
+	}
+
+	whole := initialParts[0]
+	dac := initialParts[1]
+	sn := uint(cc.precision)
+	if l := uint(len(dac)); l < sn {
+		sn = l
+	}
+	whole += initialParts[1][:sn]
+	dac = dac[sn:]
+	for i := range dac {
+		if dac[i] != '0' {
+			return types.Currency{}, errors.New("invalid or too precise currency coin amount")
+		}
+	}
+	i, ok := big.NewInt(0).SetString(whole, 10)
+	if !ok {
+		return types.Currency{}, errors.New("invalid currency coin amount")
+	}
+	if i.Cmp(big.NewInt(0)) == -1 {
+		return types.Currency{}, errors.New("invalid round currency coin amount: cannot be negative")
+	}
+	i.Mul(i, big.NewInt(0).Exp(
+		big.NewInt(10), big.NewInt(int64(cc.precision-sn)), nil))
+	c := types.NewCurrency(i)
+	if c.Cmp64(0) == -1 {
+		return types.Currency{}, errors.New("invalid round currency coin amount: cannot be negative")
+	}
+	return c, nil
+}
+
+// ToCoinString turns the in-memory currency unit,
+// into a string version of the default currency unit.
+// This can never fail, as the only thing it can do is make a number smaller.
+func (cc CurrencyConvertor) ToCoinString(c types.Currency) string {
+	if c.Equals64(0) {
+		return "0"
+	}
+
+	str := c.String()
+	if cc.precision == 0 {
+		return str
+	}
+	l := uint(len(str))
+	if l > cc.precision {
+		idx := l - cc.precision
+		str = strings.TrimRight(str[:idx]+"."+str[idx:], "0")
+		str = strings.TrimRight(str, ".")
+		if len(str) == 0 {
+			return "0"
+		}
+		return str
+	}
+	str = "0." + strings.Repeat("0", int(cc.precision-l)) + str
+	str = strings.TrimRight(str, "0")
+	str = strings.TrimRight(str, ".")
+	return str
+}
+
+// CoinArgDescription is used to print a helpful arg description message,
+// for this convertor.
+func (cc CurrencyConvertor) CoinArgDescription(argName string) string {
+	if cc.precision < 1 {
+		return fmt.Sprintf(
+			"argument %s has to be a positive natural number (no digits after comma are allowed)",
+			argName)
+	}
+	return fmt.Sprintf(
+		"argument %s can (only) have up to %d digits after comma and has to be positive",
+		argName, cc.precision)
+}
+
+// CoinHelp is used to print a help message,
+// for this convertor.
+func (cc CurrencyConvertor) CoinHelp() string {
+	if cc.precision < 1 {
+		return `coins are expressed in their default unit,
+which value has to be expressed as a positive natural number
+(no digits after comma are allowed)`
+	}
+	return fmt.Sprintf(`coins are expressed in their default unit, which value can be expressed as a floating point value,
+but it can (only) have up to %d digits after comma and it has to be positive`,
+		cc.precision)
 }

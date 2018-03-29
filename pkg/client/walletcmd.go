@@ -14,23 +14,14 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-var (
+// have to be called prior to being able to use wallet cmds
+func createWalletCommands() {
 	walletCmd = &cobra.Command{
 		Use:   "wallet",
 		Short: "Perform wallet actions",
 		Long: `Generate a new address, send coins to another wallet, or view info about the wallet.
 
-Units:
-The following units are supported:
-  p (pico,  10^-12)
-  n (nano,  10^-9 )
-  u (micro, 10^-6 )
-  m (milli, 10^-3 )
-  C
-  K (kilo,  10^3  )
-  M (mega,  10^6  )
-  G (giga,  10^9  )
-  T (tera,  10^12 )`,
+` + _CurrencyConvertor.CoinHelp(),
 		Run: Wrap(walletbalancecmd),
 	}
 
@@ -102,11 +93,9 @@ By default the wallet encryption / unlock password is the same as the generated 
 	walletSendSiacoinsCmd = &cobra.Command{
 		Use:   "coins <amount> <dest>",
 		Short: "Send coins to an address",
-		Long: `Send coins to an address. 'dest' must be a 76-byte hexadecimal address.
-'amount' can be specified in units, e.g. 1.23K. Run 'wallet --help' for a list of units.
-A unit must be supplied
+		Long: `Send coins to an address. 'dest' must be a 76-byte hexadecimal address.` + _CurrencyConvertor.CoinArgDescription("amount") + `
 
-A miner fee of 10 C is levied on all transactions.`,
+Miner fees will be added on top of the given amount automatically.`,
 		Run: Wrap(walletsendsiacoinscmd),
 	}
 
@@ -145,6 +134,26 @@ Run 'wallet send --help' to see a list of available units.`,
 		Long:  "Decrypt and load the wallet into memory",
 		Run:   Wrap(walletunlockcmd),
 	}
+}
+
+// still need to be initialized using createWalletCommands
+var (
+	walletCmd               *cobra.Command
+	walletBlockStakeStatCmd *cobra.Command
+	walletAddressCmd        *cobra.Command
+	walletAddressesCmd      *cobra.Command
+	walletInitCmd           *cobra.Command
+	walletLoadCmd           *cobra.Command
+	walletLoadSeedCmd       *cobra.Command
+	walletLockCmd           *cobra.Command
+	walletSendCmd           *cobra.Command
+	walletSeedsCmd          *cobra.Command
+	walletSendSiacoinsCmd   *cobra.Command
+	walletSendSiafundsCmd   *cobra.Command
+	walletRegisterDataCmd   *cobra.Command
+	walletBalanceCmd        *cobra.Command
+	walletTransactionsCmd   *cobra.Command
+	walletUnlockCmd         *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
@@ -247,15 +256,17 @@ func walletseedscmd() {
 
 // walletsendsiacoinscmd sends siacoins to a destination address.
 func walletsendsiacoinscmd(amount, dest string) {
-	hastings, err := ParseCurrency(amount)
+	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
 		Die("Could not parse amount:", err)
 	}
-	err = _DefaultClient.httpClient.Post("/wallet/coins", fmt.Sprintf("amount=%s&destination=%s", hastings, dest))
+	err = _DefaultClient.httpClient.Post("/wallet/coins",
+		fmt.Sprintf("amount=%s&destination=%s", hastings.String(), dest))
 	if err != nil {
 		Die("Could not send coins:", err)
 	}
-	fmt.Printf("Sent %s hastings to %s\n", hastings, dest)
+	fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinString(hastings), dest)
 }
 
 // walletsendblockstakescmd sends siafunds to a destination address.
@@ -290,7 +301,9 @@ func walletblockstakestatcmd() {
 	fmt.Printf("Total active Blockstake is %v\n", bsstat.TotalActiveBlockStake)
 	fmt.Printf("This account has %v Blockstake\n", bsstat.TotalBlockStake)
 	fmt.Printf("%v of last %v Blocks created (theoretically %v)\n", bsstat.TotalBCLast1000, bsstat.BlockCount, bsstat.TotalBCLast1000t)
-	fmt.Printf("containing %v fee \n", CurrencyUnits(bsstat.TotalFeeLast1000))
+
+	fmt.Printf("containing %v fee \n",
+		_CurrencyConvertor.ToCoinString(bsstat.TotalFeeLast1000))
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.AlignRight|tabwriter.Debug)
 	fmt.Fprintln(w, "state\t#BlockStake\tUTXO hash\t")
@@ -327,19 +340,18 @@ Unlock the wallet to view balance
 	unconfirmedBalance := status.ConfirmedCoinBalance.Add(status.UnconfirmedIncomingCoins).Sub(status.UnconfirmedOutgoingCoins)
 	var delta string
 	if unconfirmedBalance.Cmp(status.ConfirmedCoinBalance) >= 0 {
-		delta = "+" + CurrencyUnits(unconfirmedBalance.Sub(status.ConfirmedCoinBalance))
+		delta = "+ " + _CurrencyConvertor.ToCoinString(unconfirmedBalance.Sub(status.ConfirmedCoinBalance))
 	} else {
-		delta = "-" + CurrencyUnits(status.ConfirmedCoinBalance.Sub(unconfirmedBalance))
+		delta = "- " + _CurrencyConvertor.ToCoinString(status.ConfirmedCoinBalance.Sub(unconfirmedBalance))
 	}
 
 	fmt.Printf(`Wallet status:
 %s, Unlocked
 Confirmed Balance:   %v
 Unconfirmed Delta:   %v
-Exact:               %v H
 BlockStakes:         %v BS
-`, encStatus, CurrencyUnits(status.ConfirmedCoinBalance), delta,
-		status.ConfirmedCoinBalance, status.BlockStakeBalance)
+`, encStatus, _CurrencyConvertor.ToCoinString(status.ConfirmedCoinBalance), delta,
+		status.BlockStakeBalance)
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,
@@ -391,7 +403,7 @@ func wallettransactionscmd() {
 		} else {
 			fmt.Printf(" unconfirmed")
 		}
-		fmt.Printf("%67v%15.2f C", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
+		fmt.Printf("%67v%15.2f", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
 		incomingBlockStakeBigInt := incomingBlockStakes.Big()
 		outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
 		fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
