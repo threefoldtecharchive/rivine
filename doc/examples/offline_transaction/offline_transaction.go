@@ -78,7 +78,6 @@ func main() {
 	}
 
 	fmt.Println("Transaction successfull")
-
 }
 
 // CreateTxn creates a new transaction of the specified ammount to a specified address. A remainder address

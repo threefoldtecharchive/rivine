@@ -22,7 +22,7 @@ func (api *API) transactionpoolTransactionsHandler(w http.ResponseWriter, req *h
 // TransactionPoolPOST is the success response for a POST to /transactionpool/transactions.
 // It is the ID of the newly posted transaction
 type TransactionPoolPOST struct {
-	TransactionID string `json:"transactionid"`
+	TransactionID types.TransactionID `json:"transactionid"`
 }
 
 // transactionpoolPostTransactionHandler handles the API call to post a complete transaction on /transactionpool/transactions
@@ -37,5 +37,5 @@ func (api *API) transactionpoolPostTransactionHandler(w http.ResponseWriter, req
 		WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
-	WriteJSON(w, TransactionPoolPOST{TransactionID: tx.ID().String()})
+	WriteJSON(w, TransactionPoolPOST{TransactionID: tx.ID()})
 }
