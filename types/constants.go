@@ -136,12 +136,12 @@ func DefaultChainConstants() ChainConstants {
 			Value:      NewCurrency64(1000000),
 			UnlockHash: UnlockHash{},
 		}
-		bso.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e679158b5b6a40c197f")
+		bso.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f")
 		cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
 		co := CoinOutput{
 			Value: currencyUnits.OneCoin.Mul64(1000),
 		}
-		co.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e679158b5b6a40c197f")
+		co.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f")
 		cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
 
 		return cts
@@ -222,12 +222,12 @@ func DefaultChainConstants() ChainConstants {
 		Value:      NewCurrency64(1000000),
 		UnlockHash: UnlockHash{},
 	}
-	bso.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
+	bso.UnlockHash.LoadString("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e")
 	cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
 	co := CoinOutput{
 		Value: currencyUnits.OneCoin.Mul64(100 * 1000 * 1000),
 	}
-	co.UnlockHash.LoadString("b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec15c28ee7d7ed1d")
+	co.UnlockHash.LoadString("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e")
 	cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
 	return cts
 }

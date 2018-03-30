@@ -35,7 +35,7 @@ The format of an address can be visually represented as:
 +----+----+---+-------------------------+----+----+-------------------+----+
 ```
 
-As you can see an unlock hash consists out of a type, a hash and a checksum of that hash.
+As you can see an unlock hash consists out of a type, a hash and a checksum of the type and hash.
 The entire unlock hash is hex-formatted, which explains why the actual unlock hash size
 is doubled from 39 bytes to 78 bytes. Let's go over all parts of an unlock hash in detail.
 
@@ -85,6 +85,15 @@ I kindly refer you to the more extensive [transactions.md docs](transaction.md#u
 
 ### checksum
 
-The last part of a unlock hash is the checksum of the hash (which was the previous part).
+The last part of a unlock hash is the checksum of the type and hash (which were the previous 2 parts).
 Blake2b is used to generate a 256-bit checksum from the hash, of which the first 6 bytes are used
 as checksum for this unlock hash. As the checksum is also hex-encoded its byte size doubles to 12.
+
+> ```
+> checksum := first_6_bytes(blake2b_256(type, hash))
+> ```
+> > where type is one byte, and hash is a fixed-size byte array of 32 bytes
+> > returned checksum is 32 bytes (as 256 bit version of the blake2b hash algo is used)
+
+Meaning that the input message used to generate a 256-bit checksum with Blake2b is 33 bytes,
+one byte of the (unlock type) and 32 bytes for the hash itself. The output (checksum) is 32 bytes.

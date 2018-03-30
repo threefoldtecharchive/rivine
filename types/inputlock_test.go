@@ -652,7 +652,7 @@ func TestInputLockProxyJSONEncoding(t *testing.T) { // utility funcs
 		},
 		// atomic swap input lock
 		{
-			`{"type":2,"condition":{"sender":"010123456789012345678901234567890101234567890123456789012345678901dec8f8544d34","receiver":"01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a","hashedsecret":"abc543defabc543defabc543defabc543defabc543defabc543defabc543defa","timelock":1522068743},"fulfillment":{"publickey":"ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","signature":"abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab","secret":"def789def789def789def789def789dedef789def789def789def789def789de"}}`,
+			`{"type":2,"condition":{"sender":"0101234567890123456789012345678901012345678901234567890123456789018a50e31447b8","receiver":"01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc057382370c8d9","hashedsecret":"abc543defabc543defabc543defabc543defabc543defabc543defabc543defa","timelock":1522068743},"fulfillment":{"publickey":"ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","signature":"abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab","secret":"def789def789def789def789def789dedef789def789def789def789def789de"}}`,
 			InputLockProxy{
 				t: UnlockTypeAtomicSwap,
 				il: &AtomicSwapInputLock{

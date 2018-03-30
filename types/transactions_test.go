@@ -427,8 +427,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 				"unlocker": {
 					"type": 2,
 					"condition": {
-						"sender": "010123456789012345678901234567890101234567890123456789012345678901dec8f8544d34",
-						"receiver": "01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a",
+						"sender": "01654f96b317efe5fd6cd8ba1a394dce7b6ebe8c9621d6c44cbe3c8f1b58ce632a3216de71b23b",
+						"receiver": "01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105",
 						"hashedsecret": "abc543defabc543defabc543defabc543defabc543defabc543defabc543defa",
 						"timelock": 1522068743
 					},
@@ -443,15 +443,15 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 		"coinoutputs": [
 			{
 				"value": "3",
-				"unlockhash": "010123456789012345678901234567890101234567890123456789012345678901dec8f8544d34"
+				"unlockhash": "0142e9458e348598111b0bc19bda18e45835605db9f4620616d752220ae8605ce0df815fd7570e"
 			},
 			{
 				"value": "5",
-				"unlockhash": "01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a"
+				"unlockhash": "01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"
 			},
 			{
 				"value": "8",
-				"unlockhash": "02abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a"
+				"unlockhash": "02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"
 			}
 		],
 		"blockstakeinputs": [
@@ -479,11 +479,11 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 		"blockstakeoutputs": [
 			{
 				"value": "4",
-				"unlockhash": "2a0123456789012345678901234567890101234567890123456789012345678901dec8f8544d34"
+				"unlockhash": "6453402d094ed0f336950c4be0feec37167aaaaf8b974d265900e49ab22773584cfe96393b1360"
 			},
 			{
 				"value": "2",
-				"unlockhash": "18abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a"
+				"unlockhash": "2ab39baa9a58319fa47f78ed542a733a7198d106caeabf0a231b91ea3e4e222ffd8b27c861beff"
 			}
 		],
 		"minerfees": ["1", "2", "3"],
@@ -512,11 +512,11 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 							il: &AtomicSwapInputLock{
 								Sender: UnlockHash{
 									Type: UnlockTypeSingleSignature,
-									Hash: hs("0123456789012345678901234567890101234567890123456789012345678901"),
+									Hash: hs("654f96b317efe5fd6cd8ba1a394dce7b6ebe8c9621d6c44cbe3c8f1b58ce632a"),
 								},
 								Receiver: UnlockHash{
 									Type: UnlockTypeSingleSignature,
-									Hash: hs("abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0"),
+									Hash: hs("e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70"),
 								},
 								HashedSecret: AtomicSwapHashedSecret(hs("abc543defabc543defabc543defabc543defabc543defabc543defabc543defa")),
 								TimeLock:     1522068743,
@@ -535,21 +535,21 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 						Value: NewCurrency64(3),
 						UnlockHash: UnlockHash{
 							Type: UnlockTypeSingleSignature,
-							Hash: hs("0123456789012345678901234567890101234567890123456789012345678901"),
+							Hash: hs("42e9458e348598111b0bc19bda18e45835605db9f4620616d752220ae8605ce0"),
 						},
 					},
 					{
 						Value: NewCurrency64(5),
 						UnlockHash: UnlockHash{
 							Type: UnlockTypeSingleSignature,
-							Hash: hs("abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0"),
+							Hash: hs("a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35"),
 						},
 					},
 					{
 						Value: NewCurrency64(8),
 						UnlockHash: UnlockHash{
 							Type: UnlockTypeAtomicSwap,
-							Hash: hs("abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0"),
+							Hash: hs("a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e"),
 						},
 					},
 				},
@@ -582,15 +582,15 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						Value: NewCurrency64(4),
 						UnlockHash: UnlockHash{
-							Type: 42,
-							Hash: hs("0123456789012345678901234567890101234567890123456789012345678901"),
+							Type: 100,
+							Hash: hs("53402d094ed0f336950c4be0feec37167aaaaf8b974d265900e49ab22773584c"),
 						},
 					},
 					{
 						Value: NewCurrency64(2),
 						UnlockHash: UnlockHash{
-							Type: 24,
-							Hash: hs("abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0"),
+							Type: 42,
+							Hash: hs("b39baa9a58319fa47f78ed542a733a7198d106caeabf0a231b91ea3e4e222ffd"),
 						},
 					},
 				},

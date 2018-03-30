@@ -122,7 +122,7 @@ func (uh *UnlockHash) UnmarshalJSON(b []byte) error {
 // String returns the hex representation of the unlock hash as a string - this
 // includes a checksum.
 func (uh UnlockHash) String() string {
-	uhChecksum := crypto.HashObject(uh.Hash)
+	uhChecksum := crypto.HashAll(uh.Type, uh.Hash)
 	return fmt.Sprintf("%02x%x%x",
 		uh.Type, uh.Hash[:], uhChecksum[:UnlockHashChecksumSize])
 }
@@ -148,25 +148,27 @@ func (uh *UnlockHash) LoadString(strUH string) error {
 	}
 
 	// Decode the unlock hash.
-	var byteUnlockHash []byte
-	var checksum []byte
-	_, err = fmt.Sscanf(strUH[2:2+crypto.HashSize*2], "%x", &byteUnlockHash)
+	var unlockHashBytes []byte
+	_, err = fmt.Sscanf(strUH[2:2+crypto.HashSize*2], "%x", &unlockHashBytes)
 	if err != nil {
 		return err
 	}
+	var unlockHash crypto.Hash
+	copy(unlockHash[:], unlockHashBytes[:])
 
 	// Decode and verify the checksum.
+	var checksum []byte
 	_, err = fmt.Sscanf(strUH[2+crypto.HashSize*2:], "%x", &checksum)
 	if err != nil {
 		return err
 	}
-	expectedChecksum := crypto.HashBytes(byteUnlockHash)
+	expectedChecksum := crypto.HashAll(ut, unlockHash)
 	if !bytes.Equal(expectedChecksum[:UnlockHashChecksumSize], checksum) {
 		return ErrInvalidUnlockHashChecksum
 	}
 
 	uh.Type = ut
-	copy(uh.Hash[:], byteUnlockHash[:])
+	uh.Hash = unlockHash
 	return nil
 }
 

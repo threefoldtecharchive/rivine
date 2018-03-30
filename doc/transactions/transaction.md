@@ -125,9 +125,9 @@ The text (JSON) format can be explained best using an example:
 											// `1` = SingleSignature, `2` = AtomicSwap
 					"condition": { // unlock condition, required, format dependend upon sibling "type" property
 						// sender's unlock hash, required, hex-encoded, fixed-size
-						"sender": "010123456789012345678901234567890101234567890123456789012345678901dec8f8544d34",
+						"sender": "0101234567890123456789012345678901012345678901234567890123456789018a50e31447b8",
 						// receiver's unlock hash, required, hex-encoded, fixed-size
-						"receiver": "01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a",
+						"receiver": "01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc057382370c8d9",
 						// hashed secret, fixed size, 32 bytes, hex-encoded, sha256(secret)
 						"hashedsecret": "abc543defabc543defabc543defabc543defabc543defabc543defabc543defa",
 						// time lock, unix epoch timestamp (in seconds), 64-bit unsigned integer, required
@@ -152,17 +152,17 @@ The text (JSON) format can be explained best using an example:
 			{
 				"value": "3", // currency value (in smallest unit), big integer as string, required, positive
 				// output's unlock hash, specifier output will belocked to that hash, could represent wallet
-				"unlockhash": "010123456789012345678901234567890101234567890123456789012345678901dec8f8544d34"
+				"unlockhash": "0101234567890123456789012345678901012345678901234567890123456789018a50e31447b8"
 			},
 			{
 				"value": "5", // currency value (in smallest unit), big integer as string, required, positive
 				// output's unlock hash, specifier output will belocked to that hash, could represent wallet
-				"unlockhash": "01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a"
+				"unlockhash": "01abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc057382370c8d9"
 			},
 			{
 				"value": "8", // currency value (in smallest unit), big integer as string, required, positive
 				// output's unlock hash, specifier output will belocked to that hash, could represent wallet
-				"unlockhash": "02abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a"
+				"unlockhash": "02abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0ee7715ac0e0e"
 			}
 		],
 		"blockstakeinputs": [ // block stake inputs, optional
@@ -207,12 +207,12 @@ The text (JSON) format can be explained best using an example:
 			{
 				"value": "4", // currency value (in smallest unit), big integer as string, required, positive
 				// output's unlock hash, specifier output will belocked to that hash, could represent wallet
-				"unlockhash": "2a0123456789012345678901234567890101234567890123456789012345678901dec8f8544d34"
+				"unlockhash": "2a0123456789012345678901234567890101234567890123456789012345678901baa780c3d6f2"
 			},
 			{
 				"value": "2", // currency value (in smallest unit), big integer as string, required, positive
 				// output's unlock hash, specifier output will belocked to that hash, could represent wallet
-				"unlockhash": "18abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc0efb39211ea2a"
+				"unlockhash": "18abc0123abc0123abc0123abc0123abc0abc0123abc0123abc0123abc0123abc09c8b0a79cf2b"
 			}
 		],
 		// miner fees, list of currency values, at least 1 required

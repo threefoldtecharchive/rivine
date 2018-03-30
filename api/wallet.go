@@ -436,8 +436,7 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 func (api *API) walletTransactionHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	// Parse the id from the url.
 	var id types.TransactionID
-	jsonID := "\"" + ps.ByName("id") + "\""
-	err := id.UnmarshalJSON([]byte(jsonID))
+	err := id.LoadString(ps.ByName("id"))
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/history: " + err.Error()}, http.StatusBadRequest)
 		return
