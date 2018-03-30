@@ -244,7 +244,7 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 			}
 		}
 		WriteJSON(w, ExplorerHashGET{
-			HashType:    "transactionid",
+			HashType:    HashTypeTransactionIDStr,
 			Transaction: api.buildExplorerTransaction(height, block.ID(), txn),
 		})
 		return
@@ -255,7 +255,7 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 	if len(txids) != 0 {
 		txns, blocks := api.buildTransactionSet(txids)
 		WriteJSON(w, ExplorerHashGET{
-			HashType:     "coinoutputid",
+			HashType:     HashTypeCoinOutputIDStr,
 			Blocks:       blocks,
 			Transactions: txns,
 		})
@@ -267,7 +267,7 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 	if len(txids) != 0 {
 		txns, blocks := api.buildTransactionSet(txids)
 		WriteJSON(w, ExplorerHashGET{
-			HashType:     "blockstakeoutputid",
+			HashType:     HashTypeBlockStakeOutputIDStr,
 			Blocks:       blocks,
 			Transactions: txns,
 		})
@@ -277,6 +277,13 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 	// Hash not found, return an error.
 	WriteError(w, Error{"unrecognized hash used as input to /explorer/hash"}, http.StatusBadRequest)
 }
+
+// hash type string constants
+const (
+	HashTypeTransactionIDStr      = "transactionid"
+	HashTypeCoinOutputIDStr       = "coinoutputid"
+	HashTypeBlockStakeOutputIDStr = "blockstakeoutputid"
+)
 
 // explorerHandler handles API calls to /explorer
 func (api *API) explorerHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {

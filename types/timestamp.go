@@ -4,6 +4,7 @@ package types
 // interface for slices of timestamps.
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -14,6 +15,11 @@ type (
 
 func (t Timestamp) String() string {
 	return time.Unix(int64(t), 0).String()
+}
+
+func (t *Timestamp) LoadString(str string) error {
+	_, err := fmt.Sscan(str, t)
+	return err
 }
 
 // CurrentTimestamp returns the offset based on the current time as a Timestamp.
