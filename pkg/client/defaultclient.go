@@ -130,11 +130,14 @@ func DefaultCLIClient(cfg Config) {
 		Long:  "Print version information.",
 		Run:   Wrap(clientVersion),
 	})
+	stopCmd := &cobra.Command{
+		Use:   "stop",
+		Short: fmt.Sprintf("Stop the %s daemon", _DefaultClient.name),
+		Long:  fmt.Sprintf("Stop the %s daemon.", _DefaultClient.name),
+		Run:   Wrap(stopcmd),
+	}
 
 	root.AddCommand(stopCmd)
-
-	root.AddCommand(updateCmd)
-	updateCmd.AddCommand(updateCheckCmd)
 
 	createWalletCommands()
 	root.AddCommand(walletCmd)
