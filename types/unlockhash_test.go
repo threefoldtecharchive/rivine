@@ -3,8 +3,8 @@ package types
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -241,15 +241,10 @@ func TestUnlockHashLoadString(t *testing.T) {
 	foee(rand.Read(hash))
 	unlockType := byte(42) // UnlockType == (1) byte
 	chksmHash := crypto.HashBytes(append([]byte{unlockType}, hash...))
-	buf := bytes.NewBuffer(nil)
-	hexEncoder := hex.NewEncoder(buf)
-	foee(hexEncoder.Write([]byte{unlockType}))
-	foee(hexEncoder.Write(hash))
-	// 6 == types.UnlockHashChecksumSize
-	foee(hexEncoder.Write(chksmHash[:6]))
 
 	// our self-generated unlock hash
-	unlockHashStr := string(buf.Bytes())
+	// 6 == types.UnlockHashChecksumSize
+	unlockHashStr := fmt.Sprintf("%02x%x%x", unlockType, hash, chksmHash[:6])
 
 	// check if we can load string using our unlock hash code,
 	// should be, unless we have a breaking change
