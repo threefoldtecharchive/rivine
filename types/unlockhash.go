@@ -91,6 +91,21 @@ func (uh *UnlockHash) UnmarshalSia(r io.Reader) error {
 	return encoding.NewDecoder(r).DecodeAll(&uh.Type, &uh.Hash)
 }
 
+// Cmp compares returns an integer comparing two unlock hashes lexicographically.
+// The result will be 0 if a==b, -1 if a < b, and +1 if a > b.
+// A nil argument is equivalent to an empty slice.
+func (uh UnlockHash) Cmp(other UnlockHash) int {
+	if uh.Type < other.Type {
+		return -1
+	}
+	if uh.Type > other.Type {
+		return 1
+	}
+	return bytes.Compare(uh.Hash[:], other.Hash[:])
+}
+
+// TODO: unit test (UnlockHash).Cmp
+
 var (
 	_ encoding.SiaMarshaler   = UnlockType(0)
 	_ encoding.SiaMarshaler   = UnlockHash{}
@@ -122,6 +137,10 @@ func (uh *UnlockHash) UnmarshalJSON(b []byte) error {
 // String returns the hex representation of the unlock hash as a string - this
 // includes a checksum.
 func (uh UnlockHash) String() string {
+	if uh.Type == 0 {
+		return "" // nil unlock hash
+	}
+
 	uhChecksum := crypto.HashAll(uh.Type, uh.Hash)
 	return fmt.Sprintf("%02x%x%x",
 		uh.Type, uh.Hash[:], uhChecksum[:UnlockHashChecksumSize])

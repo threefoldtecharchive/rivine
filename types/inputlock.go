@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -531,6 +532,12 @@ func (ss *SingleSignatureInputLock) StrictCheck() error {
 	return strictSignatureCheck(ss.PublicKey, ss.Signature)
 }
 
+// NewAtomicSwapHashedSecret creates a new atomic swap hashed secret,
+// using a pre-generated atomic swap secret.
+func NewAtomicSwapHashedSecret(secret AtomicSwapSecret) AtomicSwapHashedSecret {
+	return AtomicSwapHashedSecret(sha256.Sum256(secret[:]))
+}
+
 // String turns this hashed secret into a hex-formatted string.
 func (hs AtomicSwapHashedSecret) String() string {
 	return hex.EncodeToString(hs[:])
@@ -566,6 +573,13 @@ var (
 	_ json.Marshaler   = AtomicSwapHashedSecret{}
 	_ json.Unmarshaler = (*AtomicSwapHashedSecret)(nil)
 )
+
+// NewAtomicSwapSecret creates a new cryptographically secure
+// atomic swap secret
+func NewAtomicSwapSecret() (ass AtomicSwapSecret, err error) {
+	_, err = rand.Read(ass[:])
+	return
+}
 
 // String turns this secret into a hex-formatted string.
 func (s AtomicSwapSecret) String() string {
@@ -631,7 +645,7 @@ func (as *AtomicSwapInputLock) Lock(inputIndex uint64, tx Transaction, key inter
 
 		as.Secret = v.Secret
 		as.PublicKey = v.PublicKey
-		hashedSecret := sha256.Sum256(as.Secret[:])
+		hashedSecret := NewAtomicSwapHashedSecret(as.Secret)
 		if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
 			return ErrInvalidPreImageSha256
 		}
@@ -676,7 +690,7 @@ func (as *AtomicSwapInputLock) Unlock(inputIndex uint64, tx Transaction) error {
 
 		// in order for the receiver to spend,
 		// the secret has to be known
-		hashedSecret := sha256.Sum256(as.Secret[:])
+		hashedSecret := NewAtomicSwapHashedSecret(as.Secret)
 		if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
 			return ErrInvalidPreImageSha256
 		}

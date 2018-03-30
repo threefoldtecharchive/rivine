@@ -70,7 +70,7 @@ type (
 	// WalletTransactionPOSTResponse contains the ID of the transaction
 	// that was created as a result of a POST call to /wallet/transaction.
 	WalletTransactionPOSTResponse struct {
-		TransactionID types.TransactionID `json:"transactionid"`
+		Transaction types.Transaction `json:"transaction"`
 	}
 
 	// WalletCoinsPOST contains the transaction sent in the POST call to
@@ -354,7 +354,7 @@ func (api *API) walletTransactionCreateHandler(w http.ResponseWriter, req *http.
 		return
 	}
 	WriteJSON(w, WalletTransactionPOSTResponse{
-		TransactionID: tx.ID(),
+		Transaction: tx,
 	})
 }
 
