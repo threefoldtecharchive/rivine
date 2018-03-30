@@ -214,10 +214,10 @@ OutputID: 2030dadef0203020102030452030dadef020302010203042030dadef0203020d
 
 Now that Bob has withdrawn from the rivine contract and revealed the secret. If bob is really nice he could simply give the secret to Alice. However,even if he doesn't do this Alice can extract the secret from this redemption transaction. Alice may watch a block explorer to see when the rivine contract output was spent and look up the redeeming transaction.
 
-Alice can automatically extract the secret from the input where it is used by Bob, by simply giving the outputID of the contract:
+Alice can automatically extract the secret from the input where it is used by Bob, by simply giving the outputID of the contract. Either you do this using a public web-based explorer, by looking up the outputID as hash. Or you let our command line client do it automatically for you:
 
 ```
-$ rivinec --addr https://185.69.166.13 extractsecret abcdef01234567890abcdef01234567890abcdef01234567890abcdef0123452
+$ rivinec --addr explorer.testnet.threefoldtoken.com extractsecret abcdef01234567890abcdef01234567890abcdef01234567890abcdef0123452
 
 Atomic Swap Contract Unlocked (spend)!
 

@@ -232,7 +232,6 @@ func atomicswapinitiatecmd(dest, amount string) {
 	fmt.Println("OutputID:", response.Transaction.CoinOutputID(uint64(coinOutputIndex)))
 }
 
-// audit outputid|unlockhash dest src timelock hashedsecret [amount]
 func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 	argn := len(args)
 	if argn < 5 || argn > 6 {
@@ -340,9 +339,18 @@ func atomicswapauditcmdComplete(outputID types.OutputID, condition types.AtomicS
 	case 2:
 		// when we receive 2 transactions,
 		// we'll assume that output (atomic swap contract) has been spend already
+		// try to find the transactionID, so we can tell which one it was spend
+		switch resp.HashType {
+		case api.HashTypeCoinOutputIDStr:
+			auditAtomicSwapFindSpendCoinTransactionID(types.CoinOutputID(outputID), resp.Transactions)
+		case api.HashTypeBlockStakeOutputIDStr:
+			auditAtomicSwapFindSpendBlockStakeTransactionID(types.BlockStakeOutputID(outputID), resp.Transactions)
+		default:
+			Die("Requested output was found, but already spend, and received unexpected hash type for given output ID:", resp.HashType)
+		}
 
 	default:
-		Die("Unexpected amount of returned transactions for given outputID:", tln)
+		Die("Unexpected amount (BUG?!) of returned transactions for given outputID:", tln)
 	}
 }
 func auditAtomicSwapCoinOutput(txn api.ExplorerTransaction, expectedCoinOutputID types.CoinOutputID, expectedUH types.UnlockHash, expectedHastings types.Currency) {
@@ -408,6 +416,26 @@ func auditAtomicSwapBlockStakeOutput(txn api.ExplorerTransaction, expectedBlockS
 			expectedBlockStakes.String(),
 			blockStakeOutput.Value.String()))
 	}
+}
+func auditAtomicSwapFindSpendCoinTransactionID(coinOutputID types.CoinOutputID, txns []api.ExplorerTransaction) {
+	for _, txn := range txns {
+		for _, ci := range txn.RawTransaction.CoinInputs {
+			if bytes.Compare(coinOutputID[:], ci.ParentID[:]) == 0 {
+				Die("Atomic swap contract was already spend as a coin input! This as part of transaction:", txn.ID.String())
+			}
+		}
+	}
+	Die("Atomic swap contract was already spend as a coin input! This as part of an unknown transaction (BUG!?)")
+}
+func auditAtomicSwapFindSpendBlockStakeTransactionID(blockStakeOutputID types.BlockStakeOutputID, txns []api.ExplorerTransaction) {
+	for _, txn := range txns {
+		for _, bsi := range txn.RawTransaction.BlockStakeInputs {
+			if bytes.Compare(blockStakeOutputID[:], bsi.ParentID[:]) == 0 {
+				Die("Atomic swap contract was already spend as a block stake input! This as part of transaction:", txn.ID.String())
+			}
+		}
+	}
+	Die("Atomic swap contract was already spend as a block stake input! This as part of an unknown transaction (BUG!?)")
 }
 
 func printContractInfo(hastings types.Currency, condition types.AtomicSwapCondition, secret types.AtomicSwapSecret) {
