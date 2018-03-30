@@ -118,6 +118,9 @@ func atomicswapparticipatecmd(dest, amount, hashedSecret string) {
 		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
 		Die("Could not parse amount:", err)
 	}
+	if hastings.Cmp(_MinimumTransactionFee) != 1 {
+		Die("Cannot create atomic swap contract! Contracts which lock a value less than or equal to miner fees are currently not supported!")
+	}
 
 	err = condition.Receiver.LoadString(dest)
 	if err != nil {
@@ -198,6 +201,9 @@ func atomicswapinitiatecmd(dest, amount string) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
 		Die("Could not parse amount:", err)
+	}
+	if hastings.Cmp(_MinimumTransactionFee) != 1 {
+		Die("Cannot create atomic swap contract! Contracts which lock a value less than or equal to miner fees are currently not supported!")
 	}
 
 	err = condition.Receiver.LoadString(dest)
@@ -617,9 +623,16 @@ func atomicswapclaimcmd(cmd *cobra.Command, args []string) {
 		Die("Unexpected wallet public key returned:", sk)
 	}
 
+	if hastings.Cmp(_MinimumTransactionFee) != 1 {
+		Die("Cannot claim atomic swap contract! Contracts which lock a value less than or equal to miner fees are currently not supported!")
+	}
+
 	// step 3: confirm contract details with user, before continuing
 	// print contract for review
-	printContractInfo(hastings, condition, secret)
+	if !atomicSwapClaimcfg.audit {
+		// only print again, if not printed already
+		printContractInfo(hastings, condition, secret)
+	}
 	fmt.Println("")
 	// ensure user wants to continue with claiming the contract!
 	if !askYesNoQuestion("Publish atomic swap claim transaction?") {
@@ -649,8 +662,11 @@ func atomicswapclaimcmd(cmd *cobra.Command, args []string) {
 		SecretKey: sk,     // out matching secret key
 		Secret:    secret, // secret, matching output's defined hashed secret
 	})
+	if err != nil {
+		Die("Cannot claim atomic swap's locked coins! Couldn't sign transaction:", err)
+	}
 	if uh.Cmp(condition.Receiver) != 0 {
-		Die("Cannot claim atomic swap's locked coins! Couldn't sign transaction:", sk)
+		Die("Cannot claim atomic swap's locked coins! Wrong wallet key-pair received:", uh)
 	}
 
 	// step 6: submit transaction to transaction pool and celebrate if possible
@@ -694,21 +710,27 @@ func atomicswaprefundcmd(cmd *cobra.Command, args []string) {
 	inputLock := types.NewAtomicSwapInputLock(condition)
 
 	// optional step: audit contract
-	if atomicSwapClaimcfg.audit {
+	if atomicSwapRefundcfg.audit {
 		atomicswapauditcmdComplete(types.OutputID(outputID), condition, hastings)
 	}
 
 	// step 2: get correct spendable key from wallet
-	pk, sk := getSpendableKey(condition.Receiver)
+	pk, sk := getSpendableKey(condition.Sender)
 	// quickly validate if returned sk matches the known unlock hash (sanity check)
 	uh := types.NewSingleSignatureInputLock(pk).UnlockHash()
-	if uh.Cmp(condition.Receiver) != 0 {
+	if uh.Cmp(condition.Sender) != 0 {
 		Die("Unexpected wallet public key returned:", sk)
+	}
+	if hastings.Cmp(_MinimumTransactionFee) == -1 {
+		Die("Cannot refund atomic swap contract! Contracts which lock a value less than or equal to miner fees are currently not supported!")
 	}
 
 	// step 3: confirm contract details with user, before continuing
 	// print contract for review
-	printContractInfo(hastings, condition, secret)
+	if !atomicSwapRefundcfg.audit {
+		// only print again, if not printed already
+		printContractInfo(hastings, condition, secret)
+	}
 	fmt.Println("")
 	// ensure user wants to continue with refunding the contract!
 	if !askYesNoQuestion("Publish atomic swap refund transaction?") {
@@ -733,13 +755,16 @@ func atomicswaprefundcmd(cmd *cobra.Command, args []string) {
 	}
 
 	// step 5: sign transaction's only input
-	err = txn.CoinInputs[0].Unlocker.Lock(0, txn, types.AtomicSwapClaimKey{
+	err = txn.CoinInputs[0].Unlocker.Lock(0, txn, types.AtomicSwapRefundKey{
 		PublicKey: pk, // our matching public key
 		SecretKey: sk, // out matching secret key
 		// not secret is given or needed, as it's a refund
 	})
-	if uh.Cmp(condition.Receiver) != 0 {
-		Die("Cannot refund atomic swap's locked coins! Couldn't sign transaction:", sk)
+	if err != nil {
+		Die("Cannot refund atomic swap's locked coins! Couldn't sign transaction:", err)
+	}
+	if uh.Cmp(condition.Sender) != 0 {
+		Die("Cannot refund atomic swap's locked coins! Wrong wallet key-pair received:", uh)
 	}
 
 	// step 6: submit transaction to transaction pool and celebrate if possible
@@ -778,7 +803,7 @@ func getAtomicSwapRedeemConditionAndAmountFromPosArgs(args []string) (condition 
 		Die("failed to parse hashedsecret-argument:", err)
 	}
 
-	hastings, err = _CurrencyConvertor.ParseCoinString(args[5])
+	hastings, err = _CurrencyConvertor.ParseCoinString(args[4])
 	if err != nil {
 		Die("failed to parse amount-argument as coins:", err)
 	}
