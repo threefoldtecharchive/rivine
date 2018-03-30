@@ -152,6 +152,7 @@ func DefaultCLIClient(cfg Config) {
 		atomicSwapParticipateCmd,
 		atomicSwapInitiateCmd,
 		atomicSwapAuditCmd,
+		atomicSwapExtractSecretCmd,
 	)
 
 	walletSendCmd.AddCommand(

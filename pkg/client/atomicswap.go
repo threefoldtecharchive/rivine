@@ -55,6 +55,20 @@ On top of that will ensure to check that the contract hasn't been spend yet.
 `,
 		Run: atomicswapauditcmd,
 	}
+
+	atomicSwapExtractSecretCmd = &cobra.Command{
+		Use:   "extractsecret outputid [hashedsecret]",
+		Short: "Extract the secret from a claimed swap contract.",
+		Long: `Extract the secret from a claimed atomic swap contract,
+by looking up the outputID, ensuring it is spend (as otherwise it cannot be claimed),
+and retrieving the secret that was given part of a claim.
+
+If it was spend as a refund, than no secret can be extracted.
+
+Optionally the expected hashedsecret can be given, as to ensure that the
+hashed secret is as expected, and also matches the found/extracted secret.`,
+		Run: atomicswapextractsecretcmd,
+	}
 )
 
 var (
@@ -308,7 +322,7 @@ func atomicswapauditcmdFast(expectedUH types.UnlockHash, condition types.AtomicS
 // and, last but not least, it ensures that this found output hasn't been spend yet
 // (but seriously, why would it?)
 func atomicswapauditcmdComplete(outputID types.OutputID, condition types.AtomicSwapCondition, amount types.Currency) {
-	// get outputID info from explorer
+	// get output info from explorer
 	resp := new(api.ExplorerHashGET)
 	err := _DefaultClient.httpClient.GetAPI("/explorer/hashes/"+outputID.String(), resp)
 	if err != nil {
@@ -436,6 +450,108 @@ func auditAtomicSwapFindSpendBlockStakeTransactionID(blockStakeOutputID types.Bl
 		}
 	}
 	Die("Atomic swap contract was already spend as a block stake input! This as part of an unknown transaction (BUG!?)")
+}
+
+// extractsecret outputid [hashedsecret]
+func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
+	argn := len(args)
+	if argn < 1 || argn > 2 {
+		cmd.UsageFunc()(cmd)
+		os.Exit(exitCodeUsage)
+	}
+
+	var (
+		outputID             types.OutputID
+		expectedHashedSecret types.AtomicSwapHashedSecret
+	)
+	err := outputID.LoadString(args[0])
+	if err != nil {
+		Die("Couldn't parse first argment as an output ID:", err)
+	}
+	if argn == 2 {
+		err := expectedHashedSecret.LoadString(args[1])
+		if err != nil {
+			Die("Couldn't parse second argment as a hashed secret:", err)
+		}
+	}
+
+	// get output info from explorer
+	resp := new(api.ExplorerHashGET)
+	err = _DefaultClient.httpClient.GetAPI("/explorer/hashes/"+outputID.String(), resp)
+	if err != nil {
+		Die("Could not get blockStake/coin output from explorer:", err)
+	}
+
+	switch tln := len(resp.Transactions); tln {
+	case 1:
+		Die("Cannot extract secret! Atomic swap contract has not yet been claimed!")
+
+	case 2:
+		// when we receive 2 transactions,
+		// we'll assume that output (atomic swap contract) has been spend already
+		// try to get the secret, which is possible if it was clamed
+		var (
+			secret       types.AtomicSwapSecret
+			hashedSecret types.AtomicSwapHashedSecret
+		)
+		switch resp.HashType {
+		case api.HashTypeCoinOutputIDStr:
+			secret, hashedSecret = auditAtomicSwapFindSpendCoinSecret(types.CoinOutputID(outputID), resp.Transactions)
+		case api.HashTypeBlockStakeOutputIDStr:
+			secret, hashedSecret = auditAtomicSwapFindSpendBlockStakeSecret(types.BlockStakeOutputID(outputID), resp.Transactions)
+		default:
+			Die("Cannot extract secret! Requested output was found and already spend, but received unexpected hash type for given output ID:", resp.HashType)
+		}
+		if secret == (types.AtomicSwapSecret{}) {
+			Die("Atomic swap contract was spend as a refund, not a claim! No secret can be extracted!")
+		}
+		computedHashedSecret := types.NewAtomicSwapHashedSecret(secret)
+		if bytes.Compare(hashedSecret[:], computedHashedSecret[:]) != 0 {
+			Die("Invalid contract! Atomic swap contract was spend as a claim, but secret and hashed secret do not match!")
+		}
+		if expectedHashedSecret != (types.AtomicSwapHashedSecret{}) {
+			if bytes.Compare(expectedHashedSecret[:], hashedSecret[:]) != 0 {
+				Die(fmt.Sprintf("Unexpected contract! Atomic swap contract was spend as a claim, but its hashed secret (%s) does not match your hash secret (%s)!",
+					hashedSecret.String(), expectedHashedSecret.String()))
+			}
+		}
+
+		fmt.Println("Atomic swap contract was claimed by recipient! Success! :)")
+		fmt.Println("Extracted secret:", secret.String())
+
+	default:
+		Die("Cannot extract secret! Unexpected amount (BUG?!) of returned transactions for given outputID:", tln)
+	}
+}
+func auditAtomicSwapFindSpendCoinSecret(coinOutputID types.CoinOutputID, txns []api.ExplorerTransaction) (types.AtomicSwapSecret, types.AtomicSwapHashedSecret) {
+	for _, txn := range txns {
+		for _, ci := range txn.RawTransaction.CoinInputs {
+			if bytes.Compare(coinOutputID[:], ci.ParentID[:]) == 0 {
+				il, ok := ci.Unlocker.AtomicSwapInputLock()
+				if !ok {
+					Die("Given output was spend as a coin input, but input lock was not of type atomic swap!")
+				}
+				return il.Secret, il.HashedSecret
+			}
+		}
+	}
+	Die("Output was spend as a coin input, but couldn't find the transaction! (BUG?!")
+	return types.AtomicSwapSecret{}, types.AtomicSwapHashedSecret{}
+}
+func auditAtomicSwapFindSpendBlockStakeSecret(blockStakeOutputID types.BlockStakeOutputID, txns []api.ExplorerTransaction) (types.AtomicSwapSecret, types.AtomicSwapHashedSecret) {
+	for _, txn := range txns {
+		for _, bsi := range txn.RawTransaction.BlockStakeInputs {
+			if bytes.Compare(blockStakeOutputID[:], bsi.ParentID[:]) == 0 {
+				il, ok := bsi.Unlocker.AtomicSwapInputLock()
+				if !ok {
+					Die("Given output was spend as a block stake input, but input lock was not of type atomic swap!")
+				}
+				return il.Secret, il.HashedSecret
+			}
+		}
+	}
+	Die("Output was spend as a block stake input, but couldn't find the transaction! (BUG?!")
+	return types.AtomicSwapSecret{}, types.AtomicSwapHashedSecret{}
 }
 
 func printContractInfo(hastings types.Currency, condition types.AtomicSwapCondition, secret types.AtomicSwapSecret) {

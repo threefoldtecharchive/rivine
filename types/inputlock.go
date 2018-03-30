@@ -211,6 +211,15 @@ func NewInputLockProxy(t UnlockType, il InputLock) InputLockProxy {
 	}
 }
 
+// AtomicSwapInputLock casts this input lock proxy into a AtomicSwapInputLock if possible.
+func (p InputLockProxy) AtomicSwapInputLock() (*AtomicSwapInputLock, bool) {
+	if p.t != UnlockTypeAtomicSwap {
+		return nil, false
+	}
+	il, ok := p.il.(*AtomicSwapInputLock)
+	return il, ok
+}
+
 // MarshalSia implements SiaMarshaler.MarshalSia
 func (p InputLockProxy) MarshalSia(w io.Writer) error {
 	encoder := encoding.NewEncoder(w)
