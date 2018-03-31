@@ -41,10 +41,10 @@ func (rh stdBlockRuleHelper) minimumValidChildTimestamp(blockMap dbBucket, pb *p
 		// parent does not need to be decoded entirely to get the desired
 		// information. This provides a performance boost. The id of the next
 		// parent lies at the first 32 bytes, and the timestamp of the block
-		// lies at bytes 40-48.
+		// lies at bytes 32-40.
 		parentBytes := blockMap.Get(parent[:])
 		copy(parent[:], parentBytes[:32])
-		windowTimes[i] = types.Timestamp(encoding.DecUint64(parentBytes[40:48]))
+		windowTimes[i] = types.Timestamp(encoding.DecUint64(parentBytes[32:40]))
 	}
 	sort.Sort(windowTimes)
 
