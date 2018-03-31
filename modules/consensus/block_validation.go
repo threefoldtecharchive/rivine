@@ -47,9 +47,9 @@ func newBlockValidator(consensusSet *ConsensusSet) stdBlockValidator {
 }
 
 // checkTarget returns true if the block's ID meets the given target.
-func checkTarget(b types.Block, target types.Target, value types.Currency, cs *ConsensusSet) bool {
+func checkTarget(b types.Block, target types.Target, value types.Currency, height types.BlockHeight, cs *ConsensusSet) bool {
 
-	stakemodifier := cs.CalculateStakeModifier(cs.Height() + 1)
+	stakemodifier := cs.CalculateStakeModifier(height)
 
 	// Calculate the hash for the given unspent output and timestamp
 
@@ -97,7 +97,7 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	}
 
 	// Check that the target of the new block is sufficient.
-	if !checkTarget(b, target, valueofblockstakeoutput, bv.cs) {
+	if !checkTarget(b, target, valueofblockstakeoutput, height, bv.cs) {
 		return modules.ErrBlockUnsolved
 	}
 
