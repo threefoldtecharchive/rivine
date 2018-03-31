@@ -1,7 +1,6 @@
 package types
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/rivine/rivine/crypto"
@@ -111,18 +110,17 @@ func TestHeaderID(t *testing.T) {
 	}
 }
 
-// TestBlockCalculateSubsidy probes the CalculateSubsidy function of the block
+// TestBlockCalculateTotalMinerFees probes the CalculateTotalMinerFees function of the block
 // type.
-func TestBlockCalculateSubsidy(t *testing.T) {
-	blockCreationFee := NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)).Mul64(1)
+func TestBlockCalculateTotalMinerFees(t *testing.T) {
 	// All tests are done at height = 0.
-	coinbase := blockCreationFee
+	var coinbase Currency
 
-	// Calculate the subsidy on a block with 0 fees at height 0. Result should
+	// Calculate the total miner fees on a block with 0 fees at height 0. Result should
 	// be 300,000.
 	var b Block
-	if b.CalculateSubsidy(blockCreationFee).Cmp(coinbase) != 0 {
-		t.Error("subsidy is miscalculated for an empty block")
+	if b.CalculateTotalMinerFees().Cmp(coinbase) != 0 {
+		t.Error("total miner fees is miscalculated for an empty block")
 	}
 
 	// Calculate when there is a fee in a transcation.
@@ -131,8 +129,8 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		MinerFees: []Currency{NewCurrency64(123)},
 	}
 	b.Transactions = append(b.Transactions, txn)
-	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
-		t.Error("subsidy is miscalculated for a block with a single transaction")
+	if b.CalculateTotalMinerFees().Cmp(expected) != 0 {
+		t.Error("total miner fees is miscalculated for a block with a single transaction")
 	}
 
 	// Add a single no-fee transaction and check again.
@@ -140,8 +138,8 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		ArbitraryData: []byte{'6'},
 	}
 	b.Transactions = append(b.Transactions, txn)
-	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
-		t.Error("subsidy is miscalculated with empty transactions.")
+	if b.CalculateTotalMinerFees().Cmp(expected) != 0 {
+		t.Error("total miner fees is miscalculated with empty transactions.")
 	}
 
 	// Add a transaction with multiple fees.
@@ -154,8 +152,8 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		},
 	}
 	b.Transactions = append(b.Transactions, txn)
-	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
-		t.Error("subsidy is miscalculated for a block with a single transaction")
+	if b.CalculateTotalMinerFees().Cmp(expected) != 0 {
+		t.Error("total miner fees is miscalculated for a block with a single transaction")
 	}
 
 	// Add an empty transaction to the beginning.
@@ -163,8 +161,8 @@ func TestBlockCalculateSubsidy(t *testing.T) {
 		ArbitraryData: []byte{'7'},
 	}
 	b.Transactions = append([]Transaction{txn}, b.Transactions...)
-	if b.CalculateSubsidy(blockCreationFee).Cmp(expected) != 0 {
-		t.Error("subsidy is miscalculated with empty transactions.")
+	if b.CalculateTotalMinerFees().Cmp(expected) != 0 {
+		t.Error("total miner fees is miscalculated with empty transactions.")
 	}
 }
 

@@ -99,10 +99,19 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 				txns := make([]types.Transaction, len(bc.unsolvedBlock.Transactions))
 				copy(txns, bc.unsolvedBlock.Transactions)
 				blockToSubmit.Transactions = txns
-				// Collect the transaction fees
-				collectedMinerFees := blockToSubmit.CalculateSubsidy(bc.chainCts.BlockCreatorFee)
-				if collectedMinerFees.Cmp(types.ZeroCurrency) != 0 {
-					blockToSubmit.MinerPayouts = []types.CoinOutput{{Value: collectedMinerFees, UnlockHash: ubso.UnlockHash}}
+				// Collect the block creation fee
+				if !bc.chainCts.BlockCreatorFee.IsZero() {
+					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.CoinOutput{
+						Value: bc.chainCts.BlockCreatorFee, UnlockHash: ubso.UnlockHash})
+				}
+				collectedMinerFees := blockToSubmit.CalculateTotalMinerFees()
+				if !collectedMinerFees.IsZero() {
+					beneficiary := bc.chainCts.TransactionFeeBeneficiary
+					if beneficiary.Cmp(types.UnlockHash{}) == 0 {
+						beneficiary = ubso.UnlockHash
+					}
+					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.CoinOutput{
+						Value: collectedMinerFees, UnlockHash: beneficiary})
 				}
 
 				return &blockToSubmit

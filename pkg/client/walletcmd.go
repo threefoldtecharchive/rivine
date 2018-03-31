@@ -189,7 +189,7 @@ func walletaddressescmd() {
 func walletinitcmd() {
 	var er api.WalletInitPOST
 
-	fmt.Println("You should provide a passphrase, it may be empty if you wish.")
+	fmt.Println("You have to provide a passphrase!")
 
 	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 	if err != nil {
@@ -273,11 +273,11 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 
 	for i, co := range body.CoinOutputs {
 		idx := i * 2
-		err := co.UnlockHash.LoadString(args[idx+1])
+		err := co.UnlockHash.LoadString(args[idx])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for coin output #%d: %v", idx, err))
 		}
-		co.Value, err = _CurrencyConvertor.ParseCoinString(args[idx])
+		co.Value, err = _CurrencyConvertor.ParseCoinString(args[idx+1])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse coin amount/value for coin output #%d: %v", idx, err))
 		}
@@ -309,11 +309,11 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 
 	for i, bo := range body.BlockStakeOutputs {
 		idx := i * 2
-		err := bo.UnlockHash.LoadString(args[idx+1])
+		err := bo.UnlockHash.LoadString(args[idx])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for blockstake output #%d: %v", idx, err))
 		}
-		_, err = fmt.Sscan(args[idx], &bo.Value)
+		_, err = fmt.Sscan(args[idx+1], &bo.Value)
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse block stake amount/value for blockstake output #%d: %v", idx, err))
 		}

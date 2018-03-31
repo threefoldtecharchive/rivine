@@ -46,9 +46,10 @@ type (
 		ExtremeFutureThreshold types.Timestamp   `json:"extremefuturethreshold"`
 		BlockStakeCount        types.Currency    `json:"blockstakecount"`
 
-		BlockStakeAging       uint64         `json:"blockstakeaging"`
-		BlockCreatorFee       types.Currency `json:"blockcreatorfee"`
-		MinimumTransactionFee types.Currency `json:"minimumtransactionfee"`
+		BlockStakeAging           uint64           `json:"blockstakeaging"`
+		BlockCreatorFee           types.Currency   `json:"blockcreatorfee"`
+		MinimumTransactionFee     types.Currency   `json:"minimumtransactionfee"`
+		TransactionFeeBeneficiary types.UnlockHash `json:"transactionfeebeneficiary"`
 
 		MaturityDelay         types.BlockHeight `json:"maturitydelay"`
 		MedianTimestampWindow uint64            `json:"mediantimestampwindow"`
@@ -258,9 +259,10 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 		ExtremeFutureThreshold: srv.chainCts.ExtremeFutureThreshold,
 		BlockStakeCount:        srv.chainCts.GenesisBlockStakeCount(),
 
-		BlockStakeAging:       srv.chainCts.BlockStakeAging,
-		BlockCreatorFee:       srv.chainCts.BlockCreatorFee,
-		MinimumTransactionFee: srv.chainCts.MinimumTransactionFee,
+		BlockStakeAging:           srv.chainCts.BlockStakeAging,
+		BlockCreatorFee:           srv.chainCts.BlockCreatorFee,
+		MinimumTransactionFee:     srv.chainCts.MinimumTransactionFee,
+		TransactionFeeBeneficiary: srv.chainCts.TransactionFeeBeneficiary,
 
 		MaturityDelay:         srv.chainCts.MaturityDelay,
 		MedianTimestampWindow: srv.chainCts.MedianTimestampWindow,

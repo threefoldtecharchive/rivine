@@ -66,6 +66,10 @@ type ChainConstants struct {
 	// in order to get your transaction to be accepted by block creators.
 	MinimumTransactionFee Currency
 
+	// TransactionFeeBeneficiary allows you to define a static unlock hash which collects all transaction fees,
+	// by default it is undefined, meaning the transaction fee will go to the creator of the relevant block.
+	TransactionFeeBeneficiary UnlockHash
+
 	// GenesisTimestamp is the unix timestamp of the genesis block
 	GenesisTimestamp Timestamp
 	// GenesisBlockStakeAllocation are the blockstake outputs of the genesis block
