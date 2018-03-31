@@ -154,15 +154,16 @@ func (bv stdBlockValidator) checkMinerPayouts(b types.Block) bool {
 		sumBC = sumBC.Add(payout.Value) // payout is for bc
 	}
 	// ensure tx fee beneficiary has no payouts, should it not be given
+	totalMinerFees := b.CalculateTotalMinerFees()
 	if bv.cs.chainCts.TransactionFeeBeneficiary.Cmp(types.UnlockHash{}) == 0 {
 		if !sumTFP.IsZero() {
 			return false // no beneficiary is given, so it should have no payouts
 		}
-	}
-	// esure tx fee beneficiary has all miner fees as payouts
-	totalMinerFees := b.CalculateTotalMinerFees()
-	if !totalMinerFees.Equals(sumTFP) {
-		return false
+	} else {
+		// esure tx fee beneficiary has all miner fees as payouts
+		if !totalMinerFees.Equals(sumTFP) {
+			return false
+		}
 	}
 	// ensure total sum is correct
 	return totalMinerFees.Add(bv.cs.chainCts.BlockCreatorFee).Equals(sumBC.Add(sumTFP))
