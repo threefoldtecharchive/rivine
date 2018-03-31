@@ -44,8 +44,8 @@ release-images: get_hub_jwt xc
 	docker build -t rivine/rivine:$(versionTag) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64/cmd .
 	docker push rivine/rivine:$(versionTag)
 	# also create a latest tag
-	docker tag tfchain/tfchain:$(versionTag) tfchain/tfchain
-	docker push tfchain/tfchain:latest
+	docker tag rivine/rivine:$(versionTag) rivine/rivine
+	docker push rivine/rivine:latest
 	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(versionTag)" "https://hub.gig.tech/api/flist/me/docker"
 
 test:
