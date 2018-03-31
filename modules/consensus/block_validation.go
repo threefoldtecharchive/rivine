@@ -141,13 +141,29 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 // checkMinerPayouts checks a block creator payouts to the block's subsidy and
 // returns true if they are equal.
 func (bv stdBlockValidator) checkMinerPayouts(b types.Block) bool {
+	var sumBC, sumTFP types.Currency
 	// Add up the payouts and check that all values are legal.
-	var payoutSum types.Currency
 	for _, payout := range b.MinerPayouts {
 		if payout.Value.IsZero() {
 			return false
 		}
-		payoutSum = payoutSum.Add(payout.Value)
+		if payout.UnlockHash.Cmp(bv.cs.chainCts.TransactionFeeBeneficiary) == 0 {
+			sumTFP = sumTFP.Add(payout.Value) // payout is for tx fee beneficiary
+			continue
+		}
+		sumBC = sumBC.Add(payout.Value) // payout is for bc
 	}
-	return b.CalculateSubsidy(bv.cs.chainCts.BlockCreatorFee).Equals(payoutSum)
+	// ensure tx fee beneficiary has no payouts, should it not be given
+	if bv.cs.chainCts.TransactionFeeBeneficiary.Cmp(types.UnlockHash{}) == 0 {
+		if !sumTFP.IsZero() {
+			return false // no beneficiary is given, so it should have no payouts
+		}
+	}
+	// esure tx fee beneficiary has all miner fees as payouts
+	totalMinerFees := b.CalculateTotalMinerFees()
+	if !totalMinerFees.Equals(sumTFP) {
+		return false
+	}
+	// ensure total sum is correct
+	return totalMinerFees.Add(bv.cs.chainCts.BlockCreatorFee).Equals(sumBC.Add(sumTFP))
 }

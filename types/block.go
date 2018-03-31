@@ -63,16 +63,15 @@ func (b Block) Header() BlockHeader {
 	}
 }
 
-// CalculateSubsidy determines the block subsidy as the sum of the minerfees and the block creator fee.
-func (b Block) CalculateSubsidy(blockCreationFee Currency) Currency {
-	subsidy := NewCurrency64(0)
+// CalculateTotalMinerFees determines the sum of the minerfees
+func (b Block) CalculateTotalMinerFees() Currency {
+	sum := NewCurrency64(0)
 	for _, txn := range b.Transactions {
 		for _, fee := range txn.MinerFees {
-			subsidy = subsidy.Add(fee)
+			sum = sum.Add(fee)
 		}
 	}
-	subsidy = subsidy.Add(blockCreationFee)
-	return subsidy
+	return sum
 }
 
 // ID returns the ID of a Block, which is calculated by hashing the

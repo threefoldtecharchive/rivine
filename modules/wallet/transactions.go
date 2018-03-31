@@ -128,7 +128,11 @@ func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.
 
 		if relevant {
 			BCcountLast1000++
-			BCfeeLast1000 = BCfeeLast1000.Add(block.CalculateSubsidy(w.chainCts.BlockCreatorFee))
+			BCfeeLast1000 = BCfeeLast1000.Add(w.chainCts.BlockCreatorFee)
+			if w.chainCts.TransactionFeeBeneficiary.Cmp(types.UnlockHash{}) == 0 {
+				// only when tx fee beneficiary is not defined is the miner fees for the block creator
+				BCfeeLast1000 = BCfeeLast1000.Add(block.CalculateTotalMinerFees())
+			}
 		}
 		if BlockHeightCounter == 0 {
 			BlockCount++
