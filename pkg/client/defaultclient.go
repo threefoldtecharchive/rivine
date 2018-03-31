@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"net"
 	"os"
 	"reflect"
 	"strings"
@@ -33,7 +32,7 @@ type Config struct {
 func DefaultConfig() Config {
 	chainConstants := types.DefaultChainConstants()
 	return Config{
-		Address:               "localhost:23110",
+		Address:               "http://localhost:23110",
 		Name:                  "Rivine",
 		Version:               build.Version,
 		CurrencyCoinUnit:      "ROC",
@@ -117,9 +116,11 @@ func DefaultCLIClient(cfg Config) {
 		Long:  fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
 		Run:   Wrap(consensuscmd),
 		PersistentPreRun: func(*cobra.Command, []string) {
-			if host, port, _ := net.SplitHostPort(_DefaultClient.httpClient.RootURL); host == "" {
-				_DefaultClient.httpClient.RootURL = net.JoinHostPort("localhost", port)
+			url, err := sanitizeURL(_DefaultClient.httpClient.RootURL)
+			if err != nil {
+				Die("invalid", strings.Title(_DefaultClient.name), "daemon RPC address", _DefaultClient.httpClient.RootURL, ":", err)
 			}
+			_DefaultClient.httpClient.RootURL = url
 		},
 	}
 

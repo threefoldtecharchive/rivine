@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/bgentry/speakeasy"
 	"github.com/rivine/rivine/api"
@@ -99,7 +101,7 @@ func (c *HTTPClient) Get(call string) error {
 // not return 2xx, the error will be read and returned. When no error is returned,
 // the response's body isn't closed, otherwise it is.
 func (c *HTTPClient) apiGet(call string) (*http.Response, error) {
-	resp, err := api.HttpGET("http://" + c.RootURL + call)
+	resp, err := api.HttpGET(c.RootURL + call)
 	if err != nil {
 		return nil, errors.New("no response from daemon")
 	}
@@ -111,7 +113,7 @@ func (c *HTTPClient) apiGet(call string) (*http.Response, error) {
 		if err != nil {
 			return nil, err
 		}
-		resp, err = api.HttpGETAuthenticated("http://"+c.RootURL+call, password)
+		resp, err = api.HttpGETAuthenticated(c.RootURL+call, password)
 		if err != nil {
 			return nil, errors.New("no response from daemon - authentication failed")
 		}
@@ -132,7 +134,7 @@ func (c *HTTPClient) apiGet(call string) (*http.Response, error) {
 // does not return 2xx, the error will be read and returned. When no error is returned,
 // the response's body isn't closed, otherwise it is.
 func (c *HTTPClient) apiPost(call, data string) (*http.Response, error) {
-	resp, err := api.HttpPOST("http://"+c.RootURL+call, data)
+	resp, err := api.HttpPOST(c.RootURL+call, data)
 	if err != nil {
 		return nil, errors.New("no response from daemon")
 	}
@@ -144,7 +146,7 @@ func (c *HTTPClient) apiPost(call, data string) (*http.Response, error) {
 		if err != nil {
 			return nil, err
 		}
-		resp, err = api.HttpPOSTAuthenticated("http://"+c.RootURL+call, data, password)
+		resp, err = api.HttpPOSTAuthenticated(c.RootURL+call, data, password)
 		if err != nil {
 			return nil, errors.New("no response from daemon - authentication failed")
 		}
@@ -159,4 +161,32 @@ func (c *HTTPClient) apiPost(call, data string) (*http.Response, error) {
 		return nil, err
 	}
 	return resp, nil
+}
+
+var (
+	urlSchemeSplitter   = regexp.MustCompile(`^(https?://)?(.+)$`)
+	urlLocalHostMatcher = regexp.MustCompile(`^(localhost|127\.0\.0\.1)?(\:[0-9]{1,5})?$`)
+)
+
+// look, a really bad validator! Hide it please :(
+func sanitizeURL(url string) (string, error) {
+	parts := urlSchemeSplitter.FindStringSubmatch(url)
+	if len(parts) == 0 {
+		return "", errors.New("invalid url format") // or perhaps our regexp just sucks >.<
+	}
+	if parts[1] == "" {
+		if localParts := urlLocalHostMatcher.FindStringSubmatch(url); len(localParts) == 3 {
+			parts[1] = "http://" // default to http for localhost
+			if localParts[2] == "" {
+				parts[2] += ":23110" // default to our default local daemon RPC port
+			}
+		} else {
+			parts[1] = "https://" // default to https, you want insecure, though luck, be explicit!
+		}
+	} else if localParts := urlLocalHostMatcher.FindStringSubmatch(parts[2]); len(localParts) == 3 {
+		if localParts[2] == "" {
+			parts[2] += ":23110" // default to our default local daemon RPC port
+		}
+	}
+	return strings.Join(parts[1:], ""), nil
 }
