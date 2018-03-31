@@ -64,3 +64,9 @@ Troubleshooting
 
   Rivine currently has support for UPnP. While not all routers support UPnP, a
   majority of users should have their ports automatically forwarded by UPnP.
+
+- I loaded a seed, but my coins don't appear yet.
+
+  After loading your seed, you will need to stop and restart your daemon. If after that
+  the coins still haven't appeared (and you are sure they should be there), you can
+  try `rivinec wallet addresses` to force load some more addresses.
