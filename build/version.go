@@ -133,7 +133,7 @@ var (
 
 var (
 	// rawVersion used to generate rivine's protocol version
-	rawVersion = "v0.1.1"
+	rawVersion = "v1.0.0"
 	// Version is the current version of rivined.
 	Version ProtocolVersion
 )
