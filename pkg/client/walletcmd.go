@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
@@ -84,27 +85,32 @@ By default the wallet encryption / unlock password is the same as the generated 
 
 	walletSendCmd = &cobra.Command{
 		Use:   "send",
-		Short: "Send either coins or blockstakes to an address",
-		Long:  "Send either coins or blockstakes to an address",
+		Short: "Send either coins or blockstakes",
+		Long:  "Send either coins or blockstakes",
 		// Run field is not set, as the load command itself is not a valid command.
 		// A subcommand must be provided.
 	}
 
-	walletSendSiacoinsCmd = &cobra.Command{
-		Use:   "coins <amount> <dest>",
-		Short: "Send coins to an address",
-		Long: `Send coins to an address. 'dest' must be a 76-byte hexadecimal address.` + _CurrencyConvertor.CoinArgDescription("amount") + `
+	walletSendCoinsCmd = &cobra.Command{
+		Use:   "coins <dest> <amount> [<dest> <amount>]...",
+		Short: "Send coins one or multiple addresses.",
+		Long: `Send coins to one or multiple addresses.
+Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash).
+
+` + _CurrencyConvertor.CoinArgDescription("amount") + `
 
 Miner fees will be added on top of the given amount automatically.`,
-		Run: Wrap(walletsendsiacoinscmd),
+		Run: walletsendcoinscmd,
 	}
 
-	walletSendSiafundsCmd = &cobra.Command{
-		Use:   "blockstakes <amount> <dest>",
-		Short: "Send blockstakes",
-		Long: `Send blockstakes to an address.
-Run 'wallet send --help' to see a list of available units.`,
-		Run: Wrap(walletsendblockstakescmd),
+	walletSendBlockStakesCmd = &cobra.Command{
+		Use:   "blockstakes <dest> <amount> [<dest> <amount>]..",
+		Short: "Send blockstakes to one or multiple addresses",
+		Long: `Send blockstakes to one or multiple addresses.
+Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash).
+
+Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automatically.`,
+		Run: walletsendblockstakescmd,
 	}
 
 	walletRegisterDataCmd = &cobra.Command{
@@ -138,22 +144,22 @@ Run 'wallet send --help' to see a list of available units.`,
 
 // still need to be initialized using createWalletCommands
 var (
-	walletCmd               *cobra.Command
-	walletBlockStakeStatCmd *cobra.Command
-	walletAddressCmd        *cobra.Command
-	walletAddressesCmd      *cobra.Command
-	walletInitCmd           *cobra.Command
-	walletLoadCmd           *cobra.Command
-	walletLoadSeedCmd       *cobra.Command
-	walletLockCmd           *cobra.Command
-	walletSendCmd           *cobra.Command
-	walletSeedsCmd          *cobra.Command
-	walletSendSiacoinsCmd   *cobra.Command
-	walletSendSiafundsCmd   *cobra.Command
-	walletRegisterDataCmd   *cobra.Command
-	walletBalanceCmd        *cobra.Command
-	walletTransactionsCmd   *cobra.Command
-	walletUnlockCmd         *cobra.Command
+	walletCmd                *cobra.Command
+	walletBlockStakeStatCmd  *cobra.Command
+	walletAddressCmd         *cobra.Command
+	walletAddressesCmd       *cobra.Command
+	walletInitCmd            *cobra.Command
+	walletLoadCmd            *cobra.Command
+	walletLoadSeedCmd        *cobra.Command
+	walletLockCmd            *cobra.Command
+	walletSendCmd            *cobra.Command
+	walletSeedsCmd           *cobra.Command
+	walletSendCoinsCmd       *cobra.Command
+	walletSendBlockStakesCmd *cobra.Command
+	walletRegisterDataCmd    *cobra.Command
+	walletBalanceCmd         *cobra.Command
+	walletTransactionsCmd    *cobra.Command
+	walletUnlockCmd          *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
@@ -254,28 +260,76 @@ func walletseedscmd() {
 	}
 }
 
-// walletsendsiacoinscmd sends siacoins to a destination address.
-func walletsendsiacoinscmd(amount, dest string) {
-	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
-		Die("Could not parse amount:", err)
+// walletsendcoinscmd sends siacoins to one or multiple destination addresses.
+func walletsendcoinscmd(cmd *cobra.Command, args []string) {
+	argn := len(args)
+	if argn < 2 || argn%2 != 0 {
+		cmd.UsageFunc()(cmd)
+		os.Exit(exitCodeUsage)
 	}
-	err = _DefaultClient.httpClient.Post("/wallet/coins",
-		fmt.Sprintf("amount=%s&destination=%s", hastings.String(), dest))
+	body := api.WalletCoinsPOST{
+		CoinOutputs: make([]types.CoinOutput, argn/2),
+	}
+
+	for i, co := range body.CoinOutputs {
+		idx := i * 2
+		err := co.UnlockHash.LoadString(args[idx+1])
+		if err != nil {
+			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for coin output #%d: %v", idx, err))
+		}
+		co.Value, err = _CurrencyConvertor.ParseCoinString(args[idx])
+		if err != nil {
+			Die(fmt.Sprintf("failed to parse coin amount/value for coin output #%d: %v", idx, err))
+		}
+		body.CoinOutputs[i] = co
+	}
+	bytes, err := json.Marshal(&body)
+	if err != nil {
+		Die("Failed to JSON Marshal the input body:", err)
+	}
+	err = _DefaultClient.httpClient.Post("/wallet/coins", string(bytes))
 	if err != nil {
 		Die("Could not send coins:", err)
 	}
-	fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(hastings), dest)
+	for _, co := range body.CoinOutputs {
+		fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.UnlockHash)
+	}
 }
 
-// walletsendblockstakescmd sends siafunds to a destination address.
-func walletsendblockstakescmd(amount, dest string) {
-	err := _DefaultClient.httpClient.Post("/wallet/blockstakes", fmt.Sprintf("amount=%s&destination=%s", amount, dest))
-	if err != nil {
-		Die("Could not send blockstakes:", err)
+// walletsendblockstakescmd sends block stakes to one or multiple destination addresses.
+func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
+	argn := len(args)
+	if argn < 2 || argn%2 != 0 {
+		cmd.UsageFunc()(cmd)
+		os.Exit(exitCodeUsage)
 	}
-	fmt.Printf("Sent %s blockstakes to %s\n", amount, dest)
+	body := api.WalletBlockStakesPOST{
+		BlockStakeOutputs: make([]types.BlockStakeOutput, argn/2),
+	}
+
+	for i, bo := range body.BlockStakeOutputs {
+		idx := i * 2
+		err := bo.UnlockHash.LoadString(args[idx+1])
+		if err != nil {
+			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for blockstake output #%d: %v", idx, err))
+		}
+		_, err = fmt.Sscan(args[idx], &bo.Value)
+		if err != nil {
+			Die(fmt.Sprintf("failed to parse block stake amount/value for blockstake output #%d: %v", idx, err))
+		}
+		body.BlockStakeOutputs[i] = bo
+	}
+	bytes, err := json.Marshal(&body)
+	if err != nil {
+		Die("Failed to JSON Marshal the input body:", err)
+	}
+	err = _DefaultClient.httpClient.Post("/wallet/blockstakes", string(bytes))
+	if err != nil {
+		Die("Could not send block stakes:", err)
+	}
+	for _, bo := range body.BlockStakeOutputs {
+		fmt.Printf("Sent %s BS to %s\n", bo.Value, bo.UnlockHash)
+	}
 }
 
 // walletregisterdatacmd registers data on the blockchain by making a minimal transaction to the designated address

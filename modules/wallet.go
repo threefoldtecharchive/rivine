@@ -336,7 +336,11 @@ type (
 		// address. Sending money usually results in multiple transactions. The
 		// transactions are automatically given to the transaction pool, and
 		// are also returned to the caller.
-		SendBlockStakes(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error)
+		SendBlockStakes(amount types.Currency, dest types.UnlockHash) (types.Transaction, error)
+
+		// SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
+		// The transaction is automatically given to the transaction pool, and is also returned to the caller.
+		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte) (types.Transaction, error)
 
 		// BlockStakeStats returns the blockstake statistical information of
 		// this wallet of the last 1000 blocks. If the blockcount is less than

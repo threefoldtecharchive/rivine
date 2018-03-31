@@ -73,16 +73,26 @@ type (
 		Transaction types.Transaction `json:"transaction"`
 	}
 
-	// WalletCoinsPOST contains the transaction sent in the POST call to
-	// /wallet/siafunds.
+	// WalletCoinsPOST is given by the user
+	// to indicate to where to send how much coins
 	WalletCoinsPOST struct {
+		CoinOutputs []types.CoinOutput `json:"coinoutputs`
+	}
+	// WalletCoinsPOSTResp Resp contains the ID of the transaction
+	// that was created as a result of a POST call to /wallet/coins.
+	WalletCoinsPOSTResp struct {
 		TransactionID types.TransactionID `json:"transactionid"`
 	}
 
-	// WalletBlockStakesPOST contains the transaction sent in the POST call to
-	// /wallet/blockstakes.
+	// WalletBlockStakesPOST is given by the user
+	// to indicate to where to send how much blockstakes
 	WalletBlockStakesPOST struct {
-		TransactionIDs []types.TransactionID `json:"transactionids"`
+		BlockStakeOutputs []types.BlockStakeOutput `json:"blockstakeoutputs`
+	}
+	// WalletBlockStakesPOSTResp Resp contains the ID of the transaction
+	// that was created as a result of a POST call to /wallet/blockstakes.
+	WalletBlockStakesPOSTResp struct {
+		TransactionID types.TransactionID `json:"transactionids"`
 	}
 
 	// WalletSeedsGET contains the seeds used by the wallet.
@@ -360,51 +370,35 @@ func (api *API) walletTransactionCreateHandler(w http.ResponseWriter, req *http.
 
 // walletSiacoinsHandler handles API calls to /wallet/coins.
 func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	amount, ok := scanAmount(req.FormValue("amount"))
-	if !ok {
-		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/coins"}, http.StatusBadRequest)
+	var body WalletCoinsPOST
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied coin outputs: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
-	dest, err := scanAddress(req.FormValue("destination"))
-	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusBadRequest)
-		return
-	}
-
-	tx, err := api.wallet.SendCoins(amount, dest, nil)
+	tx, err := api.wallet.SendOutputs(body.CoinOutputs, nil, nil)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
-	WriteJSON(w, WalletCoinsPOST{
+	WriteJSON(w, WalletCoinsPOSTResp{
 		TransactionID: tx.ID(),
 	})
 }
 
 // walletSiafundsHandler handles API calls to /wallet/blockstake.
 func (api *API) walletBlockStakesHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	amount, ok := scanAmount(req.FormValue("amount"))
-	if !ok {
-		WriteError(w, Error{"could not read 'amount' from POST call to /wallet/blockstakes"}, http.StatusBadRequest)
+	var body WalletBlockStakesPOST
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied blockstake outputs: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
-	dest, err := scanAddress(req.FormValue("destination"))
-	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, http.StatusBadRequest)
-		return
-	}
-
-	txns, err := api.wallet.SendBlockStakes(amount, dest)
+	tx, err := api.wallet.SendOutputs(nil, body.BlockStakeOutputs, nil)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
-	var txids []types.TransactionID
-	for _, txn := range txns {
-		txids = append(txids, txn.ID())
-	}
-	WriteJSON(w, WalletBlockStakesPOST{
-		TransactionIDs: txids,
+	WriteJSON(w, WalletBlockStakesPOSTResp{
+		TransactionID: tx.ID(),
 	})
 }
 
@@ -427,7 +421,7 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return
 	}
-	WriteJSON(w, WalletCoinsPOST{
+	WriteJSON(w, WalletCoinsPOSTResp{
 		TransactionID: tx.ID(),
 	})
 }

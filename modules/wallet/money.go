@@ -62,24 +62,56 @@ func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoi
 // it is added as arbitrary data to the transaction. The transaction
 // is submitted to the transaction pool and is also returned.
 func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) (types.Transaction, error) {
+	return w.SendOutputs([]types.CoinOutput{
+		{
+			UnlockHash: dest,
+			Value:      amount,
+		},
+	}, nil, data)
+}
+
+// SendBlockStakes creates a transaction sending 'amount' to 'dest'. The transaction
+// is submitted to the transaction pool and is also returned.
+func (w *Wallet) SendBlockStakes(amount types.Currency, dest types.UnlockHash) (types.Transaction, error) {
+	return w.SendOutputs(nil, []types.BlockStakeOutput{
+		{
+			UnlockHash: dest,
+			Value:      amount,
+		},
+	}, nil)
+}
+
+// SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
+// The transaction is automatically given to the transaction pool, and is also returned to the caller.
+func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte) (types.Transaction, error) {
 	if err := w.tg.Add(); err != nil {
 		return types.Transaction{}, err
 	}
 	defer w.tg.Done()
 
 	tpoolFee := w.chainCts.MinimumTransactionFee.Mul64(1) // TODO better fee algo
-	output := types.CoinOutput{
-		Value:      amount,
-		UnlockHash: dest,
-	}
-
+	totalAmount := types.NewCurrency64(0).Add(tpoolFee)
 	txnBuilder := w.StartTransaction()
-	err := txnBuilder.FundCoins(amount.Add(tpoolFee))
+	for _, co := range coinOutputs {
+		txnBuilder.AddCoinOutput(co)
+		totalAmount = totalAmount.Add(co.Value)
+	}
+	err := txnBuilder.FundCoins(totalAmount)
 	if err != nil {
 		return types.Transaction{}, err
 	}
 	txnBuilder.AddMinerFee(tpoolFee)
-	txnBuilder.AddCoinOutput(output)
+	totalAmount = types.NewCurrency64(0)
+	for _, bso := range blockstakeOutputs {
+		txnBuilder.AddBlockStakeOutput(bso)
+		totalAmount = totalAmount.Add(bso.Value)
+	}
+	if !totalAmount.Equals64(0) {
+		err = txnBuilder.FundBlockStakes(totalAmount)
+		if err != nil {
+			return types.Transaction{}, err
+		}
+	}
 	if len(data) != 0 {
 		txnBuilder.SetArbitraryData(data)
 	}
@@ -95,41 +127,6 @@ func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []
 		return types.Transaction{}, err
 	}
 	return txnSet[0], nil
-}
-
-// SendBlockStakes creates a transaction sending 'amount' to 'dest'. The transaction
-// is submitted to the transaction pool and is also returned.
-func (w *Wallet) SendBlockStakes(amount types.Currency, dest types.UnlockHash) ([]types.Transaction, error) {
-	if err := w.tg.Add(); err != nil {
-		return nil, err
-	}
-	defer w.tg.Done()
-	tpoolFee := w.chainCts.MinimumTransactionFee.Mul64(1) // TODO better fee algo
-	output := types.BlockStakeOutput{
-		Value:      amount,
-		UnlockHash: dest,
-	}
-
-	txnBuilder := w.StartTransaction()
-	err := txnBuilder.FundCoins(tpoolFee)
-	if err != nil {
-		return nil, err
-	}
-	err = txnBuilder.FundBlockStakes(amount)
-	if err != nil {
-		return nil, err
-	}
-	txnBuilder.AddMinerFee(tpoolFee)
-	txnBuilder.AddBlockStakeOutput(output)
-	txnSet, err := txnBuilder.Sign()
-	if err != nil {
-		return nil, err
-	}
-	err = w.tpool.AcceptTransactionSet(txnSet)
-	if err != nil {
-		return nil, err
-	}
-	return txnSet, nil
 }
 
 // Len returns the number of elements in the sortedOutputs struct.
