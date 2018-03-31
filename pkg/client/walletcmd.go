@@ -189,7 +189,7 @@ func walletaddressescmd() {
 func walletinitcmd() {
 	var er api.WalletInitPOST
 
-	fmt.Println("You should provide a passphrase, it may be empty if you wish.")
+	fmt.Println("You have to provide a passphrase!")
 
 	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 	if err != nil {
