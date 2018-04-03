@@ -387,11 +387,12 @@ func (g *Gateway) managedConnectPeer(conn net.Conn, remoteVersion build.Protocol
 		},
 		sess: newSmuxClient(conn),
 	})
-	// Add the peer to the node list. We can ignore the error: addNode
-	// validates the address and checks for duplicates, but we don't care
-	// about duplicates and we have already validated the address by
-	// connecting to it.
+	// Add the peer to the node list and prioritize it for future connections.
+	// NOTE: We can ignore the addNode error: addNode validates the address
+	// and checks for duplicates, but we don't care about duplicates and we
+	// have already validated the address by connecting to it.
 	g.addNode(remoteAddr)
+	g.prioritizeNode(remoteAddr)
 	// We want to persist the outbound peers.
 	err := g.saveSync()
 	if err != nil {
