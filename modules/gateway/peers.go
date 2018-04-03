@@ -155,6 +155,9 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		return err
 	}
 
+	err = g.managedAddUntrustedNode(remoteAddr)
+	local := err == nil && remoteAddr.IsLocal()
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
@@ -168,7 +171,7 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 			Inbound: true,
 			// NOTE: local may be true even if the supplied remoteAddr is not
 			// actually reachable.
-			Local:      remoteAddr.IsLocal(),
+			Local:      local,
 			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
@@ -182,9 +185,9 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		err := g.pingNode(remoteAddr)
 		if err == nil {
 			g.mu.Lock()
+			defer g.mu.Unlock()
 			g.addNode(remoteAddr)
 			g.save()
-			g.mu.Unlock()
 		}
 	}()
 

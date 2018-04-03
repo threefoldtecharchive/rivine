@@ -49,6 +49,30 @@ func (g *Gateway) pingNode(addr modules.NetAddress) (err error) {
 	return err
 }
 
+// managedAddUntrustedNode adds an address to the set of nodes on the network, but
+// first verifies that there is a reachable node at the provided address.
+func (g *Gateway) managedAddUntrustedNode(addr modules.NetAddress) error {
+	// Performing the ping during testing does not work.
+	if build.Release == "testing" {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		return g.addNode(addr)
+	}
+
+	err := g.pingNode(addr)
+	if err != nil {
+		return err
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	err = g.addNode(addr)
+	if err != nil {
+		return err
+	}
+	return g.save()
+}
+
 // removeNode will remove a node from the gateway.
 func (g *Gateway) removeNode(addr modules.NetAddress) error {
 	if _, exists := g.nodes[addr]; !exists {
