@@ -9,24 +9,35 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/NebulousLabs/ed25519"
+  name = "github.com/NebulousLabs/entropy-mnemonics"
   packages = ["."]
-  revision = "0e573b1741e255fe4a9903f4b2346a01fc45935a"
+  revision = "7b01a644a63680b90de22bacfb11d832e944eaab"
 
 [[projects]]
+  branch = "master"
   name = "github.com/NebulousLabs/fastrand"
   packages = ["."]
-  revision = "5a1a312dd2ce7d5f1383e1d36ad197739f161bd3"
+  revision = "3cf7173006a0b7d2371fa1a220da7f9d48c7827c"
 
 [[projects]]
+  branch = "master"
   name = "github.com/NebulousLabs/go-upnp"
-  packages = ["."]
-  revision = "54272a37f4032d9103cdc31b6f57940eaece7902"
+  packages = [
+    ".",
+    "goupnp",
+    "goupnp/dcps/internetgateway1",
+    "goupnp/httpu",
+    "goupnp/scpd",
+    "goupnp/soap",
+    "goupnp/ssdp"
+  ]
+  revision = "29b680b06c82d044ebea91bf3069038eb562df2a"
 
 [[projects]]
+  branch = "master"
   name = "github.com/NebulousLabs/merkletree"
   packages = ["."]
-  revision = "f01b2e9039dd48372d3e54c5121bf4efba21b8dc"
+  revision = "8482d024aa8ffc16d2d4246e84e943aca109a8dc"
 
 [[projects]]
   name = "github.com/bgentry/speakeasy"
@@ -52,30 +63,8 @@
     "internal/singleflight",
     "internal/util"
   ]
-  revision = "9133634a132e00309476e2d9acbf0c8058d4c888"
-  version = "v6.10.0"
-
-[[projects]]
-  name = "github.com/huin/goupnp"
-  packages = [
-    ".",
-    "dcps/internetgateway1",
-    "httpu",
-    "scpd",
-    "soap",
-    "ssdp"
-  ]
-  revision = "46bde78b11f3f021f2a511df138be9e2fc7506e8"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/inconshreveable/go-update"
-  packages = [
-    ".",
-    "internal/binarydist",
-    "internal/osext"
-  ]
-  revision = "8152e7eb6ccf8679a64582a66b78519688d156ad"
+  revision = "877867d2845fbaf86798befe410b6ceb6f5c29a3"
+  version = "v6.10.2"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -88,11 +77,6 @@
   packages = ["."]
   revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
   version = "v1.1"
-
-[[projects]]
-  name = "github.com/kardianos/osext"
-  packages = ["."]
-  revision = "29ae4ffbc9a6fe9fb2bc5029050ce6996ea1d3bc"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -109,20 +93,23 @@
 [[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
-  revision = "6a8bd97bdb1fc0d08a83459940498ea49d3e8c93"
+  revision = "a1f051bc3eba734da4772d60e2d677f47cf93ef4"
+  version = "v0.0.2"
 
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "367864438f1b1a3c7db4da06a2f55b144e6784e0"
+  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/xtaci/smux"
   packages = ["."]
-  revision = "ebec7ef2574b42a7088cd7751176483e0a27d458"
-  version = "v1.0.6"
+  revision = "e28719eede1ac5714cf0b06ba2f403125864ebe0"
+  version = "v1.0.7"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = [
     "blake2b",
@@ -131,22 +118,23 @@
     "pbkdf2",
     "twofish"
   ]
-  revision = "5a033cc77e57eca05bdb50522851d29e03569cbe"
+  revision = "12892e8c234f4fe6f6803f052061de9057903bb2"
 
 [[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = [
     "html",
     "html/atom",
     "html/charset"
   ]
-  revision = "4d38db76854b199960801a1734443fd02870d7e1"
+  revision = "b68f30494add4df6bd8ef5e82803f308e7f7c59c"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "37707fdb30a5b38865cfb95e5aab41707daec7fd"
+  revision = "378d26f46672a356c46195c28f61bdb4c0a781dd"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -163,17 +151,21 @@
     "encoding/unicode",
     "internal/gen",
     "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
-    "unicode/cldr"
+    "unicode/cldr",
+    "unicode/norm"
   ]
-  revision = "0a5a09ee4409a616bfa03115120f0bffacdff508"
+  revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  version = "v0.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9eb45128cf013aa530e2ff7d954ff5a4e99254bd2bb0b500b19267db0f202037"
+  inputs-digest = "fb3d35fcf46e08a1ef7edd59ce8e88e4aa1eaef3cfc56b2c872355150533c396"
   solver-name = "gps-cdcl"
   solver-version = 1
