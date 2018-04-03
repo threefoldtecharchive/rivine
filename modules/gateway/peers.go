@@ -155,8 +155,10 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 		return err
 	}
 
-	err = g.managedAddUntrustedNode(remoteAddr)
-	local := err == nil && remoteAddr.IsLocal()
+	// Attempt to ping the supplied address. If successful, we will add
+	// the address is a local address, mark the peer as a local peer.
+	// remoteAddr to our node list after accepting the peer.
+	pingSucceeded := g.pingNode(remoteAddr) == nil
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -171,26 +173,16 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteVersion build.Proto
 			Inbound: true,
 			// NOTE: local may be true even if the supplied remoteAddr is not
 			// actually reachable.
-			Local:      local,
+			Local:      remoteAddr.IsLocal(),
 			NetAddress: remoteAddr,
 			Version:    remoteVersion,
 		},
 		sess: newSmuxServer(conn),
 	})
-
-	// Attempt to ping the supplied address. If successful, and a connection is wanted,
-	// we will add remoteAddr to our node list after accepting the peer. We do this in a
-	// goroutine so that we can start communicating with the peer immediately.
-	go func() {
-		err := g.pingNode(remoteAddr)
-		if err == nil {
-			g.mu.Lock()
-			defer g.mu.Unlock()
-			g.addNode(remoteAddr)
-			g.save()
-		}
-	}()
-
+	if pingSucceeded {
+		g.addNode(remoteAddr)
+		return g.save()
+	}
 	return nil
 }
 
