@@ -391,28 +391,6 @@ types:
         204:
           description: |
             Succesfully stopped, No contents
-  /update:
-    get:
-      description: |
-        checks for an update.
-      responses:
-        200:
-          description:
-          body: 
-            type: UpdateInfo
-        500:
-          description: |
-            Failed to fetch latest release.
-    post:
-      description:  |
-        Fetches latest release code from github
-      responses:
-        204:
-          description: |
-            Succesfully fetched, No contents
-        500:
-          description: |
-            Error fetching or applying the update.
   /version:
     get:
       description: |
