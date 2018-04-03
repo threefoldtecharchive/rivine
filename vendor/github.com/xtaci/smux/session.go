@@ -118,7 +118,7 @@ func (s *Session) OpenStream() (*Stream, error) {
 func (s *Session) AcceptStream() (*Stream, error) {
 	var deadline <-chan time.Time
 	if d, ok := s.deadline.Load().(time.Time); ok && !d.IsZero() {
-		timer := time.NewTimer(d.Sub(time.Now()))
+		timer := time.NewTimer(time.Until(d))
 		defer timer.Stop()
 		deadline = timer.C
 	}
@@ -308,10 +308,7 @@ func (s *Session) sendLoop() {
 		select {
 		case <-s.die:
 			return
-		case request, ok := <-s.writes:
-			if !ok {
-				continue
-			}
+		case request := <-s.writes:
 			buf[0] = request.frame.ver
 			buf[1] = request.frame.cmd
 			binary.LittleEndian.PutUint16(buf[2:], uint16(len(request.frame.data)))

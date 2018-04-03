@@ -3,31 +3,28 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 
-	"github.com/lunny/log"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/types"
 )
 
 func main() {
 	if len(os.Args) != 2 {
-		log.Error("not enough arguments given, expected one: hex(unlock_hash)")
-		os.Exit(1)
+		log.Fatal("not enough arguments given, expected one: hex(unlock_hash)")
 	}
 
 	uhStr := os.Args[1]
 	var uh types.UnlockHash
 	err := uh.LoadString(uhStr)
 	if err == nil {
-		log.Error("Given unlock hash is already in the new correct format")
-		os.Exit(1)
+		log.Fatal("Given unlock hash is already in the new correct format")
 	}
 
 	uh, err = LoadOldUnlockHashString(uhStr)
 	if err != nil {
-		log.Error("failed to load given unlock hash using the old checksum way:", err)
-		os.Exit(1)
+		log.Fatal("failed to load given unlock hash using the old checksum way:", err)
 	}
 
 	// print the new unlock hash

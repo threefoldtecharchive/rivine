@@ -20,27 +20,18 @@
 #  name = "github.com/x/y"
 #  version = "2.4.0"
 
-
-[[constraint]]
-  name = "github.com/NebulousLabs/bolt"
-  version = "1.0.0-255-gdfb2120"
-
 [[constraint]]
   branch = "master"
   name = "github.com/NebulousLabs/demotemutex"
 
 [[constraint]]
   branch = "master"
-  name = "github.com/NebulousLabs/ed25519"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/bgentry/speakeasy"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/inconshreveable/go-update"
 
 [[constraint]]
   name = "github.com/julienschmidt/httprouter"
   version = "1.1.0-29-g77366a4"
+
+[prune]
+  go-tests = true
+  unused-packages = true

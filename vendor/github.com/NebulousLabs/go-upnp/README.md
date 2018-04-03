@@ -6,12 +6,12 @@ address. Specific quirks:
 
 - When attempting to discover UPnP-enabled routers on the network, only the
 first such router is returned. If you have multiple routers, this may cause
-some trouble. But why would you do that?
+some trouble.
 
 - Forwarded ports are always symmetric, e.g. the router's port 9980 will be
-mapped to the client's port 9980. This will be unacceptable for some
-purposes, but too bad. Symmetric mappings are the desired behavior 99% of
-the time, and they save a function argument.
+mapped to the client's port 9980. This will be unacceptable for some purposes,
+but symmetric mappings are the desired behavior 99% of the time, and they
+simplify the API.
 
 - TCP and UDP protocols are forwarded together.
 
@@ -26,39 +26,50 @@ Once you've discovered your router, you can retrieve its address by calling
 its Location method. This address can be supplied to Load to connect to the
 router directly, which is much faster than calling Discover.
 
-See the [godoc](http://godoc.org/github.com/NebulousLabs/upnp) for full documentation.
+See the [godoc](http://godoc.org/github.com/NebulousLabs/go-upnp) for full documentation.
 
 ## example ##
 
 ```go
-package main
-
 import (
-	"fmt"
-
-	"github.com/NebulousLabs/upnp"
+	"log"
+	"github.com/NebulousLabs/go-upnp"
 )
 
-// error handling omitted for concision
 func main() {
-	// connect to router
-	d, _ := upnp.Discover()
+    // connect to router
+    d, err := upnp.Discover()
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// discover external IP
-	ip, _ := d.ExternalIP()
-	fmt.Println("Your external IP is:", ip)
+    // discover external IP
+    ip, err := d.ExternalIP()
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println("Your external IP is:", ip)
 
-	// forward a port
-	_ = d.Forward(9001, "upnp test")
+    // forward a port
+    err = d.Forward(9001, "upnp test")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// un-forward a port
-	_ = d.Clear(9001)
+    // un-forward a port
+    err = d.Clear(9001)
+    if err != nil {
+        log.Fatal(err)
+    }
 
-	// record router's location
-	loc := d.Location()
+    // record router's location
+    loc := d.Location()
 
-	// connect to router directly
-	d, _ = upnp.Load(loc)
+    // connect to router directly
+    d, err = upnp.Load(loc)
+    if err != nil {
+        log.Fatal(err)
+    }
 }
 ```
 
