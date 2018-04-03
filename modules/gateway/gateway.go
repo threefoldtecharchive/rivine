@@ -64,7 +64,7 @@ import (
 	// after they successfully form a connection with the gateway. To limit the
 	// attacker's ability to add nodes to the nodelist, connections are
 	// ratelimited. An attacker with lots of IP addresses still has the ability to
-	// fill up the nodelist, however getting 90% dominance of the nodelist requries
+	// fill up the nodelist, however getting 90% dominance of the nodelist requires
 	// forming thousands of connections, which will take hours or days. By that
 	// time, the attacked node should already have its set of outbound peers,
 	// limiting the amount of damage that the attacker can do.
