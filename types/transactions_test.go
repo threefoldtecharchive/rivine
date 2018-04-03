@@ -466,14 +466,6 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 						"signature": "01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def"
 					}
 				}
-			},
-			{
-				"parentid": "fed42fed42fed42fed42fed42fed42fed42fed42fed42fed42fed42fed42fed4",
-				"unlocker": {
-					"type": 42,
-					"condition": "Y29uZGl0aW9u",
-					"fulfillment": "ZnVsZmlsbG1lbnQ="
-				}
 			}
 		],
 		"blockstakeoutputs": [
@@ -564,16 +556,6 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 									Key:       hbs("ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef12"),
 								},
 								Signature: hbs("01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def"),
-							},
-						},
-					},
-					{
-						ParentID: BlockStakeOutputID(hs("fed42fed42fed42fed42fed42fed42fed42fed42fed42fed42fed42fed42fed4")),
-						Unlocker: InputLockProxy{
-							t: 42,
-							il: &UnknownInputLock{
-								Condition:   []byte("condition"),
-								Fulfillment: []byte("fulfillment"),
 							},
 						},
 					},

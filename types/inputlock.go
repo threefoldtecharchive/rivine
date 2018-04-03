@@ -20,7 +20,7 @@ var (
 	ErrUnlockConditionLocked = errors.New("unlock condition is already locked")
 
 	// ErrUnknownUnlockType is an error returned in case
-	// one tries to lock an input lock of unknown type
+	// one tries to use an input lock of unknown type where it's not supported
 	ErrUnknownUnlockType = errors.New("unknown unlock type")
 
 	// ErrUnknownSignAlgorithmType is an error returned in case
@@ -316,16 +316,10 @@ func (p InputLockProxy) MarshalJSON() ([]byte, error) {
 		}
 
 	default:
-		// forward-compatibility
-		il := p.il.(*UnknownInputLock)
-		rawInputLock.Condition, err = json.Marshal(il.Condition)
-		if err != nil {
-			return nil, err
-		}
-		rawInputLock.Fulfillment, err = json.Marshal(il.Fulfillment)
-		if err != nil {
-			return nil, err
-		}
+		// there is no sane way to encode unknown types in a JSON way,
+		// knowing that the next time it has to be unmarshalled it again it might be supported,
+		// and thus expect a non-raw format.
+		return nil, ErrUnknownUnlockType
 
 	}
 	return json.Marshal(rawInputLock)
@@ -384,21 +378,11 @@ func (p *InputLockProxy) UnmarshalJSON(b []byte) error {
 		}
 
 	default:
-		var (
-			condition, fulfillment []byte
-		)
-		err = json.Unmarshal(rawInputLock.Condition[:], &condition)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(rawInputLock.Fulfillment[:], &fulfillment)
-		if err != nil {
-			return err
-		}
-		p.il = &UnknownInputLock{
-			Condition:   condition,
-			Fulfillment: fulfillment,
-		}
+		// UnknownTypes are only supported using the binary format.
+		// Hence in order to soft-fork the input types,
+		// you'll have to fork the actual source code and pass the transaction around yourself
+		// using a full node.
+		return ErrUnknownUnlockType
 	}
 
 	p.t = rawInputLock.Type

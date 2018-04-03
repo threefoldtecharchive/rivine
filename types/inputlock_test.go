@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/rivine/rivine/crypto"
@@ -614,7 +615,8 @@ func TestAtomicSwapRefund(t *testing.T) {
 	}
 }
 
-func TestInputLockProxyJSONEncoding(t *testing.T) { // utility funcs
+func TestInputLockProxyJSONEncoding(t *testing.T) {
+	// utility funcs
 	hbs := func(str string) []byte { // hexStr -> byte slice
 		bs, _ := hex.DecodeString(str)
 		return bs
@@ -676,18 +678,6 @@ func TestInputLockProxyJSONEncoding(t *testing.T) { // utility funcs
 			},
 			``,
 		},
-		// unknown input lock
-		{
-			`{"type":42,"condition":"Y29uZGl0aW9u","fulfillment":"ZnVsZmlsbG1lbnQ="}`,
-			InputLockProxy{
-				t: 42,
-				il: &UnknownInputLock{
-					Condition:   []byte("condition"),
-					Fulfillment: []byte("fulfillment"),
-				},
-			},
-			``,
-		},
 	}
 	for idx, testCase := range testCases {
 		var il InputLockProxy
@@ -713,6 +703,72 @@ func TestInputLockProxyJSONEncoding(t *testing.T) { // utility funcs
 			if testCase.OutputJSONEncoded != jsonEncoded {
 				t.Errorf("#%d: %v != %v", idx, testCase.OutputJSONEncoded, jsonEncoded)
 			}
+		}
+	}
+}
+
+func TestInputLockProxyJSONEncodingError(t *testing.T) {
+	// test cases
+	testCases := []struct {
+		JSONEncoded   string
+		ExpectedError error
+	}{
+		// invalid json
+		{
+			`{`,
+			nil,
+		},
+		// unknown input lock type
+		{
+			`{"type":255,"condition":"abc","fulfillment":"def"}`,
+			ErrUnknownUnlockType,
+		},
+	}
+	for idx, testCase := range testCases {
+		var il InputLockProxy
+		err := json.Unmarshal([]byte(testCase.JSONEncoded), &il)
+		if err == nil {
+			t.Error(idx, "expected error, but none was received")
+			continue
+		}
+		if testCase.ExpectedError == nil {
+			continue // no specific error was expected, just any
+		}
+		if testCase.ExpectedError != err {
+			t.Errorf("#%d: %v != %v", idx, testCase.ExpectedError, err)
+		}
+	}
+}
+
+func TestInputLockProxyJSONDecodingError(t *testing.T) {
+	// test cases
+	testCases := []struct {
+		InputLockProxy InputLockProxy
+		ExpectedError  error
+	}{
+		// unknown input lock type
+		{
+			InputLockProxy{
+				t: 255,
+				il: &UnknownInputLock{
+					Condition:   []byte("condition"),
+					Fulfillment: []byte("fulfillment"),
+				},
+			},
+			ErrUnknownUnlockType,
+		},
+	}
+	for idx, testCase := range testCases {
+		_, err := json.Marshal(testCase.InputLockProxy)
+		if err == nil {
+			t.Error(idx, "expected error, but none was received")
+			continue
+		}
+		if testCase.ExpectedError == nil {
+			continue // no specific error was expected, just any
+		}
+		if !strings.Contains(err.Error(), testCase.ExpectedError.Error()) {
+			t.Errorf("#%d: %v != %v", idx, testCase.ExpectedError, err)
 		}
 	}
 }
