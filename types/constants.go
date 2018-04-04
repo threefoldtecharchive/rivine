@@ -162,7 +162,7 @@ func DefaultChainConstants() ChainConstants {
 			BlockFrequency:         1, // ASFAP
 			MaturityDelay:          3,
 			MedianTimestampWindow:  11,
-			GenesisTimestamp:       CurrentTimestamp() - 1e6,
+			GenesisTimestamp:       testGenesisTimestamp,
 			TargetWindow:           200,
 			MaxAdjustmentUp:        big.NewRat(10001, 10000),
 			MaxAdjustmentDown:      big.NewRat(9999, 10000),
@@ -308,3 +308,6 @@ func (c *ChainConstants) StartDifficulty() Difficulty {
 func (c *ChainConstants) RootTarget() Target {
 	return NewTarget(c.StartDifficulty(), c.RootDepth)
 }
+
+// testGenesisTimestamp is computed only once, and reused always afters
+var testGenesisTimestamp = CurrentTimestamp() - 1e6

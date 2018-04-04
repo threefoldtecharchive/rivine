@@ -158,15 +158,8 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 // The requesting peer is added as a node and a peer. The peer is only added if
 // a nil error is returned.
 func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	// Don't accept a connection from a peer we're already connected to.
-	if _, exists := g.peers[remoteInfo.NetAddress]; exists {
-		return fmt.Errorf("already connected to a peer on that address: %v", remoteInfo.NetAddress)
-	}
 	// Accept the peer.
-	g.acceptPeer(&peer{
+	peer := &peer{
 		Peer: modules.Peer{
 			Inbound: true,
 			// NOTE: local may be true even if the supplied remoteAddr is not
@@ -176,7 +169,11 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) er
 			Version:    remoteInfo.Version,
 		},
 		sess: newSmuxServer(conn),
-	})
+	}
+
+	g.mu.Lock()
+	g.acceptPeer(peer)
+	g.mu.Unlock()
 
 	// Attempt to ping the supplied address. If successful, we will add
 	// remoteInfo.NetAddress to our node list after accepting the peer. We do this in a
@@ -233,45 +230,6 @@ func (g *Gateway) acceptPeer(p *peer) {
 	g.addPeer(p)
 }
 
-// acceptConnPortHandshake performs the port handshake and should be called on
-// the side accepting a connection request. The remote address is only returned
-// if err == nil.
-func acceptConnPortHandshake(conn net.Conn) (remoteAddr modules.NetAddress, err error) {
-	host, _, err := net.SplitHostPort(conn.RemoteAddr().String())
-	if err != nil {
-		return "", err
-	}
-
-	// Read the peer's port that we can dial them back on.
-	var dialbackPort string
-	err = encoding.ReadObject(conn, &dialbackPort, 13) // Max port # is 65535 (5 digits long) + 8 byte string length prefix
-	if err != nil {
-		return "", fmt.Errorf("could not read remote peer's port: %v", err)
-	}
-	remoteAddr = modules.NetAddress(net.JoinHostPort(host, dialbackPort))
-	if err := remoteAddr.IsStdValid(); err != nil {
-		return "", fmt.Errorf("peer's address (%v) is invalid: %v", remoteAddr, err)
-	}
-	// Sanity check to ensure that appending the port string to the host didn't
-	// change the host. Only necessary because the peer sends the port as a string
-	// instead of an integer.
-	if remoteAddr.Host() != host {
-		return "", fmt.Errorf("peer sent a port which modified the host")
-	}
-	return remoteAddr, nil
-}
-
-// connectPortHandshake performs the port handshake and should be called on the
-// side initiating the connection request. This shares our port with the peer
-// so they can connect to us in the future.
-func connectPortHandshake(conn net.Conn, port string) error {
-	err := encoding.WriteObject(conn, port)
-	if err != nil {
-		return errors.New("could not write port #: " + err.Error())
-	}
-	return nil
-}
-
 // remoteInfo is the info we care about about our remote connection,
 // after a successful handshake
 type remoteInfo struct {
@@ -307,10 +265,11 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 	// check if version is not the reject-version constant,
 	// a new feature to quit early, or simply quit ourselves, should the version be too low
 	if remoteInfo.Version.Compare(rejectedVersion) == 0 {
-		// static version that can be returned during the version handshake, as to indicate a rejection explicitly
+		// we're rejected, exit early!
 		err = errPeerRejectedConn
 		return
 	}
+
 	if remoteInfo.Version.Compare(minAcceptableVersion) < 0 {
 		// invalid version
 		err = insufficientVersionError(remoteInfo.Version.String())
@@ -333,12 +292,6 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 		return
 	}
 
-	// exit already, should the other side does not want a connection
-	if !wantConn {
-		err = errPeerNoConnWanted
-		return
-	}
-
 	// continue handshake based on lowest version
 	lowestVersion := version // be positive, asume ours is lowest
 	if remoteInfo.Version.Compare(lowestVersion) < 0 {
@@ -348,10 +301,13 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 	// now compare the version, as based on that we might want something verry different
 	if lowestVersion.Compare(handshakNetAddressUpgrade) >= 0 {
 		// v1.0.2+
-		remoteInfo.NetAddress, err = g.connectSessionHandshakeV102(conn, theirs)
+		remoteInfo.NetAddress, err = g.connectSessionHandshakeV102(conn, theirs, netAddress)
 	} else {
 		// v1.0.0 and v1.0.1 (launch version)
 		remoteInfo.NetAddress, err = g.connectSessionHandshakeV100(conn, theirs)
+	}
+	if err == nil && !theirs.WantConn {
+		err = errPeerNoConnWanted
 	}
 	return
 }
@@ -371,9 +327,9 @@ func (g *Gateway) connectSessionHandshakeV100(conn net.Conn, theirs sessionHeade
 	return
 }
 
-func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeader) (remoteAddress modules.NetAddress, err error) {
+func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeader, netAddress modules.NetAddress) (remoteAddress modules.NetAddress, err error) {
 	// send our net address first, as we are the one wanting to connect
-	err = encoding.WriteObject(conn, g.myAddr)
+	err = encoding.WriteObject(conn, netAddress)
 	if err != nil {
 		err = errors.New("could not write address: " + err.Error())
 		return
@@ -381,7 +337,18 @@ func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeade
 	// receive their address
 	err = encoding.ReadObject(conn, &remoteAddress, modules.MaxEncodedNetAddressLength)
 	if err != nil {
-		err = errors.New("could not read remote address: " + err.Error())
+		err = errors.New("connect: could not read remote address: " + err.Error())
+		return
+	}
+	if remoteAddress == "reject" {
+		// remote address is rejected
+		err = errPeerRejectedConn
+		return
+	}
+	// standard check their addr
+	if err = remoteAddress.IsStdValid(); err != nil {
+		err = fmt.Errorf("invalid remote address: %v", err)
+		return
 	}
 	// Check that claimed NetAddress matches remoteAddr
 	connHost, _, _ := net.SplitHostPort(conn.RemoteAddr().String())
@@ -399,6 +366,7 @@ func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeade
 func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID) (remoteInfo remoteInfo, err error) {
 	if err = encoding.ReadObject(conn, &remoteInfo.Version, build.MaxEncodedVersionLength); err != nil {
 		err = fmt.Errorf("failed to read remote version header: %v", err)
+		g.writeRejectVersionHeader(conn, err)
 		return
 	}
 
@@ -413,6 +381,12 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 		return
 	}
 
+	// write our version, as their info checks out
+	err = encoding.WriteObject(conn, version)
+	if err != nil {
+		return
+	}
+
 	// read remote session header
 	var theirs sessionHeader
 	if err = encoding.ReadObject(conn, &theirs, MaxEncodedSessionHeaderLength); err != nil {
@@ -423,34 +397,20 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 	// compare this received information
 	if theirs.GenesisID != g.genesisBlockID {
 		err = errPeerGenesisID
-		g.writeRejectVersionHeader(conn, err)
-		return
 	}
 	if theirs.UniqueID == uniqueID {
 		err = errOurAddress
-		g.writeRejectVersionHeader(conn, err)
-		return
-	}
-
-	// write our version, as their info checks out
-	err = encoding.WriteObject(conn, build.Version)
-	if err != nil {
-		return
-	}
-
-	// if no connection was desired, stop here with an error
-	if !theirs.WantConn {
-		err = errPeerNoConnWanted
-		return
 	}
 
 	// write our header
 	ours := sessionHeader{
 		GenesisID: g.genesisBlockID,
 		UniqueID:  uniqueID,
-		WantConn:  true,
+		WantConn:  err == nil,
 	}
-	err = encoding.WriteObject(conn, ours)
+	if e := encoding.WriteObject(conn, ours); e != nil {
+		err = e
+	}
 	if err != nil {
 		return
 	}
@@ -467,6 +427,9 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 	} else {
 		// v1.0.0 and v1.0.1 (launch version)
 		remoteInfo.NetAddress, err = g.acceptConnSessionHandshakeV100(conn)
+	}
+	if err == nil && !theirs.WantConn {
+		err = errPeerNoConnWanted
 	}
 	return
 }
@@ -506,19 +469,21 @@ func (g *Gateway) acceptConnSessionHandshakeV102(conn net.Conn) (remoteAddress m
 	// receive their address first, as we accept
 	err = encoding.ReadObject(conn, &remoteAddress, modules.MaxEncodedNetAddressLength)
 	if err != nil {
-		err = errors.New("could not read remote address: " + err.Error())
+		err = errors.New("accept: could not read remote address: " + err.Error())
+	}
+	// validate the address
+	err = remoteAddress.IsStdValid()
+	if err != nil {
+		if err := encoding.WriteObject(conn, "reject"); err != nil {
+			g.log.Println("WARN: failed to write reject address:", err)
+		}
+		err = fmt.Errorf("peer's address (%v) is invalid: %v", remoteAddress, err)
 	}
 	// write now our net address
 	err = encoding.WriteObject(conn, g.myAddr)
 	if err != nil {
 		err = errors.New("could not write address: " + err.Error())
 		return
-	}
-	// validate the address
-	err = remoteAddress.IsStdValid()
-	if err != nil {
-		// TODO: do we not need to warn other side of this?
-		err = fmt.Errorf("peer's address (%v) is invalid: %v", remoteAddress, err)
 	}
 	return
 }
@@ -594,7 +559,6 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 	g.log.Debugln("INFO: connected to new peer", addr)
 
 	// call initRPCs
-	g.mu.RLock()
 	for name, fn := range g.initRPCs {
 		go func(name string, fn modules.RPCFunc) {
 			if g.threads.Add() != nil {
@@ -608,7 +572,6 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 			}
 		}(name, fn)
 	}
-	g.mu.RUnlock()
 
 	return nil
 }
@@ -637,12 +600,8 @@ func (g *Gateway) Disconnect(addr modules.NetAddress) error {
 	if !exists {
 		return errors.New("not connected to that node")
 	}
-	p.sess.Close()
 	g.mu.Lock()
-	// Peer is removed from the peer list as wellas the node list, to prevent
-	// the node from being re-connected while looking for a replacement peer.
 	delete(g.peers, addr)
-	delete(g.nodes, addr)
 	g.mu.Unlock()
 	if err := p.sess.Close(); err != nil {
 		return err

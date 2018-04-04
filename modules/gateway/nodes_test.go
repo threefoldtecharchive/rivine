@@ -1,14 +1,12 @@
 package gateway
 
 import (
-	"errors"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 )
@@ -171,19 +169,6 @@ func TestShareNodes(t *testing.T) {
 	err = g1.Connect(g2.Address())
 	if err != nil {
 		t.Fatal("couldn't connect:", err)
-	}
-
-	err = build.Retry(50, 100*time.Millisecond, func() error {
-		g1.mu.Lock()
-		_, exists := g1.nodes[dummyNode]
-		g1.mu.Unlock()
-		if !exists {
-			return errors.New("node not added")
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	// g1 should have received the node
