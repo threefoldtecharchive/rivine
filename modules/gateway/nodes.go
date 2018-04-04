@@ -54,7 +54,9 @@ func (g *Gateway) pingNode(addr modules.NetAddress) (err error) {
 	defer conn.Close()
 
 	wantConn := false
-	_, err = g.connectHandshake(conn, build.Version, g.id, wantConn)
+	_, err = g.connectHandshake(conn, build.Version, g.id,
+		modules.NetAddress(conn.LocalAddr().String()), // can be inacture address, as we don't want to continue anyhow
+		wantConn)
 	return err
 }
 

@@ -16,9 +16,10 @@ const (
 	// connect to itself, this number can be reduced.
 	maxLocalOutboundPeers = 3
 
-	// EncodedVersionHeaderLength is the length of a session header encoded
+	// MaxEncodedSessionHeaderLength is the max length of a session header encoded
 	// with the encode package.
-	EncodedVersionHeaderLength = 57
+	// sizeof(blockID) + sizeof(gatewayID) + sizeof(bool) = 32 + 8 + 1 = 41
+	MaxEncodedSessionHeaderLength = 41
 
 	// saveFrequency defines how often the gateway saves its persistence.
 	saveFrequency = time.Minute * 2
@@ -27,7 +28,11 @@ const (
 var (
 	// minAcceptableVersion is the version below which the gateway will refuse to
 	// connect to peers and reject connection attempts
-	minAcceptableVersion = build.NewVersion(0, 0, 1)
+	minAcceptableVersion = build.NewVersion(1, 0, 0)
+
+	// handshakNetAddressUpgrade is the version where we upgraded the handshake,
+	// to replace the wantConn with a NetAddr.
+	handshakNetAddressUpgrade = build.NewVersion(1, 0, 2)
 
 	// fastNodePurgeDelay defines the amount of time that is waited between each
 	// iteration of the purge loop when the gateway has enough nodes to be

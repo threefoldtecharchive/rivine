@@ -157,7 +157,7 @@ func TestRandomOutboundPeer(t *testing.T) {
 	}
 }
 
-// TestListen is a general test probling the connection listener.
+// TestListen is a general test probing the connection listener.
 func TestListen(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
@@ -174,7 +174,7 @@ func TestListen(t *testing.T) {
 	var gID gatewayID
 	fastrand.Read(gID[:])
 	addr := modules.NetAddress(conn.LocalAddr().String())
-	ack, err := g.connectHandshake(conn, build.NewVersion(0, 0, 0), gID, true)
+	ack, err := g.connectHandshake(conn, build.NewVersion(0, 0, 0), gID, g.myAddr, true)
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
@@ -198,11 +198,11 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = g.connectHandshake(conn, build.Version, gID, true)
+	ack, err = g.connectHandshake(conn, build.Version, gID, g.myAddr, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ack.Compare(build.Version) != 0 {
+	if ack.Version.Compare(build.Version) != 0 {
 		t.Fatal("gateway should have given ack")
 	}
 	err = connectPortHandshake(conn, "0")
@@ -228,11 +228,11 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = g.connectHandshake(conn, build.Version, gID, true)
+	ack, err = g.connectHandshake(conn, build.Version, gID, g.myAddr, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ack.Compare(build.Version) != 0 {
+	if ack.Version.Compare(build.Version) != 0 {
 		t.Fatal("gateway should have given ack")
 	}
 
@@ -242,20 +242,35 @@ func TestListen(t *testing.T) {
 	}
 
 	// g should add the peer
-	var ok bool
-	for !ok {
+	err = build.Retry(10, 20*time.Millisecond, func() error {
 		g.mu.RLock()
-		_, ok = g.peers[addr]
+		_, ok := g.peers[addr]
 		g.mu.RUnlock()
+		if !ok {
+			return errors.New("g should have added the peer")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
+	// Disconnect. Now that connection has been established, need to shutdown
+	// via the stream multiplexer.
 	newSmuxClient(conn).Close()
 
 	// g should remove the peer
-	for ok {
+	err = build.Retry(10, 20*time.Millisecond, func() error {
 		g.mu.RLock()
-		_, ok = g.peers[addr]
+		_, ok := g.peers[addr]
 		g.mu.RUnlock()
+		if ok {
+			return errors.New("g should have removed the peer")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// uncompliant connect
@@ -412,13 +427,43 @@ func TestConnectRejectsVersions(t *testing.T) {
 		genesisID       types.BlockID
 		uniqueID        gatewayID
 	}{
-		// Test that Connect fails when the remote peer's version is < 0.0.1 (0).
+		// Test that Connect fails when the remote peer's version is < 1.0.0 (0).
 		{
 			version: build.NewVersion(0, 0, 0),
 			errWant: insufficientVersionError("0.0.0"),
 			msg:     "Connect should fail when the remote peer's version is 0.0.0",
 		},
-		// Test that Connect /could/ succeed when the remote peer's version is >= 0.1.0.
+		// Test that Connect /could/ succeed when the remote peer's version is = minAcceptableVersion
+		{
+			version:   minAcceptableVersion,
+			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
+			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
+			genesisID: cts.GenesisBlockID(),
+		},
+		{
+			version:      minAcceptableVersion,
+			msg:          "Connect should not succeed when peer is connecting to itself",
+			uniqueID:     g.id,
+			genesisID:    cts.GenesisBlockID(),
+			errWant:      errOurAddress,
+			localErrWant: errOurAddress,
+		},
+		// Test that Connect /could/ succeed when the remote peer's version is = Gateway NetAddress Update Version
+		{
+			version:   handshakNetAddressUpgrade,
+			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
+			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
+			genesisID: cts.GenesisBlockID(),
+		},
+		{
+			version:      handshakNetAddressUpgrade,
+			msg:          "Connect should not succeed when peer is connecting to itself",
+			uniqueID:     g.id,
+			genesisID:    cts.GenesisBlockID(),
+			errWant:      errOurAddress,
+			localErrWant: errOurAddress,
+		},
+		// Test that Connect /could/ succeed when the remote peer's version is = current version
 		{
 			version:   build.Version,
 			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
@@ -442,12 +487,12 @@ func TestConnectRejectsVersions(t *testing.T) {
 			if err != nil {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
 			}
-			remoteVersion, err := g.acceptConnHandshake(conn, tt.version, tt.uniqueID)
+			remoteInfo, err := g.acceptConnHandshake(conn, tt.version, tt.uniqueID)
 			if err != tt.localErrWant {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
-			} else if err == nil && build.Version.Compare(remoteVersion) != 0 {
+			} else if err == nil && build.Version.Compare(remoteInfo.Version) != 0 {
 				panic(fmt.Sprintf("test #%d failed: %q != %q",
-					testIndex, build.Version.String(), remoteVersion.String()))
+					testIndex, build.Version.String(), remoteInfo.Version.String()))
 			}
 		}()
 		err = g.Connect(modules.NetAddress(listener.Addr().String()))
