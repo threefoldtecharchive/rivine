@@ -329,6 +329,7 @@ func (g *Gateway) connectSessionHandshakeV100(conn net.Conn, theirs sessionHeade
 
 func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeader, netAddress modules.NetAddress) (remoteAddress modules.NetAddress, err error) {
 	// send our net address first, as we are the one wanting to connect
+	g.log.Debugln("accept: sending our netaddr:", netAddress, netAddress.IsLocal())
 	err = encoding.WriteObject(conn, netAddress)
 	if err != nil {
 		err = errors.New("could not write address: " + err.Error())
@@ -477,6 +478,7 @@ func (g *Gateway) acceptConnSessionHandshakeV102(conn net.Conn) (remoteAddress m
 	g.mu.RLock()
 	gaddr := g.myAddr
 	g.mu.RUnlock()
+	g.log.Debugln("accept: sending our netaddr:", gaddr, gaddr.IsLocal())
 	err = encoding.WriteObject(conn, gaddr)
 	if err != nil {
 		err = errors.New("could not write address: " + err.Error())
