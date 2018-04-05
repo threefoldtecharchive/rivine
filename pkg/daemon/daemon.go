@@ -15,7 +15,6 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/modules/blockcreator"
 	"github.com/rivine/rivine/modules/consensus"
-	"github.com/rivine/rivine/modules/datastore"
 	"github.com/rivine/rivine/modules/explorer"
 	"github.com/rivine/rivine/modules/gateway"
 	"github.com/rivine/rivine/modules/transactionpool"
@@ -68,10 +67,6 @@ type Config struct {
 	// directories will be created
 	RootPersistentDir string
 
-	RedisAddr     string
-	RedisPassword string
-	RedisDB       int
-
 	// Network defines the network config to use
 	NetworkName string
 	// optional network config constructor,
@@ -100,10 +95,6 @@ func DefaultConfig() Config {
 		Profile:           false,
 		ProfileDir:        "profiles",
 		RootPersistentDir: "",
-
-		RedisAddr:     "localhost:6379",
-		RedisPassword: "",
-		RedisDB:       0,
 
 		NetworkName: build.Release,
 	}
@@ -365,32 +356,8 @@ func StartDaemon(cfg Config) (err error) {
 			}
 		}()
 	}
-	var ds modules.DataStore
-	if strings.Contains(cfg.Modules, "d") {
-		i++
-		fmt.Printf("(%d/%d) Loading datastore...\n", i, len(cfg.Modules))
-		db, err := datastore.NewRedis(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB,
-			filepath.Join(cfg.RootPersistentDir, modules.DataStoreDir, modules.DataStoreDatabaseSubDir),
-			cfg.BlockchainInfo)
-		if err != nil {
-			return err
-		}
-		ds, err = datastore.New(cs, db,
-			filepath.Join(cfg.RootPersistentDir, modules.DataStoreDir),
-			cfg.BlockchainInfo, networkConfig.Constants)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			fmt.Println("Closing datastore...")
-			err := ds.Close()
-			if err != nil {
-				fmt.Println("Error during datastore shutdown:", err)
-			}
-		}()
-	}
 
-	// Create the Sia API
+	// Create the Rivine API
 	a := api.New(
 		cfg.RequiredUserAgent,
 		cfg.APIPassword,
