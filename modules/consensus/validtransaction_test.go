@@ -5,7 +5,7 @@ import (
 
 	"github.com/rivine/rivine/types"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 // TestTryValidTransactionSet submits a valid transaction set to the

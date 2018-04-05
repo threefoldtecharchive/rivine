@@ -5,7 +5,7 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 // Block takes a block ID and finds the corresponding block, provided that the

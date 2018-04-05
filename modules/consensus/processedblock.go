@@ -9,7 +9,7 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 // SurpassThreshold is a percentage that dictates how much heavier a competing

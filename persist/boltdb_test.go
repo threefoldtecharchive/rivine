@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 	"github.com/rivine/rivine/build"
 )
 

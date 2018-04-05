@@ -16,7 +16,7 @@ import (
 	"github.com/rivine/rivine/types"
 
 	"github.com/NebulousLabs/demotemutex"
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 var (

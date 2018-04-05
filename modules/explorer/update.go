@@ -8,7 +8,7 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 // ProcessConsensusChange follows the most recent changes to the consensus set,

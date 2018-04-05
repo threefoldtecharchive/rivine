@@ -52,12 +52,6 @@
   version = "v0.1.0"
 
 [[projects]]
-  name = "github.com/coreos/bbolt"
-  packages = ["."]
-  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
-  version = "v1.3.0"
-
-[[projects]]
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -89,6 +83,12 @@
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  name = "github.com/rivine/bbolt"
+  packages = ["."]
+  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
+  version = "v1.3.0"
 
 [[projects]]
   branch = "master"
@@ -172,6 +172,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ea841f0a4bb51548218f79745148a5d40d9dd6da9b96e7210601d03fe2010183"
+  inputs-digest = "ef6012910ba1cd106d443fd56f39a58fc080ab1893ef87829baf80ceee9ae73b"
   solver-name = "gps-cdcl"
   solver-version = 1

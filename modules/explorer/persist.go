@@ -9,7 +9,7 @@ import (
 	"github.com/rivine/rivine/persist"
 	"github.com/rivine/rivine/types"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 var explorerMetadata = persist.Metadata{

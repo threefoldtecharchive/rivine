@@ -3,7 +3,7 @@ package persist
 import (
 	"time"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 // BoltDatabase is a persist-level wrapper for the bolt database, providing

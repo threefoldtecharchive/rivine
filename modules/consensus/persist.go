@@ -10,7 +10,7 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/persist"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 const (

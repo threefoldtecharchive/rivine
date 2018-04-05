@@ -5,7 +5,7 @@ TODO: fix tests
 import (
 	"testing"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"

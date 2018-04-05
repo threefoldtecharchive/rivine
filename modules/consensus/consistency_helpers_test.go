@@ -3,7 +3,7 @@ package consensus
 import (
 	"github.com/rivine/rivine/crypto"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 // dbConsensusChecksum is a convenience function to call consensusChecksum

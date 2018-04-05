@@ -7,7 +7,7 @@ import (
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/types"
 
-	"github.com/coreos/bbolt"
+	"github.com/rivine/bbolt"
 )
 
 // dbBlockHeight is a convenience function allowing blockHeight to be called
