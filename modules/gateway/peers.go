@@ -480,7 +480,9 @@ func (g *Gateway) acceptConnSessionHandshakeV102(conn net.Conn) (remoteAddress m
 		err = fmt.Errorf("peer's address (%v) is invalid: %v", remoteAddress, err)
 	}
 	// write now our net address
-	err = encoding.WriteObject(conn, g.myAddr)
+	host, _, _ := net.SplitHostPort(conn.LocalAddr().String())
+	netAddr := modules.NetAddress(net.JoinHostPort(host, g.port))
+	err = encoding.WriteObject(conn, netAddr)
 	if err != nil {
 		err = errors.New("could not write address: " + err.Error())
 		return
