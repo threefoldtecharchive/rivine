@@ -71,10 +71,25 @@ func (p *peer) accept() (modules.PeerConn, error) {
 }
 
 // addPeer adds a peer to the Gateway's peer list and spawns a listener thread
-// to handle its requests.
+// to handle its requests and increments the remotePeers accordingly
 func (g *Gateway) addPeer(p *peer) {
 	g.peers[p.NetAddress] = p
+	if !p.Local {
+		g.remotePeers++
+	}
 	go g.threadedListenPeer(p)
+}
+
+// deletePeer deletes a peer from the Gateway's peer list and decrements the
+// amount of remotePeers accordingly
+func (g *Gateway) deletePeer(p *peer) {
+	if !p.Local {
+		g.remotePeers--
+		if build.DEBUG && g.remotePeers < 0 {
+			panic("remotePeers shouldn't have a negative value")
+		}
+	}
+	delete(g.peers, p.NetAddress)
 }
 
 // randomOutboundPeer returns a random outbound peer.
@@ -225,7 +240,7 @@ func (g *Gateway) acceptPeer(p *peer) {
 	kick := addrs[fastrand.Intn(len(addrs))]
 
 	g.peers[kick].sess.Close()
-	delete(g.peers, kick)
+	g.deletePeer(g.peers[kick])
 	g.log.Printf("INFO: disconnected from %v to make room for %v\n", kick, p.NetAddress)
 	g.addPeer(p)
 }
@@ -601,7 +616,7 @@ func (g *Gateway) Disconnect(addr modules.NetAddress) error {
 	g.mu.Lock()
 	// Peer is removed from the peer list as well as the node list, to prevent
 	// the node from being re-connected while looking for a replacement peer.
-	delete(g.peers, addr)
+	g.deletePeer(p)
 	delete(g.nodes, addr)
 	g.mu.Unlock()
 
@@ -618,4 +633,12 @@ func (g *Gateway) Peers() []modules.Peer {
 		peers = append(peers, p.Peer)
 	}
 	return peers
+}
+
+// Online returns true if the node is connected to the internet.
+// During testing we always assume that the node is online.
+func (g *Gateway) Online() bool {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return build.Release != "standard" || g.remotePeers > 0
 }
