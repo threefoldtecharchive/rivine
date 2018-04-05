@@ -1,8 +1,12 @@
 package gateway
 
 import (
+	"bytes"
+	"path/filepath"
 	"testing"
 
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/persist"
 	"github.com/rivine/rivine/types"
 )
 
@@ -15,7 +19,7 @@ func TestLoad(t *testing.T) {
 
 	g.mu.Lock()
 	g.addNode(dummyNode)
-	g.save()
+	g.saveSync()
 	g.mu.Unlock()
 	g.Close()
 
@@ -25,5 +29,36 @@ func TestLoad(t *testing.T) {
 	}
 	if _, ok := g2.nodes[dummyNode]; !ok {
 		t.Fatal("gateway did not load old peer list:", g2.nodes)
+	}
+}
+
+// TestLoadv033 tests that the gateway can load a v033 persist file.
+func TestLoadv033(t *testing.T) {
+	var buf bytes.Buffer
+	log := persist.NewLogger(types.DefaultBlockchainInfo(), &buf)
+	buf.Reset()
+	g := &Gateway{
+		nodes:      make(map[modules.NetAddress]*node),
+		persistDir: filepath.Join("testdata", t.Name()),
+		log:        log,
+	}
+	if err := g.load(); err != nil {
+		t.Fatal(err)
+	}
+
+	// All nodes should have been loaded
+	if len(g.nodes) != 10 {
+		t.Error("expected 10 nodes, got", len(g.nodes))
+	}
+	// All nodes should be marked as non-outbound
+	for _, node := range g.nodes {
+		if node.WasOutboundPeer {
+			t.Error("v033 nodes should not be marked as outbound peers")
+		}
+	}
+
+	// The log should be empty
+	if buf.Len() != 0 {
+		t.Error("expected empty log, got", buf.String())
 	}
 }

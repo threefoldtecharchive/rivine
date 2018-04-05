@@ -64,7 +64,7 @@ import (
 	// after they successfully form a connection with the gateway. To limit the
 	// attacker's ability to add nodes to the nodelist, connections are
 	// ratelimited. An attacker with lots of IP addresses still has the ability to
-	// fill up the nodelist, however getting 90% dominance of the nodelist requries
+	// fill up the nodelist, however getting 90% dominance of the nodelist requires
 	// forming thousands of connections, which will take hours or days. By that
 	// time, the attacked node should already have its set of outbound peers,
 	// limiting the amount of damage that the attacker can do.
@@ -83,13 +83,6 @@ import (
 	// addresses, and when kicking inbound peers it shouldn't just favor kicking
 	// peers of the same IP address, it should favor kicking peers of the same ip
 	// address range.
-	//
-	// TODO: Currently the gateway does not save a list of its outbound
-	// connections. When it restarts, it will have a full nodelist (which may be
-	// primarily attacker nodes) and it will be connecting primarily to nodes in
-	// the nodelist. Instead, it should start by trying to connect to peers that
-	// have previously been outbound peers, as it is less likely that those have
-	// been manipulated.
 	//
 	// TODO: There is no public key exhcange,
 	// so communications cannot be effectively encrypted or authenticated.
@@ -148,7 +141,7 @@ type Gateway struct {
 	// and would block any threads.Flush() calls. So a second threadgroup is
 	// added which handles clean-shutdown for the peers, without blocking
 	// threads.Flush() calls.
-	nodes  map[modules.NetAddress]struct{}
+	nodes  map[modules.NetAddress]*node
 	peers  map[modules.NetAddress]*peer
 	peerTG siasync.ThreadGroup
 
@@ -169,8 +162,8 @@ type Gateway struct {
 type gatewayID [8]byte
 
 // managedSleep will sleep for the given period of time. If the full time
-// elapses, 'false' is returned. If the sleep is interrupted for shutdown,
-// 'true' is returned.
+// elapses, 'true' is returned. If the sleep is interrupted for shutdown,
+// 'false' is returned.
 func (g *Gateway) managedSleep(t time.Duration) (completed bool) {
 	select {
 	case <-time.After(t):
@@ -192,8 +185,8 @@ func (g *Gateway) Close() error {
 	if err := g.threads.Stop(); err != nil {
 		return err
 	}
-	g.mu.RLock()
-	defer g.mu.RUnlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 	return g.saveSync()
 }
 
@@ -209,8 +202,8 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 		handlers: make(map[rpcID]modules.RPCFunc),
 		initRPCs: make(map[string]modules.RPCFunc),
 
+		nodes: make(map[modules.NetAddress]*node),
 		peers: make(map[modules.NetAddress]*peer),
-		nodes: make(map[modules.NetAddress]struct{}),
 
 		persistDir: persistDir,
 
@@ -249,10 +242,12 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 
 	// Register RPCs.
 	g.RegisterRPC("ShareNodes", g.shareNodes)
+	g.RegisterRPC("DiscoverIP", g.discoverPeerIP)
 	g.RegisterConnectCall("ShareNodes", g.requestNodes)
 	// Establish the de-registration of the RPCs.
 	g.threads.OnStop(func() {
 		g.UnregisterRPC("ShareNodes")
+		g.UnregisterRPC("DiscoverIP")
 		g.UnregisterConnectCall("ShareNodes")
 	})
 
@@ -261,6 +256,17 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 	if loadErr := g.load(); loadErr != nil && !os.IsNotExist(loadErr) {
 		return nil, loadErr
 	}
+	// Spawn the thread to periodically save the gateway.
+	go g.threadedSaveLoop()
+	// Make sure that the gateway saves after shutdown.
+	g.threads.AfterStop(func() {
+		g.mu.Lock()
+		err = g.saveSync()
+		g.mu.Unlock()
+		if err != nil {
+			g.log.Println("ERROR: Unable to save gateway:", err)
+		}
+	})
 
 	// Add the bootstrap peers to the node list.
 	if bootstrap {
@@ -291,13 +297,20 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 		<-permanentListenClosedChan
 	})
 	// Set the address and port of the gateway.
-	_, g.port, err = net.SplitHostPort(g.listener.Addr().String())
+	host, port, err := net.SplitHostPort(g.listener.Addr().String())
+	g.port = port
 	if err != nil {
 		return nil, err
 	}
+
+	if ip := net.ParseIP(host); ip.IsUnspecified() && ip != nil {
+		// if host is unspecified, set a dummy one for now.
+		host = "localhost"
+	}
+
 	// Set myAddr equal to the address returned by the listener. It will be
 	// overwritten by threadedLearnHostname later on.
-	g.myAddr = modules.NetAddress(g.listener.Addr().String())
+	g.myAddr = modules.NetAddress(net.JoinHostPort(host, port))
 
 	// Spawn the peer connection listener.
 	go g.permanentListen(permanentListenClosedChan)

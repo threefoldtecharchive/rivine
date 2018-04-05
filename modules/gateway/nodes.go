@@ -18,6 +18,12 @@ var (
 	errPeerGenesisID = errors.New("peer has different genesis ID")
 )
 
+// A node represents a potential peer on the Sia network.
+type node struct {
+	NetAddress      modules.NetAddress `json:"netaddress"`
+	WasOutboundPeer bool               `json:"wasoutboundpeer"`
+}
+
 // addNode adds an address to the set of nodes on the network.
 func (g *Gateway) addNode(addr modules.NetAddress) error {
 	if addr == g.myAddr {
@@ -29,7 +35,10 @@ func (g *Gateway) addNode(addr modules.NetAddress) error {
 	} else if net.ParseIP(addr.Host()) == nil {
 		return errors.New("address must be an IP address: " + string(addr))
 	}
-	g.nodes[addr] = struct{}{}
+	g.nodes[addr] = &node{
+		NetAddress:      addr,
+		WasOutboundPeer: false,
+	}
 	return nil
 }
 
@@ -45,7 +54,9 @@ func (g *Gateway) pingNode(addr modules.NetAddress) (err error) {
 	defer conn.Close()
 
 	wantConn := false
-	_, err = g.connectHandshake(conn, build.Version, g.id, wantConn)
+	_, err = g.connectHandshake(conn, build.Version, g.id,
+		modules.NetAddress(conn.LocalAddr().String()), // can be inacture address, as we don't want to continue anyhow
+		wantConn)
 	return err
 }
 
@@ -130,15 +141,21 @@ func (g *Gateway) requestNodes(conn modules.PeerConn) error {
 	}
 
 	g.mu.Lock()
+	changed := false
 	for _, node := range nodes {
 		err := g.addNode(node)
 		if err != nil && err != errNodeExists && err != errOurAddress {
 			g.log.Printf("WARN: peer '%v' sent the invalid addr '%v'", conn.RPCAddr(), node)
 		}
+		if err == nil {
+			changed = true
+		}
 	}
-	err := g.save()
-	if err != nil {
-		g.log.Println("WARN: failed to save nodelist after requesting nodes:", err)
+	if changed {
+		err := g.saveSync()
+		if err != nil {
+			g.log.Println("ERROR: unable to save new nodes added to the gateway:", err)
+		}
 	}
 	g.mu.Unlock()
 	return nil
@@ -153,7 +170,7 @@ func (g *Gateway) permanentNodePurger(closeChan chan struct{}) {
 	for {
 		// Choose an amount of time to wait before attempting to prune a node.
 		// Nodes will occasionally go offline for some time, which can even be
-		// days. We don't want to too aggressivley prune nodes with low-moderate
+		// days. We don't want to too aggressively prune nodes with low-moderate
 		// uptime, as they are still useful to the network.
 		//
 		// But if there are a lot of nodes, we want to make sure that the node
@@ -163,7 +180,7 @@ func (g *Gateway) permanentNodePurger(closeChan chan struct{}) {
 		//
 		// This value is a ratelimit which tries to keep the nodes list in the
 		// gateawy healthy. A more complex algorithm might adjust this number
-		// according to the percentage of prune attemtps that are successful
+		// according to the percentage of prune attempts that are successful
 		// (decrease prune frequency if most nodes in the database are online,
 		// increase prune frequency if more nodes in the database are offline).
 		waitTime := nodePurgeDelay
@@ -221,7 +238,6 @@ func (g *Gateway) permanentNodePurger(closeChan chan struct{}) {
 		if err = g.pingNode(node); err != nil {
 			g.mu.Lock()
 			g.removeNode(node)
-			g.save()
 			g.mu.Unlock()
 			g.log.Debugf("INFO: removing node %q because it could not be reached during a random scan: %v", node, err)
 		}

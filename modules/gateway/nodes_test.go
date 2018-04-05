@@ -182,10 +182,10 @@ func TestShareNodes(t *testing.T) {
 
 	// remove all nodes from both peers
 	g1.mu.Lock()
-	g1.nodes = map[modules.NetAddress]struct{}{}
+	g1.nodes = map[modules.NetAddress]*node{}
 	g1.mu.Unlock()
 	g2.mu.Lock()
-	g2.nodes = map[modules.NetAddress]struct{}{}
+	g2.nodes = map[modules.NetAddress]*node{}
 	g2.mu.Unlock()
 
 	// SharePeers should now return no peers
@@ -427,7 +427,7 @@ func TestHealthyNodeListPruning(t *testing.T) {
 	// Wait for enough iterations of the node purge loop that over-pruning is
 	// possible. (Over-pruning does not need to be guaranteed, causing this
 	// test to fail once in a while is sufficient.)
-	time.Sleep(nodePurgeDelay * time.Duration(healthyNodeListLen-pruneNodeListLen) * 12)
+	time.Sleep(nodePurgeDelay * time.Duration(healthyNodeListLen-pruneNodeListLen))
 
 	// Check that the remaining gateways have pruned nodes.
 	gs[0].mu.RLock()

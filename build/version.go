@@ -133,9 +133,14 @@ var (
 
 var (
 	// rawVersion used to generate rivine's protocol version
-	rawVersion = "v1.0.0"
+	rawVersion = "v1.0.2"
 	// Version is the current version of rivined.
 	Version ProtocolVersion
+)
+
+const (
+	// MaxEncodedVersionLength is the maximum length of a sia-encoded ProtocolVersion.
+	MaxEncodedVersionLength = 32 + 8 // sizeof(uint32) + sizeof([8]uint8)
 )
 
 const versionRe = `^v?(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:-(.+?))?$`

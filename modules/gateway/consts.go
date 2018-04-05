@@ -16,15 +16,23 @@ const (
 	// connect to itself, this number can be reduced.
 	maxLocalOutboundPeers = 3
 
-	// EncodedVersionHeaderLength is the length of a session header encoded
+	// MaxEncodedSessionHeaderLength is the max length of a session header encoded
 	// with the encode package.
-	EncodedVersionHeaderLength = 57
+	// sizeof(blockID) + sizeof(gatewayID) + sizeof(bool) = 32 + 8 + 1 = 41
+	MaxEncodedSessionHeaderLength = 41
+
+	// saveFrequency defines how often the gateway saves its persistence.
+	saveFrequency = time.Minute * 2
 )
 
 var (
 	// minAcceptableVersion is the version below which the gateway will refuse to
 	// connect to peers and reject connection attempts
-	minAcceptableVersion = build.NewVersion(0, 0, 1)
+	minAcceptableVersion = build.NewVersion(1, 0, 0)
+
+	// handshakNetAddressUpgrade is the version where we upgraded the handshake,
+	// to replace the wantConn with a NetAddr.
+	handshakNetAddressUpgrade = build.NewVersion(1, 0, 2)
 
 	// fastNodePurgeDelay defines the amount of time that is waited between each
 	// iteration of the purge loop when the gateway has enough nodes to be
@@ -32,7 +40,7 @@ var (
 	fastNodePurgeDelay = build.Select(build.Var{
 		Standard: 1 * time.Minute,
 		Dev:      5 * time.Second,
-		Testing:  200 * time.Millisecond,
+		Testing:  1 * time.Second,
 	}).(time.Duration)
 
 	// healthyNodeListLen defines the number of nodes that the gateway must
@@ -56,7 +64,7 @@ var (
 	nodePurgeDelay = build.Select(build.Var{
 		Standard: 10 * time.Minute,
 		Dev:      20 * time.Second,
-		Testing:  500 * time.Millisecond,
+		Testing:  6 * time.Second,
 	}).(time.Duration)
 
 	// nodeListDelay defines the amount of time that is waited between each
@@ -64,7 +72,16 @@ var (
 	nodeListDelay = build.Select(build.Var{
 		Standard: 5 * time.Second,
 		Dev:      3 * time.Second,
-		Testing:  500 * time.Millisecond,
+		Testing:  1 * time.Second,
+	}).(time.Duration)
+
+	// peerRPCDelay defines the amount of time waited between each RPC accepted
+	// from a peer. Without this delay, a peer can force us to spin up thousands
+	// of goroutines per second.
+	peerRPCDelay = build.Select(build.Var{
+		Standard: 3 * time.Second,
+		Dev:      1 * time.Second,
+		Testing:  20 * time.Millisecond,
 	}).(time.Duration)
 
 	// pruneNodeListLen defines the number of nodes that the gateway must have
@@ -174,16 +191,60 @@ var (
 
 	// the gateway will abort a connection attempt after this long
 	dialTimeout = build.Select(build.Var{
-		Standard: 2 * time.Minute,
+		Standard: 3 * time.Minute,
 		Dev:      20 * time.Second,
-		Testing:  500 * time.Millisecond,
+		Testing:  6 * time.Second,
 	}).(time.Duration)
 
 	// rpcStdDeadline defines the standard deadline that should be used for all
 	// incoming RPC calls.
 	rpcStdDeadline = build.Select(build.Var{
-		Standard: 10 * time.Minute,
+		Standard: 5 * time.Minute,
+		Dev:      3 * time.Minute,
+		Testing:  10 * time.Second,
+	}).(time.Duration)
+)
+
+var (
+	// minPeersForIPDiscovery is the minimum number of peer connections we wait
+	// for before we try to discover our public ip from them. It is also the
+	// minimum number of successful replies we expect from our peers before we
+	// accept a result.
+	minPeersForIPDiscovery = build.Select(build.Var{
+		Standard: 5,
+		Dev:      3,
+		Testing:  2,
+	}).(int)
+
+	// timeoutIPDiscovery is the time after which managedIPFromPeers will fail
+	// if the ip couldn't be discovered successfully.
+	timeoutIPDiscovery = build.Select(build.Var{
+		Standard: 5 * time.Minute,
 		Dev:      5 * time.Minute,
-		Testing:  90 * time.Second,
+		Testing:  time.Minute,
+	}).(time.Duration)
+
+	// rediscoverIPIntervalSuccess is the time that has to pass after a
+	// successful IP discovery before we rediscover the IP.
+	rediscoverIPIntervalSuccess = build.Select(build.Var{
+		Standard: 3 * time.Hour,
+		Dev:      10 * time.Minute,
+		Testing:  30 * time.Second,
+	}).(time.Duration)
+
+	// rediscoverIPIntervalFailure is the time that has to pass after a failed
+	// IP discovery before we try again.
+	rediscoverIPIntervalFailure = build.Select(build.Var{
+		Standard: 15 * time.Minute,
+		Dev:      1 * time.Minute,
+		Testing:  10 * time.Second,
+	}).(time.Duration)
+
+	// peerDiscoveryRetryInterval is the time we wait when there were not
+	// enough peers to determine our public ip address before trying again.
+	peerDiscoveryRetryInterval = build.Select(build.Var{
+		Standard: 10 * time.Second,
+		Dev:      1 * time.Second,
+		Testing:  100 * time.Millisecond,
 	}).(time.Duration)
 )

@@ -6,7 +6,7 @@ all: install
 # tests are run during testing.
 run = Test
 pkgs = ./build ./modules/gateway ./cmd/rivined ./cmd/rivinec
-testpkgs = ./build ./crypto ./encoding ./modules ./modules/blockcreator ./modules/wallet ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types
+testpkgs = ./build ./crypto ./encoding ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types
 
 version = $(shell git describe | cut -d '-' -f 1)
 versionTag = $(shell git describe | cut -d '-' -f 1| cut -d 'v' -f 2)

@@ -15,6 +15,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/NebulousLabs/errors"
+  packages = ["."]
+  revision = "7ead97ef90b8efe5e824efdf129a60498291632a"
+
+[[projects]]
+  branch = "master"
   name = "github.com/NebulousLabs/fastrand"
   packages = ["."]
   revision = "3cf7173006a0b7d2371fa1a220da7f9d48c7827c"
@@ -91,6 +97,12 @@
   revision = "e35a707fc62766b909ae41fc6d45c1efac74bf34"
 
 [[projects]]
+  name = "github.com/rivine/smux"
+  packages = ["."]
+  revision = "e28719eede1ac5714cf0b06ba2f403125864ebe0"
+  version = "v1.0.7"
+
+[[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
   revision = "a1f051bc3eba734da4772d60e2d677f47cf93ef4"
@@ -101,12 +113,6 @@
   packages = ["."]
   revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
   version = "v1.0.0"
-
-[[projects]]
-  name = "github.com/xtaci/smux"
-  packages = ["."]
-  revision = "e28719eede1ac5714cf0b06ba2f403125864ebe0"
-  version = "v1.0.7"
 
 [[projects]]
   branch = "master"
@@ -166,6 +172,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fb3d35fcf46e08a1ef7edd59ce8e88e4aa1eaef3cfc56b2c872355150533c396"
+  inputs-digest = "ea841f0a4bb51548218f79745148a5d40d9dd6da9b96e7210601d03fe2010183"
   solver-name = "gps-cdcl"
   solver-version = 1

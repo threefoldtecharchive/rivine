@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -22,6 +23,7 @@ type dummyConn struct {
 func (dc *dummyConn) Read(p []byte) (int, error)       { return len(p), nil }
 func (dc *dummyConn) Write(p []byte) (int, error)      { return len(p), nil }
 func (dc *dummyConn) Close() error                     { return nil }
+func (dc *dummyConn) SetReadDeadline(time.Time) error  { return nil }
 func (dc *dummyConn) SetWriteDeadline(time.Time) error { return nil }
 
 // TestAddPeer tries adding a peer to the gateway.
@@ -43,6 +45,83 @@ func TestAddPeer(t *testing.T) {
 	})
 	if len(g.peers) != 1 {
 		t.Fatal("gateway did not add peer")
+	}
+}
+
+// TestAcceptPeer tests that acceptPeer does't kick outbound or local peers.
+func TestAcceptPeer(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	t.Parallel()
+	g := newTestingGateway(t)
+	defer g.Close()
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// Add only unkickable peers.
+	var unkickablePeers []*peer
+	for i := 0; i < fullyConnectedThreshold+1; i++ {
+		addr := modules.NetAddress(fmt.Sprintf("1.2.3.%d", i))
+		p := &peer{
+			Peer: modules.Peer{
+				NetAddress: addr,
+				Inbound:    false,
+				Local:      false,
+			},
+			sess: newSmuxClient(new(dummyConn)),
+		}
+		unkickablePeers = append(unkickablePeers, p)
+	}
+	for i := 0; i < fullyConnectedThreshold+1; i++ {
+		addr := modules.NetAddress(fmt.Sprintf("127.0.0.1:%d", i))
+		p := &peer{
+			Peer: modules.Peer{
+				NetAddress: addr,
+				Inbound:    true,
+				Local:      true,
+			},
+			sess: newSmuxClient(new(dummyConn)),
+		}
+		unkickablePeers = append(unkickablePeers, p)
+	}
+	for _, p := range unkickablePeers {
+		g.addPeer(p)
+	}
+
+	// Test that accepting another peer doesn't kick any of the peers.
+	g.acceptPeer(&peer{
+		Peer: modules.Peer{
+			NetAddress: "9.9.9.9",
+			Inbound:    true,
+		},
+		sess: newSmuxClient(new(dummyConn)),
+	})
+	for _, p := range unkickablePeers {
+		if _, exists := g.peers[p.NetAddress]; !exists {
+			t.Error("accept peer kicked an outbound or local peer")
+		}
+	}
+
+	// Add a kickable peer.
+	g.addPeer(&peer{
+		Peer: modules.Peer{
+			NetAddress: "9.9.9.9",
+			Inbound:    true,
+		},
+		sess: newSmuxClient(new(dummyConn)),
+	})
+	// Test that accepting a local peer will kick a kickable peer.
+	g.acceptPeer(&peer{
+		Peer: modules.Peer{
+			NetAddress: "127.0.0.1:99",
+			Inbound:    true,
+			Local:      true,
+		},
+		sess: newSmuxClient(new(dummyConn)),
+	})
+	if _, exists := g.peers["9.9.9.9"]; exists {
+		t.Error("acceptPeer didn't kick a peer to make room for a local peer")
 	}
 }
 
@@ -79,7 +158,7 @@ func TestRandomOutboundPeer(t *testing.T) {
 	}
 }
 
-// TestListen is a general test probling the connection listener.
+// TestListen is a general test probing the connection listener.
 func TestListen(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
@@ -93,10 +172,8 @@ func TestListen(t *testing.T) {
 	if err != nil {
 		t.Fatal("dial failed:", err)
 	}
-	var gID gatewayID
-	fastrand.Read(gID[:])
 	addr := modules.NetAddress(conn.LocalAddr().String())
-	ack, err := g.connectHandshake(conn, build.NewVersion(0, 0, 0), gID, true)
+	ack, err := g.connectHandshake(conn, build.NewVersion(0, 1, 0), gatewayID{}, g.myAddr, true)
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
@@ -111,34 +188,14 @@ func TestListen(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 
-	// a simple 'conn.Close' would not obey the muxado disconnect protocol
-	newSmuxClient(conn).Close()
-
-	// compliant connect with invalid port
+	// compliant connect with fake netAddress
 	conn, err = net.Dial("tcp", string(g.Address()))
 	if err != nil {
 		t.Fatal("dial failed:", err)
 	}
-	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = g.connectHandshake(conn, build.Version, gID, true)
-	if err != nil {
+	ack, err = g.connectHandshake(conn, build.Version, gatewayID{}, "fake", true)
+	if err != errPeerRejectedConn {
 		t.Fatal(err)
-	}
-	if ack.Compare(build.Version) != 0 {
-		t.Fatal("gateway should have given ack")
-	}
-	err = connectPortHandshake(conn, "0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := 0; i < 10; i++ {
-		g.mu.RLock()
-		_, ok := g.peers[addr]
-		g.mu.RUnlock()
-		if ok {
-			t.Fatal("gateway should not have added a peer with an invalid port")
-		}
-		time.Sleep(20 * time.Millisecond)
 	}
 
 	// a simple 'conn.Close' would not obey the muxado disconnect protocol
@@ -150,34 +207,44 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = g.connectHandshake(conn, build.Version, gID, true)
+	ack, err = g.connectHandshake(conn, build.Version, gatewayID{}, addr, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ack.Compare(build.Version) != 0 {
+	if ack.Version.Compare(build.Version) != 0 {
 		t.Fatal("gateway should have given ack")
 	}
 
-	err = connectPortHandshake(conn, addr.Port())
+	// g should add the peer
+	err = build.Retry(50, 100*time.Millisecond, func() error {
+		g.mu.RLock()
+		_, ok := g.peers[addr]
+		g.mu.RUnlock()
+		if !ok {
+			return errors.New("g should have added the peer")
+		}
+		return nil
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// g should add the peer
-	var ok bool
-	for !ok {
-		g.mu.RLock()
-		_, ok = g.peers[addr]
-		g.mu.RUnlock()
-	}
-
+	// Disconnect. Now that connection has been established, need to shutdown
+	// via the stream multiplexer.
 	newSmuxClient(conn).Close()
 
 	// g should remove the peer
-	for ok {
+	err = build.Retry(50, 100*time.Millisecond, func() error {
 		g.mu.RLock()
-		_, ok = g.peers[addr]
+		_, ok := g.peers[addr]
 		g.mu.RUnlock()
+		if ok {
+			return errors.New("g should have removed the peer")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// uncompliant connect
@@ -334,13 +401,43 @@ func TestConnectRejectsVersions(t *testing.T) {
 		genesisID       types.BlockID
 		uniqueID        gatewayID
 	}{
-		// Test that Connect fails when the remote peer's version is < 0.0.1 (0).
+		// Test that Connect fails when the remote peer's version is < 1.0.0 (0).
 		{
 			version: build.NewVersion(0, 0, 0),
 			errWant: insufficientVersionError("0.0.0"),
 			msg:     "Connect should fail when the remote peer's version is 0.0.0",
 		},
-		// Test that Connect /could/ succeed when the remote peer's version is >= 0.1.0.
+		// Test that Connect /could/ succeed when the remote peer's version is = minAcceptableVersion
+		{
+			version:   minAcceptableVersion,
+			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
+			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
+			genesisID: cts.GenesisBlockID(),
+		},
+		{
+			version:      minAcceptableVersion,
+			msg:          "Connect should not succeed when peer is connecting to itself",
+			uniqueID:     g.id,
+			genesisID:    cts.GenesisBlockID(),
+			errWant:      errOurAddress,
+			localErrWant: errOurAddress,
+		},
+		// Test that Connect /could/ succeed when the remote peer's version is = Gateway NetAddress Update Version
+		{
+			version:   handshakNetAddressUpgrade,
+			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
+			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
+			genesisID: cts.GenesisBlockID(),
+		},
+		{
+			version:      handshakNetAddressUpgrade,
+			msg:          "Connect should not succeed when peer is connecting to itself",
+			uniqueID:     g.id,
+			genesisID:    cts.GenesisBlockID(),
+			errWant:      errOurAddress,
+			localErrWant: errOurAddress,
+		},
+		// Test that Connect /could/ succeed when the remote peer's version is = current version
 		{
 			version:   build.Version,
 			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
@@ -364,17 +461,20 @@ func TestConnectRejectsVersions(t *testing.T) {
 			if err != nil {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
 			}
-			remoteVersion, err := g.acceptConnHandshake(conn, tt.version, tt.uniqueID)
-			if err != tt.localErrWant {
+			remoteInfo, err := g.acceptConnHandshake(conn, tt.version, tt.uniqueID)
+			if tt.localErrWant != nil && err != tt.localErrWant {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
-			} else if err == nil && build.Version.Compare(remoteVersion) != 0 {
+			} else if err == nil && build.Version.Compare(remoteInfo.Version) != 0 {
 				panic(fmt.Sprintf("test #%d failed: %q != %q",
-					testIndex, build.Version.String(), remoteVersion.String()))
+					testIndex, build.Version.String(), remoteInfo.Version.String()))
+			} else if err != nil && tt.errWant == nil {
+				panic(fmt.Sprintf("test #%d failed: %q != %q",
+					testIndex, build.Version.String(), remoteInfo.Version.String()))
 			}
 		}()
 		err = g.Connect(modules.NetAddress(listener.Addr().String()))
 		if err != tt.errWant {
-			t.Fatalf("expected Connect to error with '%v', but got '%v': %s", tt.errWant, err, tt.msg)
+			t.Fatalf("test #%d failed: expected Connect to error with '%v', but got '%v': %s", testIndex, tt.errWant, err, tt.msg)
 		}
 		<-doneChan
 		g.Disconnect(modules.NetAddress(listener.Addr().String()))
@@ -440,8 +540,8 @@ func TestPeerManager(t *testing.T) {
 
 	// g1's node list should only contain g2
 	g1.mu.Lock()
-	g1.nodes = map[modules.NetAddress]struct{}{}
-	g1.nodes[g2.Address()] = struct{}{}
+	g1.nodes = map[modules.NetAddress]*node{}
+	g1.nodes[g2.Address()] = &node{NetAddress: g2.Address()}
 	g1.mu.Unlock()
 
 	// when peerManager wakes up, it should connect to g2.
@@ -576,5 +676,182 @@ func TestOverloadedBootstrap(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
+	}
+}
+
+// TestPeerManagerPriority tests that the peer manager will prioritize
+// connecting to previous outbound peers before inbound peers.
+func TestPeerManagerPriority(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	t.Parallel()
+
+	g1 := newNamedTestingGateway(t, "1")
+	defer g1.Close()
+	g2 := newNamedTestingGateway(t, "2")
+	defer g2.Close()
+	g3 := newNamedTestingGateway(t, "3")
+	defer g3.Close()
+
+	// Connect g1 to g2. This will cause g2 to be saved as an outbound peer in
+	// g1's node list.
+	if err := g1.Connect(g2.Address()); err != nil {
+		t.Fatal(err)
+	}
+	// Connect g3 to g1. This will cause g3 to be added to g1's node list, but
+	// not as an outbound peer.
+	if err := g3.Connect(g1.Address()); err != nil {
+		t.Fatal(err)
+	}
+
+	// Spin until the connections succeeded.
+	for i := 0; i < 50; i++ {
+		g1.mu.RLock()
+		_, exists2 := g1.nodes[g2.Address()]
+		_, exists3 := g1.nodes[g3.Address()]
+		g1.mu.RUnlock()
+		if exists2 && exists3 {
+			break
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
+	g1.mu.RLock()
+	peer2, exists2 := g1.nodes[g2.Address()]
+	peer3, exists3 := g1.nodes[g3.Address()]
+	g1.mu.RUnlock()
+	if !exists2 {
+		t.Fatal("peer 2 not in gateway")
+	}
+	if !exists3 {
+		t.Fatal("peer 3 not found") // ERRORS
+	}
+	// Verify assumptions about node list.
+	g1.mu.RLock()
+	g2isOutbound := peer2.WasOutboundPeer
+	g3isOutbound := peer3.WasOutboundPeer
+	g1.mu.RUnlock()
+	if !g2isOutbound {
+		t.Fatal("g2 should be an outbound node")
+	}
+	if g3isOutbound {
+		t.Fatal("g3 should not be an outbound node")
+	}
+
+	// Disconnect everyone.
+	g2.Disconnect(g1.Address())
+	g3.Disconnect(g1.Address())
+
+	// Shutdown g1.
+	err := g1.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Restart g1. It should immediately reconnect to g2, and then g3 after a
+	// delay.
+	g1, err = New(string(g1.myAddr), false, g1.persistDir,
+		types.DefaultBlockchainInfo(), types.DefaultChainConstants(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g1.Close()
+
+	// Wait until g1 connects to g2.
+	for i := 0; i < 100; i++ {
+		if peers := g1.Peers(); len(peers) == 0 {
+			time.Sleep(10 * time.Millisecond)
+		} else if len(peers) == 1 && peers[0].NetAddress == g2.Address() {
+			break
+		} else {
+			t.Fatal("something wrong with the peer list:", peers)
+		}
+	}
+	// Wait until g1 connects to g3.
+	for i := 0; i < 100; i++ {
+		if peers := g1.Peers(); len(peers) == 1 {
+			time.Sleep(10 * time.Millisecond)
+		} else if len(peers) == 2 {
+			break
+		} else {
+			t.Fatal("something wrong with the peer list:", peers)
+		}
+	}
+}
+
+// TestPeerManagerOutboundSave sets up an island of nodes and checks that they
+// can all connect to eachother, and that the all add eachother as
+// 'WasOutboundPeer'.
+func TestPeerManagerOutboundSave(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	t.Parallel()
+
+	// Create enough gateways so that every gateway should automatically end up
+	// with every other gateway as an outbound peer.
+	var gs []*Gateway
+	for i := 0; i < wellConnectedThreshold+1; i++ {
+		gs = append(gs, newNamedTestingGateway(t, strconv.Itoa(i)))
+	}
+	// Connect g1 to each peer. This should be enough that every peer eventually
+	// has the full set of outbound peers.
+	for _, g := range gs[1:] {
+		if err := gs[0].Connect(g.Address()); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Block until every peer has wellConnectedThreshold outbound peers.
+	err := build.Retry(100, time.Millisecond*200, func() error {
+		for _, g := range gs {
+			var outboundNodes, outboundPeers int
+			g.mu.RLock()
+			for _, node := range g.nodes {
+				if node.WasOutboundPeer {
+					outboundNodes++
+				}
+			}
+			for _, peer := range g.peers {
+				if !peer.Inbound {
+					outboundPeers++
+				}
+			}
+			g.mu.RUnlock()
+			if outboundNodes < wellConnectedThreshold {
+				return errors.New("not enough outbound nodes: " + strconv.Itoa(outboundNodes))
+			}
+			if outboundPeers < wellConnectedThreshold {
+				return errors.New("not enough outbound peers: " + strconv.Itoa(outboundPeers))
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestBuildPeerManagerNodeList tests the buildPeerManagerNodeList method.
+func TestBuildPeerManagerNodeList(t *testing.T) {
+	g := &Gateway{
+		nodes: map[modules.NetAddress]*node{
+			"foo":  {NetAddress: "foo", WasOutboundPeer: true},
+			"bar":  {NetAddress: "bar", WasOutboundPeer: false},
+			"baz":  {NetAddress: "baz", WasOutboundPeer: true},
+			"quux": {NetAddress: "quux", WasOutboundPeer: false},
+		},
+	}
+	nodelist := g.buildPeerManagerNodeList()
+	// all outbound nodes should be at the front of the list
+	var i int
+	for i < len(nodelist) && g.nodes[nodelist[i]].WasOutboundPeer {
+		i++
+	}
+	for i < len(nodelist) && !g.nodes[nodelist[i]].WasOutboundPeer {
+		i++
+	}
+	if i != len(nodelist) {
+		t.Fatal("bad nodelist:", nodelist)
 	}
 }
