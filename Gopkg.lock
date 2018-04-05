@@ -15,6 +15,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/NebulousLabs/errors"
+  packages = ["."]
+  revision = "7ead97ef90b8efe5e824efdf129a60498291632a"
+
+[[projects]]
+  branch = "master"
   name = "github.com/NebulousLabs/fastrand"
   packages = ["."]
   revision = "3cf7173006a0b7d2371fa1a220da7f9d48c7827c"
@@ -166,6 +172,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "fb3d35fcf46e08a1ef7edd59ce8e88e4aa1eaef3cfc56b2c872355150533c396"
+  inputs-digest = "06ecd7e8997cbbc6862cc2999d7afd53f65d71b63347d2ee2ec30d161ad10ec5"
   solver-name = "gps-cdcl"
   solver-version = 1
