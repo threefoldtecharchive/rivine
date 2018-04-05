@@ -165,15 +165,21 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 // The requesting peer is added as a node and a peer. The peer is only added if
 // a nil error is returned.
 func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) error {
+	// Get the remote address from opened socket
+	remoteAddr := modules.NetAddress(conn.RemoteAddr().String())
+
 	// Accept the peer.
 	peer := &peer{
 		Peer: modules.Peer{
 			Inbound: true,
 			// NOTE: local may be true even if the supplied remoteAddr is not
 			// actually reachable.
-			Local:      remoteInfo.NetAddress.IsLocal(),
-			NetAddress: remoteInfo.NetAddress,
-			Version:    remoteInfo.Version,
+			Local: remoteAddr.IsLocal(),
+			// Ignoring claimed IP address (which should be == to the socket address)
+			// by the host but keeping note of the port number so we can call back
+			NetAddress: modules.NetAddress(net.JoinHostPort(
+				remoteAddr.Host(), remoteInfo.NetAddress.Port())),
+			Version: remoteInfo.Version,
 		},
 		sess: newSmuxServer(conn),
 	}
