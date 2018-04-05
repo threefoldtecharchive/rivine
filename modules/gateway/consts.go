@@ -40,7 +40,7 @@ var (
 	fastNodePurgeDelay = build.Select(build.Var{
 		Standard: 1 * time.Minute,
 		Dev:      5 * time.Second,
-		Testing:  200 * time.Millisecond,
+		Testing:  1 * time.Second,
 	}).(time.Duration)
 
 	// healthyNodeListLen defines the number of nodes that the gateway must
@@ -64,7 +64,7 @@ var (
 	nodePurgeDelay = build.Select(build.Var{
 		Standard: 10 * time.Minute,
 		Dev:      20 * time.Second,
-		Testing:  500 * time.Millisecond,
+		Testing:  6 * time.Second,
 	}).(time.Duration)
 
 	// nodeListDelay defines the amount of time that is waited between each
@@ -72,7 +72,7 @@ var (
 	nodeListDelay = build.Select(build.Var{
 		Standard: 5 * time.Second,
 		Dev:      3 * time.Second,
-		Testing:  500 * time.Millisecond,
+		Testing:  1 * time.Second,
 	}).(time.Duration)
 
 	// peerRPCDelay defines the amount of time waited between each RPC accepted
@@ -193,7 +193,7 @@ var (
 	dialTimeout = build.Select(build.Var{
 		Standard: 3 * time.Minute,
 		Dev:      20 * time.Second,
-		Testing:  10 * time.Second,
+		Testing:  6 * time.Second,
 	}).(time.Duration)
 
 	// rpcStdDeadline defines the standard deadline that should be used for all
