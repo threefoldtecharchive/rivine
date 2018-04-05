@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/rivine/rivine/build"
-	"github.com/xtaci/smux"
+	"github.com/rivine/smux"
 )
 
 // A streamSession is a multiplexed transport that can accept or initiate
