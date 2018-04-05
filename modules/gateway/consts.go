@@ -193,7 +193,7 @@ var (
 	dialTimeout = build.Select(build.Var{
 		Standard: 3 * time.Minute,
 		Dev:      20 * time.Second,
-		Testing:  2 * time.Second,
+		Testing:  10 * time.Second,
 	}).(time.Duration)
 
 	// rpcStdDeadline defines the standard deadline that should be used for all
@@ -201,7 +201,7 @@ var (
 	rpcStdDeadline = build.Select(build.Var{
 		Standard: 5 * time.Minute,
 		Dev:      3 * time.Minute,
-		Testing:  5 * time.Second,
+		Testing:  10 * time.Second,
 	}).(time.Duration)
 )
 
