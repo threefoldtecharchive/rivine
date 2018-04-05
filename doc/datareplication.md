@@ -10,15 +10,15 @@ This will set up a rivine daemon which acts as a full node (it has a full copy o
 
 ## Saving data
 
-Data is saved on the blockchain by adding it as `arbitrary data` in a  transaction. Although there is no hard requirement to the structure of such arbitrary data, the `datastore` module expects it to be of the form: `specifier|namespace|actualdata`. By default, a specifier has a length of 16 bytes, and a namespace has a length of 4 bytes. The specifier is used by the transactionpool and consensus set to validate arbitrary data. Data which does not start with a validated specifier causes the transaction to be rejected. As such, the datastore currently ignores the specifier altoghether. The only whitelisted specifier is currently `NonSia` (padded with 0-value bytes to a length of 16 bytes).
+Data is saved on the blockchain by adding it as `arbitrary data` in a  transaction. Although there is no hard requirement to the structure of such arbitrary data, the `datastore` module expects it to be of the form: `namespace|actualdata`. A namespace has a length of 4 bytes.
 
-In order to allow people to store data on the blockchain, a command is exposed in the `client` which creates a minimal transaction to the provided address, while paying the miner fee, and adding the provided data. This command silently adds a specifier (the specifier being `NonSia`, as to not have the transaction rejected by the `transactionpool` for containing invalid data). The command is as follows:
+In order to allow people to store data on the blockchain, a command is exposed in the `client` which creates a minimal transaction to the provided address, while paying the miner fee, and adding the provided data. The command is as follows:
 
 ```bash
 rivinec wallet registerdata [namespace] [data] [destination address]
 ```
 
-The destination address can be any valid address (inlcuding one of your own addresses). Keeping in mind the structure the data should have, as well as the fact that the client adds the specifier by itself, we only need to add the namespace to the data. For example, if we want to write "testdata" to the namespace "1111", we can do so with the following command:
+The destination address can be any valid address (inlcuding one of your own addresses). Keeping in mind the structure the data should have, containing the namespace to the data. For example, if we want to write "testdata" to the namespace "1111", we can do so with the following command:
 
 ```bash
 rivinec wallet registerdata 1111 testdata 53d6162d18db2dffbe7f9dd9fcbce1c34...

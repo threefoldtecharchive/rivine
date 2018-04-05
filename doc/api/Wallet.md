@@ -40,7 +40,6 @@ Index
 | [/wallet/coins](#walletcoins-post)                              | POST      |
 | [/wallet/blockstakes](#walletblockstakes-post)                  | POST      |
 | [/wallet/data](#walletdata-post)                                | POST      |
-| [/wallet/siagkey](#walletsiagkey-post)                          | POST      |
 | [/wallet/transaction/___:id___](#wallettransactionid-get)       | GET       |
 | [/wallet/transactions](#wallettransactions-get)                 | GET       |
 | [/wallet/transactions/___:addr___](#wallettransactionsaddr-get) | GET       |
@@ -353,8 +352,8 @@ gets the transaction associated with a specific transaction id.
     "inputs": [
       {
         // Type of fund represented by the input. Possible values are
-        // 'siacoin input' and 'siafund input'.
-        "fundtype": "siacoin input",
+        // 'coin input' and 'blstake input'.
+        "fundtype": "coin input",
 
         // true if the address is owned by the wallet.
         "walletaddress": false,
@@ -373,14 +372,14 @@ gets the transaction associated with a specific transaction id.
     "outputs": [
       {
         // Type of fund is represented by the output. Possible values are
-        // 'siacoin output', 'siafund output', 'claim output', and 'miner
-        // payout'. oin outputs and claim outputs both relate to coins.
+        // 'coin output', 'blstake output', 'miner fee', and 'miner
+        // payout'. coin outputs and miner fees both relate to coins.
         // blockstake outputs relate to blockstakes. Miner payouts point to coins
         // that have been spent on a miner payout. Because the destination of
         // the miner payout is determined by the block and not the transaction,
         // the data 'maturityheight', 'walletaddress', and 'relatedaddress' are
         // left blank.
-        "fundtype": "siacoin output",
+        "fundtype": "coin output",
 
         // Block height the output becomes available to be spent. Coin
         // outputs and blockstake outputs mature immediately - their maturity
