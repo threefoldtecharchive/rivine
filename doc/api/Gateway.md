@@ -47,7 +47,7 @@ returns information about the gateway, including the list of connected peers.
         // `modules.NetAddress`.
         "netaddress": String,
 
-        // version is the version number of the peer.
+        // version is the protocol version number of the peer.
         "version":    String,
 
         // inbound is true when the peer initiated the connection. This field

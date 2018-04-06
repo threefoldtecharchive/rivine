@@ -56,6 +56,7 @@ func newVersionCmd(cfg *Config) func(*cobra.Command, []string) {
 		fmt.Printf("%s Daemon v%s%s\n",
 			strings.Title(cfg.BlockchainInfo.Name),
 			cfg.BlockchainInfo.ChainVersion.String(), postfix)
+		fmt.Println("Rivine Protocol v" + cfg.BlockchainInfo.ProtocolVersion.String())
 	}
 }
 
