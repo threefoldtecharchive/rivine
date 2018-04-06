@@ -7,6 +7,9 @@ algorithm.
 General
 -------
 
+Block stakes are an alternative currency, living next to the regular 'coin' currency. Block stakes is however a finite currency, and the total amount of block stakes available in a single network is defined as part of the genesis blocks, which also defines the initial distribution of which. Block stakes are stored in a wallet, next to regular coins, and can be also send to other wallets. Sending of block stakes is however a bit different from sending coins, we'll come back to this later. Just remember already that the genesis block only defines the initial distribution, given that they can be send around afterwards, the distribution at any given point in the future is undefined. The only cost of sending those, is the transaction fee that has to be paid for the transaction in which the relevant block stakes are defined as outputs.
+
+Block stakes are required in order to create blocks, and thus every blockcreator has at least one block stake. The more block stakes, the more change you have to mint the next block. Should a single party possess a majority of block stakes, it could disrupt the network, even though not undetectable.
 
 protocol
 --------
