@@ -6,8 +6,9 @@ import (
 
 // BlockchainInfo contains information about a blockchain.
 type BlockchainInfo struct {
-	Name    string
-	Version build.ProtocolVersion
+	Name            string
+	ChainVersion    build.ProtocolVersion
+	ProtocolVersion build.ProtocolVersion
 }
 
 // DefaultBlockchainInfo returns the blockchain information
@@ -15,7 +16,8 @@ type BlockchainInfo struct {
 // which is set as part of the build process.
 func DefaultBlockchainInfo() BlockchainInfo {
 	return BlockchainInfo{
-		Name:    "Rivine",
-		Version: build.Version,
+		Name:            "Rivine",
+		ChainVersion:    build.Version,
+		ProtocolVersion: build.Version,
 	}
 }

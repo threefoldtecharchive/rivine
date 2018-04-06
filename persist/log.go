@@ -79,7 +79,7 @@ func NewLogger(info types.BlockchainInfo, w io.Writer) *Logger {
 	// Call depth is 3 because NewLogger is usually called by NewFileLogger
 	l.Output(3, fmt.Sprintf(
 		"STARTUP: Logging has started. %s Version %s",
-		info.Name, info.Version.String()))
+		info.Name, info.ChainVersion.String()))
 	return &Logger{l, w}
 }
 

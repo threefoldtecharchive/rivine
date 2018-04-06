@@ -22,7 +22,7 @@ const (
 type Config struct {
 	Address               string
 	Name                  string
-	Version               build.ProtocolVersion
+	Version               build.ProtocolVersion // blockchain version (is NOT Rivine Protocol Version)
 	CurrencyCoinUnit      string
 	CurrencyUnits         types.CurrencyUnits
 	MinimumTransactionFee types.Currency

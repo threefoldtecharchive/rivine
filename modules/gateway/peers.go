@@ -134,7 +134,7 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	addr := modules.NetAddress(conn.RemoteAddr().String())
 	g.log.Debugf("INFO: %v wants to connect", addr)
 
-	remoteInfo, err := g.acceptConnHandshake(conn, build.Version, g.id)
+	remoteInfo, err := g.acceptConnHandshake(conn, g.bcInfo.ProtocolVersion, g.id)
 	if err != nil {
 		g.log.Debugf("INFO: %v wanted to connect but handshake failed: %v", addr, err)
 		conn.Close()
@@ -279,7 +279,7 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 		return
 	}
 
-	if remoteInfo.Version.Compare(minAcceptableVersion) < 0 {
+	if remoteInfo.Version.Compare(MinAcceptableVersion) < 0 {
 		// invalid version
 		err = insufficientVersionError(remoteInfo.Version.String())
 		return
@@ -308,7 +308,7 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 		lowestVersion = remoteInfo.Version
 	}
 	// now compare the version, as based on that we might want something verry different
-	if lowestVersion.Compare(handshakNetAddressUpgrade) >= 0 {
+	if lowestVersion.Compare(HandshakNetAddressUpgrade) >= 0 {
 		// v1.0.2+
 		remoteInfo.NetAddress, err = g.connectSessionHandshakeV102(conn, theirs, netAddress)
 	} else {
@@ -378,7 +378,7 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 	// check version, and handle based on that from here on out
 
 	// reject too low versions
-	if remoteInfo.Version.Compare(minAcceptableVersion) < 0 {
+	if remoteInfo.Version.Compare(MinAcceptableVersion) < 0 {
 		// return invalid version
 		err = insufficientVersionError(remoteInfo.Version.String())
 		g.writeRejectVersionHeader(conn, err)
@@ -425,7 +425,7 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 		// theirs is lower, use that one
 		lowestVersion = remoteInfo.Version
 	}
-	if lowestVersion.Compare(handshakNetAddressUpgrade) >= 0 {
+	if lowestVersion.Compare(HandshakNetAddressUpgrade) >= 0 {
 		// v1.0.2+
 		remoteInfo.NetAddress, err = g.acceptConnSessionHandshakeV102(conn)
 	} else {
@@ -534,7 +534,7 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 	}
 
 	// Perform peer initialization.
-	remoteInfo, err := g.connectHandshake(conn, build.Version, g.id, gaddr, true)
+	remoteInfo, err := g.connectHandshake(conn, g.bcInfo.ProtocolVersion, g.id, gaddr, true)
 	if err != nil {
 		conn.Close()
 		return err

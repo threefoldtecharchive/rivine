@@ -188,12 +188,14 @@ func TestListen(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 
+	bcInfo := types.DefaultBlockchainInfo()
+
 	// compliant connect with fake netAddress
 	conn, err = net.Dial("tcp", string(g.Address()))
 	if err != nil {
 		t.Fatal("dial failed:", err)
 	}
-	ack, err = g.connectHandshake(conn, build.Version, gatewayID{}, "fake", true)
+	ack, err = g.connectHandshake(conn, bcInfo.ProtocolVersion, gatewayID{}, "fake", true)
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
@@ -207,11 +209,11 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr = modules.NetAddress(conn.LocalAddr().String())
-	ack, err = g.connectHandshake(conn, build.Version, gatewayID{}, addr, true)
+	ack, err = g.connectHandshake(conn, bcInfo.ProtocolVersion, gatewayID{}, addr, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if ack.Version.Compare(build.Version) != 0 {
+	if ack.Version.Compare(bcInfo.ProtocolVersion) != 0 {
 		t.Fatal("gateway should have given ack")
 	}
 
@@ -381,11 +383,12 @@ func TestConnectRejectsVersions(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
+	bcInfo := types.DefaultBlockchainInfo()
 	cts := types.DefaultChainConstants()
 	g := newTestingGateway(t)
 	defer g.Close()
 	// Setup a listener that mocks Gateway.acceptConn, but sends the
-	// version sent over mockVersionChan instead of build.Version.
+	// version sent over mockVersionChan instead of our gateway's protocol version.
 	listener, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		t.Fatal(err)
@@ -409,13 +412,13 @@ func TestConnectRejectsVersions(t *testing.T) {
 		},
 		// Test that Connect /could/ succeed when the remote peer's version is = minAcceptableVersion
 		{
-			version:   minAcceptableVersion,
+			version:   MinAcceptableVersion,
 			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
 			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
 			genesisID: cts.GenesisBlockID(),
 		},
 		{
-			version:      minAcceptableVersion,
+			version:      MinAcceptableVersion,
 			msg:          "Connect should not succeed when peer is connecting to itself",
 			uniqueID:     g.id,
 			genesisID:    cts.GenesisBlockID(),
@@ -424,13 +427,13 @@ func TestConnectRejectsVersions(t *testing.T) {
 		},
 		// Test that Connect /could/ succeed when the remote peer's version is = Gateway NetAddress Update Version
 		{
-			version:   handshakNetAddressUpgrade,
+			version:   HandshakNetAddressUpgrade,
 			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
 			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
 			genesisID: cts.GenesisBlockID(),
 		},
 		{
-			version:      handshakNetAddressUpgrade,
+			version:      HandshakNetAddressUpgrade,
 			msg:          "Connect should not succeed when peer is connecting to itself",
 			uniqueID:     g.id,
 			genesisID:    cts.GenesisBlockID(),
@@ -439,13 +442,13 @@ func TestConnectRejectsVersions(t *testing.T) {
 		},
 		// Test that Connect /could/ succeed when the remote peer's version is = current version
 		{
-			version:   build.Version,
+			version:   bcInfo.ProtocolVersion,
 			msg:       "Connect should succeed when the remote peer's versionHeader checks out",
 			uniqueID:  func() (id gatewayID) { fastrand.Read(id[:]); return }(),
 			genesisID: cts.GenesisBlockID(),
 		},
 		{
-			version:      build.Version,
+			version:      bcInfo.ProtocolVersion,
 			msg:          "Connect should not succeed when peer is connecting to itself",
 			uniqueID:     g.id,
 			genesisID:    cts.GenesisBlockID(),
@@ -464,12 +467,12 @@ func TestConnectRejectsVersions(t *testing.T) {
 			remoteInfo, err := g.acceptConnHandshake(conn, tt.version, tt.uniqueID)
 			if tt.localErrWant != nil && err != tt.localErrWant {
 				panic(fmt.Sprintf("test #%d failed: %s", testIndex, err))
-			} else if err == nil && build.Version.Compare(remoteInfo.Version) != 0 {
+			} else if err == nil && bcInfo.ProtocolVersion.Compare(remoteInfo.Version) != 0 {
 				panic(fmt.Sprintf("test #%d failed: %q != %q",
-					testIndex, build.Version.String(), remoteInfo.Version.String()))
+					testIndex, bcInfo.ProtocolVersion.String(), remoteInfo.Version.String()))
 			} else if err != nil && tt.errWant == nil {
 				panic(fmt.Sprintf("test #%d failed: %q != %q",
-					testIndex, build.Version.String(), remoteInfo.Version.String()))
+					testIndex, bcInfo.ProtocolVersion.String(), remoteInfo.Version.String()))
 			}
 		}()
 		err = g.Connect(modules.NetAddress(listener.Addr().String()))

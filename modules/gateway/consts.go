@@ -26,13 +26,13 @@ const (
 )
 
 var (
-	// minAcceptableVersion is the version below which the gateway will refuse to
+	// MinAcceptableVersion is the version below which the gateway will refuse to
 	// connect to peers and reject connection attempts
-	minAcceptableVersion = build.NewVersion(1, 0, 0)
+	MinAcceptableVersion = build.NewVersion(1, 0, 0)
 
-	// handshakNetAddressUpgrade is the version where we upgraded the handshake,
+	// HandshakNetAddressUpgrade is the version where we upgraded the handshake,
 	// to replace the wantConn with a NetAddr.
-	handshakNetAddressUpgrade = build.NewVersion(1, 0, 2)
+	HandshakNetAddressUpgrade = build.NewVersion(1, 0, 2)
 
 	// fastNodePurgeDelay defines the amount of time that is waited between each
 	// iteration of the purge loop when the gateway has enough nodes to be

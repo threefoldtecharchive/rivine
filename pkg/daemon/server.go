@@ -24,6 +24,7 @@ type (
 		mux        *http.ServeMux
 		listener   net.Listener
 		chainCts   types.ChainConstants
+		bcInfo     types.BlockchainInfo
 	}
 
 	// SiaConstants is a struct listing all of the constants in use.
@@ -105,7 +106,7 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 
 // daemonVersionHandler handles the API call that requests the daemon's version.
 func (srv *Server) daemonVersionHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	api.WriteJSON(w, DaemonVersion{Version: build.Version.String()})
+	api.WriteJSON(w, DaemonVersion{Version: srv.bcInfo.ChainVersion.String()})
 }
 
 // daemonStopHandler handles the API call to stop the daemon cleanly.
@@ -138,7 +139,7 @@ func (srv *Server) daemonHandler(password string) http.Handler {
 // NewServer creates a new net.http server listening on bindAddr.  Only the
 // /daemon/ routes are registered by this func, additional routes can be
 // registered later by calling serv.mux.Handle.
-func NewServer(bindAddr, requiredUserAgent, requiredPassword string, chainCts types.ChainConstants) (*Server, error) {
+func NewServer(bindAddr, requiredUserAgent, requiredPassword string, chainCts types.ChainConstants, bcInfo types.BlockchainInfo) (*Server, error) {
 	// Create the listener for the server
 	l, err := net.Listen("tcp", bindAddr)
 	if err != nil {
@@ -154,6 +155,7 @@ func NewServer(bindAddr, requiredUserAgent, requiredPassword string, chainCts ty
 			Handler: mux,
 		},
 		chainCts: chainCts,
+		bcInfo:   bcInfo,
 	}
 
 	// Register siad routes

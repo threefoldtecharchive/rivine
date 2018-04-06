@@ -55,7 +55,7 @@ func newVersionCmd(cfg *Config) func(*cobra.Command, []string) {
 		}
 		fmt.Printf("%s Daemon v%s%s\n",
 			strings.Title(cfg.BlockchainInfo.Name),
-			cfg.BlockchainInfo.Version.String(), postfix)
+			cfg.BlockchainInfo.ChainVersion.String(), postfix)
 	}
 }
 
@@ -116,9 +116,9 @@ func SetupDefaultDaemon(cfg Config) {
 	root := &cobra.Command{
 		Use: os.Args[0],
 		Short: strings.Title(cfg.BlockchainInfo.Name) + " Daemon v" +
-			cfg.BlockchainInfo.Version.String(),
+			cfg.BlockchainInfo.ChainVersion.String(),
 		Long: strings.Title(cfg.BlockchainInfo.Name) + " Daemon v" +
-			cfg.BlockchainInfo.Version.String(),
+			cfg.BlockchainInfo.ChainVersion.String(),
 		Run: newStartDaemonCmd(&cfg),
 	}
 

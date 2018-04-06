@@ -232,7 +232,8 @@ func StartDaemon(cfg Config) (err error) {
 
 	// Create the server and start serving daemon routes immediately.
 	fmt.Printf("(0/%d) Loading daemon of "+cfg.BlockchainInfo.Name+"...\n", len(cfg.Modules))
-	srv, err := NewServer(cfg.APIaddr, cfg.RequiredUserAgent, cfg.APIPassword, networkConfig.Constants)
+	srv, err := NewServer(cfg.APIaddr, cfg.RequiredUserAgent, cfg.APIPassword,
+		networkConfig.Constants, cfg.BlockchainInfo)
 	if err != nil {
 		return err
 	}

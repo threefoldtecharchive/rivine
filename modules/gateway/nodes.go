@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 )
@@ -54,7 +53,7 @@ func (g *Gateway) pingNode(addr modules.NetAddress) (err error) {
 	defer conn.Close()
 
 	wantConn := false
-	_, err = g.connectHandshake(conn, build.Version, g.id,
+	_, err = g.connectHandshake(conn, g.bcInfo.ProtocolVersion, g.id,
 		modules.NetAddress(conn.LocalAddr().String()), // can be inacture address, as we don't want to continue anyhow
 		wantConn)
 	return err

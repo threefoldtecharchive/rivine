@@ -1160,7 +1160,7 @@ func TestIntegrationBroadcastRelayHeader(t *testing.T) {
 
 // TestIntegrationRelaySynchronize tests that blocks are relayed as they are
 // accepted and that peers stay synchronized. This test is header/block
-// broadcast agnostic. When build.Version <= 0.5.1 block relaying will be
+// broadcast agnostic. (TODO: still accurate?!?!) When build.Version <= 0.5.1 block relaying will be
 // tested. When build.Version > 0.5.1 header relaying will be tested.
 func TestIntegrationRelaySynchronize(t *testing.T) {
 	// TODO: fix test
