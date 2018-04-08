@@ -187,14 +187,20 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) er
 	// Attempt to ping the supplied address. If successful, we will add
 	// remoteInfo.NetAddress to our node list after accepting the peer. We do this in a
 	// goroutine so that we can start communicating with the peer immediately.
-	go func() {
-		err := g.pingNode(remoteAddr)
-		if err == nil {
-			g.mu.Lock()
-			g.addNode(remoteAddr)
-			g.mu.Unlock()
-		}
-	}()
+	if g.peerTG.Add() == nil {
+		// adding it to peer's Thread Group,
+		// as to ensure that the logger doesn't get closed,
+		// prior to this ping-pong gorutine being finished.
+		go func() {
+			defer g.peerTG.Done()
+			err := g.pingNode(remoteAddr)
+			if err == nil {
+				g.mu.Lock()
+				g.addNode(remoteAddr)
+				g.mu.Unlock()
+			}
+		}()
+	}
 
 	return nil
 }
