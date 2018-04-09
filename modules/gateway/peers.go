@@ -468,14 +468,14 @@ func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.Protocol
 		return
 	}
 	dataLen := encoding.DecUint64(prefix)
-	data := make([]byte, dataLen)
-	_, err = io.ReadFull(conn, data)
-	if err != nil {
-		return
-	}
-
 	if dataLen == legacyEncodedVersionHeaderLength {
 		legacy = true
+
+		data := make([]byte, dataLen)
+		_, err = io.ReadFull(conn, data)
+		if err != nil {
+			return
+		}
 
 		// assume legacy peer
 		var legacyVersionHeader legacyVersionHeader
@@ -497,6 +497,11 @@ func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.Protocol
 		return
 	}
 
+	data := make([]byte, dataLen)
+	_, err = io.ReadFull(conn, data)
+	if err != nil {
+		return
+	}
 	// read remote version
 	if err = encoding.Unmarshal(data, &remoteVersion); err != nil {
 		err = fmt.Errorf("failed to read remote version header: %v", err)
