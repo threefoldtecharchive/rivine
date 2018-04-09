@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
 )
 
 // TestTransactionIDs probes all of the ID functions of the Transaction type.
@@ -122,7 +123,7 @@ func TestTransactionVersionMarshaling(t *testing.T) {
 		Version           TransactionVersion
 		HexEncodedVersion string
 	}{
-		{TransactionVersionOne, "00"},
+		{TransactionVersionZero, "00"},
 	}
 	for idx, testCase := range testCases {
 		buf := bytes.NewBuffer(nil)
@@ -689,4 +690,282 @@ type idEncoder interface {
 
 	fmt.Stringer
 	LoadString(string) error
+}
+
+// legacy transactions (version 0x00)
+var legacyHexTestCases = []string{
+	`0001000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000001000000000000000100000000000000010000000000000000`,
+	`0002000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3300000000000000000000000000000000000000000000000000000000000033026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba020000000000000001000000000000000201cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000302dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01000000000000004400000000000000000000000000000000000000000000000000000000000044013800000000000000656432353531390000000000000000002000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee010000000000000001000000000000002a01abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd010000000000000001000000000000000102000000000000003432`,
+}
+
+func TestUnknownVersionBinaryEncoding(t *testing.T) {
+	testCases := append(legacyHexTestCases,
+		// transactions with unknown transaction versions
+		`2a170000000000000048656c6c6f2c20526177205472616e73616374696f6e21`,
+	)
+	for idx, inputHexTxn := range testCases {
+		// sanity check to ensure our hex is valid
+		encodedTx, err := hex.DecodeString(inputHexTxn)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		var tx Transaction
+		err = tx.UnmarshalSia(bytes.NewReader(encodedTx))
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		// change tx version number to something unknown
+		origVersion := tx.Version
+		// ensure our origVersion does not equal 255 already, as this would fuck it all
+		if origVersion == 255 {
+			t.Error(idx, "transaction version should not be 255 for this test")
+			continue
+		}
+		tx.Version = 255
+
+		// serialize it once again
+		buf := bytes.NewBuffer(nil)
+		err = tx.MarshalSia(buf)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		inputTxBytes := make([]byte, len(buf.Bytes()))
+		copy(inputTxBytes, buf.Bytes())
+
+		compareOffset := 0
+		if origVersion == TransactionVersionZero {
+			// extra offset needed for this step
+			compareOffset = 8
+		}
+		// should equal the same bytes, except for the modified version number
+		if bytes.Compare(encodedTx[1:], inputTxBytes[1+compareOffset:]) != 0 {
+			t.Errorf("#%d: %v != %v", idx, encodedTx[1:], inputTxBytes[1+compareOffset:])
+			continue
+		}
+		if inputTxBytes[0] != 255 {
+			t.Error(idx, "unexpected version number", inputTxBytes[0])
+			continue
+		}
+
+		tx = Transaction{} // clean any state
+		// now decode it again, should be done using unknown decoder
+		err = tx.UnmarshalSia(bytes.NewReader(inputTxBytes))
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		// validate that our tx version is still 255, the hacked version number
+		if tx.Version != 255 {
+			t.Error(idx, "invalid/unexpected transaction version", tx.Version)
+			continue
+		}
+		// validate that our ext now equals the unknown extension
+		if ext, ok := tx.Extension.(unknownTransactionExtension); !ok {
+			t.Errorf("#%d: invalid/unexpected txn extension: %[2]v (%[2]T)", idx, tx.Extension)
+			continue
+		} else {
+			offset := 9
+			if origVersion == TransactionVersionZero {
+				// in legacy versions there was no length encoded, thus no need to offset by 9
+				offset = 1
+			}
+			// validate that our raw data equals our expexted binary encoding
+			if bytes.Compare(encodedTx[offset:], ext.rawData) != 0 {
+				t.Errorf("#%d: %v != %v", idx, encodedTx[1:], ext.rawData)
+				continue
+			}
+		}
+
+		// now change version again, and serialize it,
+		// should be once again fine, and should still be serialized using our unknown encoder
+		tx.Version = origVersion
+		buf = bytes.NewBuffer(nil)
+		err = tx.MarshalSia(buf)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		outputBytes := buf.Bytes()
+		// again, if we were on the legacy version,
+		// we'll have to remove the length now, to come to the same hex string
+		if origVersion == TransactionVersionZero {
+			outputBytes = append(outputBytes[:1], outputBytes[9:]...)
+		}
+
+		// now turn it into a hex string again, and compare with the original input case, should be equal
+		outputHexTxn := hex.EncodeToString(outputBytes)
+		if outputHexTxn != inputHexTxn {
+			t.Error(idx, outputHexTxn, "!=", inputHexTxn)
+		}
+	}
+}
+
+// legacy test to ensure we're compatible with the old transaction ID computation logic
+// as that logic has changed since issue/feature #201
+func TestIDComputationCompatibleWithLegacyIDs(t *testing.T) {
+	for idx, inputHexTxn := range legacyHexTestCases {
+		// sanity check to ensure our hex is valid
+		encodedTx, err := hex.DecodeString(inputHexTxn)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		var tx Transaction
+		err = tx.UnmarshalSia(bytes.NewReader(encodedTx))
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		// compare ID, CoinOutputID and BlockStakeOutputID
+		// these should be equal
+		idA, idB := tx.ID(), tx.LegacyID()
+		if bytes.Compare(idA[:], idB[:]) != 0 {
+			t.Error(idx, idA, "!=", idB)
+			continue
+		}
+		coinOutputIDA, coinOutputIDB := tx.CoinOutputID(42), tx.LegacyCoinOutputID(42)
+		if bytes.Compare(coinOutputIDA[:], coinOutputIDB[:]) != 0 {
+			t.Error(idx, coinOutputIDA, "!=", coinOutputIDB)
+			continue
+		}
+		blockStakeOutputIDA, blockStakeOutputIDB := tx.BlockStakeOutputID(42), tx.LegacyBlockStakeOutputID(42)
+		if bytes.Compare(blockStakeOutputIDA[:], blockStakeOutputIDB[:]) != 0 {
+			t.Error(idx, blockStakeOutputIDA, "!=", blockStakeOutputIDB)
+		}
+
+		// now change it to something else than 0x00, but still without a custom encoder/decoder,
+		// this should give it a very new ID
+		tx.Version = TransactionVersionZero + 1
+		// compare ID, CoinOutputID and BlockStakeOutputID
+		// these should now be different
+		idA, idB = tx.ID(), tx.LegacyID()
+		if bytes.Compare(idA[:], idB[:]) == 0 {
+			t.Error(idx, idA, "==", idB)
+			continue
+		}
+		coinOutputIDA, coinOutputIDB = tx.CoinOutputID(42), tx.LegacyCoinOutputID(42)
+		if bytes.Compare(coinOutputIDA[:], coinOutputIDB[:]) == 0 {
+			t.Error(idx, coinOutputIDA, "==", coinOutputIDB)
+			continue
+		}
+		blockStakeOutputIDA, blockStakeOutputIDB = tx.BlockStakeOutputID(42), tx.LegacyBlockStakeOutputID(42)
+		if bytes.Compare(blockStakeOutputIDA[:], blockStakeOutputIDB[:]) == 0 {
+			t.Error(idx, blockStakeOutputIDA, "==", blockStakeOutputIDB)
+		}
+	}
+}
+
+// ID returns the id of a transaction, which is taken by marshalling all of the
+// fields except for the signatures and taking the hash of the result.
+func (t Transaction) LegacyID() TransactionID {
+	return TransactionID(crypto.HashAll(
+		t.CoinInputs,
+		t.CoinOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+	))
+}
+
+// CoinOutputID returns the ID of a coin output at the given index,
+// which is calculated by hashing the concatenation of the CoinOutput
+// Specifier, all of the fields in the transaction (except the signatures),
+// and output index.
+func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
+	return CoinOutputID(crypto.HashAll(
+		SpecifierCoinOutput,
+		t.CoinInputs,
+		t.CoinOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+		i,
+	))
+}
+
+// BlockStakeOutputID returns the ID of a BlockStakeOutput at the given index, which
+// is calculated by hashing the concatenation of the BlockStakeOutput Specifier,
+// all of the fields in the transaction (except the signatures), and output
+// index.
+func (t Transaction) LegacyBlockStakeOutputID(i uint64) BlockStakeOutputID {
+	return BlockStakeOutputID(crypto.HashAll(
+		SpecifierBlockStakeOutput,
+		t.CoinInputs,
+		t.CoinOutputs,
+		t.BlockStakeInputs,
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+		i,
+	))
+}
+
+func TestInputSigHashComputationCompatibleWithLegacyInputSigHash(t *testing.T) {
+	for idx, inputHexTxn := range legacyHexTestCases {
+		// sanity check to ensure our hex is valid
+		encodedTx, err := hex.DecodeString(inputHexTxn)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		var tx Transaction
+		err = tx.UnmarshalSia(bytes.NewReader(encodedTx))
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		// compare inputSigHash
+		inputSigHashA, inputSigHashB :=
+			tx.InputSigHash(42, "foo"),
+			tx.LegacyInputSigHash(42, "foo")
+		if bytes.Compare(inputSigHashA[:], inputSigHashB[:]) != 0 {
+			t.Error(idx, inputSigHashA, "!=", inputSigHashB)
+			continue
+		}
+
+		// now change it to something else than 0x00, but still without a custom inputSigHasher,
+		// even so it should give a different input signature hash, regardless of
+		tx.Version = TransactionVersionZero + 1
+		// compare ID, CoinOutputID and BlockStakeOutputID
+		// these should now be different
+		inputSigHashA, inputSigHashB =
+			tx.InputSigHash(42, "foo"),
+			tx.LegacyInputSigHash(42, "foo")
+		if bytes.Compare(inputSigHashA[:], inputSigHashB[:]) == 0 {
+			t.Error(idx, inputSigHashA, "==", inputSigHashB)
+		}
+	}
+}
+
+func (t Transaction) LegacyInputSigHash(inputIndex uint64, extraObjects ...interface{}) (hash crypto.Hash) {
+	h := crypto.NewHash()
+	enc := encoding.NewEncoder(h)
+
+	enc.Encode(inputIndex)
+	if len(extraObjects) > 0 {
+		enc.EncodeAll(extraObjects...)
+	}
+	for _, ci := range t.CoinInputs {
+		enc.EncodeAll(ci.ParentID, ci.Unlocker.UnlockHash())
+	}
+	enc.Encode(t.CoinOutputs)
+	for _, bsi := range t.BlockStakeInputs {
+		enc.EncodeAll(bsi.ParentID, bsi.Unlocker.UnlockHash())
+	}
+	enc.EncodeAll(
+		t.BlockStakeOutputs,
+		t.MinerFees,
+		t.ArbitraryData,
+	)
+
+	h.Sum(hash[:0])
+	return
 }
