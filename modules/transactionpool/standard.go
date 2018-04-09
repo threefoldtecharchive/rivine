@@ -38,6 +38,12 @@ import (
 // IsStandardTransaction enforces extra rules such as a transaction size limit.
 // These rules can be altered without disrupting consensus.
 func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
+	// check if the transaction is standard (e.g. based on its version)
+	err := t.IsStandardTransaction()
+	if err != nil {
+		return err
+	}
+
 	// Check that the size of the transaction does not exceed the standard
 	// established in Standard.md. Larger transactions are a DOS vector,
 	// because someone can fill a large transaction with a bunch of signatures
@@ -49,7 +55,6 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 		return modules.ErrLargeTransaction
 	}
 
-	var err error
 	// Check that all public keys are of a recognized type. Need to check all
 	// of the UnlockConditions, which currently can appear in 3 separate fields
 	// of the transaction. Unrecognized types are ignored because a softfork

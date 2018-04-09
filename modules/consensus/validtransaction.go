@@ -82,7 +82,10 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 func validTransaction(tx *bolt.Tx, t types.Transaction, blockSizeLimit uint64) error {
 	// StandaloneValid will check things like signatures and properties that
 	// should be inherent to the transaction. (storage proof rules, etc.)
-	err := t.StandaloneValid(blockHeight(tx), blockSizeLimit)
+	err := t.ValidateTransaction(types.TransactionValidationContext{
+		CurrentBlockHeight: blockHeight(tx),
+		BlockSizeLimit:     blockSizeLimit,
+	})
 	if err != nil {
 		return err
 	}

@@ -62,9 +62,20 @@ func Ed25519PublicKey(pk crypto.PublicKey) SiaPublicKey {
 
 // InputSigHash returns the hash of all fields in a transaction,
 // relevant to an input sig.
-func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) (hash crypto.Hash) {
+func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) crypto.Hash {
+	if hasher, ok := t.Extension.(InputSigHasher); ok {
+		// if extension implements InputSigHasher,
+		// use it here to sign the input with it
+		return hasher.InputSigHash(t, inputIndex, extraObjects...)
+	}
+
 	h := crypto.NewHash()
 	enc := encoding.NewEncoder(h)
+
+	if t.Version != TransactionVersionZero {
+		// for none legacy versions also include the txn version
+		enc.Encode(t.Version)
+	}
 
 	enc.Encode(inputIndex)
 	if len(extraObjects) > 0 {
@@ -83,8 +94,9 @@ func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}
 		t.ArbitraryData,
 	)
 
+	var hash crypto.Hash
 	h.Sum(hash[:0])
-	return
+	return hash
 }
 
 // sortedUnique checks that 'elems' is sorted, contains no repeats, and that no
