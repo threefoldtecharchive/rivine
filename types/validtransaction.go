@@ -80,12 +80,8 @@ func (t Transaction) noRepeats() error {
 	return nil
 }
 
-// StandaloneValid returns an error if a transaction is not valid in any
-// context, for example if the same output is spent twice in the same
-// transaction. StandaloneValid will not check that all outputs being spent are
-// legal outputs, as it has no confirmed or unconfirmed set to look at.
-func (t Transaction) StandaloneValid(currentHeight BlockHeight, blockSizeLimit uint64) (err error) {
-	err = t.fitsInABlock(blockSizeLimit)
+func defaultTransactionValidation(ctx TransactionValidationContext, t Transaction) (err error) {
+	err = t.fitsInABlock(ctx.BlockSizeLimit)
 	if err != nil {
 		return
 	}
@@ -97,9 +93,5 @@ func (t Transaction) StandaloneValid(currentHeight BlockHeight, blockSizeLimit u
 	if err != nil {
 		return
 	}
-	err = t.validSignatures(currentHeight)
-	if err != nil {
-		return
-	}
-	return
+	return t.validSignatures(ctx.CurrentBlockHeight)
 }
