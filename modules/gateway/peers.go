@@ -3,6 +3,7 @@ package gateway
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"time"
 
@@ -373,18 +374,34 @@ func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeade
 // Incoming version dicates which handshake version to use,
 // meaning we'll use an older handshake protocol, even if we support a newer one.
 func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID) (remoteInfo remoteInfo, err error) {
-	// read remote version
-	if err = encoding.ReadObject(conn, &remoteInfo.Version, build.MaxEncodedVersionLength); err != nil {
-		err = fmt.Errorf("failed to read remote version header: %v", err)
-		g.writeRejectVersionHeader(conn, err)
+	var (
+		theirs sessionHeader
+		legacy bool
+	)
+	remoteInfo.Version, theirs, legacy, err = g.readRemoteHeaders(conn)
+	if err != nil {
 		return
 	}
+	if legacy {
+		if !theirs.WantConn {
+			err = errPeerRejectedConn
+			return
+		}
 
-	var theirs sessionHeader
-
-	// read remote session header,
-	if err = encoding.ReadObject(conn, &theirs, MaxEncodedSessionHeaderLength); err != nil {
-		err = fmt.Errorf("failed to read remote session header: %v", err)
+		if remoteInfo.Version.Compare(legacyMinAcceptableVersion) < 0 {
+			err = insufficientVersionError(remoteInfo.Version.String())
+		} else if remoteInfo.Version.Compare(HandshakNetAddressUpgrade) >= 0 {
+			err = insufficientVersionError(remoteInfo.Version.String())
+		} else if theirs.GenesisID != g.genesisBlockID {
+			err = errPeerGenesisID
+		} else if theirs.UniqueID == uniqueID {
+			err = errOurAddress
+		}
+		var legacyErr error
+		remoteInfo.NetAddress, legacyErr = g.legacyAcceptConnectHandshake(conn, version, uniqueID, err == nil)
+		if legacyErr != nil {
+			err = fmt.Errorf("failed to write version header: %v", legacyErr)
+		}
 		return
 	}
 
@@ -409,7 +426,7 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 	if theirs.GenesisID != g.genesisBlockID {
 		err = errPeerGenesisID
 	}
-	if theirs.UniqueID == uniqueID {
+	if err == nil && theirs.UniqueID == uniqueID {
 		err = errOurAddress
 	}
 
@@ -443,6 +460,83 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 		err = errPeerNoConnWanted
 	}
 	return
+}
+
+func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.ProtocolVersion, remoteHeader sessionHeader, legacy bool, err error) {
+	prefix := make([]byte, 8)
+	if _, err = io.ReadFull(conn, prefix); err != nil {
+		return
+	}
+	dataLen := encoding.DecUint64(prefix)
+	data := make([]byte, dataLen)
+	_, err = io.ReadFull(conn, data)
+	if err != nil {
+		return
+	}
+
+	if dataLen == legacyEncodedVersionHeaderLength {
+		legacy = true
+
+		// assume legacy peer
+		var legacyVersionHeader legacyVersionHeader
+		err = encoding.Unmarshal(data, &legacyVersionHeader)
+		if err != nil {
+			return
+		}
+
+		remoteVersion = legacyVersionHeader.Version
+		remoteHeader.GenesisID = legacyVersionHeader.GenesisID
+		remoteHeader.UniqueID = legacyVersionHeader.UniqueID
+		remoteHeader.WantConn = legacyVersionHeader.WantConn
+		return
+	}
+
+	// should equal version size
+	if dataLen != build.MaxEncodedVersionLength {
+		err = errors.New("invalid data len received, cannot proceed with accept handshake")
+		return
+	}
+
+	// read remote version
+	if err = encoding.Unmarshal(data, &remoteVersion); err != nil {
+		err = fmt.Errorf("failed to read remote version header: %v", err)
+		g.writeRejectVersionHeader(conn, err)
+		return
+	}
+
+	// read remote session header,
+	err = encoding.ReadObject(conn, &remoteHeader, MaxEncodedSessionHeaderLength)
+	return
+}
+
+// We support accepting connections from legacy peers,
+// HOWEVER, we do not accept connecting to a legacy peer
+
+func (g *Gateway) legacyAcceptConnectHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID, wantConn bool) (remoteAddr modules.NetAddress, err error) {
+	ours := legacyVersionHeader{
+		Version:   version,
+		GenesisID: g.genesisBlockID,
+		UniqueID:  uniqueID,
+		WantConn:  wantConn,
+	}
+	err = encoding.WriteObject(conn, ours)
+	if err != nil {
+		return
+	}
+
+	remoteAddr, err = g.acceptConnSessionHandshakeV100(conn)
+	return
+}
+
+var legacyMinAcceptableVersion = build.NewVersion(0, 0, 1)
+
+const legacyEncodedVersionHeaderLength = 57
+
+type legacyVersionHeader struct {
+	Version   build.ProtocolVersion
+	GenesisID types.BlockID
+	UniqueID  gatewayID
+	WantConn  bool
 }
 
 func (g *Gateway) acceptConnSessionHandshakeV100(conn net.Conn) (remoteAddress modules.NetAddress, err error) {

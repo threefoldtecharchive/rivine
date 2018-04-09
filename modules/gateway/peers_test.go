@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"net"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/NebulousLabs/fastrand"
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
@@ -857,4 +859,124 @@ func TestBuildPeerManagerNodeList(t *testing.T) {
 	if i != len(nodelist) {
 		t.Fatal("bad nodelist:", nodelist)
 	}
+}
+
+// test to ensure compatibility with legacy handshake
+
+func TestLegacyPeerConnects(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
+	g := newTestingGateway(t)
+
+	// connect with 1.0.2 legacy peer
+	err := legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 2))
+	if err != errPeerRejectedConn {
+		t.Error("expected errPeerRejectedConn, but received:", err)
+	}
+
+	g = newTestingGateway(t)
+
+	// connect with 1.0.1 legacy peer
+	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 1))
+	if err != nil {
+		t.Error(err)
+	}
+
+	g = newTestingGateway(t)
+
+	// connect with 1.0.0 legacy peer
+	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 0))
+	if err != nil {
+		t.Error(err)
+	}
+
+	g = newTestingGateway(t)
+
+	// connect with 0.0.1 legacy peer
+	err = legacyConnect(string(g.myAddr), build.NewVersion(0, 0, 1))
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func legacyConnect(addr string, version build.ProtocolVersion) error {
+	dialer := &net.Dialer{
+		Timeout: dialTimeout,
+	}
+	conn, err := dialer.Dial("tcp", string(addr))
+	if err != nil {
+		return err
+	}
+	conn.SetDeadline(time.Now().Add(connStdDeadline))
+
+	_, err = legacyConnectHandshake(conn, version)
+	if err != nil {
+		return err
+	}
+
+	_, port, err := net.SplitHostPort(string(addr))
+	if err != nil {
+		return err
+	}
+	return legacyConnectPortHandshake(conn, port)
+}
+
+func legacyConnectHandshake(conn net.Conn, version build.ProtocolVersion) (remoteVersion build.ProtocolVersion, err error) {
+	cts := types.DefaultChainConstants()
+	ours := legacyVersionHeader{
+		Version:   version,
+		GenesisID: cts.GenesisBlockID(),
+		WantConn:  true,
+	}
+	rand.Read(ours.UniqueID[:])
+
+	// Send our version header.
+	if err = encoding.WriteObject(conn, ours); err != nil {
+		err = fmt.Errorf("failed to write version header: %v", err)
+		return
+	}
+
+	var theirs legacyVersionHeader
+	// Read remote version.
+	if err = encoding.ReadObject(conn, &theirs, legacyEncodedVersionHeaderLength); err != nil {
+		err = fmt.Errorf("failed to read remote version header: %v", err)
+		return
+	}
+
+	// validate if their header checks out against ours
+	if err = legacyAcceptableVersionHeader(ours, theirs); err != nil {
+		return
+	}
+
+	// checks if they want a connection or not
+	if !theirs.WantConn {
+		err = errPeerRejectedConn
+		return
+	}
+
+	// all good, pass on the remote version to the caller
+	remoteVersion = theirs.Version
+	return
+}
+
+func legacyConnectPortHandshake(conn net.Conn, port string) error {
+	err := encoding.WriteObject(conn, port)
+	if err != nil {
+		return errors.New("could not write port #: " + err.Error())
+	}
+	return nil
+}
+
+func legacyAcceptableVersionHeader(ours, theirs legacyVersionHeader) error {
+	if theirs.Version.Compare(legacyMinAcceptableVersion) < 0 {
+		return insufficientVersionError(theirs.Version.String())
+	} else if theirs.GenesisID != ours.GenesisID {
+		return errPeerGenesisID
+	} else if theirs.UniqueID == ours.UniqueID {
+		return errOurAddress
+	}
+
+	return nil
 }
