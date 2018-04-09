@@ -105,4 +105,9 @@ check-%:
 		exit 1; \
 	fi
 
+find-deadlock:
+	find . -type d -name "vendor" -prune -o -name "*.go" -print | xargs -n 1 sed -i 's/sync.RWMutex/deadlock.RWMutex/'
+	find . -type d -name "vendor" -prune -o -name "*.go" -print | xargs -n 1 sed -i 's/sync.Mutex/deadlock.Mutex/'
+	find . -type d -name "vendor" -prune -o -name "*.go" -print | xargs -I {} goimports -w {}
+
 .PHONY: all fmt install release release-std test test-v test-long cover cover-integration cover-unit ineffassign ensure_deps add_dep update_dep update_deps
