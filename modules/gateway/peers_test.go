@@ -896,8 +896,8 @@ func TestLegacyPeerConnects(t *testing.T) {
 
 	// connect with 0.0.1 legacy peer
 	err = legacyConnect(string(g.myAddr), build.NewVersion(0, 0, 1))
-	if err != nil {
-		t.Error(err)
+	if err != errPeerRejectedConn {
+		t.Error("expected errPeerRejectedConn, but received:", err)
 	}
 }
 

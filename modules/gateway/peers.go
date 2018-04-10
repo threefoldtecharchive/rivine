@@ -383,12 +383,18 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 		return
 	}
 	if legacy {
+		// 2nd part of legacy logic,
+		// as to be able to receive incoming connections
+		// from peers who are still on 1.0.0 or 1.0.1,
+		// we'll drop support for them in about two months as well,
+		// as it's still beta after all,
+		// so no need to keep this in forever.
 		if !theirs.WantConn {
 			err = errPeerRejectedConn
 			return
 		}
 
-		if remoteInfo.Version.Compare(legacyMinAcceptableVersion) < 0 {
+		if remoteInfo.Version.Compare(MinAcceptableVersion) < 0 { // already drop support for peers < 1.0.0, as that's prior to any public launch
 			err = insufficientVersionError(remoteInfo.Version.String())
 		} else if remoteInfo.Version.Compare(HandshakNetAddressUpgrade) >= 0 {
 			err = insufficientVersionError(remoteInfo.Version.String())
