@@ -16,10 +16,10 @@ const (
 	// connect to itself, this number can be reduced.
 	maxLocalOutboundPeers = 3
 
-	// MaxEncodedSessionHeaderLength is the max length of a session header encoded
+	// EncodedSessionHeaderLength is the static length of a session header encoded
 	// with the encode package.
 	// sizeof(blockID) + sizeof(gatewayID) + sizeof(bool) = 32 + 8 + 1 = 41
-	MaxEncodedSessionHeaderLength = 41
+	EncodedSessionHeaderLength = 41
 
 	// saveFrequency defines how often the gateway saves its persistence.
 	saveFrequency = time.Minute * 2

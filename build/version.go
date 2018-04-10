@@ -139,8 +139,8 @@ var (
 )
 
 const (
-	// MaxEncodedVersionLength is the maximum length of a sia-encoded ProtocolVersion.
-	MaxEncodedVersionLength = 16 // sizeof(uint32==64) + sizeof([8]uint8)
+	// EncodedVersionLength is the static length of a sia-encoded ProtocolVersion.
+	EncodedVersionLength = 16 // sizeof(uint32==64) + sizeof([8]uint8)
 )
 
 const versionRe = `^v?(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:-(.+?))?$`

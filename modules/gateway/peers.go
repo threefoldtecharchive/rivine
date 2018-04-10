@@ -273,7 +273,7 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 	}
 
 	// read their version
-	if err = encoding.ReadObject(conn, &remoteInfo.Version, build.MaxEncodedVersionLength); err != nil {
+	if err = encoding.ReadObject(conn, &remoteInfo.Version, build.EncodedVersionLength); err != nil {
 		err = fmt.Errorf("failed to read remote version header: %v", err)
 		return
 	}
@@ -293,7 +293,7 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 
 	// read their session header.
 	var theirs sessionHeader
-	if err = encoding.ReadObject(conn, &theirs, MaxEncodedSessionHeaderLength); err != nil {
+	if err = encoding.ReadObject(conn, &theirs, EncodedSessionHeaderLength); err != nil {
 		err = fmt.Errorf("failed to read session header: %v", err)
 		return
 	}
@@ -498,7 +498,7 @@ func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.Protocol
 	}
 
 	// should equal version size
-	if dataLen != build.MaxEncodedVersionLength {
+	if dataLen != build.EncodedVersionLength {
 		err = errors.New("invalid data len received, cannot proceed with accept handshake")
 		return
 	}
@@ -516,7 +516,7 @@ func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.Protocol
 	}
 
 	// read remote session header,
-	err = encoding.ReadObject(conn, &remoteHeader, MaxEncodedSessionHeaderLength)
+	err = encoding.ReadObject(conn, &remoteHeader, EncodedSessionHeaderLength)
 	return
 }
 
