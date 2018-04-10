@@ -151,6 +151,9 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 		}
 		var revertedBlocks, appliedBlocks []*processedBlock
 		revertedBlocks, appliedBlocks, err = cs.forkBlockchain(tx, newNode)
+		if len(revertedBlocks) != 0 {
+			cs.log.Printf("[CS] Blockchain switched active fork, reverted %d blocks, applied %d blocks\n", len(revertedBlocks), len(appliedBlocks))
+		}
 		if err != nil {
 			return err
 		}

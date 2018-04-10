@@ -236,6 +236,31 @@ func (cs *ConsensusSet) BlockHeightOfBlock(block types.Block) (height types.Bloc
 	return height, exists
 }
 
+// FindParentBlock finds the parent of a block at the given depth. While this function is expensive, it guarantees
+// that the correct parent block is found, even if the block is not on the longest fork. If it is known up front
+// that a lookup is done within the current fork, "BlockAtHeight" should be used.
+func (cs *ConsensusSet) FindParentBlock(b types.Block, depth types.BlockHeight) (block types.Block, exists bool) {
+	var parent *processedBlock
+	var err error
+	_ = cs.db.View(func(tx *bolt.Tx) error {
+		pID := b.Header().ParentID
+		// count back to the right block
+		for i := depth; i > 0; i-- {
+			parent, err = getBlockMap(tx, pID)
+			if err != nil {
+				return err
+			}
+			pID = parent.Block.Header().ParentID
+		}
+		return nil
+	})
+	if parent != nil {
+		exists = true
+		block = parent.Block
+	}
+	return
+}
+
 // TransactionAtShortID allows you fetch a transaction from a block within the blockchain,
 // using a given shortID.  If that transaction does not exist, false is returned.
 func (cs *ConsensusSet) TransactionAtShortID(shortID types.TransactionShortID) (types.Transaction, bool) {

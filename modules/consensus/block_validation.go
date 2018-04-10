@@ -68,6 +68,7 @@ func checkTarget(b types.Block, target types.Target, value types.Currency, heigh
 // and a block height. Returns nil if the block is valid and an appropriate
 // error otherwise.
 func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Timestamp, target types.Target, height types.BlockHeight) error {
+	bv.cs.log.Debugf("[SBV] Validating new block for height %d\n", height)
 	// Check that the timestamp is not too far in the past to be acceptable.
 	if minTimestamp > b.Timestamp {
 		return errEarlyTimestamp
@@ -76,23 +77,58 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	//In what block (transaction) is unspent block stake generated for this POBS
 	ubsu := b.POBSOutput
 
-	blockatheight, exist := bv.cs.BlockAtHeight(ubsu.BlockHeight)
-	if !exist {
-		return errPOBSBlockIndexDoesNotExist
-	}
-	bsoid := blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputID(ubsu.OutputIndex)
-	valueofblockstakeoutput := blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputs[ubsu.OutputIndex].Value
+	// We now need to retrieve the block to check if the blockstake used by the POBS protocol are indeed in the right block and transaction,
+	// as indicated by the POBSOutput field in the new block. This field conveniently includes a block height for us. But the problem is that
+	// only the "blockmap" bucket has every block available, and those are keyed by their ID, which we don't have. Using the BlockAtHeight
+	// cs function returns the block at the given height, but that is the block from the active chain, while the block we are validating
+	// could potentially be extending a currently inactive fork. Since the blocks are only keyed by height from the active chain, this convenient
+	// approach won't work here. The only way to retrieve the correct block, is to lookup the parent of the validating block, to backtrack in the fork,
+	// untill the block at the given blockheight is retrieved.
+	//
+	// But counting back from the current block to the given block is an expensive action, as it requires n database lookup, where n is the amount of blocks
+	// since the blockstake was last used. In normal operation of the chain (which we asume), most of the time we should be on the active chain. Which means
+	// that we can get the targeted block in 2 lookups in the "blockatheight" helper function. If we have, for example, 100 active block creators, with equal
+	// blockstake distribution, then every node should create a block (thus using their blockstake) every 100 blocks. And thuse we would need to always traverse
+	// about 100 blocks for the check. So given normal operation, it is much less intensive to first do the check assuming the active chain, and then only do the
+	// "correct" check should the previous have failed.
 
-	spent := 0
+	var valueofblockstakeoutput types.Currency
+	spent := false
+	blockatheight, exist := bv.cs.BlockAtHeight(ubsu.BlockHeight)
 	//Check that unspent block stake used is spent
-	for _, tr := range b.Transactions {
-		for _, bsi := range tr.BlockStakeInputs {
-			if bsi.ParentID == bsoid {
-				spent = 1
+	if exist {
+		// Check bounds
+		if ubsu.TransactionIndex < uint64(len(blockatheight.Transactions)) && ubsu.OutputIndex < uint64(len(blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputs)) {
+			bsoid := blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputID(ubsu.OutputIndex)
+			valueofblockstakeoutput = blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputs[ubsu.OutputIndex].Value
+			for _, tr := range b.Transactions {
+				for _, bsi := range tr.BlockStakeInputs {
+					if bsi.ParentID == bsoid {
+						spent = true
+					}
+				}
 			}
 		}
 	}
-	if spent == 0 {
+
+	// If the "quick" check in the active fork has failed, try going back from the submitted block in a possible inactive fork
+	if !spent {
+		parentBlock, _ := bv.cs.FindParentBlock(b, height-ubsu.BlockHeight)
+		if ubsu.TransactionIndex < uint64(len(parentBlock.Transactions)) && ubsu.OutputIndex < uint64(len(parentBlock.Transactions[ubsu.TransactionIndex].BlockStakeOutputs)) {
+			for _, tr := range b.Transactions {
+				for _, bsi := range tr.BlockStakeInputs {
+					if parentBlock.Transactions[ubsu.TransactionIndex].BlockStakeOutputID(ubsu.OutputIndex) == bsi.ParentID {
+						bv.cs.log.Debugf("[SBV] Confirmed blockstake respend from an inactive fork, ubsu in block %d, new block at height %d\n", ubsu.BlockHeight, height)
+						valueofblockstakeoutput = parentBlock.Transactions[ubsu.TransactionIndex].BlockStakeOutputs[ubsu.OutputIndex].Value
+						spent = true
+					}
+				}
+			}
+		}
+	}
+
+	// If we still didn't find a valid respend, it's just not there
+	if !spent {
 		return errBlockStakeNotRespent
 	}
 
