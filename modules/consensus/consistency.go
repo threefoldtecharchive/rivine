@@ -117,7 +117,7 @@ func (cs *ConsensusSet) checkRevertApply(tx *bolt.Tx) {
 		manageErr(tx, err)
 	}
 	if consensusChecksum(tx) != parent.ConsensusChecksum {
-		//manageErr(tx, errors.New("consensus checksum mismatch after reverting")) //this fails issue #28
+		manageErr(tx, errors.New("consensus checksum mismatch after reverting"))
 	}
 	_, _, err = cs.forkBlockchain(tx, current)
 	if err != nil {
