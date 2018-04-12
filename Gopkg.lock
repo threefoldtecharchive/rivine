@@ -9,12 +9,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/NebulousLabs/entropy-mnemonics"
-  packages = ["."]
-  revision = "7b01a644a63680b90de22bacfb11d832e944eaab"
-
-[[projects]]
-  branch = "master"
   name = "github.com/NebulousLabs/errors"
   packages = ["."]
   revision = "7ead97ef90b8efe5e824efdf129a60498291632a"
@@ -124,7 +118,7 @@
     "pbkdf2",
     "twofish"
   ]
-  revision = "12892e8c234f4fe6f6803f052061de9057903bb2"
+  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
 
 [[projects]]
   branch = "master"
@@ -157,14 +151,11 @@
     "encoding/unicode",
     "internal/gen",
     "internal/tag",
-    "internal/triegen",
-    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
-    "unicode/cldr",
-    "unicode/norm"
+    "unicode/cldr"
   ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
@@ -172,6 +163,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ef6012910ba1cd106d443fd56f39a58fc080ab1893ef87829baf80ceee9ae73b"
+  inputs-digest = "ca91c39581bc401dcfe05e19babd1dd915e65071f96f1f936353bcac0f181ef1"
   solver-name = "gps-cdcl"
   solver-version = 1
