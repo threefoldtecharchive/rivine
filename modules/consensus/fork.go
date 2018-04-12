@@ -56,7 +56,7 @@ func (cs *ConsensusSet) revertToBlock(tx *bolt.Tx, pb *processedBlock) (reverted
 	// Rewind blocks until 'pb' is the current block.
 	for currentBlockID(tx) != pb.Block.ID() {
 		block := currentProcessedBlock(tx)
-		commitDiffSet(tx, block, modules.DiffRevert)
+		cs.rewindBlock(tx, block)
 		revertedBlocks = append(revertedBlocks, block)
 
 		// Sanity check - after removing a block, check that the consensus set
@@ -79,7 +79,7 @@ func (cs *ConsensusSet) applyUntilBlock(tx *bolt.Tx, pb *processedBlock) (applie
 		// If the diffs for this block have already been generated, apply diffs
 		// directly instead of generating them. This is much faster.
 		if block.DiffsGenerated {
-			commitDiffSet(tx, block, modules.DiffApply)
+			cs.forwardBlock(tx, block)
 		} else {
 			err := cs.generateAndApplyDiff(tx, block)
 			if err != nil {
@@ -99,6 +99,22 @@ func (cs *ConsensusSet) applyUntilBlock(tx *bolt.Tx, pb *processedBlock) (applie
 		}
 	}
 	return appliedBlocks, nil
+}
+
+// rewindBlock rewinds a single block from the consensus set. This method assumes that pb is the current top op the chain, i.e. the active fork
+func (cs *ConsensusSet) rewindBlock(tx *bolt.Tx, pb *processedBlock) {
+	cs.log.Debugf("[CS] rewinding block %d\n", pb.Height)
+	createDCOBucket(tx, pb.Height)
+	commitDiffSet(tx, pb, modules.DiffRevert)
+	deleteDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
+}
+
+// forwardBlock adds a single block to the chain. It assumes that pb is the block at "currentHeight + 1"
+func (cs *ConsensusSet) forwardBlock(tx *bolt.Tx, pb *processedBlock) {
+	cs.log.Debugf("[CS] reapplying block %d\n", pb.Height)
+	createDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
+	commitDiffSet(tx, pb, modules.DiffApply)
+	deleteDCOBucket(tx, pb.Height)
 }
 
 // forkBlockchain will move the consensus set onto the 'newBlock' fork. An

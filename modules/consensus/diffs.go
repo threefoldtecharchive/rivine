@@ -92,12 +92,24 @@ func commitNodeDiffs(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirection)
 		for _, sfod := range pb.BlockStakeOutputDiffs {
 			commitBlockStakeOutputDiff(tx, sfod, dir)
 		}
+		for _, dscod := range pb.DelayedCoinOutputDiffs {
+			commitDelayedCoinOutputDiff(tx, dscod, dir)
+		}
+		for _, txIDd := range pb.TxIDDiffs {
+			commitTxIDMapDiff(tx, txIDd, dir)
+		}
 	} else {
 		for i := len(pb.CoinOutputDiffs) - 1; i >= 0; i-- {
 			commitCoinOutputDiff(tx, pb.CoinOutputDiffs[i], dir)
 		}
 		for i := len(pb.BlockStakeOutputDiffs) - 1; i >= 0; i-- {
 			commitBlockStakeOutputDiff(tx, pb.BlockStakeOutputDiffs[i], dir)
+		}
+		for i := len(pb.DelayedCoinOutputDiffs) - 1; i >= 0; i-- {
+			commitDelayedCoinOutputDiff(tx, pb.DelayedCoinOutputDiffs[i], dir)
+		}
+		for i := len(pb.TxIDDiffs) - 1; i >= 0; i-- {
+			commitTxIDMapDiff(tx, pb.TxIDDiffs[i], dir)
 		}
 	}
 }
