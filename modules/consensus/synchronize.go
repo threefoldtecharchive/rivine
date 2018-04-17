@@ -18,7 +18,7 @@ import (
 const (
 	// minNumOutbound is the minimum number of outbound peers required before ibd
 	// is confident we are synced.
-	minNumOutbound = 5
+	minNumOutbound = 3
 )
 
 var (
@@ -52,7 +52,7 @@ var (
 	}()
 	// minIBDWaitTime is the time threadedInitialBlockchainDownload waits before
 	// exiting if there are >= 1 and <= minNumOutbound peers synced. This timeout
-	// will primarily affect miners who have multiple nodes daisy chained off each
+	// will primarily affect people who have multiple nodes daisy chained off each
 	// other. Those nodes will likely have to wait minIBDWaitTime on every startup
 	// before IBD is done.
 	minIBDWaitTime = func() time.Duration {
@@ -491,8 +491,7 @@ func (cs *ConsensusSet) managedReceiveBlock(id types.BlockID) modules.RPCFunc {
 //
 // NOTE: IBD will succeed right now when each peer has a different blockchain.
 // The height and the block id of the remote peers' current blocks are not
-// checked to be the same. This can cause issues if you are connected to
-// outbound peers <= v0.5.1 that are stalled in IBD.
+// checked to be the same.
 func (cs *ConsensusSet) threadedInitialBlockchainDownload() error {
 	// The consensus set will not recognize IBD as complete until it has enough
 	// peers. After the deadline though, it will recognize the blochchain
