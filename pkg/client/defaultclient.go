@@ -146,6 +146,7 @@ func DefaultCLIClient(cfg Config) {
 		walletAddressCmd,
 		walletAddressesCmd,
 		walletInitCmd,
+		walletRecoverCmd,
 		walletLoadCmd,
 		walletLockCmd,
 		walletSeedsCmd,

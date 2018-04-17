@@ -61,7 +61,7 @@ func createWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = w.Encrypt(masterKey)
+	_, err = w.Encrypt(masterKey, modules.Seed{})
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 	if err != nil {
 		return nil, err
 	}
-	_, err = w.Encrypt(masterKey)
+	_, err = w.Encrypt(masterKey, modules.Seed{})
 	if err != nil {
 		return nil, err
 	}

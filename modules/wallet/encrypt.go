@@ -49,7 +49,9 @@ func (w *Wallet) checkMasterKey(masterKey crypto.TwofishKey) error {
 // initEncryption checks that the provided encryption key is the valid
 // encryption key for the wallet. If encryption has not yet been established
 // for the wallet, an encryption key is created.
-func (w *Wallet) initEncryption(masterKey crypto.TwofishKey) (modules.Seed, error) {
+// The primary seed can be given if it is known upfront,
+// but if a nil primary seed is given, a random one will be generated instead.
+func (w *Wallet) initEncryption(masterKey crypto.TwofishKey, seed modules.Seed) (modules.Seed, error) {
 	// ensure if crypto key is given
 	if masterKey == (crypto.TwofishKey{}) {
 		return modules.Seed{}, modules.ErrBadEncryptionKey
@@ -60,17 +62,22 @@ func (w *Wallet) initEncryption(masterKey crypto.TwofishKey) (modules.Seed, erro
 		return modules.Seed{}, errReencrypt
 	}
 
-	// Create a random seed and use it to generate the seed file for the
-	// wallet.
-	var seed modules.Seed
-	_, err := rand.Read(seed[:])
-	if err != nil {
-		return modules.Seed{}, err
+	// If no primary seed is given, create a random seed insead.
+	// Existing seeds get the full initial seed depth (PublicKeysPerSeed) (resulting in more addresses up front),
+	// compared to a new seed. This because an existing seed probably might have already addresses,
+	// outside the limited depth as identified by WalletSeedPreloadDepth.
+	preloadDepth := uint64(modules.PublicKeysPerSeed)
+	if seed == (modules.Seed{}) {
+		_, err := rand.Read(seed[:])
+		if err != nil {
+			return modules.Seed{}, err
+		}
+		preloadDepth = modules.WalletSeedPreloadDepth
 	}
 
 	// If the input key is blank, use the seed to create the master key.
 	// Otherwise, use the input key.
-	err = w.createSeed(masterKey, seed)
+	err := w.createSeed(masterKey, seed, preloadDepth)
 	if err != nil {
 		return modules.Seed{}, err
 	}
@@ -195,14 +202,17 @@ func (w *Wallet) Encrypted() bool {
 // return an error on subsequent calls (even after restarting the wallet). To
 // reset the wallet, the wallet files must be moved to a different directory or
 // deleted.
-func (w *Wallet) Encrypt(masterKey crypto.TwofishKey) (modules.Seed, error) {
+//
+// If no primary seed is given (which is possible if a nil seed is passed as primary seed),
+// a random one will be generated for you.
+func (w *Wallet) Encrypt(masterKey crypto.TwofishKey, primarySeed modules.Seed) (modules.Seed, error) {
 	if err := w.tg.Add(); err != nil {
 		return modules.Seed{}, err
 	}
 	defer w.tg.Done()
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return w.initEncryption(masterKey)
+	return w.initEncryption(masterKey, primarySeed)
 }
 
 // Unlocked indicates whether the wallet is locked or unlocked.

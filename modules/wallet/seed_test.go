@@ -26,7 +26,7 @@ func TestPrimarySeed(t *testing.T) {
 
 	// Create a seed and unlock the wallet.
 	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
-	seed, err := wt.wallet.Encrypt(encryptionKey)
+	seed, err := wt.wallet.Encrypt(encryptionKey, modules.Seed{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,6 +80,74 @@ func TestPrimarySeed(t *testing.T) {
 	}
 	if progress != 1 {
 		t.Error("progress reporting an unexpected value")
+	}
+
+	// recover first wallet into second wallet
+
+	wt2, err := createBlankWalletTester(t.Name() + "2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt2.closeWt()
+
+	encryptionKey2 := crypto.TwofishKey(crypto.HashObject("TREZOR 2"))
+	seedDup, err := wt2.wallet.Encrypt(encryptionKey2, seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Compare(seed[:], seedDup[:]) != 0 {
+		t.Fatal(seed, "!=", seedDup)
+	}
+
+	err = wt2.wallet.Unlock(encryptionKey2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	primarySeed, progress, err = wt2.wallet.PrimarySeed()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(primarySeed[:], seed[:]) {
+		t.Error("PrimarySeed is returning a value inconsitent with the seed returned by Encrypt",
+			primarySeed, "!=", seed)
+	}
+	expectedProgress := uint64(modules.PublicKeysPerSeed - modules.WalletSeedPreloadDepth)
+	if progress != expectedProgress {
+		t.Error("progress reporting an unexpected value", progress, "!=", expectedProgress)
+	}
+
+	_, err = wt2.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, progress, err = wt2.wallet.PrimarySeed()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedProgress++
+	if progress != expectedProgress {
+		t.Error("primary seed is returning the wrong progress", progress, "!=", expectedProgress)
+	}
+
+	// ensure we have all addresses of original wallet in the new wallet
+	uhs1 := wt.wallet.AllAddresses()
+	uhs2 := wt2.wallet.AllAddresses()
+	il := len(uhs2)
+	for _, uh1 := range uhs1 {
+		l := len(uhs2)
+		for i, uh2 := range uhs2 {
+			if uh1.Cmp(uh2) == 0 {
+				uhs2 = append(uhs2[:i], uhs2[i+1:]...)
+				break
+			}
+		}
+		if l == len(uhs1) {
+			t.Error("couldn't find ", uh1, " in new wallet")
+		}
+	}
+	if il-len(uhs1) != len(uhs2) {
+		t.Error("couldn't find all original hashes in the new wallet")
 	}
 }
 
@@ -139,7 +207,7 @@ func TestLoadSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
-	newSeed, err := w.Encrypt(encryptionKey)
+	newSeed, err := w.Encrypt(encryptionKey, modules.Seed{})
 	if err != nil {
 		t.Fatal(err)
 	}

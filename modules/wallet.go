@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"encoding/hex"
 	"errors"
 
 	bip39 "github.com/rivine/go-bip39"
@@ -202,7 +203,7 @@ type (
 		// and will return an error on subsequent calls (even after restarting
 		// the wallet). To reset the wallet, the wallet files must be moved to
 		// a different directory or deleted.
-		Encrypt(masterKey crypto.TwofishKey) (Seed, error)
+		Encrypt(masterKey crypto.TwofishKey, primarySeed Seed) (Seed, error)
 
 		// Encrypted returns whether or not the wallet has been encrypted yet.
 		// After being encrypted for the first time, the wallet can only be
@@ -369,4 +370,22 @@ func InitialSeedFromMnemonic(mnemonic string) (out Seed, err error) {
 	}
 	copy(out[:], seed[:])
 	return
+}
+
+// String returns this seed as a hex-encoded string.
+func (s Seed) String() string {
+	return hex.EncodeToString(s[:])
+}
+
+// LoadString loads a hex-encoded string into this seed.
+func (s *Seed) LoadString(str string) error {
+	b, err := hex.DecodeString(str)
+	if err != nil {
+		return err
+	}
+	if len(b) != crypto.EntropySize {
+		return errors.New("seed has invalid size, should equal to crypto entropy size")
+	}
+	copy(s[:], b[:])
+	return nil
 }

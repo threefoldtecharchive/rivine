@@ -145,7 +145,7 @@ func TestIntegrationUserSuppliedEncryption(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = wt.wallet.Encrypt(masterKey)
+	_, err = wt.wallet.Encrypt(masterKey, modules.Seed{})
 	if err != nil {
 		t.Error(err)
 	}
@@ -167,7 +167,7 @@ func TestIntegrationBlankEncryption(t *testing.T) {
 	}
 	defer wt.closeWt()
 	// Encrypt the wallet using a blank key.
-	_, err = wt.wallet.Encrypt(crypto.TwofishKey{})
+	_, err = wt.wallet.Encrypt(crypto.TwofishKey{}, modules.Seed{})
 	if err != modules.ErrBadEncryptionKey {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestIntegrationBlankEncryption(t *testing.T) {
 	// Encrypt the wallet using a valid key.
 	var key crypto.TwofishKey
 	rand.Read(key[:])
-	_, err = wt.wallet.Encrypt(key)
+	_, err = wt.wallet.Encrypt(key, modules.Seed{})
 	if err != nil {
 		t.Fatal(err)
 	}
