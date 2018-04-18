@@ -139,17 +139,17 @@ func (w *Wallet) recoverSeed(masterKey crypto.TwofishKey, seed modules.Seed) err
 // createSeed creates a wallet seed and encrypts it using a key derived from
 // the master key, then addds it to the wallet as the primary seed, while
 // making a disk backup.
-func (w *Wallet) createSeed(masterKey crypto.TwofishKey, seed modules.Seed) error {
+func (w *Wallet) createSeed(masterKey crypto.TwofishKey, seed modules.Seed, depth uint64) error {
 	seedFile, err := w.encryptAndSaveSeedFile(masterKey, seed)
 	if err != nil {
 		return err
 	}
 	w.primarySeed = seed
 	w.persist.PrimarySeedFile = seedFile
-	w.persist.PrimarySeedProgress = 0
+	w.persist.PrimarySeedProgress = depth - modules.WalletSeedPreloadDepth
 	// The wallet preloads keys to prevent confusion for people using the same
 	// seed/wallet file in multiple places.
-	for i := uint64(0); i < modules.WalletSeedPreloadDepth; i++ {
+	for i := uint64(0); i < depth; i++ {
 		spendableKey := generateSpendableKey(seed, i)
 		w.keys[spendableKey.UnlockHash()] = spendableKey
 	}

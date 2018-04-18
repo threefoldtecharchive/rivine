@@ -52,7 +52,10 @@ type (
 		Addresses []types.UnlockHash `json:"addresses"`
 	}
 
-	// WalletInitPOST contains the primary seed that gets generated during a
+	// WalletInitPOST contains the mnemonic of the primary seed,
+	// the seed which is either given by you as part of the request,
+	// or generated for you if none is given. If it's the first case,
+	// the returned primary seed mnemonic should be the same as the one you already know.
 	// POST call to /wallet/init.
 	WalletInitPOST struct {
 		PrimarySeed string `json:"primaryseed"`
@@ -234,20 +237,32 @@ func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ ht
 		return
 	}
 
+	seedStr := req.FormValue("seed")
+	var seed modules.Seed
+	if seedStr != "" {
+		err := seed.LoadString(seedStr)
+		if err != nil {
+			WriteError(w, Error{
+				"error when calling /wallet/init: invalid seed given: " + err.Error()},
+				http.StatusBadRequest)
+			return
+		}
+	}
+
 	encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
-	seed, err := api.wallet.Encrypt(encryptionKey)
+	seed, err := api.wallet.Encrypt(encryptionKey, seed)
 	if err != nil {
 		WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 
-	seedStr, err := modules.NewMnemonic(seed)
+	mnemonic, err := modules.NewMnemonic(seed)
 	if err != nil {
 		WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 	WriteJSON(w, WalletInitPOST{
-		PrimarySeed: seedStr,
+		PrimarySeed: mnemonic,
 	})
 }
 

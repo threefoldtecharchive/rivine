@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
 
@@ -50,9 +51,15 @@ func createWalletCommands() {
 	walletInitCmd = &cobra.Command{
 		Use:   "init",
 		Short: "Initialize and encrypt a new wallet",
-		Long: `Generate a new wallet from a randomly generated seed, and encrypt it.
-By default the wallet encryption / unlock password is the same as the generated seed.`,
-		Run: Wrap(walletinitcmd),
+		Long:  `Generate a new wallet from a randomly generated seed, and encrypt it.`,
+		Run:   Wrap(walletinitcmd),
+	}
+
+	walletRecoverCmd = &cobra.Command{
+		Use:   "recover",
+		Short: "Recover and encrypt a new wallet",
+		Long:  `Recover a wallet from the given mnemonic, to be used as primary seed, and encrypt it.`,
+		Run:   Wrap(walletrecovercmd),
 	}
 
 	walletLoadCmd = &cobra.Command{
@@ -149,6 +156,7 @@ var (
 	walletAddressCmd         *cobra.Command
 	walletAddressesCmd       *cobra.Command
 	walletInitCmd            *cobra.Command
+	walletRecoverCmd         *cobra.Command
 	walletLoadCmd            *cobra.Command
 	walletLoadSeedCmd        *cobra.Command
 	walletLockCmd            *cobra.Command
@@ -190,6 +198,7 @@ func walletinitcmd() {
 	var er api.WalletInitPOST
 
 	fmt.Println("You have to provide a passphrase!")
+	fmt.Println("If you have an existing mnemonic you can use the recover wallet command instead.")
 
 	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 	if err != nil {
@@ -215,7 +224,57 @@ func walletinitcmd() {
 		Die("Error when encrypting wallet:", err)
 	}
 
-	fmt.Printf("Recovery seed:\n%s\n\n", er.PrimarySeed)
+	fmt.Printf("Mnemonic of primary seed:\n%s\n\n", er.PrimarySeed)
+	fmt.Printf("Wallet encrypted with given passphrase\n")
+}
+
+// walletrecovercmd encrypts the wallet with the given password,
+// recovering a wallet for the given menmeonic to be used as primary seed.
+func walletrecovercmd() {
+	var er api.WalletInitPOST
+
+	fmt.Println("You have to provide a passphrase and existing mnemonic!")
+	fmt.Println("If you have no existing mnemonic use the init wallet command instead!")
+
+	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
+	if err != nil {
+		Die("Reading passphrase failed:", err)
+	}
+	if passphrase == "" {
+		Die("passphrase is required and cannot be empty")
+	}
+
+	repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
+	if err != nil {
+		Die("Reading passphrase failed:", err)
+	}
+
+	if repassphrase != passphrase {
+		Die("Given passphrases do not match !!")
+	}
+
+	mnemonic, err := speakeasy.Ask("Enter existing mnemonic to be used as primary seed: ")
+	if err != nil {
+		Die("Reading mnemonic failed:", err)
+	}
+
+	seed, err := modules.InitialSeedFromMnemonic(mnemonic)
+	if err != nil {
+		Die("Invalid mnemonic given:", err)
+	}
+
+	qs := fmt.Sprintf("passphrase=%s&seed=%s", passphrase, seed)
+
+	err = _DefaultClient.httpClient.PostResp("/wallet/init", qs, &er)
+	if err != nil {
+		Die("Error when encrypting wallet:", err)
+	}
+
+	if er.PrimarySeed != mnemonic {
+		Die("Wallet was created, but returned primary seed mnemonic was unexpected:\n\n" + er.PrimarySeed)
+	}
+
+	fmt.Printf("Mnemonic of primary seed:\n%s\n\n", er.PrimarySeed)
 	fmt.Printf("Wallet encrypted with given passphrase\n")
 }
 
