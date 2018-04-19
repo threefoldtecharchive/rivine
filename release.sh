@@ -7,8 +7,16 @@ set -e
 
 # version is supplied as argument
 package="github.com/rivine/rivine"
-full_version=$(git describe | cut -d '-' -f 1,3)
-version=$(echo "$full_version" | cut -d '-' -f 1)
+
+
+version="$(git describe | cut -d '-' -f 1)"
+commit="$(git rev-parse --short HEAD)"
+if [ "$commit" == "$(git rev-list -n 1 $version | cut -c1-7)" ]
+then
+	full_version="$version"
+else
+	full_version="${version}-${commit}"
+fi
 
 for os in darwin linux windows; do
 	echo Packaging ${os}...
@@ -22,7 +30,7 @@ for os in darwin linux windows; do
 		if [ "$os" == "windows" ]; then
 			bin=${pkg}.exe
 		fi
-		GOOS=${os} go build -a -tags 'netgo' \
+		GOOS=${os} go build -a \
 			-ldflags="-X ${package}/build.rawVersion=${full_version} -s -w" \
 			-o "${folder}/${bin}" "./${pkg}"
 

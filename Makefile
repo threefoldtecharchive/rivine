@@ -5,11 +5,26 @@ all: install
 # pkgs changes which packages the makefile calls operate on. run changes which
 # tests are run during testing.
 run = Test
-pkgs = ./build ./modules/gateway ./cmd/rivined ./cmd/rivinec
+daemonpkgs = ./cmd/rivined
+clientpkgs = ./cmd/rivinec
+pkgs = ./build ./modules/gateway $(daemonpkgs) $(clientpkgs)
 testpkgs = ./build ./crypto ./encoding ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types
 
 version = $(shell git describe | cut -d '-' -f 1)
-versionTag = $(shell git describe | cut -d '-' -f 1| cut -d 'v' -f 2)
+commit = $(shell git rev-parse --short HEAD)
+ifeq ($(commit), $(shell git rev-list -n 1 $(version) | cut -c1-7))
+fullversion = $(version)
+else
+fullversion = $(version)-$(commit)
+endif
+
+dockerVersion = $(shell git describe | cut -d '-' -f 1| cut -d 'v' -f 2)
+
+ldflagsversion = -X github.com/rivine/rivine/build.rawVersion=$(fullversion)
+
+stdoutput = $(GOPATH)/bin
+daemonbin = $(stdoutput)/rivined
+clientbin = $(stdoutput)/rivinec
 
 # fmt calls go fmt on all packages.
 fmt:
@@ -22,15 +37,19 @@ vet: release-std
 
 # install builds and installs developer binaries.
 install:
-	go install -race -tags='dev debug profile' $(pkgs)
+	go build -race -tags='dev debug profile' -ldflags '$(ldflagsversion)' -o $(daemonbin) $(daemonpkgs)
+	go build -race -tags='dev debug profile' -ldflags '$(ldflagsversion)' -o $(clientbin) $(clientpkgs)
 
 # release builds and installs release binaries.
 release:
-	go install -tags='debug profile' $(pkgs)
+	go build -tags='debug profile' -ldflags '$(ldflagsversion)' -o $(daemonbin) $(daemonpkgs)
+	go build -tags='debug profile' -ldflags '$(ldflagsversion)' -o $(clientbin) $(clientpkgs)
 release-race:
-	go install -race -tags='debug profile' $(pkgs)
+	go build -race -tags='debug profile' -ldflags '$(ldflagsversion)' -o $(daemonbin) $(daemonpkgs)
+	go build -race -tags='debug profile' -ldflags '$(ldflagsversion)' -o $(clientbin) $(clientpkgs)
 release-std:
-	go install $(pkgs)
+	go build -ldflags '$(ldflagsversion)' -o $(daemonbin) $(daemonpkgs)
+	go build -ldflags '$(ldflagsversion)' -o $(clientbin) $(clientpkgs)
 
 # xc builds and packages release binaries
 # for all windows, linux and mac, 64-bit only,
@@ -41,12 +60,12 @@ xc:
 
 # Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
 release-images: get_hub_jwt xc
-	docker build -t rivine/rivine:$(versionTag) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64/cmd .
-	docker push rivine/rivine:$(versionTag)
+	docker build -t rivine/rivine:$(dockerVersion) -f DockerfileMinimal --build-arg binaries_location=release/rivine-$(version)-linux-amd64/cmd .
+	docker push rivine/rivine:$(dockerVersion)
 	# also create a latest tag
-	docker tag rivine/rivine:$(versionTag) rivine/rivine
+	docker tag rivine/rivine:$(dockerVersion) rivine/rivine
 	docker push rivine/rivine:latest
-	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(versionTag)" "https://hub.gig.tech/api/flist/me/docker"
+	curl -b "active-user=rivine; caddyoauth=$(HUB_JWT)" -X POST --data "image=rivine/rivine:$(dockerVersion)" "https://hub.gig.tech/api/flist/me/docker"
 
 test:
 	go test -short -tags='debug testing' -timeout=30s $(testpkgs) -run=$(run)
