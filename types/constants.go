@@ -66,9 +66,9 @@ type ChainConstants struct {
 	// in order to get your transaction to be accepted by block creators.
 	MinimumTransactionFee Currency
 
-	// TransactionFeeBeneficiary allows you to define a static unlock hash which collects all transaction fees,
+	// TransactionFeeCondition allows you to define a static unlock hash which collects all transaction fees,
 	// by default it is undefined, meaning the transaction fee will go to the creator of the relevant block.
-	TransactionFeeBeneficiary UnlockHash
+	TransactionFeeCondition UnlockConditionProxy
 
 	// GenesisTimestamp is the unix timestamp of the genesis block
 	GenesisTimestamp Timestamp
@@ -76,6 +76,14 @@ type ChainConstants struct {
 	GenesisBlockStakeAllocation []BlockStakeOutput
 	// GenesisCoinDistribution are the coin outputs of the genesis block
 	GenesisCoinDistribution []CoinOutput
+
+	// GenesisTransactionVersion defines the transaction versions to be used
+	// for the transaction of the genesis block.
+	GenesisTransactionVersion TransactionVersion
+
+	// DefaultTransactionVersion defines the default transaction to be used
+	// for all to be created transactions. It does not impact how transactions are validated or understood.
+	DefaultTransactionVersion TransactionVersion
 
 	CurrencyUnits CurrencyUnits
 }
@@ -100,6 +108,11 @@ func DefaultCurrencyUnits() CurrencyUnits {
 // since they are really chain specific
 func DefaultChainConstants() ChainConstants {
 	currencyUnits := DefaultCurrencyUnits()
+
+	const (
+		defaultTxnVersion = TransactionVersionOne
+		genesisTxnVersion = TransactionVersionOne
+	)
 
 	if build.Release == "dev" {
 		// 'dev' settings are for small developer testnets, usually on the same
@@ -130,23 +143,22 @@ func DefaultChainConstants() ChainConstants {
 			// Number of blocks to take in history to calculate the stakemodifier
 			StakeModifierDelay: 2000,
 			// Block stake aging if unspent block stake is not at index 0
-			BlockStakeAging:  uint64(1 << 10),
-			CurrencyUnits:    currencyUnits,
-			GenesisTimestamp: Timestamp(1424139000),
+			BlockStakeAging:           uint64(1 << 10),
+			CurrencyUnits:             currencyUnits,
+			GenesisTransactionVersion: genesisTxnVersion,
+			DefaultTransactionVersion: defaultTxnVersion,
+			GenesisTimestamp:          Timestamp(1424139000),
 		}
 		// Seed for the addres given below twice:
 		// carbon boss inject cover mountain fetch fiber fit tornado cloth wing dinosaur proof joy intact fabric thumb rebel borrow poet chair network expire else
-		bso := BlockStakeOutput{
-			Value:      NewCurrency64(1000000),
-			UnlockHash: UnlockHash{},
-		}
-		bso.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f")
-		cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
-		co := CoinOutput{
-			Value: currencyUnits.OneCoin.Mul64(1000),
-		}
-		co.UnlockHash.LoadString("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f")
-		cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
+		cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, BlockStakeOutput{
+			Value:     NewCurrency64(1000000),
+			Condition: NewCondition(NewUnlockHashCondition(unlockHashFromHex("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"))),
+		})
+		cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, CoinOutput{
+			Value:     currencyUnits.OneCoin.Mul64(1000),
+			Condition: NewCondition(NewUnlockHashCondition(unlockHashFromHex("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"))),
+		})
 
 		return cts
 	}
@@ -155,49 +167,51 @@ func DefaultChainConstants() ChainConstants {
 		// 'testing' settings are for automatic testing, and create much faster
 		// environments than a human can interact with.
 		return ChainConstants{
-			BlockSizeLimit:         2e6,
-			RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-			BlockCreatorFee:        currencyUnits.OneCoin.Mul64(100),
-			MinimumTransactionFee:  currencyUnits.OneCoin.Mul64(1),
-			BlockFrequency:         1, // ASFAP
-			MaturityDelay:          3,
-			MedianTimestampWindow:  11,
-			GenesisTimestamp:       testGenesisTimestamp,
-			TargetWindow:           200,
-			MaxAdjustmentUp:        big.NewRat(10001, 10000),
-			MaxAdjustmentDown:      big.NewRat(9999, 10000),
-			FutureThreshold:        3, // 3 seconds
-			ExtremeFutureThreshold: 6, // seconds
-			StakeModifierDelay:     20,
-			BlockStakeAging:        uint64(1 << 10),
-			CurrencyUnits:          currencyUnits,
+			BlockSizeLimit:            2e6,
+			RootDepth:                 Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			BlockCreatorFee:           currencyUnits.OneCoin.Mul64(100),
+			MinimumTransactionFee:     currencyUnits.OneCoin.Mul64(1),
+			BlockFrequency:            1, // ASFAP
+			MaturityDelay:             3,
+			MedianTimestampWindow:     11,
+			GenesisTimestamp:          testGenesisTimestamp,
+			TargetWindow:              200,
+			MaxAdjustmentUp:           big.NewRat(10001, 10000),
+			MaxAdjustmentDown:         big.NewRat(9999, 10000),
+			FutureThreshold:           3, // 3 seconds
+			ExtremeFutureThreshold:    6, // seconds
+			StakeModifierDelay:        20,
+			BlockStakeAging:           uint64(1 << 10),
+			CurrencyUnits:             currencyUnits,
+			GenesisTransactionVersion: genesisTxnVersion,
+			DefaultTransactionVersion: defaultTxnVersion,
 			GenesisBlockStakeAllocation: []BlockStakeOutput{
 				{
 					Value: NewCurrency64(2000),
-					UnlockHash: UnlockHash{
-						Type: UnlockTypeSingleSignature,
+					Condition: NewCondition(NewUnlockHashCondition(UnlockHash{
+						Type: UnlockTypePubKey,
 						Hash: crypto.Hash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
-					},
+					})),
 				},
 				{
 					Value: NewCurrency64(7000),
-					UnlockHash: UnlockHash{
-						Type: UnlockTypeSingleSignature,
+					Condition: NewCondition(NewUnlockHashCondition(UnlockHash{
+						Type: UnlockTypePubKey,
 						Hash: crypto.Hash{209, 246, 228, 60, 248, 78, 242, 110, 9, 8, 227, 248, 225, 216, 163, 52, 142, 93, 47, 176, 103, 41, 137, 80, 212, 8, 132, 58, 241, 189, 2, 17},
-					},
+					})),
 				},
 				{
-					Value:      NewCurrency64(1000),
-					UnlockHash: UnlockHash{},
+					Value:     NewCurrency64(1000),
+					Condition: NewCondition(nil),
 				},
 			},
 			GenesisCoinDistribution: []CoinOutput{
 				{
 					Value: currencyUnits.OneCoin.Mul64(1000),
-					UnlockHash: UnlockHash{
-						Type: UnlockTypeSingleSignature,
+					Condition: NewCondition(NewUnlockHashCondition(UnlockHash{
+						Type: UnlockTypePubKey,
 						Hash: crypto.Hash{214, 166, 197, 164, 29, 201, 53, 236, 106, 239, 10, 158, 127, 131, 20, 138, 63, 221, 230, 16, 98, 247, 32, 77, 210, 68, 116, 12, 241, 89, 27, 223},
-					},
+					})),
 				},
 			},
 		}
@@ -205,34 +219,35 @@ func DefaultChainConstants() ChainConstants {
 
 	// assume standard net (same as explicit 'standard' build tag)
 	cts := ChainConstants{
-		BlockSizeLimit:         2e6,
-		RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-		BlockCreatorFee:        currencyUnits.OneCoin.Mul64(10),
-		MinimumTransactionFee:  currencyUnits.OneCoin.Mul64(1),
-		BlockFrequency:         600,
-		MaturityDelay:          144,
-		MedianTimestampWindow:  11,
-		TargetWindow:           1e3,
-		MaxAdjustmentUp:        big.NewRat(25, 10),
-		MaxAdjustmentDown:      big.NewRat(10, 25),
-		FutureThreshold:        3 * 60 * 60, // 3 hours.
-		ExtremeFutureThreshold: 5 * 60 * 60, // 5 hours.
-		StakeModifierDelay:     2000,
-		BlockStakeAging:        1 << 17, // 2^16s < 1 day < 2^17s
-		CurrencyUnits:          currencyUnits,
-		GenesisTimestamp:       Timestamp(1496322000),
+		BlockSizeLimit:            2e6,
+		RootDepth:                 Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		BlockCreatorFee:           currencyUnits.OneCoin.Mul64(10),
+		MinimumTransactionFee:     currencyUnits.OneCoin.Mul64(1),
+		BlockFrequency:            600,
+		MaturityDelay:             144,
+		MedianTimestampWindow:     11,
+		TargetWindow:              1e3,
+		MaxAdjustmentUp:           big.NewRat(25, 10),
+		MaxAdjustmentDown:         big.NewRat(10, 25),
+		FutureThreshold:           3 * 60 * 60, // 3 hours.
+		ExtremeFutureThreshold:    5 * 60 * 60, // 5 hours.
+		StakeModifierDelay:        2000,
+		BlockStakeAging:           1 << 17, // 2^16s < 1 day < 2^17s
+		CurrencyUnits:             currencyUnits,
+		GenesisTimestamp:          Timestamp(1496322000),
+		GenesisTransactionVersion: genesisTxnVersion,
+		DefaultTransactionVersion: defaultTxnVersion,
 	}
-	bso := BlockStakeOutput{
-		Value:      NewCurrency64(1000000),
-		UnlockHash: UnlockHash{},
-	}
-	bso.UnlockHash.LoadString("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e")
-	cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, bso)
-	co := CoinOutput{
-		Value: currencyUnits.OneCoin.Mul64(100 * 1000 * 1000),
-	}
-	co.UnlockHash.LoadString("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e")
-	cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, co)
+
+	cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, BlockStakeOutput{
+		Value:     NewCurrency64(1000000),
+		Condition: NewCondition(NewUnlockHashCondition(unlockHashFromHex("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"))),
+	})
+	cts.GenesisCoinDistribution = append(cts.GenesisCoinDistribution, CoinOutput{
+		Value:     currencyUnits.OneCoin.Mul64(100 * 1000 * 1000),
+		Condition: NewCondition(NewUnlockHashCondition(unlockHashFromHex("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"))),
+	})
+
 	return cts
 }
 
@@ -254,10 +269,14 @@ func (c *ChainConstants) Validate() error {
 
 // GenesisBlock returns the genesis block based on the blockchain config
 func (c *ChainConstants) GenesisBlock() Block {
+	if err := c.GenesisTransactionVersion.IsValidTransactionVersion(); err != nil {
+		panic(err)
+	}
 	return Block{
 		Timestamp: c.GenesisTimestamp,
 		Transactions: []Transaction{
 			{
+				Version:           c.GenesisTransactionVersion,
 				BlockStakeOutputs: c.GenesisBlockStakeAllocation,
 				CoinOutputs:       c.GenesisCoinDistribution,
 			},

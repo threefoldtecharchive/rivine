@@ -45,18 +45,30 @@ const (
 	// UnlockTypeNil defines a nil (empty) Input Lock and is the default.
 	UnlockTypeNil UnlockType = iota
 
-	// UnlockTypeSingleSignature provides the standard and most simple unlock type.
+	// UnlockTypePubKey provides the standard and most simple unlock type.
 	// In it the sender gives the public key of the intendend receiver.
 	// The receiver can redeem the relevant locked input by providing a signature
 	// which proofs the ownership of the private key linked to the known public key.
-	UnlockTypeSingleSignature
+	UnlockTypePubKey
 
-	// UnlockTypeAtomicSwap provides a more advanced unlocker,
-	// which allows for a more advanced InputLock,
+	// UnlockTypeAtomicSwap provides the unlocking of a more advanced condition,
 	// where before the TimeLock expired, the output can only go to the receiver,
-	// who has to give the secret in order to do so. After the InputLock,
-	// the output can only be claimed by the sender, with no deadline in this phas
+	// who has to give the secret in order to do so. After the TimeLock,
+	// the output can only be claimed by the sender, with no deadline in this phase.
 	UnlockTypeAtomicSwap
+)
+
+var (
+	NilUnlockHash     UnlockHash
+	UnknownUnlockHash = UnlockHash{
+		Type: UnlockTypeNil,
+		Hash: crypto.Hash{
+			255, 255, 255, 255, 255, 255, 255, 255,
+			255, 255, 255, 255, 255, 255, 255, 255,
+			255, 255, 255, 255, 255, 255, 255, 255,
+			255, 255, 255, 255, 255, 255, 255, 255,
+		},
+	}
 )
 
 // NewUnlockHash creates a new unlock hash
@@ -65,6 +77,14 @@ func NewUnlockHash(t UnlockType, h crypto.Hash) UnlockHash {
 		Type: t,
 		Hash: h,
 	}
+}
+
+func unlockHashFromHex(hstr string) (uh UnlockHash) {
+	err := uh.LoadString(hstr)
+	if err != nil {
+		panic(fmt.Sprintf("func unlockHashFromHex(%s) failed: %v", hstr, err))
+	}
+	return
 }
 
 // MarshalSia implements SiaMarshaler.MarshalSia

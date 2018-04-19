@@ -58,25 +58,25 @@ func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoi
 	return
 }
 
-// SendCoins creates a transaction sending 'amount' to 'dest'. If data is provided,
+// SendCoins creates a transaction sending 'amount' to whoever can fulfill the condition. If data is provided,
 // it is added as arbitrary data to the transaction. The transaction
 // is submitted to the transaction pool and is also returned.
-func (w *Wallet) SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) (types.Transaction, error) {
+func (w *Wallet) SendCoins(amount types.Currency, cond types.UnlockConditionProxy, data []byte) (types.Transaction, error) {
 	return w.SendOutputs([]types.CoinOutput{
 		{
-			UnlockHash: dest,
-			Value:      amount,
+			Condition: cond,
+			Value:     amount,
 		},
 	}, nil, data)
 }
 
-// SendBlockStakes creates a transaction sending 'amount' to 'dest'. The transaction
+// SendBlockStakes creates a transaction sending 'amount' to whoever can fulfill the condition. The transaction
 // is submitted to the transaction pool and is also returned.
-func (w *Wallet) SendBlockStakes(amount types.Currency, dest types.UnlockHash) (types.Transaction, error) {
+func (w *Wallet) SendBlockStakes(amount types.Currency, cond types.UnlockConditionProxy) (types.Transaction, error) {
 	return w.SendOutputs(nil, []types.BlockStakeOutput{
 		{
-			UnlockHash: dest,
-			Value:      amount,
+			Condition: cond,
+			Value:     amount,
 		},
 	}, nil)
 }

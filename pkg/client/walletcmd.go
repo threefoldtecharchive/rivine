@@ -332,10 +332,12 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 
 	for i, co := range body.CoinOutputs {
 		idx := i * 2
-		err := co.UnlockHash.LoadString(args[idx])
+		var uh types.UnlockHash
+		err := uh.LoadString(args[idx])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for coin output #%d: %v", idx, err))
 		}
+		co.Condition.Condition = &types.UnlockHashCondition{TargetUnlockHash: uh}
 		co.Value, err = _CurrencyConvertor.ParseCoinString(args[idx+1])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse coin amount/value for coin output #%d: %v", idx, err))
@@ -351,7 +353,7 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 		Die("Could not send coins:", err)
 	}
 	for _, co := range body.CoinOutputs {
-		fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.UnlockHash)
+		fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.Condition.UnlockHash())
 	}
 }
 
@@ -368,10 +370,12 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 
 	for i, bo := range body.BlockStakeOutputs {
 		idx := i * 2
-		err := bo.UnlockHash.LoadString(args[idx])
+		var uh types.UnlockHash
+		err := uh.LoadString(args[idx])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for blockstake output #%d: %v", idx, err))
 		}
+		bo.Condition.Condition = &types.UnlockHashCondition{TargetUnlockHash: uh}
 		_, err = fmt.Sscan(args[idx+1], &bo.Value)
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse block stake amount/value for blockstake output #%d: %v", idx, err))
@@ -387,7 +391,7 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 		Die("Could not send block stakes:", err)
 	}
 	for _, bo := range body.BlockStakeOutputs {
-		fmt.Printf("Sent %s BS to %s\n", bo.Value, bo.UnlockHash)
+		fmt.Printf("Sent %s BS to %s\n", bo.Value, bo.Condition.UnlockHash())
 	}
 }
 

@@ -20,25 +20,36 @@ var (
 )
 
 // validCoins checks that the coin inputs and outputs are valid in the
-// context of the current consensus set.
-func validCoins(tx *bolt.Tx, t types.Transaction) error {
+// context of the current consensus set, meaning that total coin input sum
+// equals the total coin output sum, as well as the fact that all conditions referenced coin outputs,
+// have been correctly fulfilled by the child coin inputs.
+func validCoins(tx *bolt.Tx, t types.Transaction) (err error) {
+	blockHeight := blockHeight(tx)
+
 	scoBucket := tx.Bucket(CoinOutputs)
 	var inputSum types.Currency
-	for _, sci := range t.CoinInputs {
+	for inputIndex, sci := range t.CoinInputs {
 		// Check that the input spends an existing output.
 		scoBytes := scoBucket.Get(sci.ParentID[:])
 		if scoBytes == nil {
 			return errMissingCoinOutput
 		}
 
-		// Check that the unlock conditions match the required unlock hash.
+		// unmarshall the output bytes
 		var sco types.CoinOutput
-		err := encoding.Unmarshal(scoBytes, &sco)
+		err = encoding.Unmarshal(scoBytes, &sco)
 		if build.DEBUG && err != nil {
 			panic(err)
 		}
-		if sci.Unlocker.UnlockHash() != sco.UnlockHash {
-			return errWrongUnlockConditions
+
+		// check if the referenced output's condition has been fulfilled
+		err = sci.Fulfillment.Fulfill(sco.Condition, types.FulfillContext{
+			InputIndex:  uint64(inputIndex),
+			BlockHeight: blockHeight,
+			Transaction: t,
+		})
+		if err != nil {
+			return
 		}
 
 		inputSum = inputSum.Add(sco.Value)
@@ -50,26 +61,36 @@ func validCoins(tx *bolt.Tx, t types.Transaction) error {
 }
 
 // validBlockStakes checks that the blockstake portions of the transaction are valid
-// in the context of the consensus set.
+// in the context of the consensus set, meaning that block stake input sum
+// equals the block stake output sum, as well as the fact that all conditions
+// of referenced block stake outputs, have been correctly fulfilled by the child block stkae inputs.
 func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
+	blockHeight := blockHeight(tx)
+
 	// Compare the number of input blockstake to the output blockstake.
 	var blockstakeInputSum types.Currency
 	var blockstakeOutputSum types.Currency
-	for _, sfi := range t.BlockStakeInputs {
-		sfo, err := getBlockStakeOutput(tx, sfi.ParentID)
+	var bso types.BlockStakeOutput
+	for inputIndex, bsi := range t.BlockStakeInputs {
+		bso, err = getBlockStakeOutput(tx, bsi.ParentID)
 		if err != nil {
-			return err
+			return
 		}
 
-		// Check the unlock conditions match the unlock hash.
-		if sfi.Unlocker.UnlockHash() != sfo.UnlockHash {
-			return errWrongUnlockConditions
+		// check if the referenced output's condition has been fulfilled
+		err = bsi.Fulfillment.Fulfill(bso.Condition, types.FulfillContext{
+			InputIndex:  uint64(inputIndex),
+			BlockHeight: blockHeight,
+			Transaction: t,
+		})
+		if err != nil {
+			return
 		}
 
-		blockstakeInputSum = blockstakeInputSum.Add(sfo.Value)
+		blockstakeInputSum = blockstakeInputSum.Add(bso.Value)
 	}
-	for _, sfo := range t.BlockStakeOutputs {
-		blockstakeOutputSum = blockstakeOutputSum.Add(sfo.Value)
+	for _, bso := range t.BlockStakeOutputs {
+		blockstakeOutputSum = blockstakeOutputSum.Add(bso.Value)
 	}
 	if !blockstakeOutputSum.Equals(blockstakeInputSum) {
 		return errBlockStakeInputOutputMismatch
@@ -82,10 +103,7 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 func validTransaction(tx *bolt.Tx, t types.Transaction, blockSizeLimit uint64) error {
 	// StandaloneValid will check things like signatures and properties that
 	// should be inherent to the transaction. (storage proof rules, etc.)
-	err := t.ValidateTransaction(types.TransactionValidationContext{
-		CurrentBlockHeight: blockHeight(tx),
-		BlockSizeLimit:     blockSizeLimit,
-	})
+	err := t.ValidateTransaction(blockSizeLimit)
 	if err != nil {
 		return err
 	}
