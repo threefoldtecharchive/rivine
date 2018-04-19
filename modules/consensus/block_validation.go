@@ -49,7 +49,7 @@ func newBlockValidator(consensusSet *ConsensusSet) stdBlockValidator {
 // checkTarget returns true if the block's ID meets the given target.
 func checkTarget(b types.Block, target types.Target, value types.Currency, height types.BlockHeight, cs *ConsensusSet) bool {
 
-	stakemodifier := cs.CalculateStakeModifier(height)
+	stakemodifier := cs.CalculateStakeModifier(height, b, cs.chainCts.StakeModifierDelay)
 
 	// Calculate the hash for the given unspent output and timestamp
 
@@ -113,13 +113,13 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 
 	// If the "quick" check in the active fork has failed, try going back from the submitted block in a possible inactive fork
 	if !spent {
-		parentBlock, _ := bv.cs.FindParentBlock(b, height-ubsu.BlockHeight)
-		if ubsu.TransactionIndex < uint64(len(parentBlock.Transactions)) && ubsu.OutputIndex < uint64(len(parentBlock.Transactions[ubsu.TransactionIndex].BlockStakeOutputs)) {
+		blockatheight, _ = bv.cs.FindParentBlock(b, height-ubsu.BlockHeight)
+		if ubsu.TransactionIndex < uint64(len(blockatheight.Transactions)) && ubsu.OutputIndex < uint64(len(blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputs)) {
 			for _, tr := range b.Transactions {
 				for _, bsi := range tr.BlockStakeInputs {
-					if parentBlock.Transactions[ubsu.TransactionIndex].BlockStakeOutputID(ubsu.OutputIndex) == bsi.ParentID {
+					if blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputID(ubsu.OutputIndex) == bsi.ParentID {
 						bv.cs.log.Debugf("[SBV] Confirmed blockstake respend from an inactive fork, ubsu in block %d, new block at height %d\n", ubsu.BlockHeight, height)
-						valueofblockstakeoutput = parentBlock.Transactions[ubsu.TransactionIndex].BlockStakeOutputs[ubsu.OutputIndex].Value
+						valueofblockstakeoutput = blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputs[ubsu.OutputIndex].Value
 						spent = true
 					}
 				}

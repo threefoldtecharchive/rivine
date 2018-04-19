@@ -176,6 +176,10 @@ type (
 		// does not exist, false is returned
 		TransactionAtID(types.TransactionID) (types.Transaction, types.TransactionShortID, bool)
 
+		// FindParentBlock finds the parent of a block at the given depth. It guarantees that
+		// the correct parent block is found, even if the block is not on the longest fork.
+		FindParentBlock(b types.Block, depth types.BlockHeight) (block types.Block, exists bool)
+
 		// ChildTarget returns the target required to extend the current heaviest
 		// fork. This function is typically used by miners looking to extend the
 		// heaviest fork.
@@ -216,7 +220,7 @@ type (
 		MinimumValidChildTimestamp(types.BlockID) (types.Timestamp, bool)
 
 		// CalculateStakeModifier calculates the stakemodifier from the blockchain.
-		CalculateStakeModifier(height types.BlockHeight) *big.Int
+		CalculateStakeModifier(height types.BlockHeight, block types.Block, delay types.BlockHeight) *big.Int
 
 		// TryTransactionSet checks whether the transaction set would be valid if
 		// it were added in the next block. A consensus change is returned

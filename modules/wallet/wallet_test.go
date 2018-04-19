@@ -431,6 +431,20 @@ func (css *consensusSetStub) TransactionAtID(id types.TransactionID) (types.Tran
 	return types.Transaction{}, 0, false
 }
 
+func (css *consensusSetStub) FindParentBlock(b types.Block, depth types.BlockHeight) (block types.Block, exists bool) {
+	var blockIndex int
+	for i, block := range css.blocks {
+		if block.Header().ID() == b.Header().ID() {
+			blockIndex = i
+			break
+		}
+	}
+	if int(depth) > blockIndex {
+		return types.Block{}, false
+	}
+	return css.blocks[blockIndex-int(depth)], true
+}
+
 func (css *consensusSetStub) ChildTarget(id types.BlockID) (types.Target, bool) {
 	// TODO: return a more sensible value if required
 	return types.Target{}, false
@@ -476,7 +490,7 @@ func (css *consensusSetStub) MinimumValidChildTimestamp(id types.BlockID) (types
 	return css.blocks[0].Timestamp, true
 }
 
-func (css *consensusSetStub) CalculateStakeModifier(height types.BlockHeight) *big.Int {
+func (css *consensusSetStub) CalculateStakeModifier(height types.BlockHeight, block types.Block, delay types.BlockHeight) *big.Int {
 	//TODO: check if a new Stakemodifier needs to be calculated. The stakemodifier
 	// only change when a new block is created, and this calculation is also needed
 	// to validate an incomming new block
@@ -491,17 +505,22 @@ func (css *consensusSetStub) CalculateStakeModifier(height types.BlockHeight) *b
 	stakemodifier := big.NewInt(0)
 	var buffer bytes.Buffer
 
-	// now signedHeight points to the sfirst block to use for the stakemodifier
-	// calculation, we count down 256 blocks and use 1 bit of each blocks ID to
-	// calculate the stakemodifier
+	// Rollback the required amount of blocks, minus 1. This way we end up at the direct child of the
+	// block we use to calculate the stakemodifer, rather than the actual first block. Simplifies
+	// the main loop a bit
+	block, _ = css.FindParentBlock(block, delay-1)
+
+	// We have the direct child of the first block used in the stake modifier calculation. As such
+	// we can follow the parentID in the block to retrieve all the blocks required, using 1 bit
+	// of each blocks ID to calculate the stake modifier
 	for i := 0; i < 256; i++ {
 		if signedHeight >= 0 {
-			// If the genesis block is not yet reached use the ID of the current block
-			BlockID, exist := css.BlockAtHeight(types.BlockHeight(signedHeight))
-			if !exist {
+			var exist bool
+			block, exist = css.FindParentBlock(block, 1)
+			if build.DEBUG && !exist {
 				panic("block to be used for stakemodifier does not yet exist")
 			}
-			hashof := BlockID.ID()
+			hashof := block.ID()
 			BlockIDHash = big.NewInt(0).SetBytes(hashof[:])
 		} else {
 			// if the counter goes sub genesis block , calculate a predefined hash
