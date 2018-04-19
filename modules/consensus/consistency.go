@@ -116,14 +116,14 @@ func (cs *ConsensusSet) checkRevertApply(tx *bolt.Tx) {
 	if err != nil {
 		manageErr(tx, err)
 	}
-	if consensusChecksum(tx) != parent.ConsensusChecksum {
+	if (parent.ConsensusChecksum != crypto.Hash{} && consensusChecksum(tx) != parent.ConsensusChecksum) {
 		manageErr(tx, errors.New("consensus checksum mismatch after reverting"))
 	}
 	_, _, err = cs.forkBlockchain(tx, current)
 	if err != nil {
 		manageErr(tx, err)
 	}
-	if consensusChecksum(tx) != current.ConsensusChecksum {
+	if (current.ConsensusChecksum != crypto.Hash{} && consensusChecksum(tx) != current.ConsensusChecksum) {
 		manageErr(tx, errors.New("consensus checksum mismatch after re-applying"))
 	}
 }
