@@ -216,7 +216,7 @@ type (
 		MinimumValidChildTimestamp(types.BlockID) (types.Timestamp, bool)
 
 		// CalculateStakeModifier calculates the stakemodifier from the blockchain.
-		CalculateStakeModifier(height types.BlockHeight) *big.Int
+		CalculateStakeModifier(height types.BlockHeight, block types.Block, delay types.BlockHeight) *big.Int
 
 		// TryTransactionSet checks whether the transaction set would be valid if
 		// it were added in the next block. A consensus change is returned

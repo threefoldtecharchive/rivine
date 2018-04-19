@@ -36,6 +36,7 @@ func (bc *BlockCreator) SolveBlocks() {
 
 		// Try to solve a block for blocktimes of the next 10 seconds
 		now := time.Now().Unix()
+		bc.log.Debugln("[BC] Attempting to solve blocks")
 		b := bc.solveBlock(uint64(now), 10)
 		if b != nil {
 			bjson, _ := json.Marshal(b)
@@ -56,7 +57,8 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 	bc.mu.RLock()
 	defer bc.mu.RUnlock()
 
-	stakemodifier := bc.cs.CalculateStakeModifier(bc.persist.Height + 1)
+	currentBlock := bc.cs.CurrentBlock()
+	stakemodifier := bc.cs.CalculateStakeModifier(bc.persist.Height+1, currentBlock, bc.chainCts.StakeModifierDelay-1)
 	cbid := bc.cs.CurrentBlock().ID()
 	target, _ := bc.cs.ChildTarget(cbid)
 
