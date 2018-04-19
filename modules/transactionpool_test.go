@@ -42,8 +42,11 @@ func TestCalculateFee(t *testing.T) {
 	if CalculateFee(txnSet).Cmp(types.ZeroCurrency) != 0 {
 		t.Error("CalculateFee is not correctly calculating the fees on an empty transaction set")
 	}
+	cst := types.DefaultChainConstants()
+
 	// Try a non-empty transaction.
 	txnSet = []types.Transaction{{
+		Version: cst.DefaultTransactionVersion,
 		CoinOutputs: []types.CoinOutput{{
 			Value: types.NewCurrency64(253e9),
 		}},
@@ -55,6 +58,7 @@ func TestCalculateFee(t *testing.T) {
 	// Try a transaction set with a single miner fee.
 	baseFee := types.NewCurrency64(12e3)
 	txnSet = []types.Transaction{{
+		Version: cst.DefaultTransactionVersion,
 		MinerFees: []types.Currency{
 			baseFee,
 		},
@@ -73,12 +77,14 @@ func TestCalculateFee(t *testing.T) {
 	fee4 := types.NewCurrency64(4e6)
 	txnSet = []types.Transaction{
 		{
+			Version: cst.DefaultTransactionVersion,
 			MinerFees: []types.Currency{
 				fee1,
 				fee2,
 			},
 		},
 		{
+			Version: cst.DefaultTransactionVersion,
 			MinerFees: []types.Currency{
 				fee3,
 				fee4,

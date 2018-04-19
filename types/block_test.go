@@ -16,7 +16,12 @@ func TestBlockHeader(t *testing.T) {
 	b.POBSOutput = BlockStakeOutputIndexes{BlockHeight: 1, TransactionIndex: 1, OutputIndex: 0}
 	b.Timestamp = 3
 	b.MinerPayouts = []CoinOutput{{Value: NewCurrency64(4)}}
-	b.Transactions = []Transaction{{ArbitraryData: []byte{'5'}}}
+	b.Transactions = []Transaction{
+		{
+			Version:       DefaultChainConstants().DefaultTransactionVersion,
+			ArbitraryData: []byte{'5'},
+		},
+	}
 
 	id1 := b.ID()
 	id2 := BlockID(crypto.HashBytes(encoding.Marshal(b.Header())))
@@ -53,9 +58,15 @@ func TestBlockID(t *testing.T) {
 	ids = append(ids, b.ID())
 	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: cts.BlockCreatorFee})
 	ids = append(ids, b.ID())
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{
+		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		MinerFees: []Currency{cts.BlockCreatorFee},
+	})
 	ids = append(ids, b.ID())
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{
+		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		MinerFees: []Currency{cts.BlockCreatorFee},
+	})
 	ids = append(ids, b.ID())
 
 	knownIDs := make(map[BlockID]struct{})
@@ -90,9 +101,15 @@ func TestHeaderID(t *testing.T) {
 	blocks = append(blocks, b)
 	b.MinerPayouts = append(b.MinerPayouts, CoinOutput{Value: cts.BlockCreatorFee})
 	blocks = append(blocks, b)
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{
+		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		MinerFees: []Currency{cts.BlockCreatorFee},
+	})
 	blocks = append(blocks, b)
-	b.Transactions = append(b.Transactions, Transaction{MinerFees: []Currency{cts.BlockCreatorFee}})
+	b.Transactions = append(b.Transactions, Transaction{
+		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		MinerFees: []Currency{cts.BlockCreatorFee},
+	})
 	blocks = append(blocks, b)
 
 	knownIDs := make(map[BlockID]struct{})
@@ -126,6 +143,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 	// Calculate when there is a fee in a transcation.
 	expected := coinbase.Add(NewCurrency64(123))
 	txn := Transaction{
+		Version:   DefaultChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{NewCurrency64(123)},
 	}
 	b.Transactions = append(b.Transactions, txn)
@@ -135,6 +153,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 
 	// Add a single no-fee transaction and check again.
 	txn = Transaction{
+		Version:       DefaultChainConstants().DefaultTransactionVersion,
 		ArbitraryData: []byte{'6'},
 	}
 	b.Transactions = append(b.Transactions, txn)
@@ -145,6 +164,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 	// Add a transaction with multiple fees.
 	expected = expected.Add(NewCurrency64(1 + 2 + 3))
 	txn = Transaction{
+		Version: DefaultChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{
 			NewCurrency64(1),
 			NewCurrency64(2),
@@ -158,6 +178,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 
 	// Add an empty transaction to the beginning.
 	txn = Transaction{
+		Version:       DefaultChainConstants().DefaultTransactionVersion,
 		ArbitraryData: []byte{'7'},
 	}
 	b.Transactions = append([]Transaction{txn}, b.Transactions...)

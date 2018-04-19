@@ -61,6 +61,7 @@ func TestTryInvalidTransactionSet(t *testing.T) {
 	}
 	txns := cst.tpool.TransactionList()
 	txn := types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		CoinInputs: []types.CoinInput{{}},
 	}
 	txns = append(txns, txn)
@@ -90,6 +91,7 @@ func TestValidSiacoins(t *testing.T) {
 
 	// Create a transaction pointing to a nonexistent siacoin output.
 	txn := types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		CoinInputs: []types.CoinInput{{}},
 	}
 	err = cst.cs.db.View(func(tx *bolt.Tx) error {
@@ -109,6 +111,7 @@ func TestValidSiacoins(t *testing.T) {
 		t.Fatal(err)
 	}
 	txn = types.Transaction{
+		Version: cst.cs.chainCts.DefaultTransactionVersion,
 		CoinInputs: []types.CoinInput{{
 			ParentID: scoid,
 		}},
@@ -126,6 +129,7 @@ func TestValidSiacoins(t *testing.T) {
 
 	// Create a txn with more outputs than inputs.
 	txn = types.Transaction{
+		Version: cst.cs.chainCts.DefaultTransactionVersion,
 		CoinOutputs: []types.CoinOutput{{
 			Value: types.NewCurrency64(1),
 		}},
@@ -156,6 +160,7 @@ func TestValidSiafunds(t *testing.T) {
 
 	// Create a transaction pointing to a nonexistent siafund output.
 	txn := types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		SiafundInputs: []types.SiafundInput{{}},
 	}
 	err = cst.cs.validSiafunds(txn)
@@ -170,6 +175,7 @@ func TestValidSiafunds(t *testing.T) {
 		// pointless to do this but I can't think of a better way.
 	})
 	txn = types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		SiafundInputs: []types.SiafundInput{{
 			ParentID:         sfoid,
 			UnlockConditions: types.UnlockConditions{Timelock: 12345}, // avoid collisions with existing outputs
@@ -182,6 +188,7 @@ func TestValidSiafunds(t *testing.T) {
 
 	// Create a transaction with more outputs than inputs.
 	txn = types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		SiafundOutputs: []types.SiafundOutput{{
 			Value: types.NewCurrency64(1),
 		}},
@@ -206,6 +213,7 @@ func TestValidTransaction(t *testing.T) {
 
 	// Create a transaction that is not standalone valid.
 	txn := types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		FileContracts: []types.FileContract{{
 			WindowStart: 0,
 		}},
@@ -217,6 +225,7 @@ func TestValidTransaction(t *testing.T) {
 
 	// Create a transaction with invalid siacoins.
 	txn = types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		SiacoinInputs: []types.SiacoinInput{{}},
 	}
 	err = cst.cs.validTransaction(txn)
@@ -226,6 +235,7 @@ func TestValidTransaction(t *testing.T) {
 
 	// Create a transaction with invalid storage proofs.
 	txn = types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		StorageProofs: []types.StorageProof{{}},
 	}
 	err = cst.cs.validTransaction(txn)
@@ -235,6 +245,7 @@ func TestValidTransaction(t *testing.T) {
 
 	// Create a transaction with invalid file contract revisions.
 	txn = types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		FileContractRevisions: []types.FileContractRevision{{
 			NewWindowStart: 5000,
 			NewWindowEnd:   5005,
@@ -248,6 +259,7 @@ func TestValidTransaction(t *testing.T) {
 
 	// Create a transaction with invalid siafunds.
 	txn = types.Transaction{
+		Version:    cst.cs.chainCts.DefaultTransactionVersion,
 		SiafundInputs: []types.SiafundInput{{}},
 	}
 	err = cst.cs.validTransaction(txn)

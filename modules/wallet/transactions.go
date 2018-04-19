@@ -121,15 +121,18 @@ func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.
 
 		relevant := false
 
-		_, exists := w.keys[bso.UnlockHash]
-		if exists {
-			relevant = true
+		// TODO: support other kind of conditions, not just unlock hash conditions
+		if uc, ok := bso.Condition.Condition.(*types.UnlockHashCondition); ok {
+			_, exists := w.keys[uc.TargetUnlockHash]
+			if exists {
+				relevant = true
+			}
 		}
 
 		if relevant {
 			BCcountLast1000++
 			BCfeeLast1000 = BCfeeLast1000.Add(w.chainCts.BlockCreatorFee)
-			if w.chainCts.TransactionFeeBeneficiary.Cmp(types.UnlockHash{}) == 0 {
+			if w.chainCts.TransactionFeeCondition.ConditionType() == types.ConditionTypeNil {
 				// only when tx fee beneficiary is not defined is the miner fees for the block creator
 				BCfeeLast1000 = BCfeeLast1000.Add(block.CalculateTotalMinerFees())
 			}

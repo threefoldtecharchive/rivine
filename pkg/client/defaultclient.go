@@ -26,18 +26,22 @@ type Config struct {
 	CurrencyCoinUnit      string
 	CurrencyUnits         types.CurrencyUnits
 	MinimumTransactionFee types.Currency
+
+	// version used to create new transactions
+	DefaultTransactionVersion types.TransactionVersion
 }
 
 // DefaultConfig creates the default configuration for the default (CLI) client.
 func DefaultConfig() Config {
 	chainConstants := types.DefaultChainConstants()
 	return Config{
-		Address:               "http://localhost:23110",
-		Name:                  "Rivine",
-		Version:               build.Version,
-		CurrencyCoinUnit:      "ROC",
-		CurrencyUnits:         types.DefaultCurrencyUnits(),
-		MinimumTransactionFee: chainConstants.MinimumTransactionFee,
+		Address:                   "http://localhost:23110",
+		Name:                      "Rivine",
+		Version:                   build.Version,
+		CurrencyCoinUnit:          "ROC",
+		CurrencyUnits:             types.DefaultCurrencyUnits(),
+		MinimumTransactionFee:     chainConstants.MinimumTransactionFee,
+		DefaultTransactionVersion: chainConstants.DefaultTransactionVersion,
 	}
 }
 
@@ -88,10 +92,11 @@ var (
 		httpClient HTTPClient
 	}
 
-	_CurrencyUnits         types.CurrencyUnits
-	_CurrencyCoinUnit      string
-	_CurrencyConvertor     CurrencyConvertor
-	_MinimumTransactionFee types.Currency
+	_CurrencyUnits             types.CurrencyUnits
+	_CurrencyCoinUnit          string
+	_CurrencyConvertor         CurrencyConvertor
+	_MinimumTransactionFee     types.Currency
+	_DefaultTransactionVersion types.TransactionVersion
 )
 
 // DefaultCLIClient creates a new client using the given params as the default config,
@@ -103,6 +108,7 @@ func DefaultCLIClient(cfg Config) {
 	_CurrencyCoinUnit = cfg.CurrencyCoinUnit
 	_CurrencyUnits = cfg.CurrencyUnits
 	_MinimumTransactionFee = cfg.MinimumTransactionFee
+	_DefaultTransactionVersion = cfg.DefaultTransactionVersion
 
 	var err error
 	_CurrencyConvertor, err = NewCurrencyConvertor(_CurrencyUnits)

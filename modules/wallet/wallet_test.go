@@ -344,10 +344,11 @@ func (css *consensusSetStub) addTransactionAsBlock(unlockHash types.UnlockHash, 
 		Timestamp: types.CurrentTimestamp(),
 		Transactions: []types.Transaction{
 			{
+				Version: types.DefaultChainConstants().DefaultTransactionVersion,
 				CoinOutputs: []types.CoinOutput{
 					{
-						Value:      value,
-						UnlockHash: unlockHash,
+						Value:     value,
+						Condition: types.NewCondition(types.NewUnlockHashCondition(unlockHash)),
 					},
 				},
 			},

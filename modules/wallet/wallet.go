@@ -48,7 +48,7 @@ func (sk spendableKey) WipeSecret() spendableKey {
 
 func (sk spendableKey) UnlockHash() types.UnlockHash {
 	epk := types.Ed25519PublicKey(sk.PublicKey)
-	return types.NewSingleSignatureInputLock(epk).UnlockHash()
+	return types.NewSingleSignatureFulfillment(epk).UnlockHash()
 }
 
 // Wallet is an object that tracks balances, creates keys and addresses,

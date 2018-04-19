@@ -28,7 +28,10 @@ func TestIntegrationLargeTransactions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	txn := types.Transaction{ArbitraryData: [][]byte{arbData}}
+	txn := types.Transaction{
+		Version:       tpt.tpool.chainCts.DefaultTransactionVersion,
+		ArbitraryData: arbData,
+	}
 	err = tpt.tpool.AcceptTransactionSet([]types.Transaction{txn})
 	if err != modules.ErrLargeTransaction {
 		t.Fatal(err)
@@ -43,7 +46,10 @@ func TestIntegrationLargeTransactions(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		txn := types.Transaction{ArbitraryData: [][]byte{arbData}}
+		txn := types.Transaction{
+			Version:       tpt.tpool.chainCts.DefaultTransactionVersion,
+			ArbitraryData: arbData,
+		}
 		tset = append(tset, txn)
 	}
 	err = tpt.tpool.AcceptTransactionSet(tset)

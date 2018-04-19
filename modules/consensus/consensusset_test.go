@@ -51,6 +51,7 @@ func (cst *consensusSetTester) addSiafunds() {
 	// Create the transaction that sends the anyone-can-spend siafund output to
 	// the wallet address (output only available during testing).
 	txn := types.Transaction{
+		Version: cst.cs.chainCts.DefaultTransactionVersion,
 		BlockStakeInputs: []types.BlockStakeInput{{
 			ParentID:         cst.cs.blockRoot.Block.Transactions[0].BlockStakeOutputID(2),
 			UnlockConditions: types.UnlockConditions{},
