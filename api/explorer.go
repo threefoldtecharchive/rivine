@@ -298,3 +298,46 @@ func (api *API) explorerHandler(w http.ResponseWriter, req *http.Request, _ http
 		BlockFacts: facts,
 	})
 }
+
+func (api *API) constantsHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+	WriteJSON(w, api.explorer.Constants())
+}
+
+func (api *API) historyStatsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var history types.BlockHeight
+	// GET request so the only place the vars can be is the queryparams
+	q := req.URL.Query()
+	_, err := fmt.Sscan(q.Get("history"), &history)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+	stats, err := api.explorer.HistoryStats(history)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, stats)
+}
+
+func (api *API) rangeStatsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var start, end types.BlockHeight
+	// GET request so the only place the vars can be is the queryparams
+	q := req.URL.Query()
+	_, err := fmt.Sscan(q.Get("start"), &start)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+	_, err = fmt.Sscan(q.Get("end"), &end)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+	stats, err := api.explorer.RangeStats(start, end)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, stats)
+}
