@@ -205,6 +205,14 @@ const (
 	//
 	// Implemented by the AtomicSwapCondition type.
 	ConditionTypeAtomicSwap
+
+	// ConditionTypeTimeLock defines an unlock condition
+	// which locks another condition with a timestamp.
+	// The internal condition has to be one of: [
+	// NilCondition,
+	// UnlockHashCondition(0x01 unlock hash type is the only standard one at the moment, others are always fulfilled),
+	// ]
+	ConditionTypeTimeLock
 )
 
 // The following enumeration defines the different possible and standard
@@ -240,6 +248,12 @@ const (
 	//
 	// Implemented by the AtomicSwapFulfillment.
 	FulfillmentTypeAtomicSwap
+
+	// FulfillmentTypeTimeLock defines an unlock fulfillment
+	// which can be unlocked if the timestamp has been reached
+	// as well as the internal condition of the parent output's condition
+	// has been fulfilled.
+	FulfillmentTypeTimeLock
 )
 
 // Constants that are used as part of AtomicSwap Conditions/Fulfillments.
@@ -326,6 +340,7 @@ var (
 		ConditionTypeNil:        func() MarshalableUnlockCondition { return &NilCondition{} },
 		ConditionTypeUnlockHash: func() MarshalableUnlockCondition { return &UnlockHashCondition{} },
 		ConditionTypeAtomicSwap: func() MarshalableUnlockCondition { return &AtomicSwapCondition{} },
+		ConditionTypeTimeLock:   func() MarshalableUnlockCondition { return &TimeLockCondition{} },
 	}
 	// Manipulated by the RegisterUnlockFulfillmentType function,
 	// and used by the UnlockFulfillmentProxy.
@@ -333,6 +348,7 @@ var (
 		FulfillmentTypeNil:             func() MarshalableUnlockFulfillment { return &NilFulfillment{} },
 		FulfillmentTypeSingleSignature: func() MarshalableUnlockFulfillment { return &SingleSignatureFulfillment{} },
 		FulfillmentTypeAtomicSwap:      func() MarshalableUnlockFulfillment { return &anyAtomicSwapFulfillment{} },
+		FulfillmentTypeTimeLock:        func() MarshalableUnlockFulfillment { return &TimeLockFulfillment{} },
 	}
 )
 
@@ -433,6 +449,37 @@ type (
 	// AtomicSwapHashedSecret defines the 256 image byte slice,
 	// used as hashed secret within the Atomic Swap protocol/contract.
 	AtomicSwapHashedSecret [sha256.Size]byte
+
+	// TimeLockCondition defines an unlock condition which require a LockTime
+	// to be reached on top of some other defined condition,
+	// which both have to be fulfilled in order to unlock/spend/use the unspend output as an input.
+	TimeLockCondition struct {
+		// LockTime defines either a block height or a timestamp.
+		// If the value is less than LockTimeMinTimestampValue it is concidered a lock based on block height,
+		// otherwise it is used as a unix epoch value expressed in seconds.
+		LockTime uint64
+		// Condition defines the condition which has to be fulfilled
+		// on top of the LockTime condition defined by this condition.
+		// See ConditionTypeTimeLock in order to know which conditions are supported.
+		Condition MarshalableUnlockCondition
+	}
+
+	// TimeLockFulfillment defines an unlock fulfillment which implicitly
+	// ensures the lock time are reached as part of the fulfillment,
+	// together with the layered fulfillment logic handled by the internal fulfillment.
+	TimeLockFulfillment struct {
+		// Fulfillment which will be used to fulfill the internal condition
+		// defined as part of the TimeLockCondition,
+		// but only if the LockTime as defined by that TimeLockCondition has been reached.
+		Fulfillment MarshalableUnlockFulfillment
+	}
+)
+
+const (
+	// LockTimeMinTimestampValue defines the minimum value a LockTime can be
+	// in order to be interpreted as a (unix epoch seconds) timestamp,
+	// otherwise it is interpreted as the block height instead.
+	LockTimeMinTimestampValue = 500 * 1000 * 1000
 )
 
 type (
@@ -1278,6 +1325,296 @@ func (as *anyAtomicSwapFulfillment) UnmarshalJSON(b []byte) error {
 var (
 	_ MarshalableUnlockFulfillment = (*anyAtomicSwapFulfillment)(nil)
 )
+
+// NewTimeLockCondition creates a new TimeLockCondition.
+// If no MarshalableUnlockCondition is given, the NilCondition is assumed.
+func NewTimeLockCondition(lockTime uint64, condition MarshalableUnlockCondition) *TimeLockCondition {
+	if build.DEBUG && lockTime == 0 {
+		panic("lock time is required")
+	}
+	if condition == nil {
+		condition = &NilCondition{}
+	}
+	return &TimeLockCondition{
+		LockTime:  lockTime,
+		Condition: condition,
+	}
+}
+
+// ConditionType implements UnlockCondition.ConditionType
+func (tl *TimeLockCondition) ConditionType() ConditionType { return ConditionTypeTimeLock }
+
+// IsStandardCondition implements UnlockCondition.IsStandardCondition
+func (tl *TimeLockCondition) IsStandardCondition() error {
+	if tl.LockTime == 0 {
+		return errors.New("lock time has to be defined")
+	}
+	switch tc := tl.Condition.(type) {
+	case *UnlockHashCondition:
+		if tc.TargetUnlockHash.Type != UnlockTypePubKey {
+			return fmt.Errorf("unsupported unlock type '%d' by unlock hash condition", tc.TargetUnlockHash.Type)
+		}
+		if tc.TargetUnlockHash.Hash == (crypto.Hash{}) {
+			return errors.New("nil crypto hash cannot be used as unlock hash")
+		}
+		return nil
+	case *NilCondition:
+		return nil
+	default:
+		return errors.New("unexpected internal unlock condition used as part of time lock condition")
+	}
+}
+
+// UnlockHash implements UnlockCondition.UnlockHash
+func (tl *TimeLockCondition) UnlockHash() UnlockHash {
+	return tl.Condition.UnlockHash()
+}
+
+// Equal implements UnlockCondition.Equal
+func (tl *TimeLockCondition) Equal(c UnlockCondition) bool {
+	otl, ok := c.(*TimeLockCondition)
+	if !ok {
+		return false
+	}
+	return tl.LockTime == otl.LockTime && tl.Condition.Equal(otl.Condition)
+}
+
+// Marshal implements MarshalableUnlockCondition.Marshal
+func (tl *TimeLockCondition) Marshal() []byte {
+	return append(
+		encoding.MarshalAll(tl.LockTime, tl.Condition.ConditionType()),
+		tl.Condition.Marshal()...)
+}
+
+// Unmarshal implements MarshalableUnlockCondition.Unmarshal
+func (tl *TimeLockCondition) Unmarshal(b []byte) error {
+	if len(b) < 9 {
+		// at least 9 bytes are required (lock time (8) + condition type (1)),
+		// as to enforce we can decode the time lock condition's properties,
+		// whether or not the internal condition requires bytes is of no concern of us.
+		return io.ErrUnexpectedEOF
+	}
+	// unmarshal the lock time
+	err := encoding.Unmarshal(b[:8], &tl.LockTime)
+	if err != nil {
+		return err
+	}
+	// interpret the condition type, and continue decoding based on that,
+	// by getting the correct constructor from the registration mapping
+	ct := ConditionType(b[8])
+	cc, ok := _RegisteredUnlockConditionTypes[ct]
+	if !ok {
+		// use the condition as unknown (and raw) condition
+		tl.Condition = &UnknownCondition{
+			Type:         ct,
+			RawCondition: b[9:],
+		}
+		return nil
+	}
+	// known condition type, create and decode it
+	tl.Condition = cc()
+	return tl.Condition.Unmarshal(b[9:])
+}
+
+type jsonTimeLockCondition struct {
+	LockTime  uint64               `json:"locktime"`
+	Condition UnlockConditionProxy `json:"condition"`
+}
+
+// MarshalJSON implements json.Marshaler.MarshalJSON
+//
+// This function is required, as to ensure
+// the underlying properties are properly serialized,
+// including the type of the internal condition.
+func (tl *TimeLockCondition) MarshalJSON() ([]byte, error) {
+	return json.Marshal(jsonTimeLockCondition{
+		LockTime:  tl.LockTime,
+		Condition: UnlockConditionProxy{Condition: tl.Condition},
+	})
+}
+
+// UnmarshalJSON implements json.Unmarshaler.UnmarshalJSON
+//
+// This function is required, as to be able to unmarshal
+// the internal condition based on the encoded condition type.
+func (tl *TimeLockCondition) UnmarshalJSON(b []byte) error {
+	// first unmarshal the top-layered time lock condition
+	var jtl jsonTimeLockCondition
+	err := json.Unmarshal(b, &jtl)
+	if err != nil {
+		return err
+	}
+	// move over the JSON-structured properties to the in-memory struct
+	tl.LockTime = jtl.LockTime
+	if jtl.Condition.Condition == nil {
+		tl.Condition = &NilCondition{}
+	} else {
+		tl.Condition = jtl.Condition.Condition
+	}
+	return nil
+}
+
+// NewTimeLockFulfillment creates a new TimeLockFulfillment.
+// If no MarshalableUnlockFulfillment is given, the NilFulfillment is assumed.
+// NOTE That the NilFulfillment is not standard and cannot ever be used,
+// so that makes the returned TimeLockFulfillment essentially useless.
+func NewTimeLockFulfillment(fulfillment MarshalableUnlockFulfillment) *TimeLockFulfillment {
+	if fulfillment == nil {
+		if build.DEBUG {
+			panic("nil fulfillment is not standard and shouldn't be used as the timelock's internal fulfillment")
+		}
+		fulfillment = &NilFulfillment{}
+	}
+	return &TimeLockFulfillment{
+		Fulfillment: fulfillment,
+	}
+}
+
+// Fulfill implements UnlockFulfillment.Fulfill
+//
+// The TimeLockFulfillment can only be used to fulfill a TimeLockCondition.
+func (tl *TimeLockFulfillment) Fulfill(condition UnlockCondition, ctx FulfillContext) error {
+	switch tc := condition.(type) {
+	case *TimeLockCondition:
+		if tc.LockTime < LockTimeMinTimestampValue {
+			if BlockHeight(tc.LockTime) > ctx.BlockHeight {
+				return errors.New("block height as defined by time lock has not yet been reached")
+			}
+		} else {
+			if Timestamp(tc.LockTime) > CurrentTimestamp() { // TODO: fix as part of issue #270
+				return errors.New("epoch timestamp as defined by time lock has not yet been reached")
+			}
+		}
+		// time lock hash been reached,
+		// delegate the rest of the fulfillment to the internally layered logic
+		return tl.Fulfillment.Fulfill(tc.Condition, ctx)
+
+	default:
+		return ErrUnexpectedUnlockCondition
+	}
+}
+
+// Sign implements UnlockFulfillment.Sign
+func (tl *TimeLockFulfillment) Sign(ctx FulfillmentSignContext) error {
+	return tl.Fulfillment.Sign(ctx)
+}
+
+// UnlockHash implements UnlockFulfillment.UnlockHash
+func (tl *TimeLockFulfillment) UnlockHash() UnlockHash {
+	return tl.Fulfillment.UnlockHash()
+}
+
+// FulfillmentType implements UnlockFulfillment.FulfillmentType
+func (tl *TimeLockFulfillment) FulfillmentType() FulfillmentType { return FulfillmentTypeTimeLock }
+
+// IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
+func (tl *TimeLockFulfillment) IsStandardFulfillment() error {
+	switch tc := tl.Fulfillment.(type) {
+	case *SingleSignatureFulfillment:
+		return tc.IsStandardFulfillment()
+	default:
+		return errors.New("unexpected internal unlock fulfillment used as part of time lock fulfillment")
+	}
+}
+
+// Equal implements UnlockFulfillment.Equal
+func (tl *TimeLockFulfillment) Equal(f UnlockFulfillment) bool {
+	otl, ok := f.(*TimeLockFulfillment)
+	if !ok {
+		return false
+	}
+	return tl.Fulfillment.Equal(otl.Fulfillment)
+}
+
+// Marshal implements MarshalableUnlockFulfillment.Marshal
+func (tl *TimeLockFulfillment) Marshal() []byte {
+	return append(
+		encoding.Marshal(tl.Fulfillment.FulfillmentType()),
+		tl.Fulfillment.Marshal()...)
+}
+
+// Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
+func (tl *TimeLockFulfillment) Unmarshal(b []byte) error {
+	if len(b) == 0 {
+		// at least 1 byte is required (fulfillment type)
+		// as to enforce we can decode the time lock fulfillment's properties,
+		// whether or not the internal fulfillment requires bytes is of no concern of us.
+		return io.ErrUnexpectedEOF
+	}
+	// interpret the fulfillment type, and continue decoding based on that,
+	// by getting the correct constructor from the registration mapping
+	ft := FulfillmentType(b[0])
+	fc, ok := _RegisteredUnlockFulfillmentTypes[ft]
+	if !ok {
+		// use the fulfillment as unknown (and raw) condition
+		tl.Fulfillment = &UnknownFulfillment{
+			Type:           ft,
+			RawFulfillment: b[1:],
+		}
+		return nil
+	}
+	// known fulfillment type, create and decode it
+	tl.Fulfillment = fc()
+	return tl.Fulfillment.Unmarshal(b[1:])
+}
+
+type jsonTimeLockFulfillment struct {
+	Type        FulfillmentType `json:"type"`
+	Fulfillment json.RawMessage `json:"fulfillment,omitempty"`
+}
+
+type jsonTimeLockFulfillmentWithNilFulfillment struct {
+	Type FulfillmentType `json:"type"`
+}
+
+// MarshalJSON implements json.Marshaler.MarshalJSON
+//
+// This function is required, as to ensure
+// the fulfillment is encoded as if it was an unlock fulfillment proxy itself.
+func (tl *TimeLockFulfillment) MarshalJSON() ([]byte, error) {
+	data, err := json.Marshal(tl.Fulfillment)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println("MarshalJSON", tl, tl.Fulfillment)
+	if string(data) == "{}" {
+		return json.Marshal(jsonTimeLockFulfillmentWithNilFulfillment{
+			Type: tl.Fulfillment.FulfillmentType(),
+		})
+	}
+	return json.Marshal(jsonTimeLockFulfillment{
+		Type:        tl.Fulfillment.FulfillmentType(),
+		Fulfillment: data,
+	})
+}
+
+// UnmarshalJSON implements json.Unmarshaler.UnmarshalJSON
+//
+// This function is required, as to ensure
+// the fulfillment is decoded as if it was an unlock fulfillment proxy itself.
+func (tl *TimeLockFulfillment) UnmarshalJSON(b []byte) error {
+	var rf jsonTimeLockFulfillment
+	err := json.Unmarshal(b, &rf)
+	if err != nil {
+		return err
+	}
+	fc, ok := _RegisteredUnlockFulfillmentTypes[rf.Type]
+	if !ok {
+		return ErrUnknownFulfillmentType
+	}
+	f := fc()
+	fmt.Println("before", f, rf.Fulfillment)
+	if rf.Fulfillment != nil {
+		err = json.Unmarshal(rf.Fulfillment, &f)
+	}
+	if f == nil {
+		f = &NilFulfillment{}
+	}
+	fmt.Println("after", f)
+	tl.Fulfillment = f
+	fmt.Println("UnmarshalJSON", tl, tl.Fulfillment, string(b))
+	return err
+}
 
 // MarshalSia implements encoding.SiaMarshaler.MarshalSia
 //
