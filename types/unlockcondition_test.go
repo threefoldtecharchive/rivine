@@ -23,6 +23,10 @@ func TestUnlockConditionSiaEncoding(t *testing.T) {
 		`012100000000000000016363636363636363636363636363636363636363636363636363636363636363`,
 		// atomic swap condition
 		`026a0000000000000001454545454545454545454545454545454545454545454545454545454545454501636363636363636363636363636363636363636363636363636363636363636378787878787878787878787878787878787878787878787878787878787878781234567812345678`,
+		// time lock condition
+		`030900000000000000111111111111111100`,                                                                   // using nil condition
+		`032a00000000000000111111111111111101016363636363636363636363636363636363636363636363636363636363636363`, // using (pubKey) unlock hash condition
+		`0315000000000000001111111111111111ff48656c6c6f2c205465737421`,                                           // using unknown condition
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -62,6 +66,9 @@ func TestUnlockFulfillmentSiaEncoding(t *testing.T) {
 		`020a01000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
 		// atomic swap fulfillment
 		`02a000000000000000656432353531390000000000000000002000000000000000fffffffffffffffffffffffffffffffff04fffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffff56fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffffffffffff123ffffffffffafffffffffffeffffffffffffff`,
+		// time lock fulfillment
+		`0381000000000000000165643235353139000000000000000000200000000000000035fffffffffffffffffffffffffffffffffffffffffffffffff46fffffffffff4000000000000000fffffffffffffffffffffffffffff123ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`, // using single signature fulfillment
+		`030d00000000000000ff48656c6c6f2c205465737421`, // using unknown fulfillment
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -129,6 +136,42 @@ func TestUnlockConditionJSONEncoding(t *testing.T) {
 		"timelock": 1522068743
 	}
 }`, ``},
+		// time lock condition
+		{`{
+	"type": 3,
+	"data": {
+		"locktime": 500000000,
+		"condition": {}
+	}
+}`, ``}, // using nil condition
+		{`{
+	"type": 3,
+	"data": {
+		"locktime": 500000000,
+		"condition": {
+			"type": 0,
+			"data": {}
+		}
+	}
+}`, `{
+	"type": 3,
+	"data": {
+		"locktime": 500000000,
+		"condition": {}
+	}
+}`}, // using nil condition
+		{`{
+	"type": 3,
+	"data": {
+		"locktime": 500000000,
+		"condition": {
+			"type": 1,
+			"data": {
+				"unlockhash": "0101234567890123456789012345678901012345678901234567890123456789018a50e31447b8"
+			}
+		}
+	}
+}`, ``}, // using unlock hash condition
 	}
 	for idx, testCase := range testCases {
 		var up UnlockConditionProxy
@@ -234,6 +277,28 @@ func TestUnlockFulfillmentJSONEncoding(t *testing.T) {
 		"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 		"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab",
 		"secret": "def789def789def789def789def789dedef789def789def789def789def789de"
+	}
+}`, ``},
+		// time lock fulfillment
+		{
+			`{
+	"type": 3,
+	"data": {"type":0}
+}`, ``}, // using nil fulfillment
+		{
+			`{
+	"type": 3,
+	"data": {"type":0, "fulfillment": null}
+}`, `{"type": 3, "data": {"type": 0}}`}, // using nil fulfillment
+		{
+			`{
+	"type": 3,
+	"data": {
+		"type": 1,
+		"fulfillment": {
+			"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
+		}
 	}
 }`, ``},
 	}
@@ -440,6 +505,74 @@ func TestUnlockConditionEqual(t *testing.T) {
 				TimeLock:     DefaultChainConstants().GenesisTimestamp,
 			},
 			"unequal sender",
+		},
+		{
+			&TimeLockCondition{Condition: &NilCondition{}},
+			nil, "unequal type",
+		},
+		{
+			&TimeLockCondition{Condition: &NilCondition{}},
+			&NilCondition{}, "unequal type",
+		},
+		{
+			&TimeLockCondition{Condition: &NilCondition{}},
+			&UnlockHashCondition{}, "unequal type",
+		},
+		{
+			&TimeLockCondition{Condition: &NilCondition{}},
+			&AtomicSwapCondition{}, "unequal type",
+		},
+		{
+			&TimeLockCondition{Condition: &NilCondition{}},
+			&TimeLockCondition{}, "",
+		},
+		{
+			&TimeLockCondition{Condition: &NilCondition{}, LockTime: 42},
+			&TimeLockCondition{Condition: &NilCondition{}},
+			"non-equal lock time",
+		},
+		{
+			&TimeLockCondition{Condition: &NilCondition{}},
+			&TimeLockCondition{Condition: &NilCondition{}, LockTime: 42},
+			"non-equal lock time",
+		},
+		{
+			&TimeLockCondition{Condition: &UnknownCondition{}},
+			&TimeLockCondition{Condition: &NilCondition{}},
+			"non-equal internalcondition",
+		},
+		{
+			&TimeLockCondition{Condition: &UnknownCondition{}},
+			&TimeLockCondition{Condition: &NilCondition{}},
+			"non-equal internalcondition",
+		},
+		{
+			&TimeLockCondition{
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				},
+			},
+			&TimeLockCondition{
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				},
+			},
+			"",
+		},
+		{
+			&TimeLockCondition{
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				},
+				LockTime: 5000,
+			},
+			&TimeLockCondition{
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				},
+				LockTime: 5000,
+			},
+			"",
 		},
 	}
 	for idx, testCase := range testCases {
@@ -894,6 +1027,57 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			},
 			"different hashed secret",
 		},
+		{
+			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
+			nil, "unequal type",
+		},
+		{
+			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
+			&NilFulfillment{}, "unequal type",
+		},
+		{
+			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
+			&SingleSignatureFulfillment{}, "unequal type",
+		},
+		{
+			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
+			&AtomicSwapFulfillment{}, "unequal type",
+		},
+		{
+			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
+			&TimeLockFulfillment{}, "",
+		},
+		{
+			&TimeLockFulfillment{Fulfillment: &UnknownFulfillment{}},
+			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
+			"non-equal internalcondition",
+		},
+		{
+			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
+			&TimeLockFulfillment{Fulfillment: &UnknownFulfillment{}},
+			"non-equal internalcondition",
+		},
+		{
+			&TimeLockFulfillment{
+				Fulfillment: &SingleSignatureFulfillment{
+					PublicKey: SiaPublicKey{
+						Algorithm: SignatureEd25519,
+						Key:       ByteSlice{1, 2, 3},
+					},
+					Signature: ByteSlice{4, 2},
+				},
+			},
+			&TimeLockFulfillment{
+				Fulfillment: &SingleSignatureFulfillment{
+					PublicKey: SiaPublicKey{
+						Algorithm: SignatureEd25519,
+						Key:       ByteSlice{1, 2, 3},
+					},
+					Signature: ByteSlice{4, 2},
+				},
+			},
+			"",
+		},
 	}
 	for idx, testCase := range testCases {
 		equal := testCase.A.Equal(testCase.B)
@@ -1216,6 +1400,50 @@ func TestValidFulFill(t *testing.T) {
 			},
 			sk,
 		},
+		{ // TimeLockedCondition (Nil) -> TimeLockedFulfillment (SingleSignature)
+			&TimeLockCondition{
+				LockTime:  uint64(CurrentTimestamp()),
+				Condition: &NilCondition{},
+			},
+			func() MarshalableUnlockFulfillment {
+				return &TimeLockFulfillment{
+					Fulfillment: &SingleSignatureFulfillment{
+						PublicKey: ed25519pk,
+					},
+				}
+			},
+			sk,
+		},
+		{ // TimeLockedCondition (UnlockHash) -> TimeLockedFulfillment (SingleSignature)
+			&TimeLockCondition{
+				LockTime: uint64(CurrentTimestamp()),
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+				},
+			},
+			func() MarshalableUnlockFulfillment {
+				return &TimeLockFulfillment{
+					Fulfillment: &SingleSignatureFulfillment{
+						PublicKey: ed25519pk,
+					},
+				}
+			},
+			sk,
+		},
+		{ // TimeLockedCondition (UnlockHash) -> TimeLockedFulfillment (Unknown)
+			&TimeLockCondition{
+				LockTime: uint64(CurrentTimestamp()),
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+				},
+			},
+			func() MarshalableUnlockFulfillment {
+				return &TimeLockFulfillment{
+					Fulfillment: &UnknownFulfillment{},
+				}
+			},
+			sk,
+		},
 	}
 	for idx, testCase := range testCases {
 		// test each testcase seperately
@@ -1270,7 +1498,7 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 
 	// sign all inputs (unless we are playing with unknown fulfillments)
 	for idx, input := range inputs {
-		if _, ok := txn.CoinInputs[idx].Fulfillment.Fulfillment.(*UnknownFulfillment); !ok {
+		if fulfillmentCanBeSigned(txn.CoinInputs[idx].Fulfillment.Fulfillment) {
 			signContext := FulfillmentSignContext{
 				InputIndex:  uint64(idx),
 				Transaction: txn,
@@ -1288,7 +1516,6 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 	}
 
 	// fulfill all inputs
-
 	for idx := range inputs {
 		fulfillContext := FulfillContext{
 			InputIndex:  uint64(idx),
@@ -1304,6 +1531,16 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 			t.Error(testIndex, idx, "fulfilling block stake input failed", err)
 		}
 	}
+}
+
+func fulfillmentCanBeSigned(fulfillment MarshalableUnlockFulfillment) bool {
+	if _, ok := fulfillment.(*UnknownFulfillment); ok {
+		return false
+	}
+	if tl, ok := fulfillment.(*TimeLockFulfillment); ok {
+		return fulfillmentCanBeSigned(tl.Fulfillment)
+	}
+	return fulfillment != nil
 }
 
 func TestIsStandardCondition(t *testing.T) {
@@ -1367,6 +1604,51 @@ func TestIsStandardCondition(t *testing.T) {
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
 				TimeLock:     DefaultChainConstants().GenesisTimestamp,
 			}, "",
+		},
+		// time lock condition
+		{
+			&TimeLockCondition{
+				LockTime:  42,
+				Condition: &NilCondition{},
+			}, "",
+		},
+		{
+			&TimeLockCondition{
+				Condition: &NilCondition{},
+			}, "lock time has to be defined",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				},
+			}, "",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+				},
+			}, "non-standard unlock hash type",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 0,
+				Condition: &UnlockHashCondition{
+					TargetUnlockHash: unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				},
+			}, "no lock time provided",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &UnknownCondition{
+					Type:         ConditionTypeUnlockHash,
+					RawCondition: []byte{1, 2, 3},
+				},
+			}, "internal condition cannot be of the unknown type",
 		},
 	}
 	for idx, testCase := range testCases {
@@ -1841,6 +2123,74 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Secret: AtomicSwapSecret{1, 2, 3},
 			},
 			"",
+		},
+		// time lock condition
+		{
+			&TimeLockFulfillment{
+				Fulfillment: &SingleSignatureFulfillment{
+					PublicKey: SiaPublicKey{
+						Algorithm: SignatureEd25519,
+						Key: ByteSlice{
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+						},
+					},
+				},
+			}, "nil signature is not allowed for single-signature fulfilment",
+		},
+		{
+			&TimeLockFulfillment{
+				Fulfillment: &SingleSignatureFulfillment{
+					PublicKey: SiaPublicKey{
+						Algorithm: SignatureEd25519,
+					},
+					Signature: ByteSlice{
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+					},
+				},
+			}, "nil pub-key is not allowed for single-signature fulfilment",
+		},
+		{
+			&TimeLockFulfillment{
+				Fulfillment: &SingleSignatureFulfillment{
+					PublicKey: SiaPublicKey{
+						Algorithm: SignatureEd25519,
+						Key: ByteSlice{
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+						},
+					},
+					Signature: ByteSlice{
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+						1, 2, 3, 4, 5, 6, 7, 8,
+					},
+				},
+			}, "",
+		},
+		{
+			&TimeLockFulfillment{
+				Fulfillment: &UnknownFulfillment{
+					Type:           FulfillmentTypeSingleSignature,
+					RawFulfillment: []byte{1, 2, 3},
+				},
+			}, "unknown fulfillment is never standard",
 		},
 	}
 	for idx, testCase := range testCases {
