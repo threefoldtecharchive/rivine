@@ -1,6 +1,8 @@
 package explorer
 
 import (
+	"errors"
+
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
@@ -124,4 +126,146 @@ func (e *Explorer) BlockStakeOutputID(id types.BlockStakeOutputID) []types.Trans
 		ids = nil
 	}
 	return ids
+}
+
+// HistoryStats return the stats for the last `history` amount of blocks
+func (e *Explorer) HistoryStats(history types.BlockHeight) (*modules.ChainStats, error) {
+	if history == 0 {
+		return nil, errors.New("No history to show for 0 blocks")
+	}
+	// Get the current height
+	var height types.BlockHeight
+	err := e.db.View(func(tx *bolt.Tx) error {
+		return dbGetInternal(internalBlockHeight, &height)(tx)
+	})
+	if err != nil {
+		return nil, err
+	}
+	start := height - history + 1
+	// Since blockheight is an uint64, we can't just check for a negative blockheight
+	if history > height {
+		start = 0
+	}
+	return e.getStats(start, height)
+}
+
+// RangeStats return the stats for the range [`start`, `end`]
+func (e *Explorer) RangeStats(start types.BlockHeight, end types.BlockHeight) (*modules.ChainStats, error) {
+	if start > end {
+		return nil, errors.New("Invalid range")
+	}
+	// Get the current height
+	var height types.BlockHeight
+	err := e.db.View(func(tx *bolt.Tx) error {
+		return dbGetInternal(internalBlockHeight, &height)(tx)
+	})
+	if err != nil || height < start {
+		return nil, nil
+	}
+	if height < end {
+		end = height
+	}
+	return e.getStats(start, end)
+}
+
+// getRangeStats fills in some stats from the blockfacts and the actual blocks in a specified range
+func (e *Explorer) getStats(start types.BlockHeight, end types.BlockHeight) (*modules.ChainStats, error) {
+	stats := modules.NewChainStats(int(end-start) + 1)
+	err := e.db.View(func(tx *bolt.Tx) error {
+		for height := start; height <= end; height++ {
+
+			// Load the block from the consensus set first so we have the ID, this saves a DB call to the
+			// consensus set later on
+			block, exists := e.cs.BlockAtHeight(height)
+			if !exists {
+				return errors.New("Block does not exist in consensus set")
+			}
+
+			var facts blockFacts
+			err := dbGetAndDecode(bucketBlockFacts, block.ID(), &facts)(tx)
+			if err != nil {
+				return err
+			}
+			// Calculate the block index
+			i := height - start
+
+			stats.BlockHeights[i] = facts.Height
+			stats.BlockTimeStamps[i] = facts.Timestamp
+			if i > 0 {
+				stats.BlockTimes[i] = int64(stats.BlockTimeStamps[i] - stats.BlockTimeStamps[i-1])
+			}
+			stats.EstimatedActiveBS[i] = facts.EstimatedActiveBS
+			stats.Difficulties[i] = facts.Difficulty
+
+			stats.TransactionCounts[i] = facts.TransactionCount
+			stats.CoinInputCounts[i] = facts.CoinInputCount
+			stats.CoinOutputCounts[i] = facts.CoinOutputCount
+			stats.BlockStakeInputCounts[i] = facts.BlockStakeInputCount
+			stats.BlockStakeOutputCounts[i] = facts.BlockStakeOutputCount
+
+			stats.BlockTransactionCounts[i] = uint32(len(block.Transactions))
+			// Don't count the transaction to respent the blockstake. However, it is possible
+			// that this is an actual transaction (e.g. send blockstakes to someone else), and
+			// is at the same time used to create the block.
+			//
+			// So we assume that:
+			// 1. The block creating transaction is in index 0
+			// 2. The block creating transaction does not pay a miner fee if the transaction is
+			// 		created for the sole purpose of respending the BS so the block can be created
+			if len(block.Transactions) > 0 && block.Transactions[0].MinerFees == nil {
+				stats.BlockTransactionCounts[i]--
+			}
+
+			// Add the block creator to the node
+			// Also genesis wan't created
+			if height != 0 {
+				creator := block.MinerPayouts[0].UnlockHash.String()
+				_, exists = stats.Creators[creator]
+				if !exists {
+					stats.Creators[creator] = 1
+				} else {
+					stats.Creators[creator]++
+				}
+			}
+		}
+		// Set the creation time for the first block
+		if start > 0 && stats.BlockCount > 0 {
+			block, exists := e.cs.BlockAtHeight(start - 1)
+			if !exists {
+				return errors.New("Block does not exist in consensus set")
+			}
+			stats.BlockTimes[0] = int64(stats.BlockTimeStamps[0] - block.Timestamp)
+		}
+		return nil
+	})
+	return stats, err
+}
+
+// Constants retuns all of the constants in use by the chain
+func (e *Explorer) Constants() modules.ExplorerConstants {
+	return modules.ExplorerConstants{
+		GenesisTimestamp:       e.chainCts.GenesisTimestamp,
+		BlockSizeLimit:         e.chainCts.BlockSizeLimit,
+		BlockFrequency:         e.chainCts.BlockFrequency,
+		FutureThreshold:        e.chainCts.FutureThreshold,
+		ExtremeFutureThreshold: e.chainCts.ExtremeFutureThreshold,
+		BlockStakeCount:        e.chainCts.GenesisBlockStakeCount(),
+
+		BlockStakeAging:           e.chainCts.BlockStakeAging,
+		BlockCreatorFee:           e.chainCts.BlockCreatorFee,
+		MinimumTransactionFee:     e.chainCts.MinimumTransactionFee,
+		TransactionFeeBeneficiary: e.chainCts.TransactionFeeBeneficiary,
+
+		MaturityDelay:         e.chainCts.MaturityDelay,
+		MedianTimestampWindow: e.chainCts.MedianTimestampWindow,
+
+		RootTarget: e.chainCts.RootTarget(),
+		RootDepth:  e.chainCts.RootDepth,
+
+		TargetWindow:      e.chainCts.TargetWindow,
+		MaxAdjustmentUp:   e.chainCts.MaxAdjustmentUp,
+		MaxAdjustmentDown: e.chainCts.MaxAdjustmentDown,
+
+		OneCoin: e.chainCts.CurrencyUnits.OneCoin,
+	}
 }

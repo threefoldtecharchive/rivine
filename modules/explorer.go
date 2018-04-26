@@ -1,6 +1,8 @@
 package modules
 
 import (
+	"math/big"
+
 	"github.com/rivine/rivine/types"
 )
 
@@ -32,6 +34,58 @@ type (
 		BlockStakeOutputCount uint64 `json:"blockstakeoutputcount"`
 		MinerFeeCount         uint64 `json:"minerfeecount"`
 		ArbitraryDataCount    uint64 `json:"arbitrarydatacount"`
+	}
+
+	// ChainStats are data points related to a selection of blocks
+	ChainStats struct {
+		BlockCount uint32 `json:"blockcount"`
+		// The following fields all have the same length,
+		// and are in the same order. The lenght is equal
+		// to `BlockCount`.
+		BlockHeights           []types.BlockHeight `json:"blockheights"`
+		BlockTimeStamps        []types.Timestamp   `json:"blocktimestamps"`
+		BlockTimes             []int64             `json:"blocktimes"` // Time to create this block
+		EstimatedActiveBS      []types.Difficulty  `json:"estimatedactivebs"`
+		BlockTransactionCounts []uint32            `json:"blocktransactioncounts"` // txns in a single block
+		Difficulties           []types.Difficulty  `json:"difficulties"`
+
+		// Who created these blocks and how many
+		Creators map[string]uint32 `json:"creators"`
+
+		// Some aggregated stats at the time of
+		// the respective block
+		TransactionCounts      []uint64 `json:"transactioncounts"`
+		CoinInputCounts        []uint64 `json:"coininputcounts"`
+		CoinOutputCounts       []uint64 `json:"coinoutputcounts"`
+		BlockStakeInputCounts  []uint64 `json:"blockstakeinputcounts"`
+		BlockStakeOutputCounts []uint64 `json:"blockstakeoutputcounts"`
+	}
+
+	// ExplorerConstants represent the constants in use by the chain
+	ExplorerConstants struct {
+		GenesisTimestamp       types.Timestamp   `json:"genesistimestamp"`
+		BlockSizeLimit         uint64            `json:"blocksizelimit"`
+		BlockFrequency         types.BlockHeight `json:"blockfrequency"`
+		FutureThreshold        types.Timestamp   `json:"futurethreshold"`
+		ExtremeFutureThreshold types.Timestamp   `json:"extremefuturethreshold"`
+		BlockStakeCount        types.Currency    `json:"blockstakecount"`
+
+		BlockStakeAging           uint64           `json:"blockstakeaging"`
+		BlockCreatorFee           types.Currency   `json:"blockcreatorfee"`
+		MinimumTransactionFee     types.Currency   `json:"minimumtransactionfee"`
+		TransactionFeeBeneficiary types.UnlockHash `json:"transactionfeebeneficiary"`
+
+		MaturityDelay         types.BlockHeight `json:"maturitydelay"`
+		MedianTimestampWindow uint64            `json:"mediantimestampwindow"`
+
+		RootTarget types.Target `json:"roottarget"`
+		RootDepth  types.Target `json:"rootdepth"`
+
+		TargetWindow      types.BlockHeight `json:"targetwindow"`
+		MaxAdjustmentUp   *big.Rat          `json:"maxadjustmentup"`
+		MaxAdjustmentDown *big.Rat          `json:"maxadjustmentdown"`
+
+		OneCoin types.Currency `json:"onecoin"`
 	}
 
 	// Explorer tracks the blockchain and provides tools for gathering
@@ -76,6 +130,39 @@ type (
 		// the provided blockstake output id.
 		BlockStakeOutputID(types.BlockStakeOutputID) []types.TransactionID
 
+		// HistoryStats return the stats for the last `history` amount of blocks
+		HistoryStats(types.BlockHeight) (*ChainStats, error)
+
+		// RangeStats return the stats for the range [`start`, `end`]
+		RangeStats(types.BlockHeight, types.BlockHeight) (*ChainStats, error)
+
+		// Constants returns the constants in use by the chain
+		Constants() ExplorerConstants
+
 		Close() error
 	}
 )
+
+// NewChainStats initializes a new `ChainStats` object
+func NewChainStats(size int) *ChainStats {
+	if size <= 0 {
+		return nil
+	}
+	return &ChainStats{
+		BlockCount:             uint32(size),
+		BlockHeights:           make([]types.BlockHeight, size),
+		BlockTimeStamps:        make([]types.Timestamp, size),
+		BlockTimes:             make([]int64, size),
+		EstimatedActiveBS:      make([]types.Difficulty, size),
+		BlockTransactionCounts: make([]uint32, size),
+		Difficulties:           make([]types.Difficulty, size),
+
+		Creators: make(map[string]uint32),
+
+		TransactionCounts:      make([]uint64, size),
+		CoinInputCounts:        make([]uint64, size),
+		CoinOutputCounts:       make([]uint64, size),
+		BlockStakeInputCounts:  make([]uint64, size),
+		BlockStakeOutputCounts: make([]uint64, size),
+	}
+}

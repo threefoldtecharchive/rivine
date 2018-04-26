@@ -166,6 +166,9 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 		router.GET("/explorer", api.explorerHandler)
 		router.GET("/explorer/blocks/:height", api.explorerBlocksHandler)
 		router.GET("/explorer/hashes/:hash", api.explorerHashHandler)
+		router.GET("/explorer/stats/history", api.historyStatsHandler)
+		router.GET("/explorer/stats/range", api.rangeStatsHandler)
+		router.GET("/explorer/constants", api.constantsHandler)
 	}
 
 	// Gateway API Calls
