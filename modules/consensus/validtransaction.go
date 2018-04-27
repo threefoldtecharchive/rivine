@@ -43,7 +43,7 @@ func validCoins(tx *bolt.Tx, t types.Transaction, blockTimestamp types.Timestamp
 		}
 
 		// check if the referenced output's condition has been fulfilled
-		err = sci.Fulfillment.Fulfill(sco.Condition, types.FulfillContext{
+		err = sco.Condition.Fulfill(sci.Fulfillment, types.FulfillContext{
 			InputIndex:  uint64(inputIndex),
 			BlockHeight: blockHeight,
 			BlockTime:   blockTimestamp,
@@ -79,7 +79,7 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction, blockTimestamp types.Tim
 		}
 
 		// check if the referenced output's condition has been fulfilled
-		err = bsi.Fulfillment.Fulfill(bso.Condition, types.FulfillContext{
+		err = bso.Condition.Fulfill(bsi.Fulfillment, types.FulfillContext{
 			InputIndex:  uint64(inputIndex),
 			BlockHeight: blockHeight,
 			BlockTime:   blockTimestamp,

@@ -26,6 +26,12 @@ type (
 	// but in that case it will not be minted into a block,
 	// unless a (block) creator sees it as standard.
 	UnlockCondition interface {
+		// Fulfill this condition using the given fulfillment, if supported,
+		// within the given (fulfill) context.
+		// An error is to be returned in case the given UnlockFulfillment
+		// cannot fulfill the UnlockCondition (within the given context).
+		Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error
+
 		// ConditionType returns the condition type of the UnlockCondtion.
 		ConditionType() ConditionType
 		// IsStandardCondtion returns if this (unlock) condition is standard.
@@ -71,11 +77,6 @@ type (
 	// but in that case it will not be minted into a block,
 	// unless a (block) creator sees it as standard.
 	UnlockFulfillment interface {
-		// Fulfill the given condition, if supported,
-		// within the given (fulfill) context.
-		// An error is to be returned in case the UnlockFulfillment
-		// cannot fulfill the given Condition (within the given context).
-		Fulfill(condition UnlockCondition, ctx FulfillContext) error
 		// Sign the given fulfillment, which is to be done after all properties
 		// have been filled of the parent transaction
 		// (including the unsigned fulfillments of all inputs).
@@ -274,6 +275,13 @@ var (
 	// ErrUnexpectedUnlockCondition is returnd when a fulfillment is given
 	// an UnlockCondition of an unexpected type.
 	ErrUnexpectedUnlockCondition = errors.New("unexpected unlock condition")
+
+	// ErrUnexpectedUnlockFulfillment is returnd when an UnlockCondition is given
+	// an UnlockFulfillment of an unexpected type.
+	ErrUnexpectedUnlockFulfillment = errors.New("unexpected unlock fulfillment")
+
+	// ErrUnexpectedUnlockType is returned when an unlock hash has the wrong type.
+	ErrUnexpectedUnlockType = errors.New("unexpected unlock (hash) type")
 
 	// ErrFulfillmentDoubleSign is returned when a fulfillment that is already signed,
 	// is attempted to be signed once again.
@@ -506,6 +514,17 @@ var (
 	ErrInvalidRedeemer = errors.New("invalid input redeemer")
 )
 
+// Fulfill implements UnlockCondition.Fulfill
+func (n *NilCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	switch tf := fulfillment.(type) {
+	case *SingleSignatureFulfillment:
+		return verifyHashUsingSiaPublicKey(tf.PublicKey,
+			ctx.InputIndex, ctx.Transaction, tf.Signature)
+	default:
+		return ErrUnexpectedUnlockFulfillment
+	}
+}
+
 // ConditionType implements UnlockCondition.ConditionType
 func (n *NilCondition) ConditionType() ConditionType { return ConditionTypeNil }
 
@@ -528,9 +547,6 @@ func (n *NilCondition) Equal(c UnlockCondition) bool {
 func (n *NilCondition) Marshal() []byte { return nil } // nothing to marshal
 // Unmarshal implements MarshalableUnlockCondition.Unmarshal
 func (n *NilCondition) Unmarshal(b []byte) error { return nil } // nothing to unmarshal
-
-// Fulfill implements UnlockFulfillment.Fulfill
-func (n *NilFulfillment) Fulfill(UnlockCondition, FulfillContext) error { return ErrNilFulfillmentType }
 
 // Sign implements UnlockFulfillment.Sign
 func (n *NilFulfillment) Sign(FulfillmentSignContext) error { return ErrNilFulfillmentType }
@@ -563,6 +579,11 @@ func (n *NilFulfillment) Marshal() []byte {
 
 // Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
 func (n *NilFulfillment) Unmarshal([]byte) error { return ErrNilFulfillmentType } // cannot be unmarshaled
+
+// Fulfill implements UnlockCondition.Fulfill
+func (u *UnknownCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	return nil // TODO: decline unknown conditions within the reserved standard range (see: https://github.com/rivine/rivine/issues/295)
+}
 
 // ConditionType implements UnlockCondition.ConditionType
 func (u *UnknownCondition) ConditionType() ConditionType { return u.Type }
@@ -599,8 +620,6 @@ func (u *UnknownCondition) Unmarshal(b []byte) error {
 	return nil
 }
 
-// Fulfill implements UnlockFulfillment.Fulfill
-func (u *UnknownFulfillment) Fulfill(UnlockCondition, FulfillContext) error { return nil } // always fulfilled
 // Sign implements UnlockFulfillment.Sign
 func (u *UnknownFulfillment) Sign(FulfillmentSignContext) error {
 	return errors.New("cannot sign fulfillment: " + ErrUnknownFulfillmentType.Error())
@@ -647,6 +666,78 @@ func NewUnlockHashCondition(uh UnlockHash) *UnlockHashCondition {
 	return &UnlockHashCondition{TargetUnlockHash: uh}
 }
 
+// Fulfill implements UnlockCondition.Fulfill
+func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	switch tf := fulfillment.(type) {
+	case *SingleSignatureFulfillment:
+		// only UnlockTypePubKey is supported when fulfilling using a SingleSignatureFulfillment
+		if uh.TargetUnlockHash.Type != UnlockTypePubKey {
+			return ErrUnexpectedUnlockType
+		}
+
+		euh := tf.UnlockHash()
+		if euh != uh.TargetUnlockHash {
+			return errors.New("single signature fulfillment provides wrong public key")
+		}
+		return verifyHashUsingSiaPublicKey(tf.PublicKey,
+			ctx.InputIndex, ctx.Transaction, tf.Signature)
+
+	case *LegacyAtomicSwapFulfillment:
+		// only UnlockTypeAtomicSwap is supported when fulfilling using a LegacyAtomicSwapFulfillment
+		if uh.TargetUnlockHash.Type != UnlockTypeAtomicSwap {
+			return ErrUnexpectedUnlockType
+		}
+
+		// ensure the condition equals the ours
+		ourHS := tf.UnlockHash()
+		if ourHS.Cmp(uh.TargetUnlockHash) != 0 {
+			return errors.New("produced unlock hash doesn't equal the expected unlock hash")
+		}
+
+		// create the unlockHash for the given public Key
+		unlockHash := NewSingleSignatureFulfillment(tf.PublicKey).UnlockHash()
+
+		// prior to our timelock, only the receiver can claim the unspend output
+		if ctx.BlockTime <= tf.TimeLock {
+			// verify that receiver public key was given
+			if unlockHash.Cmp(tf.Receiver) != 0 {
+				return ErrInvalidRedeemer
+			}
+
+			// verify signature
+			err := verifyHashUsingSiaPublicKey(
+				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
+				tf.PublicKey, tf.Secret)
+			if err != nil {
+				return err
+			}
+
+			// in order for the receiver to spend,
+			// the secret has to be known
+			hashedSecret := NewAtomicSwapHashedSecret(tf.Secret)
+			if bytes.Compare(tf.HashedSecret[:], hashedSecret[:]) != 0 {
+				return ErrInvalidPreImageSha256
+			}
+
+			return nil
+		}
+
+		// verify that sender public key was given
+		if unlockHash.Cmp(tf.Sender) != 0 {
+			return ErrInvalidRedeemer
+		}
+
+		// after the deadline (timelock),
+		// only the original sender can reclaim the unspend output
+		return verifyHashUsingSiaPublicKey(
+			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
+			tf.PublicKey)
+
+	default:
+		return ErrUnexpectedUnlockFulfillment
+	}
+}
+
 // ConditionType implements UnlockCondition.ConditionType
 func (uh *UnlockHashCondition) ConditionType() ConditionType { return ConditionTypeUnlockHash }
 
@@ -690,29 +781,6 @@ func (uh *UnlockHashCondition) Unmarshal(b []byte) error {
 // as part of the later sign call to the returned instance.
 func NewSingleSignatureFulfillment(pk SiaPublicKey) *SingleSignatureFulfillment {
 	return &SingleSignatureFulfillment{PublicKey: pk}
-}
-
-// Fulfill implements UnlockFulfillment.Fulfill
-//
-// The SingleSignatureFulfillment usually is used to fulfill an UnlockHashCondition,
-// but it can also fulfill a NilCondition. Any other condition type will result in an error.
-func (ss *SingleSignatureFulfillment) Fulfill(condition UnlockCondition, ctx FulfillContext) error {
-	switch tc := condition.(type) {
-	case *UnlockHashCondition:
-		uh := ss.UnlockHash()
-		if uh != tc.TargetUnlockHash {
-			return errors.New("fulfillment provides wrong public key")
-		}
-		return verifyHashUsingSiaPublicKey(ss.PublicKey,
-			ctx.InputIndex, ctx.Transaction, ss.Signature)
-
-	case *NilCondition, nil:
-		return verifyHashUsingSiaPublicKey(ss.PublicKey,
-			ctx.InputIndex, ctx.Transaction, ss.Signature)
-
-	default:
-		return ErrUnexpectedUnlockCondition
-	}
 }
 
 // Sign implements UnlockFulfillment.Sign
@@ -764,6 +832,78 @@ func (ss *SingleSignatureFulfillment) Marshal() []byte {
 // Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
 func (ss *SingleSignatureFulfillment) Unmarshal(b []byte) error {
 	return encoding.UnmarshalAll(b, &ss.PublicKey, &ss.Signature)
+}
+
+// Fulfill implements UnlockCondition.Fulfill
+func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	switch tf := fulfillment.(type) {
+	case *AtomicSwapFulfillment:
+		// create the unlockHash for the given public Ke
+		unlockHash := NewUnlockHash(UnlockTypePubKey,
+			crypto.HashObject(encoding.Marshal(tf.PublicKey)))
+		// prior to our timelock, only the receiver can claim the unspend output
+		if ctx.BlockTime <= as.TimeLock {
+			// verify that receiver public key was given
+			if unlockHash.Cmp(as.Receiver) != 0 {
+				return ErrInvalidRedeemer
+			}
+
+			// verify signature
+			err := verifyHashUsingSiaPublicKey(
+				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
+				tf.PublicKey, tf.Secret)
+			if err != nil {
+				return err
+			}
+
+			// in order for the receiver to spend,
+			// the secret has to be known
+			hashedSecret := NewAtomicSwapHashedSecret(tf.Secret)
+			if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
+				return ErrInvalidPreImageSha256
+			}
+
+			return nil
+		}
+
+		// verify that sender public key was given
+		if unlockHash.Cmp(as.Sender) != 0 {
+			return ErrInvalidRedeemer
+		}
+
+		// after the deadline (timelock),
+		// only the original sender can reclaim the unspend output
+		return verifyHashUsingSiaPublicKey(
+			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
+			tf.PublicKey)
+
+	case *LegacyAtomicSwapFulfillment:
+		// it's perfectly fine to unlock an atomic swap condition
+		// using an atomic swap format in the legacy format,
+		// as long as all properties check out
+		if as.Sender.Cmp(tf.Sender) != 0 {
+			return errors.New("legacy atomic swap fulfillment defines an incorrect sender")
+		}
+		if as.Receiver.Cmp(tf.Receiver) != 0 {
+			return errors.New("legacy atomic swap fulfillment defines an incorrect receiver")
+		}
+		if as.TimeLock != tf.TimeLock {
+			return errors.New("legacy atomic swap fulfillment defines an incorrect time lock")
+		}
+		if bytes.Compare(as.HashedSecret[:], tf.HashedSecret[:]) != 0 {
+			return errors.New("legacy atomic swap fulfillment defines an incorrect hashed secret")
+		}
+		// delegate logic to the fulfillment in the new format,
+		// by calling this method once again
+		return as.Fulfill(&AtomicSwapFulfillment{
+			PublicKey: tf.PublicKey,
+			Signature: tf.Signature,
+			Secret:    tf.Secret,
+		}, ctx)
+
+	default:
+		return ErrUnexpectedUnlockFulfillment
+	}
 }
 
 // ConditionType implements UnlockCondition.ConditionType
@@ -846,57 +986,6 @@ func NewAtomicSwapRefundFulfillment(pk SiaPublicKey) *AtomicSwapFulfillment {
 	return &AtomicSwapFulfillment{PublicKey: pk}
 }
 
-// Fulfill implements UnlockFulfillment.Fulfill
-//
-// The AtomicSwapFulfillment can only be used to fulfill an AtomicSwapCondition,
-// as defined by the new format (used since v1 transactions).
-func (as *AtomicSwapFulfillment) Fulfill(condition UnlockCondition, ctx FulfillContext) error {
-	switch tc := condition.(type) {
-	case *AtomicSwapCondition:
-		// create the unlockHash for the given public Ke
-		unlockHash := NewUnlockHash(UnlockTypePubKey,
-			crypto.HashObject(encoding.Marshal(as.PublicKey)))
-		// prior to our timelock, only the receiver can claim the unspend output
-		if ctx.BlockTime <= tc.TimeLock {
-			// verify that receiver public key was given
-			if unlockHash.Cmp(tc.Receiver) != 0 {
-				return ErrInvalidRedeemer
-			}
-
-			// verify signature
-			err := verifyHashUsingSiaPublicKey(
-				as.PublicKey, ctx.InputIndex, ctx.Transaction, as.Signature,
-				as.PublicKey, as.Secret)
-			if err != nil {
-				return err
-			}
-
-			// in order for the receiver to spend,
-			// the secret has to be known
-			hashedSecret := NewAtomicSwapHashedSecret(as.Secret)
-			if bytes.Compare(tc.HashedSecret[:], hashedSecret[:]) != 0 {
-				return ErrInvalidPreImageSha256
-			}
-
-			return nil
-		}
-
-		// verify that sender public key was given
-		if unlockHash.Cmp(tc.Sender) != 0 {
-			return ErrInvalidRedeemer
-		}
-
-		// after the deadline (timelock),
-		// only the original sender can reclaim the unspend output
-		return verifyHashUsingSiaPublicKey(
-			as.PublicKey, ctx.InputIndex, ctx.Transaction, as.Signature,
-			as.PublicKey)
-
-	default:
-		return ErrUnexpectedUnlockCondition
-	}
-}
-
 // Sign implements UnlockFulfillment.Sign
 func (as *AtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 	if len(as.Signature) != 0 {
@@ -964,88 +1053,6 @@ func (as *AtomicSwapFulfillment) Unmarshal(b []byte) error {
 // AtomicSwapSecret returns the AtomicSwapSecret defined in this legacy fulfillmen
 func (as *AtomicSwapFulfillment) AtomicSwapSecret() AtomicSwapSecret {
 	return as.Secret
-}
-
-// Fulfill implements UnlockFulfillment.Fulfill
-//
-// The LegacyAtomicSwapFulfillment can be used to fulfill an atomic swap condition,
-// both when it is defined in the legacy-for-atomic-swaps UnlockHashCondition,
-// as well as when it is defined as the new format (since v1 transactions) AtomicSwapCondition.
-func (as *LegacyAtomicSwapFulfillment) Fulfill(condition UnlockCondition, ctx FulfillContext) error {
-	switch tc := condition.(type) {
-	case *UnlockHashCondition:
-		// ensure the condition equals the ours
-		ourHS := as.UnlockHash()
-		if ourHS.Cmp(tc.TargetUnlockHash) != 0 {
-			return errors.New("produced unlock hash doesn't equal the expected unlock hash")
-		}
-
-		// create the unlockHash for the given public Key
-		unlockHash := NewSingleSignatureFulfillment(as.PublicKey).UnlockHash()
-
-		// prior to our timelock, only the receiver can claim the unspend output
-		if ctx.BlockTime <= as.TimeLock {
-			// verify that receiver public key was given
-			if unlockHash.Cmp(as.Receiver) != 0 {
-				return ErrInvalidRedeemer
-			}
-
-			// verify signature
-			err := verifyHashUsingSiaPublicKey(
-				as.PublicKey, ctx.InputIndex, ctx.Transaction, as.Signature,
-				as.PublicKey, as.Secret)
-			if err != nil {
-				return err
-			}
-
-			// in order for the receiver to spend,
-			// the secret has to be known
-			hashedSecret := NewAtomicSwapHashedSecret(as.Secret)
-			if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
-				return ErrInvalidPreImageSha256
-			}
-
-			return nil
-		}
-
-		// verify that sender public key was given
-		if unlockHash.Cmp(as.Sender) != 0 {
-			return ErrInvalidRedeemer
-		}
-
-		// after the deadline (timelock),
-		// only the original sender can reclaim the unspend output
-		return verifyHashUsingSiaPublicKey(
-			as.PublicKey, ctx.InputIndex, ctx.Transaction, as.Signature,
-			as.PublicKey)
-
-	case *AtomicSwapCondition:
-		// it's perfectly fine to unlock an atomic swap condition
-		// using an atomic swap format in the legacy format,
-		// as long as all properties check out
-		if tc.Sender.Cmp(as.Sender) != 0 {
-			return errors.New("legacy atomic swap fulfillment defines an incorrect sender")
-		}
-		if tc.Receiver.Cmp(as.Receiver) != 0 {
-			return errors.New("legacy atomic swap fulfillment defines an incorrect receiver")
-		}
-		if tc.TimeLock != as.TimeLock {
-			return errors.New("legacy atomic swap fulfillment defines an incorrect time lock")
-		}
-		if bytes.Compare(tc.HashedSecret[:], as.HashedSecret[:]) != 0 {
-			return errors.New("legacy atomic swap fulfillment defines an incorrect hashed secret")
-		}
-
-		// delegate logic to the fulfillment in the new format
-		return (&AtomicSwapFulfillment{
-			PublicKey: as.PublicKey,
-			Signature: as.Signature,
-			Secret:    as.Secret,
-		}).Fulfill(condition, ctx)
-
-	default:
-		return ErrUnexpectedUnlockCondition
-	}
 }
 
 // Sign implements UnlockFulfillment.Sign
@@ -1339,6 +1346,30 @@ func NewTimeLockCondition(lockTime uint64, condition MarshalableUnlockCondition)
 	}
 }
 
+// Fulfill implements UnlockFulfillment.Fulfill
+//
+// The TimeLockFulfillment can only be used to fulfill a TimeLockCondition.
+func (tl *TimeLockCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	switch tf := fulfillment.(type) {
+	case *TimeLockFulfillment:
+		if tl.LockTime < LockTimeMinTimestampValue {
+			if BlockHeight(tl.LockTime) > ctx.BlockHeight {
+				return errors.New("block height as defined by time lock has not yet been reached")
+			}
+		} else {
+			if Timestamp(tl.LockTime) > ctx.BlockTime {
+				return errors.New("epoch timestamp as defined by time lock has not yet been reached")
+			}
+		}
+		// time lock hash been reached,
+		// delegate the rest of the fulfillment to the internally layered logic
+		return tl.Condition.Fulfill(tf.Fulfillment, ctx)
+
+	default:
+		return ErrUnexpectedUnlockFulfillment
+	}
+}
+
 // ConditionType implements UnlockCondition.ConditionType
 func (tl *TimeLockCondition) ConditionType() ConditionType { return ConditionTypeTimeLock }
 
@@ -1468,30 +1499,6 @@ func NewTimeLockFulfillment(fulfillment MarshalableUnlockFulfillment) *TimeLockF
 	}
 }
 
-// Fulfill implements UnlockFulfillment.Fulfill
-//
-// The TimeLockFulfillment can only be used to fulfill a TimeLockCondition.
-func (tl *TimeLockFulfillment) Fulfill(condition UnlockCondition, ctx FulfillContext) error {
-	switch tc := condition.(type) {
-	case *TimeLockCondition:
-		if tc.LockTime < LockTimeMinTimestampValue {
-			if BlockHeight(tc.LockTime) > ctx.BlockHeight {
-				return errors.New("block height as defined by time lock has not yet been reached")
-			}
-		} else {
-			if Timestamp(tc.LockTime) > ctx.BlockTime {
-				return errors.New("epoch timestamp as defined by time lock has not yet been reached")
-			}
-		}
-		// time lock hash been reached,
-		// delegate the rest of the fulfillment to the internally layered logic
-		return tl.Fulfillment.Fulfill(tc.Condition, ctx)
-
-	default:
-		return ErrUnexpectedUnlockCondition
-	}
-}
-
 // Sign implements UnlockFulfillment.Sign
 func (tl *TimeLockFulfillment) Sign(ctx FulfillmentSignContext) error {
 	return tl.Fulfillment.Sign(ctx)
@@ -1574,7 +1581,6 @@ func (tl *TimeLockFulfillment) MarshalJSON() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("MarshalJSON", tl, tl.Fulfillment)
 	if string(data) == "{}" {
 		return json.Marshal(jsonTimeLockFulfillmentWithNilFulfillment{
 			Type: tl.Fulfillment.FulfillmentType(),
@@ -1601,16 +1607,13 @@ func (tl *TimeLockFulfillment) UnmarshalJSON(b []byte) error {
 		return ErrUnknownFulfillmentType
 	}
 	f := fc()
-	fmt.Println("before", f, rf.Fulfillment)
 	if rf.Fulfillment != nil {
 		err = json.Unmarshal(rf.Fulfillment, &f)
 	}
 	if f == nil {
 		f = &NilFulfillment{}
 	}
-	fmt.Println("after", f)
 	tl.Fulfillment = f
-	fmt.Println("UnmarshalJSON", tl, tl.Fulfillment, string(b))
 	return err
 }
 
@@ -1648,6 +1651,25 @@ func (ft *FulfillmentType) UnmarshalSia(r io.Reader) error {
 	_, err := r.Read(b[:])
 	*ft = FulfillmentType(b[0])
 	return err
+}
+
+// Fulfill implements UnlockFulfillment.Fulfill
+//
+// If no child is defined, an error will be returned,
+// otherwise the child condition will be attempted to be fulfilled
+// using the given fulfillment within the given (fulfill) context.
+func (up UnlockConditionProxy) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	condition := up.Condition
+	if condition == nil {
+		condition = &NilCondition{}
+	}
+	if p, ok := fulfillment.(UnlockFulfillmentProxy); ok {
+		fulfillment = p.Fulfillment
+		if fulfillment == nil {
+			fulfillment = &NilFulfillment{}
+		}
+	}
+	return condition.Fulfill(fulfillment, ctx)
 }
 
 // ConditionType implements UnlockCondition.ConditionType
@@ -1699,25 +1721,6 @@ func (up UnlockConditionProxy) Equal(o UnlockCondition) bool {
 		o = p.Condition
 	}
 	return condition.Equal(o)
-}
-
-// Fulfill implements UnlockFulfillment.Fulfill
-//
-// If no child is defined, an error will be returned,
-// otherwise the given condition will be attempted to be fulfilled
-// using the child fulfillment within the given (fulfill) context.
-func (fp UnlockFulfillmentProxy) Fulfill(condition UnlockCondition, ctx FulfillContext) error {
-	fulfillment := fp.Fulfillment
-	if fulfillment == nil {
-		fulfillment = &NilFulfillment{}
-	}
-	if p, ok := condition.(UnlockConditionProxy); ok {
-		condition = p.Condition
-		if condition == nil {
-			condition = &NilCondition{}
-		}
-	}
-	return fulfillment.Fulfill(condition, ctx)
 }
 
 // Sign implements UnlockFulfillment.Sign

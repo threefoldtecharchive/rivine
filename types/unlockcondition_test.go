@@ -1106,10 +1106,10 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 
 	testCases := []struct {
 		Transaction                      Transaction
-		CoinConditions                   []UnlockCondition
+		CoinConditions                   []MarshalableUnlockCondition
 		ExpectedCoinIdentifiers          []CoinOutputID
 		ExpectedCoinInputSigHashes       []ByteSlice
-		BlockStakeConditions             []UnlockCondition
+		BlockStakeConditions             []MarshalableUnlockCondition
 		ExpectedBlockStakeIdentifiers    []BlockStakeOutputID
 		ExpectedBlockStakeInputSigHashes []ByteSlice
 		ExpectedTransactionIdentifier    TransactionID
@@ -1140,7 +1140,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			nil,
 			nil,
 			nil,
-			[]UnlockCondition{
+			[]MarshalableUnlockCondition{
 				&UnlockHashCondition{
 					TargetUnlockHash: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				},
@@ -1184,7 +1184,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 					NewCurrency64(100000000),
 				},
 			},
-			[]UnlockCondition{
+			[]MarshalableUnlockCondition{
 				&UnlockHashCondition{
 					TargetUnlockHash: unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 				},
@@ -1215,7 +1215,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
 
-			err = ci.Fulfillment.Fulfill(testCase.CoinConditions[idx], FulfillContext{
+			err = (UnlockConditionProxy{testCase.CoinConditions[idx]}).Fulfill(ci.Fulfillment, FulfillContext{
 				InputIndex:  uint64(idx),
 				Transaction: testCase.Transaction,
 			})
@@ -1235,7 +1235,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
 
-			err = bsi.Fulfillment.Fulfill(testCase.BlockStakeConditions[idx], FulfillContext{
+			err = (UnlockConditionProxy{testCase.BlockStakeConditions[idx]}).Fulfill(bsi.Fulfillment, FulfillContext{
 				InputIndex:  uint64(idx),
 				Transaction: testCase.Transaction,
 			})
@@ -1303,22 +1303,6 @@ func TestValidFulFill(t *testing.T) {
 		},
 		{ // unknown -> unknown
 			&UnknownCondition{},
-			func() MarshalableUnlockFulfillment {
-				return &UnknownFulfillment{}
-			},
-			nil,
-		},
-		{ // nil -> unknown
-			&NilCondition{},
-			func() MarshalableUnlockFulfillment {
-				return &UnknownFulfillment{}
-			},
-			nil,
-		},
-		{ // unlock hash -> unknown
-			&UnlockHashCondition{
-				TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
-			},
 			func() MarshalableUnlockFulfillment {
 				return &UnknownFulfillment{}
 			},
@@ -1430,16 +1414,27 @@ func TestValidFulFill(t *testing.T) {
 			},
 			sk,
 		},
-		{ // TimeLockedCondition (UnlockHash) -> TimeLockedFulfillment (Unknown)
+		{ // unknown -> single signature
+			&UnknownCondition{},
+			func() MarshalableUnlockFulfillment {
+				return &TimeLockFulfillment{
+					Fulfillment: &SingleSignatureFulfillment{
+						PublicKey: ed25519pk,
+					},
+				}
+			},
+			sk,
+		},
+		{ // TimeLockedCondition (unknown) -> TimeLockedFulfillment (SingleSignature)
 			&TimeLockCondition{
 				LockTime: uint64(CurrentTimestamp()),
-				Condition: &UnlockHashCondition{
-					TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
-				},
+				Condition: &UnknownCondition{},
 			},
 			func() MarshalableUnlockFulfillment {
 				return &TimeLockFulfillment{
-					Fulfillment: &UnknownFulfillment{},
+					Fulfillment: &SingleSignatureFulfillment{
+						PublicKey: ed25519pk,
+					},
 				}
 			},
 			sk,
@@ -1523,11 +1518,11 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 			BlockTime:   CurrentTimestamp(), // not important for now,
 			Transaction: txn,
 		}
-		err := txn.CoinInputs[idx].Fulfillment.Fulfill(inputs[idx].Condition, fulfillContext)
+		err := (UnlockConditionProxy{inputs[idx].Condition}).Fulfill(txn.CoinInputs[idx].Fulfillment, fulfillContext)
 		if err != nil {
 			t.Error(testIndex, idx, "fulfilling coin input failed", err)
 		}
-		err = txn.BlockStakeInputs[idx].Fulfillment.Fulfill(inputs[idx].Condition, fulfillContext)
+		err = (UnlockConditionProxy{inputs[idx].Condition}).Fulfill(txn.BlockStakeInputs[idx].Fulfillment, fulfillContext)
 		if err != nil {
 			t.Error(testIndex, idx, "fulfilling block stake input failed", err)
 		}
