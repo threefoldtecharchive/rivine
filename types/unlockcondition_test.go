@@ -1519,7 +1519,8 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 	for idx := range inputs {
 		fulfillContext := FulfillContext{
 			InputIndex:  uint64(idx),
-			BlockHeight: 0, // not important for now
+			BlockHeight: 0,                  // not important for now
+			BlockTime:   CurrentTimestamp(), // not important for now,
 			Transaction: txn,
 		}
 		err := txn.CoinInputs[idx].Fulfillment.Fulfill(inputs[idx].Condition, fulfillContext)
