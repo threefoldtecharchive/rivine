@@ -219,7 +219,7 @@ func (e *Explorer) getStats(start types.BlockHeight, end types.BlockHeight) (*mo
 			// Add the block creator to the node
 			// Also genesis wan't created
 			if height != 0 {
-				creator := block.MinerPayouts[0].UnlockHash.String()
+				creator := block.MinerPayouts[0].Condition.UnlockHash().String()
 				_, exists = stats.Creators[creator]
 				if !exists {
 					stats.Creators[creator] = 1
@@ -254,7 +254,7 @@ func (e *Explorer) Constants() modules.ExplorerConstants {
 		BlockStakeAging:           e.chainCts.BlockStakeAging,
 		BlockCreatorFee:           e.chainCts.BlockCreatorFee,
 		MinimumTransactionFee:     e.chainCts.MinimumTransactionFee,
-		TransactionFeeBeneficiary: e.chainCts.TransactionFeeBeneficiary,
+		TransactionFeeBeneficiary: e.chainCts.TransactionFeeCondition.UnlockHash(),
 
 		MaturityDelay:         e.chainCts.MaturityDelay,
 		MedianTimestampWindow: e.chainCts.MedianTimestampWindow,
