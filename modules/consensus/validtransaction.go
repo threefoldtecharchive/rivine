@@ -23,7 +23,7 @@ var (
 // context of the current consensus set, meaning that total coin input sum
 // equals the total coin output sum, as well as the fact that all conditions referenced coin outputs,
 // have been correctly fulfilled by the child coin inputs.
-func validCoins(tx *bolt.Tx, t types.Transaction) (err error) {
+func validCoins(tx *bolt.Tx, t types.Transaction, blockTimestamp types.Timestamp) (err error) {
 	blockHeight := blockHeight(tx)
 
 	scoBucket := tx.Bucket(CoinOutputs)
@@ -46,6 +46,7 @@ func validCoins(tx *bolt.Tx, t types.Transaction) (err error) {
 		err = sci.Fulfillment.Fulfill(sco.Condition, types.FulfillContext{
 			InputIndex:  uint64(inputIndex),
 			BlockHeight: blockHeight,
+			BlockTime:   blockTimestamp,
 			Transaction: t,
 		})
 		if err != nil {
@@ -64,7 +65,7 @@ func validCoins(tx *bolt.Tx, t types.Transaction) (err error) {
 // in the context of the consensus set, meaning that block stake input sum
 // equals the block stake output sum, as well as the fact that all conditions
 // of referenced block stake outputs, have been correctly fulfilled by the child block stkae inputs.
-func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
+func validBlockStakes(tx *bolt.Tx, t types.Transaction, blockTimestamp types.Timestamp) (err error) {
 	blockHeight := blockHeight(tx)
 
 	// Compare the number of input blockstake to the output blockstake.
@@ -81,6 +82,7 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 		err = bsi.Fulfillment.Fulfill(bso.Condition, types.FulfillContext{
 			InputIndex:  uint64(inputIndex),
 			BlockHeight: blockHeight,
+			BlockTime:   blockTimestamp,
 			Transaction: t,
 		})
 		if err != nil {
@@ -100,7 +102,7 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction) (err error) {
 
 // validTransaction checks that all fields are valid within the current
 // consensus state. If not an error is returned.
-func validTransaction(tx *bolt.Tx, t types.Transaction, blockSizeLimit uint64) error {
+func validTransaction(tx *bolt.Tx, t types.Transaction, blockSizeLimit uint64, blockTimestamp types.Timestamp) error {
 	// StandaloneValid will check things like signatures and properties that
 	// should be inherent to the transaction. (storage proof rules, etc.)
 	err := t.ValidateTransaction(blockSizeLimit)
@@ -110,11 +112,11 @@ func validTransaction(tx *bolt.Tx, t types.Transaction, blockSizeLimit uint64) e
 
 	// Check that each portion of the transaction is legal given the current
 	// consensus set.
-	err = validCoins(tx, t)
+	err = validCoins(tx, t, blockTimestamp)
 	if err != nil {
 		return err
 	}
-	err = validBlockStakes(tx, t)
+	err = validBlockStakes(tx, t, blockTimestamp)
 	if err != nil {
 		return err
 	}
@@ -149,8 +151,9 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 	errSuccess := errors.New("success")
 	err = cs.db.Update(func(tx *bolt.Tx) error {
 		diffHolder.Height = blockHeight(tx)
+		extremeFutureBlockTime := types.CurrentTimestamp() + cs.chainCts.ExtremeFutureThreshold
 		for _, txn := range txns {
-			err := validTransaction(tx, txn, cs.chainCts.BlockSizeLimit)
+			err := validTransaction(tx, txn, cs.chainCts.BlockSizeLimit, extremeFutureBlockTime)
 			if err != nil {
 				return err
 			}

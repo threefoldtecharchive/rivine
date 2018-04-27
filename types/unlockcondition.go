@@ -166,6 +166,9 @@ type (
 		InputIndex uint64
 		// BlockHeight of the parent block.
 		BlockHeight BlockHeight
+		// BlockTime defines the time of the block,
+		// the transaction belonged to.
+		BlockTime Timestamp
 		// (Parent) transaction the fulfillment belongs to.
 		Transaction Transaction
 	}
@@ -854,7 +857,7 @@ func (as *AtomicSwapFulfillment) Fulfill(condition UnlockCondition, ctx FulfillC
 		unlockHash := NewUnlockHash(UnlockTypePubKey,
 			crypto.HashObject(encoding.Marshal(as.PublicKey)))
 		// prior to our timelock, only the receiver can claim the unspend output
-		if CurrentTimestamp() <= tc.TimeLock {
+		if ctx.BlockTime <= tc.TimeLock {
 			// verify that receiver public key was given
 			if unlockHash.Cmp(tc.Receiver) != 0 {
 				return ErrInvalidRedeemer
@@ -981,7 +984,7 @@ func (as *LegacyAtomicSwapFulfillment) Fulfill(condition UnlockCondition, ctx Fu
 		unlockHash := NewSingleSignatureFulfillment(as.PublicKey).UnlockHash()
 
 		// prior to our timelock, only the receiver can claim the unspend output
-		if CurrentTimestamp() <= as.TimeLock {
+		if ctx.BlockTime <= as.TimeLock {
 			// verify that receiver public key was given
 			if unlockHash.Cmp(as.Receiver) != 0 {
 				return ErrInvalidRedeemer
@@ -1051,11 +1054,6 @@ func (as *LegacyAtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 		return ErrFulfillmentDoubleSign
 	}
 	if as.Secret != (AtomicSwapSecret{}) {
-		if CurrentTimestamp() > as.TimeLock {
-			// cannot sign as claimer, when time lock has already been unlocked
-			return errors.New("atomic swap contract expired already")
-		}
-
 		// sign as claimer
 		var err error
 		as.Signature, err = signHashUsingSiaPublicKey(
@@ -1481,7 +1479,7 @@ func (tl *TimeLockFulfillment) Fulfill(condition UnlockCondition, ctx FulfillCon
 				return errors.New("block height as defined by time lock has not yet been reached")
 			}
 		} else {
-			if Timestamp(tc.LockTime) > CurrentTimestamp() { // TODO: fix as part of issue #270
+			if Timestamp(tc.LockTime) > ctx.BlockTime {
 				return errors.New("epoch timestamp as defined by time lock has not yet been reached")
 			}
 		}
