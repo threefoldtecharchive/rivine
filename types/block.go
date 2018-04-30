@@ -87,7 +87,10 @@ func (b Block) ID() BlockID {
 func (b Block) MerkleRoot() crypto.Hash {
 	tree := crypto.NewTree()
 	for _, payout := range b.MinerPayouts {
-		tree.PushObject(payout)
+		tree.PushObject(legacyTransactionCoinOutput{
+			Value:      payout.Value,
+			UnlockHash: payout.Condition.UnlockHash(),
+		})
 	}
 	for _, txn := range b.Transactions {
 		tree.PushObject(txn)

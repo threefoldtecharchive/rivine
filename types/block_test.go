@@ -1,6 +1,8 @@
 package types
 
 import (
+	"bytes"
+	"encoding/hex"
 	"testing"
 
 	"github.com/rivine/rivine/crypto"
@@ -236,4 +238,137 @@ func TestBlockEncoding(t *testing.T) {
 		decB.MinerPayouts[1].Value.Cmp(b.MinerPayouts[1].Value) != 0 {
 		t.Fatal("block changed after encode/decode:", b, decB)
 	}
+}
+
+// TestBlockIDAfterFixForBug302 ensures that the block ID is correct after all the condition/fulfillment changes
+// part of issue https://github.com/rivine/rivine/issues/302
+func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
+	hbs := func(str string) []byte { // hexStr -> byte slice
+		bs, err := hex.DecodeString(str)
+		if err != nil {
+			panic(err)
+		}
+		return bs
+	}
+	hs := func(str string) (hash crypto.Hash) { // hbs -> crypto.Hash
+		copy(hash[:], hbs(str))
+		return
+	}
+
+	testCases := []struct {
+		BlockID BlockID
+		Block   Block
+	}{
+		{
+			blockIDFromHex("76e55acb89d1a16514a74123160b79d9917995d87e2176668afcb1a9df53bd1d"),
+			Block{
+				ParentID:  blockIDFromHex("0000000000000000000000000000000000000000000000000000000000000000"),
+				Timestamp: 1519200000,
+				POBSOutput: BlockStakeOutputIndexes{
+					BlockHeight:      0,
+					TransactionIndex: 0,
+					OutputIndex:      0,
+				},
+				MinerPayouts: nil,
+				Transactions: []Transaction{
+					{
+						Version:    0,
+						CoinInputs: nil,
+						CoinOutputs: []CoinOutput{
+							{
+								Value: NewCurrency64(100000000000000000),
+								Condition: UnlockConditionProxy{
+									Condition: NewUnlockHashCondition(unlockHashFromHex(
+										"01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51")),
+								},
+							},
+						},
+						BlockStakeInputs: nil,
+						BlockStakeOutputs: []BlockStakeOutput{
+							{
+								Value: NewCurrency64(3000),
+								Condition: UnlockConditionProxy{
+									Condition: NewUnlockHashCondition(unlockHashFromHex(
+										"01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51")),
+								},
+							},
+						},
+						MinerFees:     nil,
+						ArbitraryData: nil,
+					},
+				},
+			},
+		},
+		{
+			blockIDFromHex("0624c4830353c83e75683ce47683d0acc11216e528cd46c87350c2516a24d743"),
+			Block{
+				ParentID:  blockIDFromHex("76e55acb89d1a16514a74123160b79d9917995d87e2176668afcb1a9df53bd1d"),
+				Timestamp: 1522792547,
+				POBSOutput: BlockStakeOutputIndexes{
+					BlockHeight:      0,
+					TransactionIndex: 0,
+					OutputIndex:      0,
+				},
+				MinerPayouts: []CoinOutput{
+					{
+						Value: NewCurrency64(10000000000),
+						Condition: UnlockConditionProxy{
+							Condition: NewUnlockHashCondition(unlockHashFromHex(
+								"01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51")),
+						},
+					},
+				},
+				Transactions: []Transaction{
+					{
+						Version:     0,
+						CoinInputs:  nil,
+						CoinOutputs: nil,
+						BlockStakeInputs: []BlockStakeInput{
+							{
+								ParentID: BlockStakeOutputID(hs("4cd0ec4f270ac5fe50ec3a4008ff652754400aff02af1caa8d1b5889ffa61292")),
+								Fulfillment: UnlockFulfillmentProxy{
+									Fulfillment: &SingleSignatureFulfillment{
+										PublicKey: SiaPublicKey{
+											Algorithm: SignatureEd25519,
+											Key:       hbs("47c54e33cdfa770f2180af660d27881d1dbc544b37a4233390af603162c7433d"),
+										},
+										Signature: hbs("a17970cbf50fe1f9929f2dec6c60994f2ea9e6c30af1ae84e5a496171d86584c944853edab70b15a423d64857d62f96b21fa263c338c966dd9a1e4bdf6725d04"),
+									},
+								},
+							},
+						},
+						BlockStakeOutputs: []BlockStakeOutput{
+							{
+								Value: NewCurrency64(3000),
+								Condition: UnlockConditionProxy{
+									Condition: NewUnlockHashCondition(unlockHashFromHex(
+										"01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51")),
+								},
+							},
+						},
+						MinerFees:     nil,
+						ArbitraryData: nil,
+					},
+				},
+			},
+		},
+	}
+	for idx, testCase := range testCases {
+		blockID := testCase.Block.ID()
+		if bytes.Compare(testCase.BlockID[:], blockID[:]) != 0 {
+			t.Error(idx, testCase.BlockID, "!=", blockID)
+		}
+	}
+}
+
+func blockIDFromHex(s string) (id BlockID) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	if len(b) != len(id) {
+		panic("wrong length")
+	}
+	copy(id[:], b[:])
+	return
 }
