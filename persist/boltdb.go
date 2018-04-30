@@ -13,6 +13,23 @@ type BoltDatabase struct {
 	*bolt.DB
 }
 
+// SaveMetadata overwrites the metadata.
+func (db *BoltDatabase) SaveMetadata() error {
+	return db.Update(func(tx *bolt.Tx) error {
+		// Check if the database has metadata. If not, create metadata for the
+		// database.
+		bucket := tx.Bucket([]byte("Metadata"))
+		if bucket == nil {
+			return db.updateMetadata(tx)
+		}
+		err := bucket.Put([]byte("Header"), []byte(db.Header))
+		if err != nil {
+			return err
+		}
+		return bucket.Put([]byte("Version"), []byte(db.Version))
+	})
+}
+
 // checkMetadata confirms that the metadata in the database is
 // correct. If there is no metadata, correct metadata is inserted
 func (db *BoltDatabase) checkMetadata(md Metadata) error {
@@ -21,11 +38,7 @@ func (db *BoltDatabase) checkMetadata(md Metadata) error {
 		// database.
 		bucket := tx.Bucket([]byte("Metadata"))
 		if bucket == nil {
-			err := db.updateMetadata(tx)
-			if err != nil {
-				return err
-			}
-			return nil
+			return db.updateMetadata(tx)
 		}
 
 		// Verify that the metadata matches the expected metadata.

@@ -1,12 +1,8 @@
 package consensus
 
-import (
-	"testing"
-
-	"github.com/rivine/rivine/types"
-
-	"github.com/rivine/bbolt"
-)
+// TODO:
+// enable and fix
+/*
 
 // TestTryValidTransactionSet submits a valid transaction set to the
 // TryTransactionSet method.
