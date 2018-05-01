@@ -369,33 +369,6 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 			},
 		},
 		{
-			"019c00000000000000010000000000000011000000000000000000000000000000000000000000000000000000000000112a15000000000000006d7920637573746f6d2066756c66696c6c6d656e7401000000000000000100000000000000032a13000000000000006d7920637573746f6d20636f6e646974696f6e0000000000000000000000000000000001000000000000000100000000000000040000000000000000",
-			Transaction{
-				Version: TransactionVersionOne,
-				CoinInputs: []CoinInput{
-					{
-						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
-						Fulfillment: NewFulfillment(&UnknownFulfillment{
-							Type:           42,
-							RawFulfillment: []byte("my custom fulfillment"),
-						}),
-					},
-				},
-				CoinOutputs: []CoinOutput{
-					{
-						Value: NewCurrency64(3),
-						Condition: NewCondition(&UnknownCondition{
-							Type:         42,
-							RawCondition: []byte("my custom condition"),
-						}),
-					},
-				},
-				MinerFees: []Currency{
-					NewCurrency64(4),
-				},
-			},
-		},
-		{
 			"01480100000000000001000000000000002200000000000000000000000000000000000000000000000000000000000022018000000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff020000000000000001000000000000000201210000000000000001cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000301210000000000000001dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd0000000000000000000000000000000001000000000000000100000000000000010000000000000000",
 			Transaction{
 				Version: TransactionVersionOne,
@@ -1438,17 +1411,11 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 }
 
 func TestTransactionWithUnknownVersionJSONEncoding(t *testing.T) {
-	b, err := json.Marshal(Transaction{
-		Version:   42,
-		Extension: []byte("hello, world"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	str := string(b)
-	const expectedStr = `{"version":42,"data":"aGVsbG8sIHdvcmxk"}`
-	if str != expectedStr {
-		t.Fatal(str, "!=", expectedStr)
+	const str = `{"version":42,"data":"aGVsbG8sIHdvcmxk"}`
+	var txn Transaction
+	err := json.Unmarshal([]byte(str), &txn)
+	if err == nil {
+		t.Fatal("txn with unknown version shouldn't be able to be decoded")
 	}
 }
 
@@ -1557,94 +1524,8 @@ func TestUnknownVersionBinaryEncoding(t *testing.T) {
 		}
 		var tx Transaction
 		err = tx.UnmarshalSia(bytes.NewReader(encodedTx))
-		if err != nil {
-			t.Error(idx, err)
-			continue
-		}
-		// change tx version number to something unknown
-		origVersion := tx.Version
-		// ensure our origVersion does not equal 255 already, as this would fuck it all
-		if origVersion == 255 {
-			t.Error(idx, "transaction version should not be 255 for this test")
-			continue
-		}
-		tx.Version = 255
-
-		// serialize it once again
-		buf := bytes.NewBuffer(nil)
-		err = tx.MarshalSia(buf)
-		if err != nil {
-			t.Error(idx, err)
-			continue
-		}
-		inputTxBytes := make([]byte, len(buf.Bytes()))
-		copy(inputTxBytes, buf.Bytes())
-
-		compareOffset := 0
-		if origVersion == TransactionVersionZero {
-			// extra offset needed for this step
-			compareOffset = 8
-		}
-		// should equal the same bytes, except for the modified version number
-		if bytes.Compare(encodedTx[1:], inputTxBytes[1+compareOffset:]) != 0 {
-			t.Errorf("#%d: %v != %v", idx, encodedTx[1:], inputTxBytes[1+compareOffset:])
-			continue
-		}
-		if inputTxBytes[0] != 255 {
-			t.Error(idx, "unexpected version number", inputTxBytes[0])
-			continue
-		}
-
-		tx = Transaction{} // clean any state
-		// now decode it again, should be done using unknown decoder
-		err = tx.UnmarshalSia(bytes.NewReader(inputTxBytes))
-		if err != nil {
-			t.Error(idx, err)
-			continue
-		}
-		// validate that our tx version is still 255, the hacked version number
-		if tx.Version != 255 {
-			t.Error(idx, "invalid/unexpected transaction version", tx.Version)
-			continue
-		}
-		// validate that our ext now equals the unknown extension
-		if rawData, ok := tx.Extension.([]byte); !ok {
-			t.Errorf("#%d: invalid/unexpected txn extension: %[2]v (%[2]T)", idx, tx.Extension)
-			continue
-		} else {
-			offset := 9
-			if origVersion == TransactionVersionZero {
-				// in legacy versions there was no length encoded, thus no need to offset by 9
-				offset = 1
-			}
-			// validate that our raw data equals our expexted binary encoding
-			if bytes.Compare(encodedTx[offset:], rawData) != 0 {
-				t.Errorf("#%d: %v != %v", idx, encodedTx[1:], rawData)
-				continue
-			}
-		}
-
-		// now change version again, and serialize it,
-		// should be once again fine, and should still be serialized using our unknown encoder
-		tx.Version = origVersion
-		buf = bytes.NewBuffer(nil)
-		err = tx.MarshalSia(buf)
-		if err != nil {
-			t.Error(idx, err)
-			continue
-		}
-
-		outputBytes := buf.Bytes()
-		// again, if we were on the legacy version,
-		// we'll have to remove the length now, to come to the same hex string
-		if origVersion == TransactionVersionZero {
-			outputBytes = append(outputBytes[:1], outputBytes[9:]...)
-		}
-
-		// now turn it into a hex string again, and compare with the original input case, should be equal
-		outputHexTxn := hex.EncodeToString(outputBytes)
-		if outputHexTxn != inputHexTxn {
-			t.Error(idx, outputHexTxn, "!=", inputHexTxn)
+		if err == nil {
+			t.Error(idx, "expected error, but none received")
 		}
 	}
 }

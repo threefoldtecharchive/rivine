@@ -20,13 +20,9 @@ import (
 
 var (
 	// These Specifiers enumerate the types of signatures that are recognized
-	// by this implementation. If a signature's type is unrecognized, the
-	// signature is treated as valid. Signatures using the special "entropy"
-	// type are always treated as invalid; see Consensus.md for more details.
-	SignatureEntropy = Specifier{'e', 'n', 't', 'r', 'o', 'p', 'y'}
+	// by this implementation. see Consensus.md for more details.
 	SignatureEd25519 = Specifier{'e', 'd', '2', '5', '5', '1', '9'}
 
-	ErrEntropyKey                = errors.New("transaction tries to use an entproy public key")
 	ErrFrivolousSignature        = errors.New("transaction contains a frivolous signature")
 	ErrInvalidPubKeyIndex        = errors.New("transaction contains a signature that points to a nonexistent public key")
 	ErrInvalidUnlockHashChecksum = errors.New("provided unlock hash has an invalid checksum")
