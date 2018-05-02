@@ -280,13 +280,18 @@ func (w *MyWallet) SyncWallet() error {
 					continue
 				}
 				for i, minerPayout := range block.RawBlock.MinerPayouts {
-					if minerPayout.Condition.UnlockHash() == addr {
+					if minerPayout.UnlockHash == addr {
 						fmt.Println("Found miner output with value ", minerPayout.Value)
 						fmt.Println("Block: ", block.Height)
 						for _, c := range block.MinerPayoutIDs {
 							fmt.Println("Adding miner payout id", c.String())
 						}
-						w.unspentCoinOutputs[block.MinerPayoutIDs[i]] = minerPayout
+						w.unspentCoinOutputs[block.MinerPayoutIDs[i]] = types.CoinOutput{
+							Value: minerPayout.Value,
+							Condition: types.UnlockConditionProxy{
+								Condition: types.NewUnlockHashCondition(minerPayout.UnlockHash),
+							},
+						}
 					}
 				}
 			}

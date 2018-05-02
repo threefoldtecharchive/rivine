@@ -103,8 +103,8 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 				blockToSubmit.Transactions = txns
 				// Collect the block creation fee
 				if !bc.chainCts.BlockCreatorFee.IsZero() {
-					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.CoinOutput{
-						Value: bc.chainCts.BlockCreatorFee, Condition: ubso.Condition})
+					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.MinerPayout{
+						Value: bc.chainCts.BlockCreatorFee, UnlockHash: ubso.Condition.UnlockHash()})
 				}
 				collectedMinerFees := blockToSubmit.CalculateTotalMinerFees()
 				if !collectedMinerFees.IsZero() {
@@ -112,8 +112,8 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 					if condition.ConditionType() == types.ConditionTypeNil {
 						condition = ubso.Condition
 					}
-					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.CoinOutput{
-						Value: collectedMinerFees, Condition: condition})
+					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.MinerPayout{
+						Value: collectedMinerFees, UnlockHash: condition.UnlockHash()})
 				}
 
 				return &blockToSubmit

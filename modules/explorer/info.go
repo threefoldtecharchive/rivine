@@ -219,7 +219,7 @@ func (e *Explorer) getStats(start types.BlockHeight, end types.BlockHeight) (*mo
 			// Add the block creator to the node
 			// Also genesis wan't created
 			if height != 0 {
-				creator := block.MinerPayouts[0].Condition.UnlockHash().String()
+				creator := block.MinerPayouts[0].UnlockHash.String()
 				_, exists = stats.Creators[creator]
 				if !exists {
 					stats.Creators[creator] = 1

@@ -73,7 +73,7 @@ func (w *Wallet) revertHistory(cc modules.ConsensusChange) {
 
 		// Remove the miner payout transaction if applicable.
 		for _, mp := range block.MinerPayouts {
-			_, exists := w.keys[mp.Condition.UnlockHash()]
+			_, exists := w.keys[mp.UnlockHash]
 			if exists {
 				w.processedTransactions = w.processedTransactions[:len(w.processedTransactions)-1]
 				delete(w.processedTransactionMap, types.TransactionID(block.ID()))
@@ -98,7 +98,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 		}
 		relevant := false
 		for i, mp := range block.MinerPayouts {
-			_, exists := w.keys[mp.Condition.UnlockHash()]
+			_, exists := w.keys[mp.UnlockHash]
 			if exists {
 				relevant = true
 			}
@@ -106,7 +106,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				FundType:       types.SpecifierMinerPayout,
 				MaturityHeight: w.consensusSetHeight + w.chainCts.MaturityDelay,
 				WalletAddress:  exists,
-				RelatedAddress: mp.Condition.UnlockHash(),
+				RelatedAddress: mp.UnlockHash,
 				Value:          mp.Value,
 			})
 			w.historicOutputs[types.OutputID(block.MinerPayoutID(uint64(i)))] = mp.Value

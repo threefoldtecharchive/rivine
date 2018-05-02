@@ -22,9 +22,14 @@ func (cs *ConsensusSet) applyMinerPayouts(tx *bolt.Tx, pb *processedBlock) {
 	for i := range pb.Block.MinerPayouts {
 		mpid := pb.Block.MinerPayoutID(uint64(i))
 		dscod := modules.DelayedCoinOutputDiff{
-			Direction:      modules.DiffApply,
-			ID:             mpid,
-			CoinOutput:     pb.Block.MinerPayouts[i],
+			Direction: modules.DiffApply,
+			ID:        mpid,
+			CoinOutput: types.CoinOutput{
+				Value: pb.Block.MinerPayouts[i].Value,
+				Condition: types.UnlockConditionProxy{
+					Condition: types.NewUnlockHashCondition(pb.Block.MinerPayouts[i].UnlockHash),
+				},
+			},
 			MaturityHeight: pb.Height + cs.chainCts.MaturityDelay,
 		}
 		pb.DelayedCoinOutputDiffs = append(pb.DelayedCoinOutputDiffs, dscod)
