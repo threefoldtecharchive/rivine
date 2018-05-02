@@ -151,8 +151,8 @@ func (g *Gateway) threadedAcceptConn(conn net.Conn) {
 	// Handshake successful, remove the deadline.
 	conn.SetDeadline(time.Time{})
 
-	g.log.Debugf("INFO: accepted connection from new peer '%v -> %v' (v%v)",
-		addr, remoteInfo.NetAddress, remoteInfo.Version)
+	g.log.Debugf("INFO: accepted connection from new peer '%v -> %v' (v%s)",
+		addr, remoteInfo.NetAddress, remoteInfo.Version.String())
 }
 
 // managedAcceptConnPeer accepts connection requests from peers.
