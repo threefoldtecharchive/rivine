@@ -383,39 +383,6 @@ type (
 	// See FulfillmentTypeNil for more information.
 	NilFulfillment struct{} // invalid fulfillment
 
-	// UnknownCondition implements the Condition of any (unlock) ConditionType,
-	// which is not registered using the RegisterUnlockConditionType,
-	// neither implicit (because it has been unregistered) nor explicit.
-	//
-	// UnknownCondition contains the ConditionType and RawCondition in encoded binary format,
-	// as to be able to (re)encode it once again properly,
-	// without having to know/understand the implementation.
-	//
-	// It is considered non-standard,
-	// but even so can still be propagated between (gateway peers).
-	// Part of a to-be created block it can however only be if the block creator creating the block
-	// considers the used ConditionType as standard.
-	UnknownCondition struct {
-		Type         ConditionType
-		RawCondition []byte
-	}
-	// UnknownFulfillment implements the Fulfillment of any (unlock) FulfillmentType,
-	// which is not registered using the RegisterUnlockFulfillmentType,
-	// neither implicit (because it has been unregistered) nor explicit.
-	//
-	// UnknownFulfillment contains the FulfillmentType and RawFulfillment in encoded binary format,
-	// as to be able to (re)encode it once again properly,
-	// without having to know/understand the implementation.
-	//
-	// It is considered non-standard,
-	// but even so can still be propagated between (gateway peers).
-	// Part of a to-be created block it can however only be if the block creator creating the block
-	// considers the used FulfillmentType as standard.
-	UnknownFulfillment struct {
-		Type           FulfillmentType
-		RawFulfillment []byte
-	}
-
 	// UnlockHashCondition implements the ConditionTypeUnlockHash (unlock) ConditionType.
 	// See ConditionTypeUnlockHash for more information.
 	UnlockHashCondition struct {
@@ -579,86 +546,6 @@ func (n *NilFulfillment) Marshal() []byte {
 
 // Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
 func (n *NilFulfillment) Unmarshal([]byte) error { return ErrNilFulfillmentType } // cannot be unmarshaled
-
-// Fulfill implements UnlockCondition.Fulfill
-func (u *UnknownCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
-	return nil // TODO: decline unknown conditions within the reserved standard range (see: https://github.com/rivine/rivine/issues/295)
-}
-
-// ConditionType implements UnlockCondition.ConditionType
-func (u *UnknownCondition) ConditionType() ConditionType { return u.Type }
-
-// IsStandardCondition implements UnlockCondition.IsStandardCondition
-func (u *UnknownCondition) IsStandardCondition() error { return ErrUnknownConditionType } // never valid
-
-// UnlockHash implements UnlockCondition.UnlockHash
-func (u *UnknownCondition) UnlockHash() UnlockHash { return UnknownUnlockHash }
-
-// Equal implements UnlockCondition.Equal
-func (u *UnknownCondition) Equal(c UnlockCondition) bool {
-	uc, ok := c.(*UnknownCondition)
-	if !ok {
-		return false
-	}
-	if u.Type != uc.Type {
-		return false
-	}
-	return bytes.Compare(u.RawCondition[:], uc.RawCondition[:]) == 0
-}
-
-// Marshal implements MarshalableUnlockCondition.Marshal
-func (u *UnknownCondition) Marshal() []byte {
-	return u.RawCondition
-}
-
-// Unmarshal implements MarshalableUnlockCondition.Unmarshal
-func (u *UnknownCondition) Unmarshal(b []byte) error {
-	if len(b) == 0 {
-		return errors.New("no bytes given to unmarsal into a raw condition")
-	}
-	u.RawCondition = b
-	return nil
-}
-
-// Sign implements UnlockFulfillment.Sign
-func (u *UnknownFulfillment) Sign(FulfillmentSignContext) error {
-	return errors.New("cannot sign fulfillment: " + ErrUnknownFulfillmentType.Error())
-}
-
-// UnlockHash implements UnlockFulfillment.UnlockHash
-func (u *UnknownFulfillment) UnlockHash() UnlockHash { return UnknownUnlockHash }
-
-// Equal implements UnlockFulfillment.Equal
-func (u *UnknownFulfillment) Equal(f UnlockFulfillment) bool {
-	uf, ok := f.(*UnknownFulfillment)
-	if !ok {
-		return false
-	}
-	if u.Type != uf.Type {
-		return false
-	}
-	return bytes.Compare(u.RawFulfillment[:], uf.RawFulfillment[:]) == 0
-}
-
-// FulfillmentType implements UnlockFulfillment.FulfillmentType
-func (u *UnknownFulfillment) FulfillmentType() FulfillmentType { return u.Type }
-
-// IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (u *UnknownFulfillment) IsStandardFulfillment() error { return ErrUnknownFulfillmentType } // never valid
-
-// Marshal implements MarshalableUnlockFulfillment.Marshal
-func (u *UnknownFulfillment) Marshal() []byte {
-	return u.RawFulfillment
-}
-
-// Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
-func (u *UnknownFulfillment) Unmarshal(b []byte) error {
-	if len(b) == 0 {
-		return errors.New("no bytes given to unmarsal into a raw fulfillment")
-	}
-	u.RawFulfillment = b
-	return nil
-}
 
 // NewUnlockHashCondition creates a new unlock condition,
 // using a (target) unlock hash as the condtion to be fulfilled.
@@ -1157,12 +1044,10 @@ func (as *LegacyAtomicSwapFulfillment) AtomicSwapSecret() AtomicSwapSecret {
 
 var (
 	_ MarshalableUnlockCondition = (*NilCondition)(nil)
-	_ MarshalableUnlockCondition = (*UnknownCondition)(nil)
 	_ MarshalableUnlockCondition = (*UnlockHashCondition)(nil)
 	_ MarshalableUnlockCondition = (*AtomicSwapCondition)(nil)
 
 	_ MarshalableUnlockFulfillment = (*NilFulfillment)(nil)
-	_ MarshalableUnlockFulfillment = (*UnknownFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*SingleSignatureFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*AtomicSwapFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*LegacyAtomicSwapFulfillment)(nil)
@@ -1433,12 +1318,7 @@ func (tl *TimeLockCondition) Unmarshal(b []byte) error {
 	ct := ConditionType(b[8])
 	cc, ok := _RegisteredUnlockConditionTypes[ct]
 	if !ok {
-		// use the condition as unknown (and raw) condition
-		tl.Condition = &UnknownCondition{
-			Type:         ct,
-			RawCondition: b[9:],
-		}
-		return nil
+		return ErrUnknownConditionType
 	}
 	// known condition type, create and decode it
 	tl.Condition = cc()
@@ -1551,12 +1431,7 @@ func (tl *TimeLockFulfillment) Unmarshal(b []byte) error {
 	ft := FulfillmentType(b[0])
 	fc, ok := _RegisteredUnlockFulfillmentTypes[ft]
 	if !ok {
-		// use the fulfillment as unknown (and raw) condition
-		tl.Fulfillment = &UnknownFulfillment{
-			Type:           ft,
-			RawFulfillment: b[1:],
-		}
-		return nil
+		return ErrUnknownFulfillmentType
 	}
 	// known fulfillment type, create and decode it
 	tl.Fulfillment = fc()
@@ -1822,11 +1697,7 @@ func (up *UnlockConditionProxy) UnmarshalSia(r io.Reader) error {
 	}
 	cc, ok := _RegisteredUnlockConditionTypes[t]
 	if !ok {
-		up.Condition = &UnknownCondition{
-			Type:         t,
-			RawCondition: rc,
-		}
-		return nil
+		return ErrUnknownConditionType
 	}
 	c := cc()
 	err = c.Unmarshal(rc)
@@ -1870,11 +1741,7 @@ func (fp *UnlockFulfillmentProxy) UnmarshalSia(r io.Reader) error {
 	}
 	fc, ok := _RegisteredUnlockFulfillmentTypes[t]
 	if !ok {
-		fp.Fulfillment = &UnknownFulfillment{
-			Type:           t,
-			RawFulfillment: rf,
-		}
-		return nil
+		return ErrUnknownFulfillmentType
 	}
 	f := fc()
 	err = f.Unmarshal(rf)
@@ -2037,8 +1904,6 @@ var (
 // It ensures that the given public key and signature are a valid pair.
 func strictSignatureCheck(pk SiaPublicKey, signature ByteSlice) error {
 	switch pk.Algorithm {
-	case SignatureEntropy:
-		return ErrEntropyKey
 	case SignatureEd25519:
 		if len(pk.Key) != crypto.PublicKeySize {
 			return errors.New("invalid public key size in transaction")
@@ -2059,10 +1924,6 @@ func strictSignatureCheck(pk SiaPublicKey, signature ByteSlice) error {
 // and this also allows the function to know how to interpret the given (private) key.
 func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, key interface{}, extraObjects ...interface{}) ([]byte, error) {
 	switch pk.Algorithm {
-	case SignatureEntropy:
-		// Entropy cannot ever be used to sign a transaction.
-		return nil, ErrEntropyKey
-
 	case SignatureEd25519:
 		// decode the ed-secretKey
 		var edSK crypto.SecretKey
@@ -2102,10 +1963,6 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 //    and thus being able to know how to verify the given signature;
 func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) (err error) {
 	switch pk.Algorithm {
-	case SignatureEntropy:
-		// Entropy cannot ever be used to sign a transaction.
-		err = ErrEntropyKey
-
 	case SignatureEd25519:
 		// Decode the public key and signature.
 		var (
@@ -2119,10 +1976,7 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 		err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
 
 	default:
-		// If the identifier is not recognized, assume that the signature
-		// is valid. This allows more signature types to be added via soft
-		// forking.
+		err = ErrUnknownSignAlgorithmType
 	}
-
 	return
 }

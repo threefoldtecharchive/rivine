@@ -152,6 +152,10 @@ type (
 	}
 )
 
+var (
+	ErrUnknownTransactionType = errors.New("unknown transaction type")
+)
+
 // ID returns the id of a transaction, which is taken by marshalling all of the
 // fields except for the signatures and taking the hash of the result.
 func (t Transaction) ID() (id TransactionID) {
@@ -250,7 +254,7 @@ func (t Transaction) MarshalSia(w io.Writer) error {
 	// get a controller registered or unknown controller
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
-		controller = UnknownTransactionController{}
+		return ErrUnknownTransactionType
 	}
 
 	// encode the data using the controller,
@@ -296,7 +300,7 @@ func (t *Transaction) UnmarshalSia(r io.Reader) error {
 	}
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
-		controller = UnknownTransactionController{}
+		return ErrUnknownTransactionType
 	}
 	td, err := controller.DecodeTransactionData(rawData)
 	if err != nil {
@@ -342,7 +346,7 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 	// get a controller registered or unknown controller
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
-		controller = UnknownTransactionController{}
+		return nil, ErrUnknownTransactionType
 	}
 
 	// json-encode the data using the controller,
@@ -381,7 +385,7 @@ func (t *Transaction) UnmarshalJSON(b []byte) error {
 	}
 	controller, exists := _RegisteredTransactionVersions[txn.Version]
 	if !exists {
-		controller = UnknownTransactionController{}
+		return ErrUnknownTransactionType
 	}
 	td, err := controller.JSONDecodeTransactionData(txn.Data)
 	if err != nil {

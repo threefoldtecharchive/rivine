@@ -130,94 +130,9 @@ func (td *TransactionData) UnmarshalSia(r io.Reader) error {
 
 // Standard Transaction Controller implementations
 type (
-	// UnknownTransactionController is the transaction controller used,
-	// for all transaction versions which aren't registered.
-	UnknownTransactionController struct{}
-
 	// DefaultTransactionController is the default transaction controller used,
 	// and is also by default the controller for the default transaction version 0x01.
 	DefaultTransactionController struct{}
-)
-
-// EncodeTransactionData implements TransactionController.EncodeTransactionData
-func (utc UnknownTransactionController) EncodeTransactionData(td TransactionData) ([]byte, error) {
-	rawData, ok := td.Extension.([]byte)
-	if !ok {
-		return nil, ErrUnexpectedExtensionType
-	}
-	if build.DEBUG {
-		err := utc.debugEncodeTransactionCheck(td)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return rawData, nil
-}
-
-// DecodeTransactionData implements TransactionController.DecodeTransactionData
-func (utc UnknownTransactionController) DecodeTransactionData(b []byte) (TransactionData, error) {
-	return TransactionData{Extension: b}, nil
-}
-
-// JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
-func (utc UnknownTransactionController) JSONEncodeTransactionData(td TransactionData) ([]byte, error) {
-	rawData, ok := td.Extension.([]byte)
-	if !ok {
-		return nil, ErrUnexpectedExtensionType
-	}
-	if build.DEBUG {
-		err := utc.debugEncodeTransactionCheck(td)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return json.Marshal(rawData)
-}
-
-// JSONDecodeTransactionData implements TransactionController.JSONDecodeTransactionData
-func (utc UnknownTransactionController) JSONDecodeTransactionData([]byte) (TransactionData, error) {
-	return TransactionData{}, ErrInvalidTransactionVersion
-}
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (utc UnknownTransactionController) ValidateTransaction(Transaction, uint64) error {
-	return ErrInvalidTransactionVersion
-}
-
-// InputSigHash implements InputSigHasher.InputSigHash
-func (utc UnknownTransactionController) InputSigHash(Transaction, uint64, ...interface{}) crypto.Hash {
-	if build.DEBUG {
-		panic(ErrInvalidTransactionVersion)
-	}
-	return crypto.Hash{}
-}
-
-func (utc UnknownTransactionController) debugEncodeTransactionCheck(td TransactionData) error {
-	if len(td.CoinInputs) != 0 {
-		return errors.New("no coin inputs should be defined for a transaction with an unknown version number")
-	}
-	if len(td.CoinOutputs) != 0 {
-		return errors.New("no coin outputs should be defined for a transaction with an unknown version number")
-	}
-	if len(td.BlockStakeInputs) != 0 {
-		return errors.New("no block stake inputs should be defined for a transaction with an unknown version number")
-	}
-	if len(td.BlockStakeOutputs) != 0 {
-		return errors.New("no block stake outputs should be defined for a transaction with an unknown version number")
-	}
-	if len(td.MinerFees) != 0 {
-		return errors.New("no miner fees should be defined for a transaction with an unknown version number")
-	}
-	if len(td.ArbitraryData) != 0 {
-		return errors.New("no arbitrary data should be defined for a transaction with an unknown version number")
-	}
-	return nil
-}
-
-// optional interfaces the UnknownTransactionController implements
-var (
-	_ TransactionValidator = UnknownTransactionController{}
-	_ InputSigHasher       = UnknownTransactionController{}
 )
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
