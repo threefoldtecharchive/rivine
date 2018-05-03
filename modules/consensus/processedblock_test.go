@@ -1,7 +1,7 @@
 package consensus
 
-import "testing"
-
+// TODO: enable and fix
+/*
 //
 // // TestIntegrationMinimumValidChildTimestamp probes the
 // // MinimumValidChildTimestamp method of the consensus type.

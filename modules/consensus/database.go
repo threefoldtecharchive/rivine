@@ -24,7 +24,7 @@ var (
 
 	dbMetadata = persist.Metadata{
 		Header:  "Consensus Set Database",
-		Version: "0.5.0",
+		Version: "1.0.5",
 	}
 )
 
@@ -75,7 +75,10 @@ func (cs *ConsensusSet) replaceDatabase(filename string) error {
 func (cs *ConsensusSet) openDB(filename string) (err error) {
 	cs.db, err = persist.OpenDatabase(dbMetadata, filename)
 	if err == persist.ErrBadVersion {
-		return cs.replaceDatabase(filename)
+		cs.db, err = convertLegacyDatabase(filename)
+		if err == persist.ErrBadVersion {
+			return cs.replaceDatabase(filename)
+		}
 	}
 	if err != nil {
 		return errors.New("error opening consensus database: " + err.Error())

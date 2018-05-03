@@ -360,10 +360,236 @@ func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 
 func TestDecodeLegacyBlockAfterBug305(t *testing.T) {
 	testCases := []string{
+		// tfchain standard - block height 3
+		// > https://explorer.threefoldtoken.com/explorer/blocks/3
+		// {
+		// 	"parentid": "026e4b5c1d54d6237ec7246e789ee34a63ae98540bb63971c2e7f19904f77758",
+		// 	"timestamp": 1524169049,
+		// 	"pobsindexes": {
+		// 		"BlockHeight": 2,
+		// 		"TransactionIndex": 0,
+		// 		"OutputIndex": 0
+		// 	},
+		// 	"minerpayouts": [{
+		// 		"value": "1000000000",
+		// 		"unlockhash": "01ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543c992e6fba1c4"
+		// 	}],
+		// 	"transactions": [{
+		// 		"version": 0,
+		// 		"data": {
+		// 			"coininputs": null,
+		// 			"blockstakeinputs": [{
+		// 				"parentid": "441ac4150342765cb73c6656613ee2aaa79173cffa8b19fda3eadc5aadc3d682",
+		// 				"unlocker": {
+		// 					"type": 1,
+		// 					"condition": {
+		// 						"publickey": "ed25519:b5662caa078efd42b25f3ab10768b55fd0607ed8cb8e3c44f3b26df1d17ef934"
+		// 					},
+		// 					"fulfillment": {
+		// 						"signature": "b30700ee21a314e0838e460649c2519ab58fe28413298bc5ee8feb2af0284f46e71eb24453a8f8c89c200735ee9100c7f859999dfe5dfc8be7964545d05e7008"
+		// 					}
+		// 				}
+		// 			}],
+		// 			"blockstakeoutputs": [{
+		// 				"value": "100",
+		// 				"unlockhash": "01ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543c992e6fba1c4"
+		// 			}],
+		// 			"minerfees": null
+		// 		}
+		// 	}]
+		// }
 		`026e4b5c1d54d6237ec7246e789ee34a63ae98540bb63971c2e7f19904f7775859f9d85a00000000020000000000000000000000000000000000000000000000010000000000000004000000000000003b9aca0001ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543010000000000000000000000000000000000000000000000000100000000000000441ac4150342765cb73c6656613ee2aaa79173cffa8b19fda3eadc5aadc3d682013800000000000000656432353531390000000000000000002000000000000000b5662caa078efd42b25f3ab10768b55fd0607ed8cb8e3c44f3b26df1d17ef9344000000000000000b30700ee21a314e0838e460649c2519ab58fe28413298bc5ee8feb2af0284f46e71eb24453a8f8c89c200735ee9100c7f859999dfe5dfc8be7964545d05e7008010000000000000001000000000000006401ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b54300000000000000000000000000000000`,
+		// tfchain standard - block height 5
+		// > https://explorer.threefoldtoken.com/explorer/blocks/5
+		// {
+		// 	"parentid": "d8db0191654e0ed1798879dd63f519f9054e9400341b40a93190dfe9ee5787d4",
+		// 	"timestamp": 1524169770,
+		// 	"pobsindexes": {
+		// 		"BlockHeight": 4,
+		// 		"TransactionIndex": 0,
+		// 		"OutputIndex": 0
+		// 	},
+		// 	"minerpayouts": [{
+		// 		"value": "1000000000",
+		// 		"unlockhash": "01ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543c992e6fba1c4"
+		// 	}],
+		// 	"transactions": [{
+		// 		"version": 0,
+		// 		"data": {
+		// 			"coininputs": null,
+		// 			"blockstakeinputs": [{
+		// 				"parentid": "940a089ea20801e87faf8b70e710728c28443261cbf8dc00b33c76c5a21ec7bf",
+		// 				"unlocker": {
+		// 					"type": 1,
+		// 					"condition": {
+		// 						"publickey": "ed25519:b5662caa078efd42b25f3ab10768b55fd0607ed8cb8e3c44f3b26df1d17ef934"
+		// 					},
+		// 					"fulfillment": {
+		// 						"signature": "c4ef3c95ad062c363ec3cc66ff67a296b54e02ea5b97781239ff75cbac8ae6e7e0e71b6d7f59f990488c44e80c5461eedee8cc7aed1cd0f22a055a1564f48607"
+		// 					}
+		// 				}
+		// 			}],
+		// 			"blockstakeoutputs": [{
+		// 				"value": "100",
+		// 				"unlockhash": "01ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543c992e6fba1c4"
+		// 			}],
+		// 			"minerfees": null
+		// 		}
+		// 	}]
+		// }
 		`d8db0191654e0ed1798879dd63f519f9054e9400341b40a93190dfe9ee5787d42afcd85a00000000040000000000000000000000000000000000000000000000010000000000000004000000000000003b9aca0001ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543010000000000000000000000000000000000000000000000000100000000000000940a089ea20801e87faf8b70e710728c28443261cbf8dc00b33c76c5a21ec7bf013800000000000000656432353531390000000000000000002000000000000000b5662caa078efd42b25f3ab10768b55fd0607ed8cb8e3c44f3b26df1d17ef9344000000000000000c4ef3c95ad062c363ec3cc66ff67a296b54e02ea5b97781239ff75cbac8ae6e7e0e71b6d7f59f990488c44e80c5461eedee8cc7aed1cd0f22a055a1564f48607010000000000000001000000000000006401ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b54300000000000000000000000000000000`,
+		// tfchain standard - block height 42
+		// > https://explorer.threefoldtoken.com/explorer/blocks/42
+		// {
+		// 	"parentid": "fb6f2fd3491fc4f9ffbbbdf9d2728f6c93307064748a323c4ea412c3f7411ca6",
+		// 	"timestamp": 1524216449,
+		// 	"pobsindexes": {
+		// 		"BlockHeight": 41,
+		// 		"TransactionIndex": 0,
+		// 		"OutputIndex": 0
+		// 	},
+		// 	"minerpayouts": [{
+		// 		"value": "1000000000",
+		// 		"unlockhash": "01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"
+		// 	}],
+		// 	"transactions": [{
+		// 		"version": 0,
+		// 		"data": {
+		// 			"coininputs": null,
+		// 			"blockstakeinputs": [{
+		// 				"parentid": "b33661b26a27cb24c87cb3f39e2dc91522fd070428d1ba97da7704a8ddd705b5",
+		// 				"unlocker": {
+		// 					"type": 1,
+		// 					"condition": {
+		// 						"publickey": "ed25519:8d368f6c457f1f7f49f4cb32636c1d34197c046f5398ea6661b0b4ecfe36a3cd"
+		// 					},
+		// 					"fulfillment": {
+		// 						"signature": "e72783399189c5c1f2518bb4f81b91d2e0ccf4d2cd7b010ad8f75ef7beec74d80b5d822a6848b4765c1866cbc0acbbb1fb3b003b58a19c9f1191bb7f22bc1d0f"
+		// 					}
+		// 				}
+		// 			}],
+		// 			"blockstakeoutputs": [{
+		// 				"value": "390",
+		// 				"unlockhash": "01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"
+		// 			}],
+		// 			"minerfees": null
+		// 		}
+		// 	}]
+		// }
 		`fb6f2fd3491fc4f9ffbbbdf9d2728f6c93307064748a323c4ea412c3f7411ca681b2d95a00000000290000000000000000000000000000000000000000000000010000000000000004000000000000003b9aca0001746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a010000000000000000000000000000000000000000000000000100000000000000b33661b26a27cb24c87cb3f39e2dc91522fd070428d1ba97da7704a8ddd705b50138000000000000006564323535313900000000000000000020000000000000008d368f6c457f1f7f49f4cb32636c1d34197c046f5398ea6661b0b4ecfe36a3cd4000000000000000e72783399189c5c1f2518bb4f81b91d2e0ccf4d2cd7b010ad8f75ef7beec74d80b5d822a6848b4765c1866cbc0acbbb1fb3b003b58a19c9f1191bb7f22bc1d0f01000000000000000200000000000000018601746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a00000000000000000000000000000000`,
+		// tfchain standard - block height 7535
+		// > https://explorer.threefoldtoken.com/explorer/blocks/7535
+		// {
+		// 	"parentid": "a8176b8937312ae1b897945ea9305b68e1f19ba3310835b1dd3f4d968b12d076",
+		// 	"timestamp": 1525101295,
+		// 	"pobsindexes": {
+		// 		"BlockHeight": 7504,
+		// 		"TransactionIndex": 0,
+		// 		"OutputIndex": 0
+		// 	},
+		// 	"minerpayouts": [{
+		// 		"value": "1000000000",
+		// 		"unlockhash": "01d82a5845555245610dfbebfe9a876f0892277114859dd6bcaf7c57d5f6667b430bb26a23eee3"
+		// 	}],
+		// 	"transactions": [{
+		// 		"version": 0,
+		// 		"data": {
+		// 			"coininputs": null,
+		// 			"blockstakeinputs": [{
+		// 				"parentid": "c9fab10d20d746bcca39603b30f41c5d5610d86387e6a88966e5fcac8a2a078e",
+		// 				"unlocker": {
+		// 					"type": 1,
+		// 					"condition": {
+		// 						"publickey": "ed25519:f9118670ce11881d9c679c34f66e92380a085f460725d6bdb250fbb6472c5437"
+		// 					},
+		// 					"fulfillment": {
+		// 						"signature": "1741d07a462e6b6596acbc07efecdebe1ae806afc03589e51300f4ec81986b75c18a53385c769269fbf3bd48a95f0d73a5b6fa45573f690c2ed8014f5e0bc805"
+		// 					}
+		// 				}
+		// 			}],
+		// 			"blockstakeoutputs": [{
+		// 				"value": "1",
+		// 				"unlockhash": "01d82a5845555245610dfbebfe9a876f0892277114859dd6bcaf7c57d5f6667b430bb26a23eee3"
+		// 			}],
+		// 			"minerfees": null
+		// 		}
+		// 	}]
+		// }
 		`a8176b8937312ae1b897945ea9305b68e1f19ba3310835b1dd3f4d968b12d076ef32e75a00000000501d00000000000000000000000000000000000000000000010000000000000004000000000000003b9aca0001d82a5845555245610dfbebfe9a876f0892277114859dd6bcaf7c57d5f6667b43010000000000000000000000000000000000000000000000000100000000000000c9fab10d20d746bcca39603b30f41c5d5610d86387e6a88966e5fcac8a2a078e013800000000000000656432353531390000000000000000002000000000000000f9118670ce11881d9c679c34f66e92380a085f460725d6bdb250fbb6472c543740000000000000001741d07a462e6b6596acbc07efecdebe1ae806afc03589e51300f4ec81986b75c18a53385c769269fbf3bd48a95f0d73a5b6fa45573f690c2ed8014f5e0bc805010000000000000001000000000000000101d82a5845555245610dfbebfe9a876f0892277114859dd6bcaf7c57d5f6667b4300000000000000000000000000000000`,
+		// tfchain standard - block height 8143
+		// > https://explorer.threefoldtoken.com/explorer/blocks/8143
+		// {
+		// 	"parentid": "12bb1fda9736c394aca93d1fcfe208c8808ccdc0acb8c34d488cd62a2ef1ee99",
+		// 	"timestamp": 1525242351,
+		// 	"pobsindexes": {
+		// 		"BlockHeight": 8142,
+		// 		"TransactionIndex": 0,
+		// 		"OutputIndex": 0
+		// 	},
+		// 	"minerpayouts": [{
+		// 		"value": "1000000000",
+		// 		"unlockhash": "01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"
+		// 	}, {
+		// 		"value": "100000000",
+		// 		"unlockhash": "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34"
+		// 	}],
+		// 	"transactions": [{
+		// 		"version": 0,
+		// 		"data": {
+		// 			"coininputs": null,
+		// 			"blockstakeinputs": [{
+		// 				"parentid": "9c38904ce13b6437a1c45121ad7c5f34ce744eccab43b4a7276b2c69eaf562c0",
+		// 				"unlocker": {
+		// 					"type": 1,
+		// 					"condition": {
+		// 						"publickey": "ed25519:8d368f6c457f1f7f49f4cb32636c1d34197c046f5398ea6661b0b4ecfe36a3cd"
+		// 					},
+		// 					"fulfillment": {
+		// 						"signature": "88c3dfdd5afb9337dfe53878f8666491d6f0bda5b6e2804cea5d1e86f8eb920c432e33d4d6dd382b86e69d5bc245f19651977cc7e98f0d6ee9f78358c04d5705"
+		// 					}
+		// 				}
+		// 			}],
+		// 			"blockstakeoutputs": [{
+		// 				"value": "390",
+		// 				"unlockhash": "01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"
+		// 			}],
+		// 			"minerfees": null
+		// 		}
+		// 	}, {
+		// 		"version": 0,
+		// 		"data": {
+		// 			"coininputs": [{
+		// 				"parentid": "27d30e2ec9814588323362132b0d9d73c19d9f7269e6ec7cbef340db390c7fe3",
+		// 				"unlocker": {
+		// 					"type": 1,
+		// 					"condition": {
+		// 						"publickey": "ed25519:fd66e536490d7e834fd1e655fb16d2b5ddb20c41369bc3fc613da7d0360cc13c"
+		// 					},
+		// 					"fulfillment": {
+		// 						"signature": "120b95c41fb420777af37a8658ec5f71c3138312dcef6ae7a251ea5e2bf1c7133a3c094661d8fa0614507b5c6f1ad04fb1299bd4539509658b1a1a0f9ca9c30e"
+		// 					}
+		// 				}
+		// 			}],
+		// 			"coinoutputs": [{
+		// 				"value": "12000000000000",
+		// 				"unlockhash": "01922d994ede1ce5f90b39e73b1a03dcd4a4b7f4746e7dad602a3c8d6df190c923e6998ddbfb2f"
+		// 			}, {
+		// 				"value": "12000000000000",
+		// 				"unlockhash": "01980da1071fb4f1095bb785bc4bd52832fc47222a772345ab41ac4d49d685500ef809e55960a8"
+		// 			}, {
+		// 				"value": "1000000000000000",
+		// 				"unlockhash": "01fad166445b2fee3a2e32dc28bc5f7c7e27fbfa3786db53ba337f5bd9218f549f49ef6d06a917"
+		// 			}, {
+		// 				"value": "250000000000000",
+		// 				"unlockhash": "01f6fbe425a9535b5d794b4b2ca7486ec3a76aec1cc816e20662fc2fb55d0d740e72cfb72ddb11"
+		// 			}, {
+		// 				"value": "685228263400000000",
+		// 				"unlockhash": "016232383c2791b5f87722a3140f7a8774d691df8dc2d0ca84c3973c2a995d514a4ffefc521b6c"
+		// 			}],
+		// 			"minerfees": ["100000000"]
+		// 		}
+		// 	}]
+		// }
 		`12bb1fda9736c394aca93d1fcfe208c8808ccdc0acb8c34d488cd62a2ef1ee99ef59e95a00000000ce1f00000000000000000000000000000000000000000000020000000000000004000000000000003b9aca0001746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a040000000000000005f5e100017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8c0200000000000000000000000000000000000000000000000001000000000000009c38904ce13b6437a1c45121ad7c5f34ce744eccab43b4a7276b2c69eaf562c00138000000000000006564323535313900000000000000000020000000000000008d368f6c457f1f7f49f4cb32636c1d34197c046f5398ea6661b0b4ecfe36a3cd400000000000000088c3dfdd5afb9337dfe53878f8666491d6f0bda5b6e2804cea5d1e86f8eb920c432e33d4d6dd382b86e69d5bc245f19651977cc7e98f0d6ee9f78358c04d570501000000000000000200000000000000018601746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a0000000000000000000000000000000000010000000000000027d30e2ec9814588323362132b0d9d73c19d9f7269e6ec7cbef340db390c7fe3013800000000000000656432353531390000000000000000002000000000000000fd66e536490d7e834fd1e655fb16d2b5ddb20c41369bc3fc613da7d0360cc13c4000000000000000120b95c41fb420777af37a8658ec5f71c3138312dcef6ae7a251ea5e2bf1c7133a3c094661d8fa0614507b5c6f1ad04fb1299bd4539509658b1a1a0f9ca9c30e050000000000000006000000000000000ae9f7bcc00001922d994ede1ce5f90b39e73b1a03dcd4a4b7f4746e7dad602a3c8d6df190c92306000000000000000ae9f7bcc00001980da1071fb4f1095bb785bc4bd52832fc47222a772345ab41ac4d49d685500e0700000000000000038d7ea4c6800001fad166445b2fee3a2e32dc28bc5f7c7e27fbfa3786db53ba337f5bd9218f549f0600000000000000e35fa931a00001f6fbe425a9535b5d794b4b2ca7486ec3a76aec1cc816e20662fc2fb55d0d740e080000000000000009826b799e03ca00016232383c2791b5f87722a3140f7a8774d691df8dc2d0ca84c3973c2a995d514a000000000000000000000000000000000100000000000000040000000000000005f5e1000000000000000000`,
 	}
 	for idx, testCase := range testCases {

@@ -14,7 +14,7 @@ import (
 
 var explorerMetadata = persist.Metadata{
 	Header:  "Sia Explorer",
-	Version: "0.5.2",
+	Version: "1.0.5",
 }
 
 // initPersist initializes the persistent structures of the explorer module.
@@ -26,9 +26,16 @@ func (e *Explorer) initPersist() error {
 	}
 
 	// Open the database
-	db, err := persist.OpenDatabase(explorerMetadata, filepath.Join(e.persistDir, "explorer.db"))
+	dbFilPath := filepath.Join(e.persistDir, "explorer.db")
+	db, err := persist.OpenDatabase(explorerMetadata, dbFilPath)
 	if err != nil {
-		return err
+		if err != persist.ErrBadVersion {
+			return err
+		}
+		db, err = convertLegacyDatabase(dbFilPath)
+		if err != nil {
+			return err
+		}
 	}
 	e.db = db
 
