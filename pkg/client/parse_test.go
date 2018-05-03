@@ -85,6 +85,37 @@ func TestParseCoinStringInvalidStrings(t *testing.T) {
 	}
 }
 
+func TestParseCoinStringValidStrings(t *testing.T) {
+	cc, err := NewCurrencyConvertor(types.DefaultCurrencyUnits())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	testCases := []string{
+		"1",
+		"1.1",
+		"1.123",
+		"1.123456",
+		"1.123456789",
+		"123456789.987654321",
+		"1.1234567890",
+		"1.123456789000",
+	}
+	for idx, testCase := range testCases {
+		x, err := cc.ParseCoinString(testCase)
+		if err != nil {
+			t.Error(idx, "expected to parse, but it didn't", err)
+			continue
+		}
+
+		str := cc.ToCoinString(x)
+		strippedTestCase := strings.TrimRight(testCase, "0")
+		if str != strippedTestCase {
+			t.Error(idx, str, "!=", strippedTestCase)
+		}
+	}
+}
+
 func TestParseCoinStringToCoinSmallValueString_E0(t *testing.T) {
 	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
