@@ -608,7 +608,7 @@ func atomicswapclaimcmd(cmd *cobra.Command, args []string) {
 	// step 2: get correct spendable key from wallet
 	pk, sk := getSpendableKey(conditionRef.Receiver)
 	// quickly validate if returned sk matches the known unlock hash (sanity check)
-	uh := types.NewSingleSignatureFulfillment(pk).UnlockHash()
+	uh := types.NewPubKeyUnlockHash(pk)
 	if uh.Cmp(conditionRef.Receiver) != 0 {
 		Die("Unexpected wallet public key returned:", sk)
 	}
@@ -755,7 +755,7 @@ func atomicswaprefundcmd(cmd *cobra.Command, args []string) {
 	// step 2: get correct spendable key from wallet
 	pk, sk := getSpendableKey(conditionRef.Sender)
 	// quickly validate if returned sk matches the known unlock hash (sanity check)
-	uh := types.NewSingleSignatureFulfillment(pk).UnlockHash()
+	uh := types.NewPubKeyUnlockHash(pk)
 	if uh.Cmp(conditionRef.Sender) != 0 {
 		Die("Unexpected wallet public key returned:", sk)
 	}

@@ -2217,3 +2217,59 @@ func TestAtomicSwapSecretJSON(t *testing.T) {
 		}
 	}
 }
+
+func TestUnlockConditionFulfillable(t *testing.T) {
+	testCases := []struct {
+		Condition   UnlockCondition
+		Context     FulfillableContext
+		Fulfillable bool
+	}{
+		{UnlockConditionProxy{}, FulfillableContext{}, true},
+		{UnlockConditionProxy{&NilCondition{}}, FulfillableContext{}, true},
+		{&NilCondition{}, FulfillableContext{}, true},
+		{&UnlockHashCondition{}, FulfillableContext{}, true},
+		{&AtomicSwapCondition{}, FulfillableContext{}, true},
+		{&TimeLockCondition{}, FulfillableContext{}, true},
+		{
+			&TimeLockCondition{LockTime: 1},
+			FulfillableContext{},
+			false,
+		},
+		{
+			&TimeLockCondition{LockTime: 1},
+			FulfillableContext{BlockHeight: 1},
+			true,
+		},
+		{
+			&TimeLockCondition{},
+			FulfillableContext{BlockHeight: 1},
+			true,
+		},
+		{
+			&TimeLockCondition{LockTime: 500000001},
+			FulfillableContext{BlockHeight: 500000002, BlockTime: 50000000},
+			false,
+		},
+		{
+			&TimeLockCondition{LockTime: 500000001},
+			FulfillableContext{BlockHeight: 500000002, BlockTime: 500000001},
+			true,
+		},
+		{
+			&TimeLockCondition{LockTime: 500000003},
+			FulfillableContext{BlockHeight: 500000002, BlockTime: 500000003},
+			true,
+		},
+		{
+			&TimeLockCondition{LockTime: 500000004},
+			FulfillableContext{BlockHeight: 500000002, BlockTime: 500000005},
+			true,
+		},
+	}
+	for idx, testCase := range testCases {
+		fulfillable := testCase.Condition.Fulfillable(testCase.Context)
+		if fulfillable != testCase.Fulfillable {
+			t.Error(idx, fulfillable, "!=", testCase.Fulfillable)
+		}
+	}
+}

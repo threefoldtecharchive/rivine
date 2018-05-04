@@ -41,13 +41,20 @@ type (
 		IsStandardCondition() error
 
 		// UnlockHash returns the deterministic unlock hash of this UnlockCondition.
-		//
-		// TODO: check if we really need this function, internally
+		// It identifies the owner(s) or contract which own the output,
+		// and can spend it, once the conditions becomes `Fulfillable`.
 		UnlockHash() UnlockHash
 
 		// Equal returns if the given unlock condition
 		// equals the called unlock condition.
 		Equal(UnlockCondition) bool
+
+		// Fulfillable returns true if the unlock condition can be fullfilled,
+		// should the right fulfillment be given with the same (fulfill)
+		// context as given.
+		//
+		// NOTE: that this method does assume that the condition is a standard condition.
+		Fulfillable(FulfillableContext) bool
 	}
 	// MarshalableUnlockCondition adds binary marshaling as a required interface
 	// to the regular unlock condition interface. This allows the condition
@@ -85,13 +92,12 @@ type (
 		Sign(ctx FulfillmentSignContext) error
 
 		// UnlockHash returns the unlock hash of this UnlockFulfillment.
+		// It identifies the spender of the output linked by the input's parent ID.
 		//
 		// The UnlockHash, as returned by the UnlockFulfillment,
 		// does not have to be deterministic and can depend on how it fulfills a condition.
 		// (e.g. if multiple people can fulfill by means of signing,
 		//       than the returned unlock hash might depend upon who signed it)
-		//
-		// TODO: check if we really need this function, internally
 		UnlockHash() UnlockHash
 
 		// Equal returns if the given unlock fulfillment
@@ -159,19 +165,29 @@ type (
 		Key interface{}
 	}
 
-	// FulfillContext is given as part of the fulfill call of an UnlockFulfillment,
+	// FulfillContext is given as part of the fulfill call of an UnlockCondition,
 	// as to provide the necessary context required for fulfilling a fulfillment.
 	FulfillContext struct {
 		// Index of the input that is to be fulfilled,
 		// whether that input is a coin- or blockStake- input is of no importance.
 		InputIndex uint64
-		// BlockHeight of the parent block.
+		// BlockHeight of the currently last registered block.
 		BlockHeight BlockHeight
-		// BlockTime defines the time of the block,
+		// BlockTime defines the time of the currently last registered block,
 		// the transaction belonged to.
 		BlockTime Timestamp
 		// (Parent) transaction the fulfillment belongs to.
 		Transaction Transaction
+	}
+
+	// FulfillableContext is given as part of the fulfillable call of an UnlockCondition,
+	// as to provide the necessary context required for fulfilling a fulfillment.
+	FulfillableContext struct {
+		// BlockHeight of the currently last registered block.
+		BlockHeight BlockHeight
+		// BlockTime defines the time of the currently last registered block,
+		// the transaction belonged to.
+		BlockTime Timestamp
 	}
 
 	// ConditionType defines the type of a condition.
@@ -510,6 +526,9 @@ func (n *NilCondition) Equal(c UnlockCondition) bool {
 	return equal // explicit equality
 }
 
+// Fulfillable implements UnlockCondition.Fulfillable
+func (n *NilCondition) Fulfillable(FulfillableContext) bool { return true }
+
 // Marshal implements MarshalableUnlockCondition.Marshal
 func (n *NilCondition) Marshal() []byte { return nil } // nothing to marshal
 // Unmarshal implements MarshalableUnlockCondition.Unmarshal
@@ -582,7 +601,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		}
 
 		// create the unlockHash for the given public Key
-		unlockHash := NewSingleSignatureFulfillment(tf.PublicKey).UnlockHash()
+		unlockHash := NewPubKeyUnlockHash(tf.PublicKey)
 
 		// prior to our timelock, only the receiver can claim the unspend output
 		if ctx.BlockTime <= tf.TimeLock {
@@ -653,6 +672,9 @@ func (uh *UnlockHashCondition) Equal(c UnlockCondition) bool {
 	return uh.TargetUnlockHash.Cmp(ouh.TargetUnlockHash) == 0
 }
 
+// Fulfillable implements UnlockCondition.Fulfillable
+func (uh *UnlockHashCondition) Fulfillable(FulfillableContext) bool { return true }
+
 // Marshal implements MarshalableUnlockCondition.Marshal
 func (uh *UnlockHashCondition) Marshal() []byte {
 	return encoding.Marshal(uh.TargetUnlockHash)
@@ -683,7 +705,7 @@ func (ss *SingleSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err erro
 
 // UnlockHash implements UnlockFulfillment.UnlockHash
 func (ss *SingleSignatureFulfillment) UnlockHash() UnlockHash {
-	return NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ss.PublicKey)))
+	return NewPubKeyUnlockHash(ss.PublicKey)
 }
 
 // FulfillmentType implements UnlockFulfillment.FulfillmentType
@@ -836,6 +858,9 @@ func (as *AtomicSwapCondition) Equal(c UnlockCondition) bool {
 	return as.Receiver.Cmp(oas.Receiver) == 0
 }
 
+// Fulfillable implements UnlockCondition.Fulfillable
+func (as *AtomicSwapCondition) Fulfillable(FulfillableContext) bool { return true }
+
 // Marshal implements MarshalableUnlockCondition.Marshal
 func (as *AtomicSwapCondition) Marshal() []byte {
 	return encoding.MarshalAll(as.Sender, as.Receiver, as.HashedSecret, as.TimeLock)
@@ -898,7 +923,8 @@ func (as *AtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 
 // UnlockHash implements UnlockFulfillment.UnlockHash
 func (as *AtomicSwapFulfillment) UnlockHash() UnlockHash {
-	return NewUnlockHash(UnlockTypeAtomicSwap, crypto.HashObject(encoding.Marshal(as.PublicKey)))
+	return NewUnlockHash(UnlockTypeAtomicSwap,
+		crypto.HashObject(encoding.Marshal(as.PublicKey)))
 }
 
 // FulfillmentType implements UnlockFulfillment.FulfillmentType
@@ -1237,14 +1263,8 @@ func NewTimeLockCondition(lockTime uint64, condition MarshalableUnlockCondition)
 func (tl *TimeLockCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
 	switch tf := fulfillment.(type) {
 	case *TimeLockFulfillment:
-		if tl.LockTime < LockTimeMinTimestampValue {
-			if BlockHeight(tl.LockTime) > ctx.BlockHeight {
-				return errors.New("block height as defined by time lock has not yet been reached")
-			}
-		} else {
-			if Timestamp(tl.LockTime) > ctx.BlockTime {
-				return errors.New("epoch timestamp as defined by time lock has not yet been reached")
-			}
+		if !tl.Fulfillable(FulfillableContext{BlockHeight: ctx.BlockHeight, BlockTime: ctx.BlockTime}) {
+			return errors.New("time lock has not yet been reached")
 		}
 		// time lock hash been reached,
 		// delegate the rest of the fulfillment to the internally layered logic
@@ -1291,6 +1311,14 @@ func (tl *TimeLockCondition) Equal(c UnlockCondition) bool {
 		return false
 	}
 	return tl.LockTime == otl.LockTime && tl.Condition.Equal(otl.Condition)
+}
+
+// Fulfillable implements UnlockCondition.Fulfillable
+func (tl *TimeLockCondition) Fulfillable(ctx FulfillableContext) bool {
+	if tl.LockTime < LockTimeMinTimestampValue {
+		return BlockHeight(tl.LockTime) <= ctx.BlockHeight
+	}
+	return Timestamp(tl.LockTime) <= ctx.BlockTime
 }
 
 // Marshal implements MarshalableUnlockCondition.Marshal
@@ -1596,6 +1624,15 @@ func (up UnlockConditionProxy) Equal(o UnlockCondition) bool {
 		o = p.Condition
 	}
 	return condition.Equal(o)
+}
+
+// Fulfillable implements UnlockCondition.Fulfillable
+func (up UnlockConditionProxy) Fulfillable(ctx FulfillableContext) bool {
+	condition := up.Condition
+	if condition == nil {
+		condition = &NilCondition{}
+	}
+	return condition.Fulfillable(ctx)
 }
 
 // Sign implements UnlockFulfillment.Sign

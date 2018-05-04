@@ -44,9 +44,15 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
-	// Collect a value-sorted set of siacoin outputs.
+	// prepare fulfillable context
+	ctx := tb.wallet.getFulfillableContextForLatestBlock()
+
+	// Collect a value-sorted set of fulfillable coin outputs.
 	var so sortedOutputs
 	for scoid, sco := range tb.wallet.coinOutputs {
+		if !sco.Condition.Fulfillable(ctx) {
+			continue
+		}
 		so.ids = append(so.ids, scoid)
 		so.outputs = append(so.outputs, sco)
 	}
@@ -56,7 +62,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 			uh := sco.Condition.UnlockHash()
 			// Determine if the output belongs to the wallet.
 			_, exists := tb.wallet.keys[uh]
-			if !exists {
+			if !exists || !sco.Condition.Fulfillable(ctx) {
 				continue
 			}
 			so.ids = append(so.ids, upt.Transaction.CoinOutputID(uint64(i)))
@@ -145,12 +151,18 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
+	// prepare fulfillable context
+	ctx := tb.wallet.getFulfillableContextForLatestBlock()
+
 	// Create a transaction that will add the correct amount of siafunds to the
 	// transaction.
 	var fund types.Currency
 	var potentialFund types.Currency
 	var spentSfoids []types.BlockStakeOutputID
 	for sfoid, sfo := range tb.wallet.blockstakeOutputs {
+		if !sfo.Condition.Fulfillable(ctx) {
+			continue
+		}
 		// Check that this output has not recently been spent by the wallet.
 		spendHeight := tb.wallet.spentOutputs[types.OutputID(sfoid)]
 		// Prevent an underflow error.

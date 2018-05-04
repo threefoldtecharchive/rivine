@@ -465,10 +465,15 @@ Unlock the wallet to view balance
 	fmt.Printf(`Wallet status:
 %s, Unlocked
 Confirmed Balance:   %v
+Locked Balance:      %v
 Unconfirmed Delta:   %v
 BlockStakes:         %v BS
-`, encStatus, _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance), delta,
-		status.BlockStakeBalance)
+`, encStatus, _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance),
+		_CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedLockedCoinBalance),
+		delta, status.BlockStakeBalance)
+	if !status.LockedBlockStakeBalance.IsZero() {
+		fmt.Printf("Locked BlockStakes:  %v BS\n", status.LockedBlockStakeBalance)
+	}
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,

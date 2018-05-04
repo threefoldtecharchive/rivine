@@ -71,6 +71,21 @@ var (
 	}
 )
 
+// NewEd25519PubKeyUnlockHash creates a new unlock hash of type UnlockTypePubKey,
+// using a given public key which is assumed to be used in combination with the Ed25519 algorithm.
+func NewEd25519PubKeyUnlockHash(pk crypto.PublicKey) UnlockHash {
+	return NewPubKeyUnlockHash(Ed25519PublicKey(pk))
+}
+
+// NewPubKeyUnlockHash creates a new unlock hash of type UnlockTypePubKey,
+// using a given Sia-standard Public key.
+func NewPubKeyUnlockHash(pk SiaPublicKey) UnlockHash {
+	return UnlockHash{
+		Type: UnlockTypePubKey,
+		Hash: crypto.HashObject(encoding.Marshal(pk)),
+	}
+}
+
 // NewUnlockHash creates a new unlock hash
 func NewUnlockHash(t UnlockType, h crypto.Hash) UnlockHash {
 	return UnlockHash{

@@ -20,11 +20,42 @@ func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalan
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	// prepare fulfillable context
+	ctx := w.getFulfillableContextForLatestBlock()
+
+	// get all coin and block stake stum
 	for _, sco := range w.coinOutputs {
-		coinBalance = coinBalance.Add(sco.Value)
+		if sco.Condition.Fulfillable(ctx) {
+			coinBalance = coinBalance.Add(sco.Value)
+		}
 	}
 	for _, sfo := range w.blockstakeOutputs {
-		blockstakeBalance = blockstakeBalance.Add(sfo.Value)
+		if sfo.Condition.Fulfillable(ctx) {
+			blockstakeBalance = blockstakeBalance.Add(sfo.Value)
+		}
+	}
+	return
+}
+
+// ConfirmedLockedBalance returns the locked balance of the wallet according to all of the
+// confirmed transactions, which have locked outputs.
+func (w *Wallet) ConfirmedLockedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// prepare fulfillable context
+	ctx := w.getFulfillableContextForLatestBlock()
+
+	// get all coin and block stake stum
+	for _, sco := range w.coinOutputs {
+		if !sco.Condition.Fulfillable(ctx) {
+			coinBalance = coinBalance.Add(sco.Value)
+		}
+	}
+	for _, sfo := range w.blockstakeOutputs {
+		if !sfo.Condition.Fulfillable(ctx) {
+			blockstakeBalance = blockstakeBalance.Add(sfo.Value)
+		}
 	}
 	return
 }
@@ -32,8 +63,21 @@ func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalan
 // UnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 // address this wallet has an unlockhash for.
 func (w *Wallet) UnspentBlockStakeOutputs() map[types.BlockStakeOutputID]types.BlockStakeOutput {
-	//TODO: think about returning a copy
-	return w.blockstakeOutputs
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// prepare fulfillable context
+	ctx := w.getFulfillableContextForLatestBlock()
+
+	// get all unspend block stake outputs, which are fulfillable
+	outputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput, 0)
+	for id := range w.blockstakeOutputs {
+		output := w.blockstakeOutputs[id]
+		if output.Condition.Fulfillable(ctx) {
+			outputs[id] = output
+		}
+	}
+	return outputs
 }
 
 // UnconfirmedBalance returns the number of outgoing and incoming coins in

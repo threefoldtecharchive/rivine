@@ -58,7 +58,8 @@ type (
 	// coming from an address and going to the outputs. The fund types are
 	// 'SiacoinInput', 'SiafundInput'.
 	ProcessedInput struct {
-		FundType       types.Specifier  `json:"fundtype"`
+		FundType types.Specifier `json:"fundtype"`
+		// WalletAddress indicates it's an address owned by this wallet
 		WalletAddress  bool             `json:"walletaddress"`
 		RelatedAddress types.UnlockHash `json:"relatedaddress"`
 		Value          types.Currency   `json:"value"`
@@ -78,9 +79,10 @@ type (
 	ProcessedOutput struct {
 		FundType       types.Specifier   `json:"fundtype"`
 		MaturityHeight types.BlockHeight `json:"maturityheight"`
-		WalletAddress  bool              `json:"walletaddress"`
-		RelatedAddress types.UnlockHash  `json:"relatedaddress"`
-		Value          types.Currency    `json:"value"`
+		// WalletAddress indicates it's an address owned by this wallet
+		WalletAddress  bool             `json:"walletaddress"`
+		RelatedAddress types.UnlockHash `json:"relatedaddress"`
+		Value          types.Currency   `json:"value"`
 	}
 
 	// A ProcessedTransaction is a transaction that has been processed into
@@ -286,6 +288,11 @@ type (
 		// any outgoing transactions. ConfirmedBalance will include unconfirmed
 		// refund transactions.
 		ConfirmedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
+
+		// ConfirmedLockedBalance returns the confirmed balance of the wallet, which is locked,
+		// minus any outgoing transactions. ConfirmedLockedBalance will include unconfirmed
+		// refund transactions which are locked as well.
+		ConfirmedLockedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
 
 		// GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 		// address this wallet has an unlockhash for.

@@ -368,7 +368,7 @@ type spendableKey struct {
 }
 
 func (sk spendableKey) UnlockHash() types.UnlockHash {
-	return types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(sk.PublicKey)).UnlockHash()
+	return types.NewEd25519PubKeyUnlockHash(sk.PublicKey)
 }
 
 // generateSpendableKey creates the keys and unlock conditions a given index of a

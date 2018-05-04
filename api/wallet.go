@@ -20,11 +20,13 @@ type (
 		Encrypted bool `json:"encrypted"`
 		Unlocked  bool `json:"unlocked"`
 
-		ConfirmedCoinBalance     types.Currency `json:"confirmedcoinbalance"`
-		UnconfirmedOutgoingCoins types.Currency `json:"unconfirmedoutgoingcoins"`
-		UnconfirmedIncomingCoins types.Currency `json:"unconfirmedincomingcoins"`
+		ConfirmedCoinBalance       types.Currency `json:"confirmedcoinbalance"`
+		ConfirmedLockedCoinBalance types.Currency `json:"confirmedlockedcoinbalance"`
+		UnconfirmedOutgoingCoins   types.Currency `json:"unconfirmedoutgoingcoins"`
+		UnconfirmedIncomingCoins   types.Currency `json:"unconfirmedincomingcoins"`
 
-		BlockStakeBalance types.Currency `json:"blockstakebalance"`
+		BlockStakeBalance       types.Currency `json:"blockstakebalance"`
+		LockedBlockStakeBalance types.Currency `json:"lockedblockstakebalance"`
 	}
 
 	// WalletBlockStakeStatsGET contains blockstake statistical info of the wallet.
@@ -137,16 +139,19 @@ type (
 // walletHander handles API calls to /wallet.
 func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	coinBal, blockstakeBal := api.wallet.ConfirmedBalance()
+	coinLockBal, blockstakeLockBal := api.wallet.ConfirmedLockedBalance()
 	coinsOut, coinsIn := api.wallet.UnconfirmedBalance()
 	WriteJSON(w, WalletGET{
 		Encrypted: api.wallet.Encrypted(),
 		Unlocked:  api.wallet.Unlocked(),
 
-		ConfirmedCoinBalance:     coinBal,
-		UnconfirmedOutgoingCoins: coinsOut,
-		UnconfirmedIncomingCoins: coinsIn,
+		ConfirmedCoinBalance:       coinBal,
+		ConfirmedLockedCoinBalance: coinLockBal,
+		UnconfirmedOutgoingCoins:   coinsOut,
+		UnconfirmedIncomingCoins:   coinsIn,
 
-		BlockStakeBalance: blockstakeBal,
+		BlockStakeBalance:       blockstakeBal,
+		LockedBlockStakeBalance: blockstakeLockBal,
 	})
 }
 
