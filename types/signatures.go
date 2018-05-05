@@ -159,7 +159,7 @@ func legacyUnlockHashFromFulfillment(uf UnlockFulfillment) UnlockHash {
 		return NewUnlockHash(UnlockTypePubKey,
 			crypto.HashObject(encoding.Marshal(tuf.PublicKey)))
 	case *LegacyAtomicSwapFulfillment:
-		return NewUnlockHash(UnlockTypePubKey,
+		return NewUnlockHash(UnlockTypeAtomicSwap,
 			crypto.HashObject(encoding.MarshalAll(
 				tuf.Sender, tuf.Receiver, tuf.HashedSecret, tuf.TimeLock)))
 	default:
