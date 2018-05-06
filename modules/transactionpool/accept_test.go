@@ -136,7 +136,9 @@ func TestIntegrationCheckMinerFees(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		txn := types.Transaction{ArbitraryData: [][]byte{arbData}}
+		txn := types.Transaction{
+			Version:       tpt.tpool.chainCts.DefaultTransactionVersion,
+			ArbitraryData: arbData}
 		err := tpt.tpool.AcceptTransactionSet([]types.Transaction{txn})
 		if err != nil {
 			t.Fatal(err)
@@ -150,7 +152,7 @@ func TestIntegrationCheckMinerFees(t *testing.T) {
 	}
 
 	// Add a transaction that has sufficient fees.
-	_, err = tpt.wallet.SendCoins(types.NewCurrency64(100), types.UnlockHash{})
+	_, err = tpt.wallet.SendCoins(types.NewCurrency64(100), types.NewCondition(nil), nil)
 	if err != nil {
 		t.Error(err)
 	}

@@ -103,17 +103,17 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 				blockToSubmit.Transactions = txns
 				// Collect the block creation fee
 				if !bc.chainCts.BlockCreatorFee.IsZero() {
-					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.CoinOutput{
-						Value: bc.chainCts.BlockCreatorFee, UnlockHash: ubso.UnlockHash})
+					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.MinerPayout{
+						Value: bc.chainCts.BlockCreatorFee, UnlockHash: ubso.Condition.UnlockHash()})
 				}
 				collectedMinerFees := blockToSubmit.CalculateTotalMinerFees()
 				if !collectedMinerFees.IsZero() {
-					beneficiary := bc.chainCts.TransactionFeeBeneficiary
-					if beneficiary.Cmp(types.UnlockHash{}) == 0 {
-						beneficiary = ubso.UnlockHash
+					condition := bc.chainCts.TransactionFeeCondition
+					if condition.ConditionType() == types.ConditionTypeNil {
+						condition = ubso.Condition
 					}
-					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.CoinOutput{
-						Value: collectedMinerFees, UnlockHash: beneficiary})
+					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.MinerPayout{
+						Value: collectedMinerFees, UnlockHash: condition.UnlockHash()})
 				}
 
 				return &blockToSubmit
@@ -145,8 +145,8 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) {
 	// to the used BlockStake output
 
 	bso := types.BlockStakeOutput{
-		Value:      ubso.Value,      //use the same amount of BlockStake
-		UnlockHash: ubso.UnlockHash, //use the same unlockhash.
+		Value:     ubso.Value,     //use the same amount of BlockStake
+		Condition: ubso.Condition, //use the same condition.
 	}
 	ind := t.AddBlockStakeOutput(bso)
 	if ind != 0 {

@@ -179,11 +179,12 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 func (bv stdBlockValidator) checkMinerPayouts(b types.Block) bool {
 	var sumBC, sumTFP types.Currency
 	// Add up the payouts and check that all values are legal.
+	txFeeUnlockHash := bv.cs.chainCts.TransactionFeeCondition.UnlockHash()
 	for _, payout := range b.MinerPayouts {
 		if payout.Value.IsZero() {
 			return false
 		}
-		if payout.UnlockHash.Cmp(bv.cs.chainCts.TransactionFeeBeneficiary) == 0 {
+		if payout.UnlockHash.Cmp(txFeeUnlockHash) == 0 {
 			sumTFP = sumTFP.Add(payout.Value) // payout is for tx fee beneficiary
 			continue
 		}
@@ -191,7 +192,7 @@ func (bv stdBlockValidator) checkMinerPayouts(b types.Block) bool {
 	}
 	// ensure tx fee beneficiary has no payouts, should it not be given
 	totalMinerFees := b.CalculateTotalMinerFees()
-	if bv.cs.chainCts.TransactionFeeBeneficiary.Cmp(types.UnlockHash{}) == 0 {
+	if bv.cs.chainCts.TransactionFeeCondition.ConditionType() == types.ConditionTypeNil {
 		if !sumTFP.IsZero() {
 			return false // no beneficiary is given, so it should have no payouts
 		}

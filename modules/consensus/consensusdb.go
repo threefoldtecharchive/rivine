@@ -106,14 +106,26 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 }
 
 // blockHeight returns the height of the blockchain.
-func blockHeight(tx *bolt.Tx) types.BlockHeight {
-	var height types.BlockHeight
+func blockHeight(tx *bolt.Tx) (height types.BlockHeight) {
 	bh := tx.Bucket(BlockHeight)
 	err := encoding.Unmarshal(bh.Get(BlockHeight), &height)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
-	return height
+	return
+}
+
+// blockTimeStamp returns the timestamp of the block on the given height.
+func blockTimeStamp(tx *bolt.Tx, height types.BlockHeight) (types.Timestamp, error) {
+	id, err := getPath(tx, height)
+	if err != nil {
+		return 0, err
+	}
+	pb, err := getBlockMap(tx, id)
+	if err != nil {
+		return 0, err
+	}
+	return pb.Block.Timestamp, nil
 }
 
 // currentBlockID returns the id of the most recent block in the consensus set.

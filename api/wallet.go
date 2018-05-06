@@ -20,11 +20,13 @@ type (
 		Encrypted bool `json:"encrypted"`
 		Unlocked  bool `json:"unlocked"`
 
-		ConfirmedCoinBalance     types.Currency `json:"confirmedcoinbalance"`
-		UnconfirmedOutgoingCoins types.Currency `json:"unconfirmedoutgoingcoins"`
-		UnconfirmedIncomingCoins types.Currency `json:"unconfirmedincomingcoins"`
+		ConfirmedCoinBalance       types.Currency `json:"confirmedcoinbalance"`
+		ConfirmedLockedCoinBalance types.Currency `json:"confirmedlockedcoinbalance"`
+		UnconfirmedOutgoingCoins   types.Currency `json:"unconfirmedoutgoingcoins"`
+		UnconfirmedIncomingCoins   types.Currency `json:"unconfirmedincomingcoins"`
 
-		BlockStakeBalance types.Currency `json:"blockstakebalance"`
+		BlockStakeBalance       types.Currency `json:"blockstakebalance"`
+		LockedBlockStakeBalance types.Currency `json:"lockedblockstakebalance"`
 	}
 
 	// WalletBlockStakeStatsGET contains blockstake statistical info of the wallet.
@@ -65,9 +67,9 @@ type (
 	// during a POST call to /wallet/transaction, funding the output,
 	// using available inputs in the wallet.
 	WalletTransactionPOST struct {
-		UnlockHash types.UnlockHash `json:"unlockhash"`
-		Amount     types.Currency   `json:"amount"`
-		Data       string           `json:"data,omitempty"`
+		Condition types.UnlockConditionProxy `json:"condition"`
+		Amount    types.Currency             `json:"amount"`
+		Data      string                     `json:"data,omitempty"`
 	}
 
 	// WalletTransactionPOSTResponse contains the ID of the transaction
@@ -137,16 +139,19 @@ type (
 // walletHander handles API calls to /wallet.
 func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	coinBal, blockstakeBal := api.wallet.ConfirmedBalance()
+	coinLockBal, blockstakeLockBal := api.wallet.ConfirmedLockedBalance()
 	coinsOut, coinsIn := api.wallet.UnconfirmedBalance()
 	WriteJSON(w, WalletGET{
 		Encrypted: api.wallet.Encrypted(),
 		Unlocked:  api.wallet.Unlocked(),
 
-		ConfirmedCoinBalance:     coinBal,
-		UnconfirmedOutgoingCoins: coinsOut,
-		UnconfirmedIncomingCoins: coinsIn,
+		ConfirmedCoinBalance:       coinBal,
+		ConfirmedLockedCoinBalance: coinLockBal,
+		UnconfirmedOutgoingCoins:   coinsOut,
+		UnconfirmedIncomingCoins:   coinsIn,
 
-		BlockStakeBalance: blockstakeBal,
+		BlockStakeBalance:       blockstakeBal,
+		LockedBlockStakeBalance: blockstakeLockBal,
 	})
 }
 
@@ -373,7 +378,7 @@ func (api *API) walletTransactionCreateHandler(w http.ResponseWriter, req *http.
 		return
 	}
 
-	tx, err := api.wallet.SendCoins(body.Amount, body.UnlockHash, []byte(body.Data))
+	tx, err := api.wallet.SendCoins(body.Amount, body.Condition, []byte(body.Data))
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/transaction: " + err.Error()}, http.StatusInternalServerError)
 		return
@@ -431,7 +436,8 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 	}
 	// Since zero outputs are not allowed, just send one of the smallest unit, the minimal amount.
 	// The transaction fee should be much higher anyway
-	tx, err := api.wallet.SendCoins(types.NewCurrency64(1), dest, data)
+	tx, err := api.wallet.SendCoins(types.NewCurrency64(1),
+		types.NewCondition(types.NewUnlockHashCondition(dest)), data)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return

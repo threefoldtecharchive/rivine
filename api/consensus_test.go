@@ -82,6 +82,7 @@ func TestConsensusValidateTransactionSet(t *testing.T) {
 	contract := cs.Contracts[0]
 
 	// Validate the contract
+	// todo: use default txn version
 	jsonTxns, err := json.Marshal([]types.Transaction{contract.LastTransaction})
 	if err != nil {
 		t.Fatal(err)
@@ -97,6 +98,7 @@ func TestConsensusValidateTransactionSet(t *testing.T) {
 
 	// Try again with an invalid contract
 	contract.LastTransaction.FileContractRevisions[0].NewFileSize++
+	// todo: use default txn version
 	jsonTxns, err = json.Marshal([]types.Transaction{contract.LastTransaction})
 	if err != nil {
 		t.Fatal(err)

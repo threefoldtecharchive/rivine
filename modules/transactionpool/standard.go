@@ -55,19 +55,28 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 		return modules.ErrLargeTransaction
 	}
 
-	// Check that all public keys are of a recognized type. Need to check all
-	// of the UnlockConditions, which currently can appear in 3 separate fields
-	// of the transaction. Unrecognized types are ignored because a softfork
-	// may make certain unrecognized signatures invalid, and this node cannot
-	// tell which signatures are the invalid ones.
+	// check if all condtions are standard
+	for _, sco := range t.CoinOutputs {
+		err = sco.Condition.IsStandardCondition()
+		if err != nil {
+			return err
+		}
+	}
+	for _, sfo := range t.BlockStakeOutputs {
+		err = sfo.Condition.IsStandardCondition()
+		if err != nil {
+			return err
+		}
+	}
+	// check if all fulfillments are standard
 	for _, sci := range t.CoinInputs {
-		err = sci.Unlocker.StrictCheck()
+		err = sci.Fulfillment.IsStandardFulfillment()
 		if err != nil {
 			return err
 		}
 	}
 	for _, sfi := range t.BlockStakeInputs {
-		err = sfi.Unlocker.StrictCheck()
+		err = sfi.Fulfillment.IsStandardFulfillment()
 		if err != nil {
 			return err
 		}

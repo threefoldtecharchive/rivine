@@ -37,7 +37,7 @@ func TestSendCoins(t *testing.T) {
 	}
 
 	// sending coins requires funds to be send
-	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.UnlockHash{}, nil)
+	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.NewCondition(nil), nil)
 	if err != modules.ErrLowBalance {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestSendCoins(t *testing.T) {
 	// unconfirmed siacoins - incoming unconfirmed coins should equal 5000 +
 	// fee.
 	tpoolFee := wt.wallet.chainCts.MinimumTransactionFee.Mul64(1)
-	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.UnlockHash{}, nil)
+	_, err = wt.wallet.SendCoins(types.NewCurrency64(5000), types.NewCondition(nil), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 
 	// Spend too many coins.
 	tooManyCoins := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(1e12)
-	_, err = wt.wallet.SendCoins(tooManyCoins, types.UnlockHash{}, nil)
+	_, err = wt.wallet.SendCoins(tooManyCoins, types.NewCondition(nil), nil)
 	if err != modules.ErrLowBalance {
 		t.Error("low balance err not returned after attempting to send too many coins")
 	}
@@ -103,7 +103,7 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 	}
 
 	// Spend a reasonable amount of coins.
-	_, err = wt.wallet.SendCoins(reasonableCoins, types.UnlockHash{}, nil)
+	_, err = wt.wallet.SendCoins(reasonableCoins, types.NewCondition(nil), nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
@@ -124,11 +124,13 @@ func TestIntegrationSpendHalfHalf(t *testing.T) {
 
 	// Spend more than half of the coins twice.
 	halfPlus := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
+	_, err = wt.wallet.SendCoins(halfPlus, types.NewCondition(nil), nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
-	_, err = wt.wallet.SendCoins(halfPlus, types.NewUnlockHash(0, crypto.Hash{1}), nil)
+	_, err = wt.wallet.SendCoins(halfPlus,
+		types.NewCondition(types.NewUnlockHashCondition(types.NewUnlockHash(0, crypto.Hash{1}))),
+		nil)
 	if err != modules.ErrIncompleteTransactions {
 		t.Error("wallet appears to be reusing outputs when building transactions: ", err)
 	}
@@ -147,12 +149,14 @@ func TestIntegrationSpendUnconfirmed(t *testing.T) {
 
 	// Spend the only output.
 	halfPlus := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.UnlockHash{}, nil)
+	_, err = wt.wallet.SendCoins(halfPlus, types.NewCondition(nil), nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
 	}
 	someMore := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(75e3)
-	_, err = wt.wallet.SendCoins(someMore, types.NewUnlockHash(types.UnlockTypeSingleSignature, crypto.Hash{1}), nil)
+	_, err = wt.wallet.SendCoins(someMore,
+		types.NewCondition(types.NewUnlockHashCondition(types.NewUnlockHash(0, crypto.Hash{1}))),
+		nil)
 	if err != nil {
 		t.Error("wallet appears to be struggling to spend unconfirmed outputs")
 	}

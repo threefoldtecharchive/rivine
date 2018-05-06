@@ -16,8 +16,7 @@ import (
 // and unmarshalled using JSON, the result is what is expected.
 func TestUnlockHashJSONMarshalling(t *testing.T) {
 	_, pk := crypto.GenerateKeyPair()
-	uc := NewSingleSignatureInputLock(Ed25519PublicKey(pk))
-	uh := uc.UnlockHash()
+	uh := NewEd25519PubKeyUnlockHash(pk)
 
 	// Marshal the unlock hash.
 	marUH, err := json.Marshal(uh)
@@ -63,7 +62,7 @@ func TestUnlockHashJSONMarshalling(t *testing.T) {
 	marUH[7] -= 100
 
 	// Try an input of the wrong length.
-	err = (&umarUH).UnmarshalJSON(marUH[2:])
+	err = (&umarUH).UnmarshalJSON([]byte(`"foo"`))
 	if err != ErrUnlockHashWrongLen {
 		t.Error("Got wrong error:", err)
 	}
@@ -74,8 +73,7 @@ func TestUnlockHashJSONMarshalling(t *testing.T) {
 // is expected.
 func TestUnlockHashStringMarshalling(t *testing.T) {
 	_, pk := crypto.GenerateKeyPair()
-	uc := NewSingleSignatureInputLock(Ed25519PublicKey(pk))
-	uh := uc.UnlockHash()
+	uh := NewEd25519PubKeyUnlockHash(pk)
 
 	// Marshal the unlock hash.
 	marUH := uh.String()
@@ -259,5 +257,29 @@ func TestUnlockHashLoadString(t *testing.T) {
 	}
 	if bytes.Compare(hash[:], uh.Hash[:]) != 0 {
 		t.Fatal("loaded hash isn't correct:", hash, uh.Hash)
+	}
+}
+
+// test as part of fix for https://github.com/rivine/rivine/issues/273
+func TestUnlockHashLoadEmptyString(t *testing.T) {
+	var uh UnlockHash
+	err := uh.LoadString("")
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if uh.Cmp(UnlockHash{}) != 0 {
+		t.Fatal(uh, "!=", UnlockHash{})
+	}
+}
+
+// test as part of fix for https://github.com/rivine/rivine/issues/273
+func TestUnlockHashLoadEmptyJSONString(t *testing.T) {
+	var uh UnlockHash
+	err := uh.UnmarshalJSON([]byte(`""`))
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if uh.Cmp(UnlockHash{}) != 0 {
+		t.Fatal(uh, "!=", UnlockHash{})
 	}
 }

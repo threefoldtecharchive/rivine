@@ -47,8 +47,7 @@ func (sk spendableKey) WipeSecret() spendableKey {
 }
 
 func (sk spendableKey) UnlockHash() types.UnlockHash {
-	epk := types.Ed25519PublicKey(sk.PublicKey)
-	return types.NewSingleSignatureInputLock(epk).UnlockHash()
+	return types.NewEd25519PubKeyUnlockHash(sk.PublicKey)
 }
 
 // Wallet is an object that tracks balances, creates keys and addresses,
@@ -217,9 +216,26 @@ func (w *Wallet) GetKey(address types.UnlockHash) (types.SiaPublicKey, types.Byt
 func (w *Wallet) GetUnspentBlockStakeOutputs() (unspent []types.UnspentBlockStakeOutput) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
-	unspent = make([]types.UnspentBlockStakeOutput, 0, len(w.blockstakeOutputs))
-	for usbsoid := range w.blockstakeOutputs {
-		unspent = append(unspent, w.unspentblockstakeoutputs[usbsoid])
+
+	unspent = make([]types.UnspentBlockStakeOutput, 0)
+
+	// prepare fulfillable context
+	ctx := w.getFulfillableContextForLatestBlock()
+
+	// collect all fulfillable block stake outputs
+	for usbsoid, output := range w.blockstakeOutputs {
+		if output.Condition.Fulfillable(ctx) {
+			unspent = append(unspent, w.unspentblockstakeoutputs[usbsoid])
+		}
 	}
 	return
+}
+
+func (w *Wallet) getFulfillableContextForLatestBlock() types.FulfillableContext {
+	height := w.cs.Height()
+	block, _ := w.cs.BlockAtHeight(height)
+	return types.FulfillableContext{
+		BlockHeight: height,
+		BlockTime:   block.Timestamp,
+	}
 }

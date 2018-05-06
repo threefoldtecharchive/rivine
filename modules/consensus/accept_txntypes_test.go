@@ -1,5 +1,7 @@
 package consensus
 
+// TODO: enable and fix?!
+/*
 // testBlockSuite tests a wide variety of blocks.
 func (cst *consensusSetTester) testBlockSuite() {
 	//TODO: fix this
@@ -7,7 +9,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 	// cst.testSpendSiacoinsBlock()
 	// cst.testSpendSiafunds()
 }
-
+*/
 // // testSimpleBlock mines a simple block (no transactions except those
 // // automatically added by the miner) and adds it to the consnesus set.
 // func (cst *consensusSetTester) testSimpleBlock() {

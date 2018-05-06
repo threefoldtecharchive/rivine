@@ -102,7 +102,9 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 	}
 
 	// Create the transaction object
-	txn := &types.Transaction{}
+	txn := types.Transaction{
+		Version: types.DefaultChainConstants().DefaultTransactionVersion,
+	}
 
 	// Greedily add coin inputs until we have enough to fund the output and minerfee
 	inputs := []types.CoinInput{}
@@ -118,8 +120,8 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 		// Append the input
 		inputs = append(inputs, types.CoinInput{
 			ParentID: id,
-			Unlocker: types.NewSingleSignatureInputLock(
-				types.Ed25519PublicKey(w.keys[utxo.UnlockHash].PublicKey)),
+			Fulfillment: types.NewFulfillment(types.NewSingleSignatureFulfillment(
+				types.Ed25519PublicKey(w.keys[utxo.Condition.UnlockHash()].PublicKey))),
 		})
 		// And update the value in the transaction
 		inputValue = inputValue.Add(utxo.Value)
@@ -128,12 +130,15 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 	txn.CoinInputs = inputs
 
 	for _, inp := range inputs {
-		if _, exists := w.keys[w.unspentCoinOutputs[inp.ParentID].UnlockHash]; !exists {
-			panic("Trying to spend unexisting output")
+		if _, exists := w.keys[w.unspentCoinOutputs[inp.ParentID].Condition.UnlockHash()]; !exists {
+			return nil, errors.New("Trying to spend unexisting output")
 		}
 	}
 	// Add our first output
-	txn.CoinOutputs = append(txn.CoinOutputs, types.CoinOutput{Value: amount, UnlockHash: addressTo})
+	txn.CoinOutputs = append(txn.CoinOutputs, types.CoinOutput{
+		Value:     amount,
+		Condition: types.NewCondition(types.NewUnlockHashCondition(addressTo)),
+	})
 
 	// So now we have enough inputs to fund everything. But we might have overshot it a little bit, so lets check that
 	// and add a new output to ourself if required to consume the leftover value
@@ -144,7 +149,7 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 		for addr := range w.keys {
 			addrUsed := false
 			for _, utxo := range w.unspentCoinOutputs {
-				if utxo.UnlockHash == addr {
+				if utxo.Condition.UnlockHash() == addr {
 					addrUsed = true
 					break
 				}
@@ -153,8 +158,8 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 				continue
 			}
 			outputToSelf := types.CoinOutput{
-				Value:      remainder,
-				UnlockHash: addr,
+				Value:     remainder,
+				Condition: types.NewCondition(types.NewUnlockHashCondition(addr)),
 			}
 			// add our self referencing output to the transaction
 			txn.CoinOutputs = append(txn.CoinOutputs, outputToSelf)
@@ -167,25 +172,33 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 
 	// sign transaction
 	if err := w.signTxn(txn); err != nil {
-		panic(err)
+		return nil, err
 	}
-	return txn, nil
+	return &txn, nil
 }
 
 // signTxn signs a transaction
-func (w *MyWallet) signTxn(txn *types.Transaction) error {
-	// sign/lock every coin input
+func (w *MyWallet) signTxn(txn types.Transaction) error {
+	// sign every coin input
 	for idx, input := range txn.CoinInputs {
-		key := w.keys[input.Unlocker.UnlockHash()]
-		err := input.Unlocker.Lock(uint64(idx), *txn, key.SecretKey)
+		key := w.keys[input.Fulfillment.UnlockHash()]
+		err := input.Fulfillment.Sign(types.FulfillmentSignContext{
+			InputIndex:  uint64(idx),
+			Transaction: txn,
+			Key:         key.SecretKey,
+		})
 		if err != nil {
 			return err
 		}
 	}
-	// sign/lock every blockstake input
+	// sign every blockstake input
 	for idx, input := range txn.BlockStakeInputs {
-		key := w.keys[input.Unlocker.UnlockHash()]
-		err := input.Unlocker.Lock(uint64(idx), *txn, key.SecretKey)
+		key := w.keys[input.Fulfillment.UnlockHash()]
+		err := input.Fulfillment.Sign(types.FulfillmentSignContext{
+			InputIndex:  uint64(idx),
+			Transaction: txn,
+			Key:         key.SecretKey,
+		})
 		if err != nil {
 			return err
 		}
@@ -273,7 +286,12 @@ func (w *MyWallet) SyncWallet() error {
 						for _, c := range block.MinerPayoutIDs {
 							fmt.Println("Adding miner payout id", c.String())
 						}
-						w.unspentCoinOutputs[block.MinerPayoutIDs[i]] = minerPayout
+						w.unspentCoinOutputs[block.MinerPayoutIDs[i]] = types.CoinOutput{
+							Value: minerPayout.Value,
+							Condition: types.UnlockConditionProxy{
+								Condition: types.NewUnlockHashCondition(minerPayout.UnlockHash),
+							},
+						}
 					}
 				}
 			}
@@ -281,7 +299,7 @@ func (w *MyWallet) SyncWallet() error {
 			// Collect the transaction outputs
 			for _, txn := range resp.Transactions {
 				for i, utxo := range txn.RawTransaction.CoinOutputs {
-					if utxo.UnlockHash == addr {
+					if utxo.Condition.UnlockHash() == addr {
 						w.unspentCoinOutputs[txn.CoinOutputIDs[i]] = utxo
 					}
 				}
@@ -350,7 +368,7 @@ type spendableKey struct {
 }
 
 func (sk spendableKey) UnlockHash() types.UnlockHash {
-	return types.NewSingleSignatureInputLock(types.Ed25519PublicKey(sk.PublicKey)).UnlockHash()
+	return types.NewEd25519PubKeyUnlockHash(sk.PublicKey)
 }
 
 // generateSpendableKey creates the keys and unlock conditions a given index of a

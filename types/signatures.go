@@ -10,21 +10,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 )
 
 var (
 	// These Specifiers enumerate the types of signatures that are recognized
-	// by this implementation. If a signature's type is unrecognized, the
-	// signature is treated as valid. Signatures using the special "entropy"
-	// type are always treated as invalid; see Consensus.md for more details.
-	SignatureEntropy = Specifier{'e', 'n', 't', 'r', 'o', 'p', 'y'}
+	// by this implementation. see Consensus.md for more details.
 	SignatureEd25519 = Specifier{'e', 'd', '2', '5', '5', '1', '9'}
 
-	ErrEntropyKey                = errors.New("transaction tries to sign an entproy public key")
 	ErrFrivolousSignature        = errors.New("transaction contains a frivolous signature")
 	ErrInvalidPubKeyIndex        = errors.New("transaction contains a signature that points to a nonexistent public key")
 	ErrInvalidUnlockHashChecksum = errors.New("provided unlock hash has an invalid checksum")
@@ -63,6 +61,10 @@ func Ed25519PublicKey(pk crypto.PublicKey) SiaPublicKey {
 // InputSigHash returns the hash of all fields in a transaction,
 // relevant to an input sig.
 func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) crypto.Hash {
+	if t.Version == TransactionVersionZero {
+		return t.legacyInputSigHash(inputIndex, extraObjects...)
+	}
+
 	if hasher, ok := t.Extension.(InputSigHasher); ok {
 		// if extension implements InputSigHasher,
 		// use it here to sign the input with it
@@ -72,21 +74,22 @@ func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}
 	h := crypto.NewHash()
 	enc := encoding.NewEncoder(h)
 
-	if t.Version != TransactionVersionZero {
-		// for none legacy versions also include the txn version
-		enc.Encode(t.Version)
-	}
+	enc.EncodeAll(
+		t.Version,
+		inputIndex,
+	)
 
-	enc.Encode(inputIndex)
 	if len(extraObjects) > 0 {
 		enc.EncodeAll(extraObjects...)
 	}
+	enc.Encode(len(t.CoinInputs))
 	for _, ci := range t.CoinInputs {
-		enc.EncodeAll(ci.ParentID, ci.Unlocker.UnlockHash())
+		enc.Encode(ci.ParentID)
 	}
 	enc.Encode(t.CoinOutputs)
+	enc.Encode(len(t.BlockStakeInputs))
 	for _, bsi := range t.BlockStakeInputs {
-		enc.EncodeAll(bsi.ParentID, bsi.Unlocker.UnlockHash())
+		enc.Encode(bsi.ParentID)
 	}
 	enc.EncodeAll(
 		t.BlockStakeOutputs,
@@ -97,6 +100,74 @@ func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}
 	var hash crypto.Hash
 	h.Sum(hash[:0])
 	return hash
+}
+
+func (t Transaction) legacyInputSigHash(inputIndex uint64, extraObjects ...interface{}) crypto.Hash {
+	h := crypto.NewHash()
+	enc := encoding.NewEncoder(h)
+
+	enc.Encode(inputIndex)
+	if len(extraObjects) > 0 {
+		enc.EncodeAll(extraObjects...)
+	}
+	for _, ci := range t.CoinInputs {
+		enc.EncodeAll(ci.ParentID, legacyUnlockHashFromFulfillment(ci.Fulfillment.Fulfillment))
+	}
+	// legacy transactions encoded unlock hashes in pure form
+	enc.Encode(len(t.CoinOutputs))
+	for _, co := range t.CoinOutputs {
+		enc.EncodeAll(
+			co.Value,
+			legacyUnlockHashCondition(co.Condition.Condition),
+		)
+	}
+	for _, bsi := range t.BlockStakeInputs {
+		enc.EncodeAll(bsi.ParentID, legacyUnlockHashFromFulfillment(bsi.Fulfillment.Fulfillment))
+	}
+	// legacy transactions encoded unlock hashes in pure form
+	enc.Encode(len(t.BlockStakeOutputs))
+	for _, bso := range t.BlockStakeOutputs {
+		enc.EncodeAll(
+			bso.Value,
+			legacyUnlockHashCondition(bso.Condition.Condition),
+		)
+	}
+	enc.EncodeAll(
+		t.MinerFees,
+		t.ArbitraryData,
+	)
+
+	var hash crypto.Hash
+	h.Sum(hash[:0])
+	return hash
+}
+
+func legacyUnlockHashCondition(uc UnlockCondition) UnlockHash {
+	uhc, ok := uc.(*UnlockHashCondition)
+	if !ok {
+		if build.DEBUG {
+			panic(fmt.Sprintf("unexpected condition %[1]v (%[1]T) encountered", uc))
+		}
+		return NilUnlockHash
+	}
+	return uhc.TargetUnlockHash
+}
+
+func legacyUnlockHashFromFulfillment(uf UnlockFulfillment) UnlockHash {
+	switch tuf := uf.(type) {
+	case *SingleSignatureFulfillment:
+		return NewUnlockHash(UnlockTypePubKey,
+			crypto.HashObject(encoding.Marshal(tuf.PublicKey)))
+	case *LegacyAtomicSwapFulfillment:
+		return NewUnlockHash(UnlockTypeAtomicSwap,
+			crypto.HashObject(encoding.MarshalAll(
+				tuf.Sender, tuf.Receiver, tuf.HashedSecret, tuf.TimeLock)))
+	default:
+		if build.DEBUG {
+			panic(fmt.Sprintf("unexpected fulfillment %[1]v (%[1]T) encountered", uf))
+		}
+		return NilUnlockHash
+	}
 }
 
 // sortedUnique checks that 'elems' is sorted, contains no repeats, and that no
@@ -119,32 +190,24 @@ func sortedUnique(elems []uint64, max int) bool {
 	return true
 }
 
-// validSignatures checks the validaty of all signatures in a transaction.
-func (t *Transaction) validSignatures(currentHeight BlockHeight) (err error) {
+// validateNoDoubleSpends validates that no output has been spend twice.
+func (t *Transaction) validateNoDoubleSpends() (err error) {
 	spendCoins := make(map[CoinOutputID]struct{})
-	for index, ci := range t.CoinInputs {
+	for _, ci := range t.CoinInputs {
 		if _, found := spendCoins[ci.ParentID]; found {
 			err = ErrDoubleSpend
 			return
 		}
 		spendCoins[ci.ParentID] = struct{}{}
-		err = ci.Unlocker.Unlock(uint64(index), *t)
-		if err != nil {
-			return
-		}
 	}
 
 	spendBlockStakes := make(map[BlockStakeOutputID]struct{})
-	for index, bsi := range t.BlockStakeInputs {
+	for _, bsi := range t.BlockStakeInputs {
 		if _, found := spendBlockStakes[bsi.ParentID]; found {
 			err = ErrDoubleSpend
 			return
 		}
 		spendBlockStakes[bsi.ParentID] = struct{}{}
-		err = bsi.Unlocker.Unlock(uint64(index), *t)
-		if err != nil {
-			return
-		}
 	}
 
 	return

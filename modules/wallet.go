@@ -58,7 +58,8 @@ type (
 	// coming from an address and going to the outputs. The fund types are
 	// 'SiacoinInput', 'SiafundInput'.
 	ProcessedInput struct {
-		FundType       types.Specifier  `json:"fundtype"`
+		FundType types.Specifier `json:"fundtype"`
+		// WalletAddress indicates it's an address owned by this wallet
 		WalletAddress  bool             `json:"walletaddress"`
 		RelatedAddress types.UnlockHash `json:"relatedaddress"`
 		Value          types.Currency   `json:"value"`
@@ -78,9 +79,10 @@ type (
 	ProcessedOutput struct {
 		FundType       types.Specifier   `json:"fundtype"`
 		MaturityHeight types.BlockHeight `json:"maturityheight"`
-		WalletAddress  bool              `json:"walletaddress"`
-		RelatedAddress types.UnlockHash  `json:"relatedaddress"`
-		Value          types.Currency    `json:"value"`
+		// WalletAddress indicates it's an address owned by this wallet
+		WalletAddress  bool             `json:"walletaddress"`
+		RelatedAddress types.UnlockHash `json:"relatedaddress"`
+		Value          types.Currency   `json:"value"`
 	}
 
 	// A ProcessedTransaction is a transaction that has been processed into
@@ -287,6 +289,11 @@ type (
 		// refund transactions.
 		ConfirmedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
 
+		// ConfirmedLockedBalance returns the confirmed balance of the wallet, which is locked,
+		// minus any outgoing transactions. ConfirmedLockedBalance will include unconfirmed
+		// refund transactions which are locked as well.
+		ConfirmedLockedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
+
 		// GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 		// address this wallet has an unlockhash for.
 		GetUnspentBlockStakeOutputs() []types.UnspentBlockStakeOutput
@@ -328,16 +335,16 @@ type (
 		// RegisterTransaction(types.Transaction{}, nil)
 		StartTransaction() TransactionBuilder
 
-		// SendCoins is a tool for sending coins from the wallet to an
-		// address. The transaction is automatically given to the transaction pool, and
+		// SendCoins is a tool for sending coins from the wallet to anyone who can fulfill the
+		// given condition (can be nil). The transaction is automatically given to the transaction pool, and
 		// are also returned to the caller.
-		SendCoins(amount types.Currency, dest types.UnlockHash, data []byte) (types.Transaction, error)
+		SendCoins(amount types.Currency, cond types.UnlockConditionProxy, data []byte) (types.Transaction, error)
 
-		// SendBlockStakes is a tool for sending blockstakes from the wallet to an
-		// address. Sending money usually results in multiple transactions. The
+		// SendBlockStakes is a tool for sending blockstakes from the wallet to anyone who can fulfill the
+		// given condition (can be nil). Sending money usually results in multiple transactions. The
 		// transactions are automatically given to the transaction pool, and
 		// are also returned to the caller.
-		SendBlockStakes(amount types.Currency, dest types.UnlockHash) (types.Transaction, error)
+		SendBlockStakes(amount types.Currency, cond types.UnlockConditionProxy) (types.Transaction, error)
 
 		// SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
 		// The transaction is automatically given to the transaction pool, and is also returned to the caller.

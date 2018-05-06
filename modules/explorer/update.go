@@ -63,22 +63,22 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbRemoveCoinOutputID(tx, sci.ParentID, txid)
-					dbRemoveUnlockHash(tx, sci.Unlocker.UnlockHash(), txid)
+					dbRemoveUnlockHash(tx, sci.Fulfillment.UnlockHash(), txid)
 				}
 				for k, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(k))
 					dbRemoveCoinOutputID(tx, scoid, txid)
-					dbRemoveUnlockHash(tx, sco.UnlockHash, txid)
+					dbRemoveUnlockHash(tx, sco.Condition.UnlockHash(), txid)
 					dbRemoveCoinOutput(tx, scoid)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
-					dbRemoveUnlockHash(tx, sfi.Unlocker.UnlockHash(), txid)
+					dbRemoveUnlockHash(tx, sfi.Fulfillment.UnlockHash(), txid)
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbRemoveBlockStakeOutputID(tx, sfoid, txid)
-					dbRemoveUnlockHash(tx, sfo.UnlockHash, txid)
+					dbRemoveUnlockHash(tx, sfo.Condition.UnlockHash(), txid)
 				}
 			}
 
@@ -112,7 +112,12 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				scoid := block.MinerPayoutID(uint64(j))
 				dbAddCoinOutputID(tx, scoid, tbid)
 				dbAddUnlockHash(tx, payout.UnlockHash, tbid)
-				dbAddCoinOutput(tx, scoid, payout)
+				dbAddCoinOutput(tx, scoid, types.CoinOutput{
+					Value: payout.Value,
+					Condition: types.UnlockConditionProxy{
+						Condition: types.NewUnlockHashCondition(payout.UnlockHash),
+					},
+				})
 			}
 
 			// Update cumulative stats for applied transactions.
@@ -123,21 +128,21 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbAddCoinOutputID(tx, sci.ParentID, txid)
-					dbAddUnlockHash(tx, sci.Unlocker.UnlockHash(), txid)
+					dbAddUnlockHash(tx, sci.Fulfillment.UnlockHash(), txid)
 				}
 				for j, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(j))
 					dbAddCoinOutputID(tx, scoid, txid)
-					dbAddUnlockHash(tx, sco.UnlockHash, txid)
+					dbAddUnlockHash(tx, sco.Condition.UnlockHash(), txid)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
-					dbAddUnlockHash(tx, sfi.Unlocker.UnlockHash(), txid)
+					dbAddUnlockHash(tx, sfi.Fulfillment.UnlockHash(), txid)
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbAddBlockStakeOutputID(tx, sfoid, txid)
-					dbAddUnlockHash(tx, sfo.UnlockHash, txid)
+					dbAddUnlockHash(tx, sfo.Condition.UnlockHash(), txid)
 				}
 			}
 
@@ -282,13 +287,13 @@ func (e *Explorer) dbAddGenesisBlock(tx *bolt.Tx) {
 	for i, sco := range e.chainCts.GenesisCoinDistribution {
 		scoid := e.genesisBlock.Transactions[0].CoinOutputID(uint64(i))
 		dbAddCoinOutputID(tx, scoid, txid)
-		dbAddUnlockHash(tx, sco.UnlockHash, txid)
+		dbAddUnlockHash(tx, sco.Condition.UnlockHash(), txid)
 		dbAddCoinOutput(tx, scoid, sco)
 	}
 	for i, sfo := range e.chainCts.GenesisBlockStakeAllocation {
 		sfoid := e.genesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
 		dbAddBlockStakeOutputID(tx, sfoid, txid)
-		dbAddUnlockHash(tx, sfo.UnlockHash, txid)
+		dbAddUnlockHash(tx, sfo.Condition.UnlockHash(), txid)
 		dbAddBlockStakeOutput(tx, sfoid, sfo)
 	}
 	dbAddBlockFacts(tx, blockFacts{

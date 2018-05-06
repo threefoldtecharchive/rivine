@@ -80,8 +80,8 @@ func (t Transaction) noRepeats() error {
 	return nil
 }
 
-func defaultTransactionValidation(ctx TransactionValidationContext, t Transaction) (err error) {
-	err = t.fitsInABlock(ctx.BlockSizeLimit)
+func defaultTransactionValidation(t Transaction, blockSizeLimit uint64) (err error) {
+	err = t.fitsInABlock(blockSizeLimit)
 	if err != nil {
 		return
 	}
@@ -93,5 +93,5 @@ func defaultTransactionValidation(ctx TransactionValidationContext, t Transactio
 	if err != nil {
 		return
 	}
-	return t.validSignatures(ctx.CurrentBlockHeight)
+	return t.validateNoDoubleSpends()
 }

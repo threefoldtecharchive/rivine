@@ -30,8 +30,18 @@ type (
 		ParentID     BlockID                 `json:"parentid"`
 		Timestamp    Timestamp               `json:"timestamp"`
 		POBSOutput   BlockStakeOutputIndexes `json:"pobsindexes"`
-		MinerPayouts []CoinOutput            `json:"minerpayouts"`
+		MinerPayouts []MinerPayout           `json:"minerpayouts"`
 		Transactions []Transaction           `json:"transactions"`
+	}
+
+	// MinerPayout defines a miner payout, as (to be) payed out,
+	// as orchestrated by this block's transactions.
+	//
+	// It is a structure created as to keep the Block Structure unchanged,
+	// to how it used to be.
+	MinerPayout struct {
+		Value      Currency   `json:"value"`
+		UnlockHash UnlockHash `json:"unlockhash"`
 	}
 
 	// A BlockHeader, when encoded, is an 96-byte constant size field

@@ -254,7 +254,7 @@ func (e *Explorer) Constants() modules.ExplorerConstants {
 		BlockStakeAging:           e.chainCts.BlockStakeAging,
 		BlockCreatorFee:           e.chainCts.BlockCreatorFee,
 		MinimumTransactionFee:     e.chainCts.MinimumTransactionFee,
-		TransactionFeeBeneficiary: e.chainCts.TransactionFeeBeneficiary,
+		TransactionFeeBeneficiary: e.chainCts.TransactionFeeCondition.UnlockHash(),
 
 		MaturityDelay:         e.chainCts.MaturityDelay,
 		MedianTimestampWindow: e.chainCts.MedianTimestampWindow,

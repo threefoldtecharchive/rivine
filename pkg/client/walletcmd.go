@@ -13,6 +13,7 @@ import (
 
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/pkg/cli"
 	"github.com/rivine/rivine/types"
 )
 
@@ -106,9 +107,13 @@ Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash).
 
 ` + _CurrencyConvertor.CoinArgDescription("amount") + `
 
-Miner fees will be added on top of the given amount automatically.`,
+Miner fees will be added on top of the given amount automatically.
+
+` + lockTimeFlagDescriptionExtra,
 		Run: walletsendcoinscmd,
 	}
+	walletSendCoinsCmd.Flags().Var(
+		&walletCommonSendCmdConfig.LockTime, "locktime", lockTimeFlagDescription)
 
 	walletSendBlockStakesCmd = &cobra.Command{
 		Use:   "blockstakes <dest> <amount> [<dest> <amount>]..",
@@ -116,9 +121,13 @@ Miner fees will be added on top of the given amount automatically.`,
 		Long: `Send blockstakes to one or multiple addresses.
 Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash).
 
-Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automatically.`,
+Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automatically.
+
+` + lockTimeFlagDescriptionExtra,
 		Run: walletsendblockstakescmd,
 	}
+	walletSendBlockStakesCmd.Flags().Var(
+		&walletCommonSendCmdConfig.LockTime, "locktime", lockTimeFlagDescription)
 
 	walletRegisterDataCmd = &cobra.Command{
 		Use:   "registerdata <namespace> <data> <dest>",
@@ -169,6 +178,22 @@ var (
 	walletTransactionsCmd    *cobra.Command
 	walletUnlockCmd          *cobra.Command
 )
+
+var (
+	walletCommonSendCmdConfig struct {
+		LockTime cli.LockTimeFlag
+	}
+)
+
+const lockTimeFlagDescription = `optionally lock the outputs given a block time or height`
+const lockTimeFlagDescriptionExtra = `Regarding lock times:
+a block height is always specified as an uint64,
+but a block height can be specified in all given formats:
+  DD/MM/YYYY TZN            E.g.: 20/02/2018 UTC
+  DD Mon yy hh:mm TZN       E.g.: 20 Feb 18 12:30 UTC
+  Duration                  E.g.: +48h
+  Unix Epoch Seconds        E.g.: 1533254400
+`
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
 // receive coins.
@@ -330,11 +355,23 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 		CoinOutputs: make([]types.CoinOutput, argn/2),
 	}
 
+	// Get optionally defined lock time
+	lockTime := walletCommonSendCmdConfig.LockTime.LockTime()
+
 	for i, co := range body.CoinOutputs {
 		idx := i * 2
-		err := co.UnlockHash.LoadString(args[idx])
+		var uh types.UnlockHash
+		err := uh.LoadString(args[idx])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for coin output #%d: %v", idx, err))
+		}
+		co.Condition.Condition = &types.UnlockHashCondition{TargetUnlockHash: uh}
+		if lockTime != 0 {
+			// lock time is defined, ensure the condition is block time/height-locked
+			co.Condition.Condition = &types.TimeLockCondition{
+				LockTime:  lockTime,
+				Condition: co.Condition.Condition,
+			}
 		}
 		co.Value, err = _CurrencyConvertor.ParseCoinString(args[idx+1])
 		if err != nil {
@@ -351,7 +388,7 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 		Die("Could not send coins:", err)
 	}
 	for _, co := range body.CoinOutputs {
-		fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.UnlockHash)
+		fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.Condition.UnlockHash())
 	}
 }
 
@@ -366,11 +403,23 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 		BlockStakeOutputs: make([]types.BlockStakeOutput, argn/2),
 	}
 
+	// Get optionally defined lock time
+	lockTime := walletCommonSendCmdConfig.LockTime.LockTime()
+
 	for i, bo := range body.BlockStakeOutputs {
 		idx := i * 2
-		err := bo.UnlockHash.LoadString(args[idx])
+		var uh types.UnlockHash
+		err := uh.LoadString(args[idx])
 		if err != nil {
 			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for blockstake output #%d: %v", idx, err))
+		}
+		bo.Condition.Condition = &types.UnlockHashCondition{TargetUnlockHash: uh}
+		if lockTime != 0 {
+			// lock time is defined, ensure the condition is block time/height-locked
+			bo.Condition.Condition = &types.TimeLockCondition{
+				LockTime:  lockTime,
+				Condition: bo.Condition.Condition,
+			}
 		}
 		_, err = fmt.Sscan(args[idx+1], &bo.Value)
 		if err != nil {
@@ -387,7 +436,7 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 		Die("Could not send block stakes:", err)
 	}
 	for _, bo := range body.BlockStakeOutputs {
-		fmt.Printf("Sent %s BS to %s\n", bo.Value, bo.UnlockHash)
+		fmt.Printf("Sent %s BS to %s\n", bo.Value, bo.Condition.UnlockHash())
 	}
 }
 
@@ -461,10 +510,15 @@ Unlock the wallet to view balance
 	fmt.Printf(`Wallet status:
 %s, Unlocked
 Confirmed Balance:   %v
+Locked Balance:      %v
 Unconfirmed Delta:   %v
 BlockStakes:         %v BS
-`, encStatus, _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance), delta,
-		status.BlockStakeBalance)
+`, encStatus, _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance),
+		_CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedLockedCoinBalance),
+		delta, status.BlockStakeBalance)
+	if !status.LockedBlockStakeBalance.IsZero() {
+		fmt.Printf("Locked BlockStakes:  %v BS\n", status.LockedBlockStakeBalance)
+	}
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,

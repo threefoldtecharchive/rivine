@@ -10,6 +10,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 )
@@ -36,6 +37,7 @@ const (
 	// TransactionVersionZero defines the initial (and currently only)
 	// version format. Any other version number is concidered invalid.
 	TransactionVersionZero TransactionVersion = iota
+	TransactionVersionOne
 )
 
 type (
@@ -95,59 +97,14 @@ type (
 		Extension interface{}
 	}
 
-	// TransactionDataEncoder defines the interface an Extension object can implement,
-	// in order to define custom encoding logic for transaction data.
-	//
-	// This encoder should never serialize the version, as that is already done for the encoder,
-	// instead all the other data should be encoded, as an independend object.
-	TransactionDataEncoder interface {
-		// EncodeTransactionData binary-encodes the transaction data,
-		// which is all transaction properties except for the version.
-		EncodeTransactionData(Transaction) ([]byte, error)
-		// JSONEncodeTransactionData JSON-encodes the transaction data,
-		// which is all transaction properties except for the version.
-		JSONEncodeTransactionData(Transaction) ([]byte, error)
-	}
-
-	// TransactionDecoder defines the interface which can create a transaction,
-	// by decoding a stream of binary or json-encoded data.
-	//
-	// The version is already decoded upfront,
-	// and should be used as it is (received) by the decoder.
-	TransactionDecoder interface {
-		DecodeTransactionData(TransactionVersion, []byte) (Transaction, error)
-		JSONDecodeTransactionData(TransactionVersion, []byte) (Transaction, error)
-	}
-
-	// TransactionValidationContext is the context object given to a transaction,
-	// and TransactionValidator in order to validate a transaction.
-	TransactionValidationContext struct {
-		CurrentBlockHeight BlockHeight
-		BlockSizeLimit     uint64
-	}
-
-	// TransactionValidator defines the interface an Extension object can implement,
-	// in order to define custom validation logic for a transaction,
-	// overwriting the default validation logic.
-	TransactionValidator interface {
-		ValidateTransaction(TransactionValidationContext, Transaction) error
-	}
-
-	// InputSigHasher defines the interface an Extension object can implement,
-	// in order to define custom Input signatures,
-	// overwriting the default input sig hash logic.
-	InputSigHasher interface {
-		InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) crypto.Hash
-	}
-
 	// A CoinInput consumes a CoinInput and adds the coins to the set of
 	// coins that can be spent in the transaction. The ParentID points to the
 	// output that is getting consumed, and the UnlockConditions contain the rules
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
 	CoinInput struct {
-		ParentID CoinOutputID   `json:"parentid"`
-		Unlocker InputLockProxy `json:"unlocker"`
+		ParentID    CoinOutputID           `json:"parentid"`
+		Fulfillment UnlockFulfillmentProxy `json:"fulfillment"`
 	}
 
 	// A CoinOutput holds a volume of siacoins. Outputs must be spent
@@ -155,8 +112,8 @@ type (
 	// UnlockHash is the hash of the UnlockConditions that must be fulfilled
 	// in order to spend the output.
 	CoinOutput struct {
-		Value      Currency   `json:"value"`
-		UnlockHash UnlockHash `json:"unlockhash"`
+		Value     Currency             `json:"value"`
+		Condition UnlockConditionProxy `json:"condition"`
 	}
 
 	// A BlockStakeInput consumes a BlockStakeOutput and adds the blockstakes to the set of
@@ -165,8 +122,8 @@ type (
 	// for spending the output. The UnlockConditions must match the UnlockHash of
 	// the output.
 	BlockStakeInput struct {
-		ParentID BlockStakeOutputID `json:"parentid"`
-		Unlocker InputLockProxy     `json:"unlocker"`
+		ParentID    BlockStakeOutputID     `json:"parentid"`
+		Fulfillment UnlockFulfillmentProxy `json:"fulfillment"`
 	}
 
 	// A BlockStakeOutput holds a volume of blockstakes. Outputs must be spent
@@ -174,8 +131,8 @@ type (
 	// UnlockHash is the hash of a set of UnlockConditions that must be fulfilled
 	// in order to spend the output.
 	BlockStakeOutput struct {
-		Value      Currency   `json:"value"`
-		UnlockHash UnlockHash `json:"unlockhash"`
+		Value     Currency             `json:"value"`
+		Condition UnlockConditionProxy `json:"condition"`
 	}
 
 	// UnspentBlockStakeOutput groups the BlockStakeOutputID, the block height, the transaction index, the output index and the value
@@ -183,7 +140,7 @@ type (
 		BlockStakeOutputID BlockStakeOutputID
 		Indexes            BlockStakeOutputIndexes
 		Value              Currency
-		UnlockHash         UnlockHash
+		Condition          UnlockConditionProxy
 	}
 
 	// BlockStakeOutputIndexes groups the block height, the transaction index and the output index to uniquely identify a blockstake output.
@@ -195,20 +152,21 @@ type (
 	}
 )
 
+var (
+	ErrUnknownTransactionType = errors.New("unknown transaction type")
+)
+
 // ID returns the id of a transaction, which is taken by marshalling all of the
 // fields except for the signatures and taking the hash of the result.
 func (t Transaction) ID() (id TransactionID) {
 	if t.Version == TransactionVersionZero {
+		lt, err := newLegacyTransaction(t)
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
-		return TransactionID(crypto.HashAll(
-			t.CoinInputs,
-			t.CoinOutputs,
-			t.BlockStakeInputs,
-			t.BlockStakeOutputs,
-			t.MinerFees,
-			t.ArbitraryData,
-		))
+		return TransactionID(crypto.HashObject(lt.Data))
 	}
 	h := crypto.NewHash()
 	t.MarshalSia(h)
@@ -222,16 +180,15 @@ func (t Transaction) ID() (id TransactionID) {
 // and output index.
 func (t Transaction) CoinOutputID(i uint64) CoinOutputID {
 	if t.Version == TransactionVersionZero {
+		lt, err := newLegacyTransaction(t)
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
 		return CoinOutputID(crypto.HashAll(
 			SpecifierCoinOutput,
-			t.CoinInputs,
-			t.CoinOutputs,
-			t.BlockStakeInputs,
-			t.BlockStakeOutputs,
-			t.MinerFees,
-			t.ArbitraryData,
+			lt.Data,
 			i,
 		))
 	}
@@ -248,16 +205,15 @@ func (t Transaction) CoinOutputID(i uint64) CoinOutputID {
 // index.
 func (t Transaction) BlockStakeOutputID(i uint64) BlockStakeOutputID {
 	if t.Version == TransactionVersionZero {
+		lt, err := newLegacyTransaction(t)
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
 		return BlockStakeOutputID(crypto.HashAll(
 			SpecifierBlockStakeOutput,
-			t.CoinInputs,
-			t.CoinOutputs,
-			t.BlockStakeInputs,
-			t.BlockStakeOutputs,
-			t.MinerFees,
-			t.ArbitraryData,
+			lt.Data,
 			i,
 		))
 	}
@@ -286,39 +242,36 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 
 // MarshalSia implements the encoding.SiaMarshaler interface.
 func (t Transaction) MarshalSia(w io.Writer) error {
-	if encoder, ok := t.Extension.(TransactionDataEncoder); ok {
-		rawData, err := encoder.EncodeTransactionData(t)
+	// if version is legacy, marshal it as it was expected
+	if t.Version == TransactionVersionZero {
+		lt, err := newLegacyTransaction(t)
 		if err != nil {
 			return err
 		}
-		return encoding.NewEncoder(w).EncodeAll(
-			t.Version,
-			rawData,
-		)
+		return encoding.NewEncoder(w).Encode(lt)
 	}
-	// if version is legacy, just marshal it all flat
-	if t.Version == TransactionVersionZero {
-		return encoding.NewEncoder(w).EncodeAll(
-			t.Version,
-			t.CoinInputs,
-			t.CoinOutputs,
-			t.BlockStakeInputs,
-			t.BlockStakeOutputs,
-			t.MinerFees,
-			t.ArbitraryData,
-		)
+
+	// get a controller registered or unknown controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return ErrUnknownTransactionType
 	}
-	// if version isn't legacy, and no custom encoder is defined,
-	// we'll merge all normal data properties as one big data slice,
-	// to than assemble this way our standard structure
-	rawData := encoding.MarshalAll(
-		t.CoinInputs,
-		t.CoinOutputs,
-		t.BlockStakeInputs,
-		t.BlockStakeOutputs,
-		t.MinerFees,
-		t.ArbitraryData,
-	)
+
+	// encode the data using the controller,
+	// to than encode the transaction in its totality,
+	// using the version and previously encoded data
+	rawData, err := controller.EncodeTransactionData(TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+		Extension:         t.Extension,
+	})
+	if err != nil {
+		return err
+	}
 	return encoding.NewEncoder(w).EncodeAll(
 		t.Version,
 		rawData,
@@ -326,35 +279,41 @@ func (t Transaction) MarshalSia(w io.Writer) error {
 }
 
 // UnmarshalSia implements the encoding.SiaUnmarshaler interface.
-func (t *Transaction) UnmarshalSia(r io.Reader) (err error) {
+func (t *Transaction) UnmarshalSia(r io.Reader) error {
 	decoder := encoding.NewDecoder(r)
-	err = decoder.Decode(&t.Version)
+	err := decoder.Decode(&t.Version)
 	if err != nil {
-		return
+		return err
 	}
 	// if version is legacy, we'll unmarshal it in the old/legacy way
 	if t.Version == TransactionVersionZero {
-		return decoder.DecodeAll(
-			&t.CoinInputs,
-			&t.CoinOutputs,
-			&t.BlockStakeInputs,
-			&t.BlockStakeOutputs,
-			&t.MinerFees,
-			&t.ArbitraryData,
-		)
+		lt := legacyTransaction{Version: TransactionVersionZero}
+		err = encoding.NewDecoder(r).Decode(&lt.Data)
+		*t = lt.Transaction()
+		return err
 	}
 	// otherwise decode the data as a raw data slice
 	var rawData []byte
 	err = decoder.Decode(&rawData)
 	if err != nil {
-		return
+		return err
 	}
-	dataDecoder, exists := _RegisteredTransactionDecoders[t.Version]
+	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
-		dataDecoder = unknownTransactionDecoder{}
+		return ErrUnknownTransactionType
 	}
-	*t, err = dataDecoder.DecodeTransactionData(t.Version, rawData)
-	return
+	td, err := controller.DecodeTransactionData(rawData)
+	if err != nil {
+		return err
+	}
+
+	// assign all our data variables directly, zero copy
+	t.CoinInputs, t.CoinOutputs = td.CoinInputs, td.CoinOutputs
+	t.BlockStakeInputs = td.BlockStakeInputs
+	t.BlockStakeOutputs = td.BlockStakeOutputs
+	t.MinerFees, t.ArbitraryData = td.MinerFees, td.ArbitraryData
+	t.Extension = td.Extension
+	return nil
 }
 
 // util structs to support some kind of json OneOf feature
@@ -364,34 +323,44 @@ type (
 		Version TransactionVersion `json:"version"`
 		Data    json.RawMessage    `json:"data"`
 	}
-	jsonLegacyTransactionVersion struct {
-		CoinInputs        []CoinInput        `json:"coininputs"`
-		CoinOutputs       []CoinOutput       `json:"coinoutputs,omitempty"`
-		BlockstakeInputs  []BlockStakeInput  `json:"blockstakeinputs,omitempty"`
-		BlockStakeOutputs []BlockStakeOutput `json:"blockstakeoutputs,omitempty"`
-		MinerFees         []Currency         `json:"minerfees"`
-		ArbitraryData     []byte             `json:"arbitrarydata,omitempty"`
-	}
 )
 
 // MarshalJSON implements the json.Marshaler interface.
 func (t Transaction) MarshalJSON() ([]byte, error) {
-	var (
-		data []byte
-		err  error
-	)
-	if encoder, ok := t.Extension.(TransactionDataEncoder); ok {
-		data, err = encoder.JSONEncodeTransactionData(t)
-	} else {
-		data, err = json.Marshal(jsonLegacyTransactionVersion{
-			CoinInputs:        t.CoinInputs,
-			CoinOutputs:       t.CoinOutputs,
-			BlockstakeInputs:  t.BlockStakeInputs,
-			BlockStakeOutputs: t.BlockStakeOutputs,
-			MinerFees:         t.MinerFees,
-			ArbitraryData:     t.ArbitraryData,
+	// if version is legacy, marshal it as it was expected
+	if t.Version == TransactionVersionZero {
+		lt, err := newLegacyTransaction(t)
+		if err != nil {
+			return nil, err
+		}
+		data, err := json.Marshal(lt.Data)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(jsonTransaction{
+			Version: t.Version,
+			Data:    data,
 		})
 	}
+
+	// get a controller registered or unknown controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return nil, ErrUnknownTransactionType
+	}
+
+	// json-encode the data using the controller,
+	// to than json-encode the transaction in its totality,
+	// using the version and previously encoded data
+	data, err := controller.JSONEncodeTransactionData(TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+		Extension:         t.Extension,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -402,33 +371,35 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface.
-func (t *Transaction) UnmarshalJSON(b []byte) (err error) {
+func (t *Transaction) UnmarshalJSON(b []byte) error {
 	var txn jsonTransaction
-	err = json.Unmarshal(b, &txn)
+	err := json.Unmarshal(b, &txn)
 	if err != nil {
-		return
+		return err
 	}
 	if txn.Version == TransactionVersionZero {
-		var data jsonLegacyTransactionVersion
-		err = json.Unmarshal(txn.Data, &data)
-		if err != nil {
-			return
-		}
-		t.Version = txn.Version
-		t.CoinInputs = data.CoinInputs
-		t.CoinOutputs = data.CoinOutputs
-		t.BlockStakeInputs = data.BlockstakeInputs
-		t.BlockStakeOutputs = data.BlockStakeOutputs
-		t.MinerFees = data.MinerFees
-		t.ArbitraryData = data.ArbitraryData
-		return
+		lt := legacyTransaction{Version: TransactionVersionZero}
+		err = json.Unmarshal(txn.Data, &lt.Data)
+		*t = lt.Transaction()
+		return err
 	}
-	decoder, exists := _RegisteredTransactionDecoders[txn.Version]
+	controller, exists := _RegisteredTransactionVersions[txn.Version]
 	if !exists {
-		decoder = unknownTransactionDecoder{}
+		return ErrUnknownTransactionType
 	}
-	*t, err = decoder.JSONDecodeTransactionData(txn.Version, txn.Data)
-	return
+	td, err := controller.JSONDecodeTransactionData(txn.Data)
+	if err != nil {
+		return err
+	}
+
+	// assign all our data variables directly, zero copy
+	t.Version = txn.Version
+	t.CoinInputs, t.CoinOutputs = td.CoinInputs, td.CoinOutputs
+	t.BlockStakeInputs = td.BlockStakeInputs
+	t.BlockStakeOutputs = td.BlockStakeOutputs
+	t.MinerFees, t.ArbitraryData = td.MinerFees, td.ArbitraryData
+	t.Extension = td.Extension
+	return nil
 }
 
 var (
@@ -437,21 +408,59 @@ var (
 )
 
 // ValidateTransaction validates this transaction in the given context.
-func (t Transaction) ValidateTransaction(ctx TransactionValidationContext) error {
-	if validator, ok := t.Extension.(TransactionValidator); ok {
-		return validator.ValidateTransaction(ctx, t)
+func (t Transaction) ValidateTransaction(blockSizeLimit uint64) error {
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		// this will also trigger for v0 transactions
+		return defaultTransactionValidation(t, blockSizeLimit)
 	}
-	return defaultTransactionValidation(ctx, t)
+	validator, ok := controller.(TransactionValidator)
+	if !ok {
+		return defaultTransactionValidation(t, blockSizeLimit)
+	}
+	return validator.ValidateTransaction(t, blockSizeLimit)
 }
 
 // IsStandardTransaction returns an error if this transaction is not
 // to be considered standard.
 func (t Transaction) IsStandardTransaction() error {
-	if t.Version == TransactionVersionZero {
-		return nil // legacy but standard
+	if t.Version != TransactionVersionZero {
+		controller, exists := _RegisteredTransactionVersions[t.Version]
+		if !exists {
+			// version is non-0 and non-registered
+			return ErrInvalidTransactionVersion
+		}
+		// version can optionally define its own transaction standard check
+		checker, ok := controller.(TransactionIsStandardChecker)
+		if ok {
+			return checker.IsStandardTransaction(t)
+		}
 	}
-	if _, ok := _RegisteredTransactionDecoders[t.Version]; !ok {
-		return ErrInvalidTransactionVersion
+
+	var err error
+	for _, ci := range t.CoinInputs {
+		err = ci.Fulfillment.IsStandardFulfillment()
+		if err != nil {
+			return err
+		}
+	}
+	for _, co := range t.CoinOutputs {
+		err = co.Condition.IsStandardCondition()
+		if err != nil {
+			return err
+		}
+	}
+	for _, bsi := range t.BlockStakeInputs {
+		err = bsi.Fulfillment.IsStandardFulfillment()
+		if err != nil {
+			return err
+		}
+	}
+	for _, bso := range t.BlockStakeOutputs {
+		err = bso.Condition.IsStandardCondition()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -474,6 +483,18 @@ var (
 	_ encoding.SiaMarshaler   = TransactionVersion(0)
 	_ encoding.SiaUnmarshaler = (*TransactionVersion)(nil)
 )
+
+// IsValidTransactionVersion returns an error in case the
+// transaction version is not 0, and isn't registered either.
+func (v TransactionVersion) IsValidTransactionVersion() error {
+	if v == TransactionVersionZero {
+		return nil
+	}
+	if _, ok := _RegisteredTransactionVersions[v]; ok {
+		return nil
+	}
+	return ErrInvalidTransactionVersion
+}
 
 // NewTransactionShortID creates a new Transaction ShortID,
 // combining a blockheight together with a transaction index.
