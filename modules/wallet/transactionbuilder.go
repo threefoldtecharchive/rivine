@@ -2,8 +2,10 @@ package wallet
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
@@ -95,12 +97,26 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 			continue
 		}
 
-		// Add a coin input for this output.
+		// prepare fulfillment, matching the output
 		uh := sco.Condition.UnlockHash()
+		var ff types.MarshalableUnlockFulfillment
+		switch sco.Condition.ConditionType() {
+		case types.ConditionTypeUnlockHash:
+			ff = types.NewSingleSignatureFulfillment(
+				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))
+		case types.ConditionTypeTimeLock:
+			ff = types.NewTimeLockFulfillment(types.NewSingleSignatureFulfillment(
+				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey)))
+		default:
+			if build.DEBUG {
+				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sco.Condition))
+			}
+			return types.ErrUnexpectedUnlockCondition
+		}
+		// Add a coin input for this output.
 		sci := types.CoinInput{
-			ParentID: scoid,
-			Fulfillment: types.NewFulfillment(types.NewSingleSignatureFulfillment(
-				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))),
+			ParentID:    scoid,
+			Fulfillment: types.NewFulfillment(ff),
 		}
 		tb.coinInputs = append(tb.coinInputs, inputSignContext{
 			InputIndex: len(tb.transaction.CoinInputs),
@@ -175,11 +191,26 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 			continue
 		}
 
+		// prepare fulfillment, matching the output
 		uh := sfo.Condition.UnlockHash()
+		var ff types.MarshalableUnlockFulfillment
+		switch sfo.Condition.ConditionType() {
+		case types.ConditionTypeUnlockHash:
+			ff = types.NewSingleSignatureFulfillment(
+				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))
+		case types.ConditionTypeTimeLock:
+			ff = types.NewTimeLockFulfillment(types.NewSingleSignatureFulfillment(
+				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey)))
+		default:
+			if build.DEBUG {
+				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sfo.Condition))
+			}
+			return types.ErrUnexpectedUnlockCondition
+		}
+		// Add a block stake input for this output.
 		sfi := types.BlockStakeInput{
-			ParentID: sfoid,
-			Fulfillment: types.NewFulfillment(types.NewSingleSignatureFulfillment(
-				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))),
+			ParentID:    sfoid,
+			Fulfillment: types.NewFulfillment(ff),
 		}
 		tb.blockstakeInputs = append(tb.blockstakeInputs, inputSignContext{
 			InputIndex: len(tb.transaction.BlockStakeInputs),
