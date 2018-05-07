@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"bytes"
 	"encoding/hex"
 
 	bolt "github.com/rivine/bbolt"
@@ -39,9 +40,17 @@ func convertLegacyDatabase(filePath string, log *persist.Logger) (db *persist.Bo
 		}
 		if bucket := tx.Bucket(BlockStakeOutputs); bucket != nil {
 			log.Printf("upgrading bucket %s format from 0.5.0 to %v...\n", string(BlockStakeOutputs), dbMetadata.Version)
-			return updateLegacyBlockstakeOutputBucket(bucket, log)
+			if err := updateLegacyBlockstakeOutputBucket(bucket, log); err != nil {
+				return err
+			}
 		}
-		return nil
+		return tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
+			if !bytes.HasPrefix(name, prefixDCO) {
+				return nil
+			}
+			log.Printf("upgrading legacy DCO bucket 0x%s format from 0.5.0 to %v...\n", hex.EncodeToString(name), dbMetadata.Version)
+			return updateLegacyCoinOutputBucket(bucket, log)
+		})
 	})
 	if err == nil {
 		// set the new metadata, and save it,
