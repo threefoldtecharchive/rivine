@@ -83,8 +83,6 @@ func TestUnlockFulfillmentSiaEncoding(t *testing.T) {
 		`020a01000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
 		// atomic swap fulfillment
 		`02a000000000000000656432353531390000000000000000002000000000000000fffffffffffffffffffffffffffffffff04fffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffff56fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffffffffffff123ffffffffffafffffffffffeffffffffffffff`,
-		// time lock fulfillment
-		`0381000000000000000165643235353139000000000000000000200000000000000035fffffffffffffffffffffffffffffffffffffffffffffffff46fffffffffff4000000000000000fffffffffffffffffffffffffffff123ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`, // using single signature fulfillment
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -315,28 +313,6 @@ func TestUnlockFulfillmentJSONEncoding(t *testing.T) {
 		"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 		"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab",
 		"secret": "def789def789def789def789def789dedef789def789def789def789def789de"
-	}
-}`, ``},
-		// time lock fulfillment
-		{
-			`{
-	"type": 3,
-	"data": {"type":0}
-}`, ``}, // using nil fulfillment
-		{
-			`{
-	"type": 3,
-	"data": {"type":0, "fulfillment": null}
-}`, `{"type": 3, "data": {"type": 0}}`}, // using nil fulfillment
-		{
-			`{
-	"type": 3,
-	"data": {
-		"type": 1,
-		"fulfillment": {
-			"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
-		}
 	}
 }`, ``},
 	}
@@ -1016,47 +992,6 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			},
 			"different hashed secret",
 		},
-		{
-			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
-			nil, "unequal type",
-		},
-		{
-			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
-			&NilFulfillment{}, "unequal type",
-		},
-		{
-			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
-			&SingleSignatureFulfillment{}, "unequal type",
-		},
-		{
-			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
-			&AtomicSwapFulfillment{}, "unequal type",
-		},
-		{
-			&TimeLockFulfillment{Fulfillment: &NilFulfillment{}},
-			&TimeLockFulfillment{}, "",
-		},
-		{
-			&TimeLockFulfillment{
-				Fulfillment: &SingleSignatureFulfillment{
-					PublicKey: SiaPublicKey{
-						Algorithm: SignatureEd25519,
-						Key:       ByteSlice{1, 2, 3},
-					},
-					Signature: ByteSlice{4, 2},
-				},
-			},
-			&TimeLockFulfillment{
-				Fulfillment: &SingleSignatureFulfillment{
-					PublicKey: SiaPublicKey{
-						Algorithm: SignatureEd25519,
-						Key:       ByteSlice{1, 2, 3},
-					},
-					Signature: ByteSlice{4, 2},
-				},
-			},
-			"",
-		},
 	}
 	for idx, testCase := range testCases {
 		equal := testCase.A.Equal(testCase.B)
@@ -1356,16 +1291,14 @@ func TestValidFulFill(t *testing.T) {
 			},
 			sk,
 		},
-		{ // TimeLockedCondition (Nil) -> TimeLockedFulfillment (SingleSignature)
+		{ // TimeLockedCondition (Nil) -> SingleSignature
 			&TimeLockCondition{
 				LockTime:  uint64(CurrentTimestamp()),
 				Condition: &NilCondition{},
 			},
 			func() MarshalableUnlockFulfillment {
-				return &TimeLockFulfillment{
-					Fulfillment: &SingleSignatureFulfillment{
-						PublicKey: ed25519pk,
-					},
+				return &SingleSignatureFulfillment{
+					PublicKey: ed25519pk,
 				}
 			},
 			sk,
@@ -1378,10 +1311,8 @@ func TestValidFulFill(t *testing.T) {
 				},
 			},
 			func() MarshalableUnlockFulfillment {
-				return &TimeLockFulfillment{
-					Fulfillment: &SingleSignatureFulfillment{
-						PublicKey: ed25519pk,
-					},
+				return &SingleSignatureFulfillment{
+					PublicKey: ed25519pk,
 				}
 			},
 			sk,
@@ -1477,9 +1408,6 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 }
 
 func fulfillmentCanBeSigned(fulfillment MarshalableUnlockFulfillment) bool {
-	if tl, ok := fulfillment.(*TimeLockFulfillment); ok {
-		return fulfillmentCanBeSigned(tl.Fulfillment)
-	}
 	return fulfillment != nil
 }
 
@@ -1970,66 +1898,6 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Secret: AtomicSwapSecret{1, 2, 3},
 			},
 			"",
-		},
-		// time lock condition
-		{
-			&TimeLockFulfillment{
-				Fulfillment: &SingleSignatureFulfillment{
-					PublicKey: SiaPublicKey{
-						Algorithm: SignatureEd25519,
-						Key: ByteSlice{
-							1, 2, 3, 4, 5, 6, 7, 8,
-							1, 2, 3, 4, 5, 6, 7, 8,
-							1, 2, 3, 4, 5, 6, 7, 8,
-							1, 2, 3, 4, 5, 6, 7, 8,
-						},
-					},
-				},
-			}, "nil signature is not allowed for single-signature fulfilment",
-		},
-		{
-			&TimeLockFulfillment{
-				Fulfillment: &SingleSignatureFulfillment{
-					PublicKey: SiaPublicKey{
-						Algorithm: SignatureEd25519,
-					},
-					Signature: ByteSlice{
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-					},
-				},
-			}, "nil pub-key is not allowed for single-signature fulfilment",
-		},
-		{
-			&TimeLockFulfillment{
-				Fulfillment: &SingleSignatureFulfillment{
-					PublicKey: SiaPublicKey{
-						Algorithm: SignatureEd25519,
-						Key: ByteSlice{
-							1, 2, 3, 4, 5, 6, 7, 8,
-							1, 2, 3, 4, 5, 6, 7, 8,
-							1, 2, 3, 4, 5, 6, 7, 8,
-							1, 2, 3, 4, 5, 6, 7, 8,
-						},
-					},
-					Signature: ByteSlice{
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-						1, 2, 3, 4, 5, 6, 7, 8,
-					},
-				},
-			}, "",
 		},
 	}
 	for idx, testCase := range testCases {

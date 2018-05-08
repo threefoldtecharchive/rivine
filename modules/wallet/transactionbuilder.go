@@ -105,8 +105,8 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 			ff = types.NewSingleSignatureFulfillment(
 				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))
 		case types.ConditionTypeTimeLock:
-			ff = types.NewTimeLockFulfillment(types.NewSingleSignatureFulfillment(
-				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey)))
+			ff = types.NewSingleSignatureFulfillment(
+				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))
 		default:
 			if build.DEBUG {
 				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sco.Condition))
@@ -199,8 +199,8 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 			ff = types.NewSingleSignatureFulfillment(
 				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))
 		case types.ConditionTypeTimeLock:
-			ff = types.NewTimeLockFulfillment(types.NewSingleSignatureFulfillment(
-				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey)))
+			ff = types.NewSingleSignatureFulfillment(
+				types.Ed25519PublicKey(tb.wallet.keys[uh].PublicKey))
 		default:
 			if build.DEBUG {
 				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sfo.Condition))

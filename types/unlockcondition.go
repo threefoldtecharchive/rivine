@@ -268,12 +268,6 @@ const (
 	//
 	// Implemented by the AtomicSwapFulfillment.
 	FulfillmentTypeAtomicSwap
-
-	// FulfillmentTypeTimeLock defines an unlock fulfillment
-	// which can be unlocked if the timestamp has been reached
-	// as well as the internal condition of the parent output's condition
-	// has been fulfilled.
-	FulfillmentTypeTimeLock
 )
 
 // Constants that are used as part of AtomicSwap Conditions/Fulfillments.
@@ -375,7 +369,6 @@ var (
 		FulfillmentTypeNil:             func() MarshalableUnlockFulfillment { return &NilFulfillment{} },
 		FulfillmentTypeSingleSignature: func() MarshalableUnlockFulfillment { return &SingleSignatureFulfillment{} },
 		FulfillmentTypeAtomicSwap:      func() MarshalableUnlockFulfillment { return &anyAtomicSwapFulfillment{} },
-		FulfillmentTypeTimeLock:        func() MarshalableUnlockFulfillment { return &TimeLockFulfillment{} },
 	}
 )
 
@@ -456,16 +449,6 @@ type (
 		// on top of the LockTime condition defined by this condition.
 		// See ConditionTypeTimeLock in order to know which conditions are supported.
 		Condition MarshalableUnlockCondition
-	}
-
-	// TimeLockFulfillment defines an unlock fulfillment which implicitly
-	// ensures the lock time are reached as part of the fulfillment,
-	// together with the layered fulfillment logic handled by the internal fulfillment.
-	TimeLockFulfillment struct {
-		// Fulfillment which will be used to fulfill the internal condition
-		// defined as part of the TimeLockCondition,
-		// but only if the LockTime as defined by that TimeLockCondition has been reached.
-		Fulfillment MarshalableUnlockFulfillment
 	}
 )
 
@@ -1261,15 +1244,15 @@ func NewTimeLockCondition(lockTime uint64, condition MarshalableUnlockCondition)
 //
 // The TimeLockFulfillment can only be used to fulfill a TimeLockCondition.
 func (tl *TimeLockCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
-	switch tf := fulfillment.(type) {
-	case *TimeLockFulfillment:
-		if !tl.Fulfillable(FulfillableContext{BlockHeight: ctx.BlockHeight, BlockTime: ctx.BlockTime}) {
-			return errors.New("time lock has not yet been reached")
-		}
-		// time lock hash been reached,
-		// delegate the rest of the fulfillment to the internally layered logic
-		return tl.Condition.Fulfill(tf.Fulfillment, ctx)
+	if !tl.Fulfillable(FulfillableContext{BlockHeight: ctx.BlockHeight, BlockTime: ctx.BlockTime}) {
+		return errors.New("time lock has not yet been reached")
+	}
 
+	// time lock hash been reached,
+	// delegate the actual fulfillment to the given fulfillment, if supported
+	switch tf := fulfillment.(type) {
+	case *SingleSignatureFulfillment:
+		return tl.Condition.Fulfill(tf, ctx)
 	default:
 		return ErrUnexpectedUnlockFulfillment
 	}
@@ -1389,135 +1372,6 @@ func (tl *TimeLockCondition) UnmarshalJSON(b []byte) error {
 		tl.Condition = jtl.Condition.Condition
 	}
 	return nil
-}
-
-// NewTimeLockFulfillment creates a new TimeLockFulfillment.
-// If no MarshalableUnlockFulfillment is given, the NilFulfillment is assumed.
-// NOTE That the NilFulfillment is not standard and cannot ever be used,
-// so that makes the returned TimeLockFulfillment essentially useless.
-func NewTimeLockFulfillment(fulfillment MarshalableUnlockFulfillment) *TimeLockFulfillment {
-	if fulfillment == nil {
-		if build.DEBUG {
-			panic("nil fulfillment is not standard and shouldn't be used as the timelock's internal fulfillment")
-		}
-		fulfillment = &NilFulfillment{}
-	}
-	return &TimeLockFulfillment{
-		Fulfillment: fulfillment,
-	}
-}
-
-// Sign implements UnlockFulfillment.Sign
-func (tl *TimeLockFulfillment) Sign(ctx FulfillmentSignContext) error {
-	return tl.Fulfillment.Sign(ctx)
-}
-
-// UnlockHash implements UnlockFulfillment.UnlockHash
-func (tl *TimeLockFulfillment) UnlockHash() UnlockHash {
-	return tl.Fulfillment.UnlockHash()
-}
-
-// FulfillmentType implements UnlockFulfillment.FulfillmentType
-func (tl *TimeLockFulfillment) FulfillmentType() FulfillmentType { return FulfillmentTypeTimeLock }
-
-// IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (tl *TimeLockFulfillment) IsStandardFulfillment() error {
-	switch tc := tl.Fulfillment.(type) {
-	case *SingleSignatureFulfillment:
-		return tc.IsStandardFulfillment()
-	default:
-		return errors.New("unexpected internal unlock fulfillment used as part of time lock fulfillment")
-	}
-}
-
-// Equal implements UnlockFulfillment.Equal
-func (tl *TimeLockFulfillment) Equal(f UnlockFulfillment) bool {
-	otl, ok := f.(*TimeLockFulfillment)
-	if !ok {
-		return false
-	}
-	return tl.Fulfillment.Equal(otl.Fulfillment)
-}
-
-// Marshal implements MarshalableUnlockFulfillment.Marshal
-func (tl *TimeLockFulfillment) Marshal() []byte {
-	return append(
-		encoding.Marshal(tl.Fulfillment.FulfillmentType()),
-		tl.Fulfillment.Marshal()...)
-}
-
-// Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
-func (tl *TimeLockFulfillment) Unmarshal(b []byte) error {
-	if len(b) == 0 {
-		// at least 1 byte is required (fulfillment type)
-		// as to enforce we can decode the time lock fulfillment's properties,
-		// whether or not the internal fulfillment requires bytes is of no concern of us.
-		return io.ErrUnexpectedEOF
-	}
-	// interpret the fulfillment type, and continue decoding based on that,
-	// by getting the correct constructor from the registration mapping
-	ft := FulfillmentType(b[0])
-	fc, ok := _RegisteredUnlockFulfillmentTypes[ft]
-	if !ok {
-		return ErrUnknownFulfillmentType
-	}
-	// known fulfillment type, create and decode it
-	tl.Fulfillment = fc()
-	return tl.Fulfillment.Unmarshal(b[1:])
-}
-
-type jsonTimeLockFulfillment struct {
-	Type        FulfillmentType `json:"type"`
-	Fulfillment json.RawMessage `json:"fulfillment,omitempty"`
-}
-
-type jsonTimeLockFulfillmentWithNilFulfillment struct {
-	Type FulfillmentType `json:"type"`
-}
-
-// MarshalJSON implements json.Marshaler.MarshalJSON
-//
-// This function is required, as to ensure
-// the fulfillment is encoded as if it was an unlock fulfillment proxy itself.
-func (tl *TimeLockFulfillment) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(tl.Fulfillment)
-	if err != nil {
-		return nil, err
-	}
-	if string(data) == "{}" {
-		return json.Marshal(jsonTimeLockFulfillmentWithNilFulfillment{
-			Type: tl.Fulfillment.FulfillmentType(),
-		})
-	}
-	return json.Marshal(jsonTimeLockFulfillment{
-		Type:        tl.Fulfillment.FulfillmentType(),
-		Fulfillment: data,
-	})
-}
-
-// UnmarshalJSON implements json.Unmarshaler.UnmarshalJSON
-//
-// This function is required, as to ensure
-// the fulfillment is decoded as if it was an unlock fulfillment proxy itself.
-func (tl *TimeLockFulfillment) UnmarshalJSON(b []byte) error {
-	var rf jsonTimeLockFulfillment
-	err := json.Unmarshal(b, &rf)
-	if err != nil {
-		return err
-	}
-	fc, ok := _RegisteredUnlockFulfillmentTypes[rf.Type]
-	if !ok {
-		return ErrUnknownFulfillmentType
-	}
-	f := fc()
-	if rf.Fulfillment != nil {
-		err = json.Unmarshal(rf.Fulfillment, &f)
-	}
-	if f == nil {
-		f = &NilFulfillment{}
-	}
-	tl.Fulfillment = f
-	return err
 }
 
 // MarshalSia implements encoding.SiaMarshaler.MarshalSia

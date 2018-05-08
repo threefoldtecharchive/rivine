@@ -512,19 +512,19 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 			},
 		},
 		{
-			"01fe000000000000000100000000000000110000000000000000000000000000000000000000000000000000000000001103810000000000000001656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01000000000000000100000000000000090309000000000000002a00000000000000000000000000000000000000000000000001000000000000000100000000000000030000000000000000",
+			"01fd0000000000000001000000000000001100000000000000000000000000000000000000000000000000000000000011018000000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01000000000000000100000000000000090309000000000000002a00000000000000000000000000000000000000000000000001000000000000000100000000000000030000000000000000",
 			Transaction{
 				Version: TransactionVersionOne,
 				CoinInputs: []CoinInput{
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
-						Fulfillment: NewFulfillment(&TimeLockFulfillment{Fulfillment: &SingleSignatureFulfillment{
+						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
 							PublicKey: SiaPublicKey{
 								Algorithm: SignatureEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-						}}),
+						}),
 					},
 				},
 				CoinOutputs: []CoinOutput{
@@ -540,19 +540,19 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 			},
 		},
 		{
-			"011f010000000000000100000000000000110000000000000000000000000000000000000000000000000000000000001103810000000000000001656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0100000000000000010000000000000009032a000000000000002a000000000000000101abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd0000000000000000000000000000000001000000000000000100000000000000030000000000000000",
+			"011e0100000000000001000000000000001100000000000000000000000000000000000000000000000000000000000011018000000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0100000000000000010000000000000009032a000000000000002a000000000000000101abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd0000000000000000000000000000000001000000000000000100000000000000030000000000000000",
 			Transaction{
 				Version: TransactionVersionOne,
 				CoinInputs: []CoinInput{
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
-						Fulfillment: NewFulfillment(&TimeLockFulfillment{Fulfillment: &SingleSignatureFulfillment{
+						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
 							PublicKey: SiaPublicKey{
 								Algorithm: SignatureEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-						}}),
+						}),
 					},
 				},
 				CoinOutputs: []CoinOutput{
