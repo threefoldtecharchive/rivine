@@ -464,9 +464,15 @@ func (w *Wallet) RegisterTransaction(t types.Transaction, parents []types.Transa
 }
 
 // StartTransaction is a convenience function that calls
-// RegisterTransaction(types.Transaction{}, nil).
+// StartTransactionWithVersion with the DefaultTransactionVersion constant.
 func (w *Wallet) StartTransaction() modules.TransactionBuilder {
+	return w.StartTransactionWithVersion(w.chainCts.DefaultTransactionVersion)
+}
+
+// StartTransactionWithVersion is a convenience function that calls
+// RegisterTransaction(types.Transaction{Version: version}, nil).
+func (w *Wallet) StartTransactionWithVersion(version types.TransactionVersion) modules.TransactionBuilder {
 	return w.RegisterTransaction(types.Transaction{
-		Version: w.chainCts.DefaultTransactionVersion,
+		Version: version,
 	}, nil)
 }

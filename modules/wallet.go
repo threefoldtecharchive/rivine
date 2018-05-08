@@ -348,7 +348,7 @@ type (
 
 		// SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
 		// The transaction is automatically given to the transaction pool, and is also returned to the caller.
-		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte) (types.Transaction, error)
+		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte, version types.TransactionVersion) (types.Transaction, error)
 
 		// BlockStakeStats returns the blockstake statistical information of
 		// this wallet of the last 1000 blocks. If the blockcount is less than

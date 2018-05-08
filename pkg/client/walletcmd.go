@@ -114,6 +114,9 @@ Miner fees will be added on top of the given amount automatically.
 	}
 	walletSendCoinsCmd.Flags().Var(
 		&walletCommonSendCmdConfig.LockTime, "locktime", lockTimeFlagDescription)
+	walletSendCoinsCmd.Flags().BoolVar(
+		&walletCommonSendCmdConfig.Legacy, "legacy", false,
+		"send the coins as a legacy v0 transaction")
 
 	walletSendBlockStakesCmd = &cobra.Command{
 		Use:   "blockstakes <dest> <amount> [<dest> <amount>]..",
@@ -128,6 +131,9 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 	}
 	walletSendBlockStakesCmd.Flags().Var(
 		&walletCommonSendCmdConfig.LockTime, "locktime", lockTimeFlagDescription)
+	walletSendBlockStakesCmd.Flags().BoolVar(
+		&walletCommonSendCmdConfig.Legacy, "legacy", false,
+		"send the block stakes as a legacy v0 transaction")
 
 	walletRegisterDataCmd = &cobra.Command{
 		Use:   "registerdata <namespace> <data> <dest>",
@@ -182,6 +188,7 @@ var (
 var (
 	walletCommonSendCmdConfig struct {
 		LockTime cli.LockTimeFlag
+		Legacy   bool
 	}
 )
 
@@ -354,6 +361,11 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 	body := api.WalletCoinsPOST{
 		CoinOutputs: make([]types.CoinOutput, argn/2),
 	}
+	if walletCommonSendCmdConfig.Legacy {
+		body.TransactionVersion = types.TransactionVersionZero
+	} else {
+		body.TransactionVersion = _DefaultTransactionVersion
+	}
 
 	// Get optionally defined lock time
 	lockTime := walletCommonSendCmdConfig.LockTime.LockTime()
@@ -401,6 +413,11 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 	}
 	body := api.WalletBlockStakesPOST{
 		BlockStakeOutputs: make([]types.BlockStakeOutput, argn/2),
+	}
+	if walletCommonSendCmdConfig.Legacy {
+		body.TransactionVersion = types.TransactionVersionZero
+	} else {
+		body.TransactionVersion = _DefaultTransactionVersion
 	}
 
 	// Get optionally defined lock time
