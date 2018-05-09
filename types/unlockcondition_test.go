@@ -1237,6 +1237,30 @@ func TestValidFulFill(t *testing.T) {
 			},
 			sk,
 		},
+		{ // [LEGACY] unlock hash -> atomic swap (refund)
+			&UnlockHashCondition{
+				TargetUnlockHash: (&AtomicSwapCondition{
+					Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+					Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
+					HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
+					TimeLock:     42, // we are waaaaay beyond this
+				}).UnlockHash(),
+			},
+			func() MarshalableUnlockFulfillment {
+				return &anyAtomicSwapFulfillment{
+					&LegacyAtomicSwapFulfillment{
+						Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+						Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
+						HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
+						TimeLock:     42, // we are waaaaay beyond this
+						PublicKey:    ed25519pk,
+						Secret:       AtomicSwapSecret{}, // refund as claiming is impossible due to time lock
+						// Signature is set at signing step
+					},
+				}
+			},
+			sk,
+		},
 		{ // [LEGACY] unlock hash -> atomic swap (claim)
 			&UnlockHashCondition{
 				TargetUnlockHash: (&AtomicSwapCondition{
@@ -1287,6 +1311,42 @@ func TestValidFulFill(t *testing.T) {
 					PublicKey: ed25519pk,
 					Secret:    AtomicSwapSecret{4, 2},
 					// Signature is set at signing step
+				}
+			},
+			sk,
+		},
+		{ // atomic swap -> atomic swap (refund)
+			&AtomicSwapCondition{
+				Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+				Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
+				HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
+				TimeLock:     42, // we are waaaaay beyond this
+			},
+			func() MarshalableUnlockFulfillment {
+				return &anyAtomicSwapFulfillment{
+					&AtomicSwapFulfillment{
+						PublicKey: ed25519pk,
+						Secret:    AtomicSwapSecret{}, // refund as claiming is impossible due to time lock
+						// Signature is set at signing step
+					},
+				}
+			},
+			sk,
+		},
+		{ // atomic swap -> atomic swap (claim)
+			&AtomicSwapCondition{
+				Receiver:     NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+				Sender:       unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
+				HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
+				TimeLock:     futureTimeStamp,
+			},
+			func() MarshalableUnlockFulfillment {
+				return &anyAtomicSwapFulfillment{
+					&AtomicSwapFulfillment{
+						PublicKey: ed25519pk,
+						Secret:    AtomicSwapSecret{4, 2},
+						// Signature is set at signing step
+					},
 				}
 			},
 			sk,

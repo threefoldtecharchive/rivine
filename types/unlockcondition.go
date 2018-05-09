@@ -622,6 +622,9 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
 			tf.PublicKey)
 
+	case *anyAtomicSwapFulfillment:
+		return uh.Fulfill(tf.MarshalableUnlockFulfillment, ctx)
+
 	default:
 		return ErrUnexpectedUnlockFulfillment
 	}
@@ -792,6 +795,9 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			Signature: tf.Signature,
 			Secret:    tf.Secret,
 		}, ctx)
+
+	case *anyAtomicSwapFulfillment:
+		return as.Fulfill(tf.MarshalableUnlockFulfillment, ctx)
 
 	default:
 		return ErrUnexpectedUnlockFulfillment

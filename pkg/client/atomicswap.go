@@ -358,11 +358,16 @@ func atomicswapauditcmdComplete(outputID types.CoinOutputID, conditionRef *types
 
 		// when we receive 1 transaction,
 		// we'll assume that the output (atomic swap contract) hasn't been spend yet
-		var expectedUnlockHash types.UnlockHash
+		expectedUnlockHash := types.NilUnlockHash
 		if conditionRef != nil {
 			expectedUnlockHash = conditionRef.UnlockHash()
 		} else {
-			expectedUnlockHash = types.NilUnlockHash
+			for i, id := range resp.Transactions[0].CoinOutputIDs {
+				if bytes.Compare(id[:], outputID[:]) == 0 {
+					expectedUnlockHash = resp.Transactions[0].RawTransaction.CoinOutputs[i].Condition.UnlockHash()
+					break
+				}
+			}
 		}
 		var condition types.AtomicSwapCondition
 		switch resp.HashType {
@@ -646,7 +651,7 @@ func atomicswapclaimcmd(cmd *cobra.Command, args []string) {
 							Secret:       secret,
 						}
 					}
-					return &types.LegacyAtomicSwapFulfillment{
+					return &types.AtomicSwapFulfillment{
 						PublicKey: pk,
 						Secret:    secret,
 					}
@@ -792,7 +797,7 @@ func atomicswaprefundcmd(cmd *cobra.Command, args []string) {
 							// secret not needed for refund
 						}
 					}
-					return &types.LegacyAtomicSwapFulfillment{
+					return &types.AtomicSwapFulfillment{
 						PublicKey: pk,
 						// secret not needed for refund
 					}
