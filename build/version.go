@@ -67,7 +67,7 @@ func (e InvalidVersionError) Error() string {
 }
 
 // Compare returns an integer comparing this version with another version.
-func (pv *ProtocolVersion) Compare(other ProtocolVersion) int {
+func (pv ProtocolVersion) Compare(other ProtocolVersion) int {
 	if pv.Version < other.Version {
 		return -1
 	} else if pv.Version > other.Version {
@@ -90,7 +90,7 @@ func (pv *ProtocolVersion) Compare(other ProtocolVersion) int {
 }
 
 // String returns the string version of this ProtocolVersion
-func (pv *ProtocolVersion) String() string {
+func (pv ProtocolVersion) String() string {
 	str := fmt.Sprintf("%d.%d.%d",
 		(pv.Version>>24)&0xFF, // major
 		(pv.Version>>16)&0xFF, // minor

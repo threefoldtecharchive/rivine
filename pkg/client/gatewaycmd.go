@@ -47,7 +47,7 @@ var (
 	}
 )
 
-// gatewayconnectcmd is the handler for the command `siac gateway add [address]`.
+// gatewayconnectcmd is the handler for the command `gateway add [address]`.
 // Adds a new peer to the peer list.
 func gatewayconnectcmd(addr string) {
 	err := _DefaultClient.httpClient.Post("/gateway/connect/"+addr, "")
@@ -57,7 +57,7 @@ func gatewayconnectcmd(addr string) {
 	fmt.Println("Added", addr, "to peer list.")
 }
 
-// gatewaydisconnectcmd is the handler for the command `siac gateway remove [address]`.
+// gatewaydisconnectcmd is the handler for the command `gateway remove [address]`.
 // Removes a peer from the peer list.
 func gatewaydisconnectcmd(addr string) {
 	err := _DefaultClient.httpClient.Post("/gateway/disconnect/"+addr, "")
@@ -67,7 +67,7 @@ func gatewaydisconnectcmd(addr string) {
 	fmt.Println("Removed", addr, "from peer list.")
 }
 
-// gatewayaddresscmd is the handler for the command `siac gateway address`.
+// gatewayaddresscmd is the handler for the command `gateway address`.
 // Prints the gateway's network address.
 func gatewayaddresscmd() {
 	var info api.GatewayGET
@@ -78,7 +78,7 @@ func gatewayaddresscmd() {
 	fmt.Println("Address:", info.NetAddress)
 }
 
-// Gatewaycmd is the handler for the command `siac gateway`.
+// Gatewaycmd is the handler for the command `gateway`.
 // Prints the gateway's network address and number of peers.
 func gatewaycmd() {
 	var info api.GatewayGET
@@ -90,7 +90,7 @@ func gatewaycmd() {
 	fmt.Println("Active peers:", len(info.Peers))
 }
 
-// Gatewaylistcmd is the handler for the command `siac gateway list`.
+// Gatewaylistcmd is the handler for the command `gateway list`.
 // Prints a list of all peers.
 func gatewaylistcmd() {
 	var info api.GatewayGET
@@ -106,7 +106,7 @@ func gatewaylistcmd() {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "Version\tOutbound\tAddress")
 	for _, peer := range info.Peers {
-		fmt.Fprintf(w, "%v\t%v\t%v\n", peer.Version, YesNo(!peer.Inbound), peer.NetAddress)
+		fmt.Fprintf(w, "%s\t%v\t%v\n", peer.Version, YesNo(!peer.Inbound), peer.NetAddress)
 	}
 	w.Flush()
 }
