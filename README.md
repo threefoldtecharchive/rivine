@@ -35,7 +35,7 @@ Building From Source
 To build from source, [Go 1.8 or higher must be installed](https://golang.org/doc/install)
 on the system (older versions of GO might work, but we don't support it). Then simply use `go get`:
 
-```
+```bash
 go get -u github.com/rivine/rivine/cmd/...
 ```
 
@@ -48,6 +48,14 @@ to build and `docker run --name rivine rivine` to start the daemon.
 Running the client can be done with `docker run -it rivine rivinec`.
 Add client commands just like you would calling rivinec normally (like `docker run -it rivine rivinec wallet transactions`).
 
+Supporting a Rivine Wallet in a Light Client
+--------------------
+
+Should you wish to support Rivine, or more likely a Rivine-based wallet in a(n) existing/new **light** client,
+it is recommended that you read [/doc/transactions/light_wallet.md](/doc/transactions/light_wallet.md) as a starting point.
+
+This document references to (most of the) other documentation
+you'll need in order to develop your own light wallet for a Rivine-Protocol-based blockchain.
 
 Troubleshooting
 ---------------

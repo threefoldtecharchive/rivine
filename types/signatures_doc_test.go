@@ -9,7 +9,7 @@ import (
 	"github.com/rivine/rivine/encoding"
 )
 
-// TestLegacyInputSigHash tests the legacy input signature hash algorithm.
+// TestInputSigHash tests the legacy input signature hash algorithm.
 // It is the algorithm used to compute a signature for an input within a v0 transaction.
 //
 // Pseudo code of signature algorithm, as documented:
