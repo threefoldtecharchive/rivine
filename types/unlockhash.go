@@ -243,10 +243,7 @@ func (uhs UnlockHashSlice) Len() int {
 
 // Less implements the Less method of sort.Interface.
 func (uhs UnlockHashSlice) Less(i, j int) bool {
-	if uhs[i].Type == uhs[j].Type {
-		return bytes.Compare(uhs[i].Hash[:], uhs[j].Hash[:]) < 0
-	}
-	return uhs[i].Type < uhs[j].Type
+	return uhs[i].Cmp(uhs[j]) < 0
 }
 
 // Swap implements the Swap method of sort.Interface.

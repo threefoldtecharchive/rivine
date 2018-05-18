@@ -231,7 +231,7 @@ const (
 	// which locks another condition with a timestamp.
 	// The internal condition has to be one of: [
 	// NilCondition,
-	// UnlockHashCondition,
+	// UnlockHashCondition (0x01 unlock hash type is the only standard one at the moment, others aren't allowed),
 	// MultiSignatureCondition,
 	// ]
 	ConditionTypeTimeLock
@@ -1652,10 +1652,6 @@ func (ms *MultiSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err error
 	keypair, ok := ctx.Key.(KeyPair)
 	if !ok {
 		return errors.New("Invalid keypair to sign this input")
-	}
-
-	if ms.Pairs == nil {
-		ms.Pairs = []PublicKeySignaturePair{}
 	}
 
 	signature, err := signHashUsingSiaPublicKey(

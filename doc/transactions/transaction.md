@@ -282,6 +282,46 @@ Where the legacy/v0 format is meant to fulfill legacy UnlockHash-based condition
 While that format can also fulfill the new/v1 AtomicSwapCondition (ConditionType `2`),
 when fulfilling that condition it makes more sense to use the new/v1 format, as to avoid info-duplication.
 
+##### JSON Encoding of a MultiSignatureFulfillment
+
+The FulfillmentTypeMultiSignature (`3`) identifies a MultiSignatureFulfillment
+and is json-encoded in the following format:
+
+```javascript
+{
+    "type": 3, // indicates a MultiSignatureFulfillment
+    "data": {
+        // on a local level, at least one pair is required,
+        // but in order to fulfill a MultiSignatureCondition (ConditionType `4`),
+        // it needs to contain at least as many pairs as defined by the `condition.minimumsignaturecount`.
+        "pairs": [
+            {
+                // public key, required, format: `<algorithmSpecifier>:<key>`, where <key> is hex-encoded
+                // and which byte-size is fixed but dependent upon the <algorithmSpecifier>,
+                // <algorithmSpecifier> can currently only be `"ed25519"`
+                "publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                // signature, byte-size is fixed but dependend upon the <algorithmSpecifier>,
+                // when <algorithmSpecifier> equals `"ed25519"` the byte size is 64, required, hex-encoded
+                "signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
+            },
+            {
+                // public key, required, format: `<algorithmSpecifier>:<key>`, where <key> is hex-encoded
+                // and which byte-size is fixed but dependent upon the <algorithmSpecifier>,
+                // <algorithmSpecifier> can currently only be `"ed25519"`
+                "publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                // signature, byte-size is fixed but dependend upon the <algorithmSpecifier>,
+                // when <algorithmSpecifier> equals `"ed25519"` the byte size is 64, required, hex-encoded
+                "signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
+            }
+        ]
+    }
+}
+```
+
+The public key of each listed pair in the MultiSignatureFulfillment,
+should be listed in the unlockhashes listed as part of the MultiSignatureCondition this fulfillment is to fulfill.
+That is to be said, if the public key is turned into a PubKeyUnlockHash, the resulting unlockhash should be present in the condition's unlockhashes.
+
 #### JSON Encoding of Outputs in v1 Transactions
 
 Block stake- and coin- outputs are optional, and both are encoded in the same format:
@@ -294,6 +334,7 @@ Block stake- and coin- outputs are optional, and both are encoded in the same fo
         "type": byte,   // condition type, byte, supported range: [0,3], required
                         // `0` = NilCondition, `1` = UnlockHashCondition,
                         // `2` = AtomicSwapCondition, `3` = TimeLockCondition
+                        // `4` = MultiSignatureCondition
         "data": data, // structure of the fulfillment depends upon the sibling type byte
     },
 }
@@ -399,14 +440,12 @@ and is json-encoded in the following format:
         // this internal condition will have to be explicitly fulfilled on top
         // of the implicit locktime fulfillment.
         "condition": {
-            // Only support type is `1` (`UnlockHashCondition`)
-            "type": 1,
-            "data": {
-                // output's unlock hash, specifier output will be locked to that hash
-                // the `0x01` prefix in this instance indicates that it is a PubKey Unlock Hash (a wallet address),
-                // and that UnlockHash Type is also the only one supported by the TimeLockCondition.
-                "unlockhash": "0101234567890123456789012345678901012345678901234567890123456789018a50e31447b8"
-            }
+            // Supported types are:
+            //   + UnlockHashCondition (ConditionType `1` with a UnlockType of `1`)
+            //   + MultiSignatureCondition (ConditionType `4`)
+            "type": conditionType,
+            "data": data, // data depends upon the ConditionType
+                          // defined in the sibling type property
         }
     }
 }
@@ -419,6 +458,40 @@ Such condition is to be fulfilled in 2 parts:
 
 The constant which defines whether a LockTime is a Block Height or a Unix Epoch Timestamp in seconds,
 is `LockTimeMinTimestampValue` and is documented in <https://godoc.org/github.com/rivine/rivine/types#pkg-constants>.
+
+##### JSON Encoding of a MultiSignatureCondition
+
+The ConditionTypeMultiSignature (`4`) identifies a MultiSignatureCondition
+and is json-encoded in the following format:
+
+```javascript
+{
+    "type": 4, // indicates a MultiSignatureCondition
+    "data": {
+        // lists all unlock hashes which are authorised to
+        // spend this output by signing off
+        "unlockhashes": [ // at least one unlockhash is required, this array cannot be empty or non-defined
+            "01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105",
+            "01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"
+        ],
+        // defines the amount of signatures required in order to spend this output,
+        // note that this number must be at least one, and it cannot be greater
+        // than the total amount of unlockhashes listed in the sibliging "unlockhashes" property
+        "minimumsignaturecount": 2 // can be anything as long as it is `0 > n >= len(unlockhashes)`
+    }
+}
+```
+
+Such condition can only be fulfilled by a `MultiSignatureFulfillment` (FulfillmentType `3`),
+and the condition is fulfilled in 3 steps:
+
+1. First it is ensured that the minimumsignaturecount property is valid,
+   and that there are enough key-signature pairs present in the fulfillment
+2. Then is ensured that all public keys listed in the fulfillment are authorized to do so,
+   checking this is as easy as ensuring that the `PubKeyUnlockHash` of each public key, is present
+   in the `unlockhashes` list of this condition
+3. Finally all signatures are checked against the paired public key and the given transaction,
+   within the given Fulfillment Context;
 
 #### Example of a JSON-encoded v1 Transaction
 
@@ -1069,6 +1142,36 @@ if you want to know how a public key is encoded.
 The length of a signature depends upon the signature algorithm used.
 The type of (signature) algorithm is identified by the Algorithm Specifier, encoded as part of the Public Key.
 
+##### Binary Encoding of a MultiSignatureFulfillment
+
+The FulfillmentTypeMultiSignature (`0x03`) identifies a MultiSignatureFulfillment
+and has following format:
+
+```plain
++---------------------+------------------+-----+------------------+
+| pubkey-signature    | pubkey-signature | ... | pubkey-signature |
+| pair slice length N | pair #1          |     | pair #N          |
++---------------------+------------------+-----+------------------+
+| 8 bytes             | M bytes          |     | K bytes          |
+```
+
+Where each pubkey-signature pair is binary-encoded as:
+
+```plain
++------------+-----------+
+| PublicKey  | Signature |
++------------+-----------+
+| 24+N bytes | M bytes   |
+```
+
+Please read [/doc/transactions/unlockhash.md#public-key-unlock-hash](/doc/transactions/unlockhash.md#public-key-unlock-hash),
+if you want to know how a public key is encoded.
+
+The length of a signature depends upon the signature algorithm used.
+The type of (signature) algorithm is identified by the Algorithm Specifier, encoded as part of the Public Key.
+
+The MultiSignatureFulfillment is used to fulfill a MultiSignatureCondition  (ConditionType `0x04`) only.
+
 #### Binary Encoding of Outputs in v1 Transactions
 
 Block stake- and coin- outputs are optional, and both are encoded in the same format:
@@ -1148,6 +1251,33 @@ Such condition is to be fulfilled in 2 parts:
 
 The constant which defines whether a LockTime is a Block Height or a Unix Epoch Timestamp in seconds,
 is `LockTimeMinTimestampValue` and is documented in <https://godoc.org/github.com/rivine/rivine/types#pkg-constants>.
+
+##### Binary Encoding of a MultiSignatureCondition
+
+The ConditionTypeMultiSignature (`0x04`) identifies a MultiSignatureCondition
+and has following format:
+
+```plain
++-------------------+------------------+----------------+-----+----------------+
+| minimum signature | unlockhash slice | unlock hash #1 | ... | unlock hash #N |
+| count             | length N         |                |     |                |
++-------------------+------------------+----------------+-----+----------------+
+| 8 bytes           | 8bytes           | 33 bytes       |     | 33 bytes       |
+```
+
+Please read [/doc/transactions/unlockhash.md#public-key-unlock-hash](/doc/transactions/unlockhash.md#public-key-unlock-hash),
+if you want to know how a public key is encoded.
+
+Such condition can only be fulfilled by a `MultiSignatureFulfillment` (FulfillmentType `0x03`),
+and the condition is fulfilled in 3 steps:
+
+1. First it is ensured that the minimumsignaturecount property is valid,
+   and that there are enough key-signature pairs present in the fulfillment
+2. Then is ensured that all public keys listed in the fulfillment are authorized to do so,
+   checking this is as easy as ensuring that the `PubKeyUnlockHash` of each public key, is present
+   in the `unlockhashes` list of this condition
+3. Finally all signatures are checked against the paired public key and the given transaction,
+   within the given Fulfillment Context;
 
 #### Example of a binary-encoded v1 transaction
 
