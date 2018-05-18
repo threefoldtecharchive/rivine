@@ -24,6 +24,8 @@ func TestUnlockConditionSiaEncoding(t *testing.T) {
 		// time lock condition
 		`030900000000000000111111111111111100`,                                                                   // using nil condition
 		`032a00000000000000111111111111111101016363636363636363636363636363636363636363636363636363636363636363`, // using (pubKey) unlock hash condition
+		// MultiSig condition
+		`0452000000000000000200000000000000020000000000000001e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f7001a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35`,
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -83,6 +85,8 @@ func TestUnlockFulfillmentSiaEncoding(t *testing.T) {
 		`020a01000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
 		// atomic swap fulfillment
 		`02a000000000000000656432353531390000000000000000002000000000000000fffffffffffffffffffffffffffffffff04fffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffff56fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffffffffffff123ffffffffffafffffffffffeffffffffffffff`,
+		// MultiSig fulfillment
+		`0388000000000000000100000000000000656432353531390000000000000000002000000000000000def123def123def123def123def123def123def123def123def123def123def14000000000000000ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef`,
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -208,6 +212,20 @@ func TestUnlockConditionJSONEncoding(t *testing.T) {
 		}
 	}
 }`, ``}, // using unlock hash condition
+		// MultiSig condition
+		{
+			`{
+			"type": 4,
+			"data": {
+				"unlockhashes": [
+					"01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105",
+					"01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"
+				],
+				"minimumsignaturecount": 2
+			}
+		}`,
+			``,
+		},
 	}
 	for idx, testCase := range testCases {
 		var up UnlockConditionProxy
@@ -315,6 +333,24 @@ func TestUnlockFulfillmentJSONEncoding(t *testing.T) {
 		"secret": "def789def789def789def789def789dedef789def789def789def789def789de"
 	}
 }`, ``},
+		{
+			`{
+			"type": 3,
+			"data": {
+				"pairs": [
+					{
+						"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+						"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
+					},
+					{
+						"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+						"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
+					}
+				]
+			}
+		}`,
+			``,
+		},
 	}
 	for idx, testCase := range testCases {
 		var fp UnlockFulfillmentProxy
@@ -575,6 +611,130 @@ func TestUnlockConditionEqual(t *testing.T) {
 					TargetUnlockHash: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				},
 				LockTime: 5000,
+			},
+			"",
+		},
+		{
+			&TimeLockCondition{
+				Condition: &MultiSignatureCondition{
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+						unlockHashFromHex("01fe92204c6e413c765a39988605a80fe4273eda49b95ff7b6e57d8049afee13574ef6a04985f1"),
+					},
+					MinimumSignatureCount: 2,
+				},
+			},
+			&TimeLockCondition{
+				Condition: &MultiSignatureCondition{
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+						unlockHashFromHex("01fe92204c6e413c765a39988605a80fe4273eda49b95ff7b6e57d8049afee13574ef6a04985f1"),
+					},
+					MinimumSignatureCount: 2,
+				},
+			},
+			"",
+		},
+		{
+			&MultiSignatureCondition{},
+			&MultiSignatureCondition{},
+			"",
+		},
+		{
+			&MultiSignatureCondition{},
+			&NilCondition{},
+			"unequal type",
+		},
+		{
+			&MultiSignatureCondition{},
+			nil,
+			"unequal type",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			"",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			// swap the unlock hash placement
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				},
+			},
+			"",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 1,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			"Different amount of signatures required",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			"Unlock hash occurst multiple times",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8")},
 			},
 			"",
 		},
@@ -992,6 +1152,301 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			},
 			"different hashed secret",
 		},
+		{&MultiSignatureFulfillment{}, nil, "unequal type"},
+		{&MultiSignatureFulfillment{}, &NilFulfillment{}, "unequal type"},
+		{&MultiSignatureFulfillment{}, &LegacyAtomicSwapFulfillment{}, "unequal type"},
+		{&MultiSignatureFulfillment{}, &SingleSignatureFulfillment{}, "unequal type"},
+		{&MultiSignatureFulfillment{}, &AtomicSwapFulfillment{}, "unequal type"},
+		{&MultiSignatureFulfillment{}, &MultiSignatureFulfillment{}, ""},
+		// case 45
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+				},
+			},
+			"different amount of keys/signatures",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 50},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			"Different signature",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 10, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			"Different public key",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			"PublicKeySignaturePair not repeated",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			"",
+		},
+		// Case 50
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			"",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+				},
+			},
+			"",
+		},
 	}
 	for idx, testCase := range testCases {
 		equal := testCase.A.Equal(testCase.B)
@@ -1191,6 +1646,10 @@ func TestValidFulFill(t *testing.T) {
 	sk, pk := crypto.GenerateKeyPair()
 	ed25519pk := Ed25519PublicKey(pk)
 
+	// Second keypair
+	sk2, pk2 := crypto.GenerateKeyPair()
+	ed25519pk2 := Ed25519PublicKey(pk2)
+
 	// future time stamp
 	futureTimeStamp := CurrentTimestamp() + 123456
 
@@ -1376,6 +1835,41 @@ func TestValidFulFill(t *testing.T) {
 				}
 			},
 			sk,
+		},
+		{ // TimeLockedCondition (MultiSignatureCondition) -> MultiSignatureFulfillment
+			&TimeLockCondition{
+				LockTime: uint64(CurrentTimestamp()),
+				Condition: &MultiSignatureCondition{
+					UnlockHashes: UnlockHashSlice{
+						NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+						NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk2))),
+					},
+					MinimumSignatureCount: 1,
+				},
+			},
+			func() MarshalableUnlockFulfillment {
+				return &MultiSignatureFulfillment{}
+			},
+			KeyPair{
+				PublicKey:  ed25519pk2,
+				PrivateKey: sk2[:],
+			},
+		},
+		{
+			&MultiSignatureCondition{
+				UnlockHashes: UnlockHashSlice{
+					NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+					NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk2))),
+				},
+				MinimumSignatureCount: 1,
+			},
+			func() MarshalableUnlockFulfillment {
+				return &MultiSignatureFulfillment{}
+			},
+			KeyPair{
+				PublicKey:  ed25519pk2,
+				PrivateKey: sk2[:],
+			},
 		},
 	}
 	for idx, testCase := range testCases {
@@ -1564,6 +2058,63 @@ func TestIsStandardCondition(t *testing.T) {
 					TargetUnlockHash: unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				},
 			}, "no lock time provided",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &MultiSignatureCondition{
+					MinimumSignatureCount: 2,
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+						unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+					},
+				},
+			}, "",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 0,
+				Condition: &MultiSignatureCondition{
+					MinimumSignatureCount: 2,
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+						unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+					},
+				},
+			}, "no lock time provided",
+		},
+		{
+			&MultiSignatureCondition{},
+			"amount of required signatures must be greater than one",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				},
+			},
+			"amount of required signatures must be less then or equal to the amount of provided unlock hashes",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+					unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+					unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				},
+			},
+			"",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes:          UnlockHashSlice{},
+			},
+			"need at least a single unlockhash",
 		},
 	}
 	for idx, testCase := range testCases {
@@ -1959,6 +2510,142 @@ func TestIsStandardFulfillment(t *testing.T) {
 			},
 			"",
 		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key: ByteSlice{
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+							},
+						},
+						Signature: ByteSlice{
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+						},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key: ByteSlice{
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+							},
+						},
+						Signature: ByteSlice{
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+						},
+					},
+				},
+			},
+			"",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key: ByteSlice{
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+							},
+						},
+						Signature: ByteSlice{ // only 56 bytes
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+						},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key: ByteSlice{
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+							},
+						},
+						Signature: ByteSlice{
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+						},
+					},
+				},
+			},
+			"Invalid signature",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key: ByteSlice{
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+							},
+						},
+						Signature: ByteSlice{
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+							1, 2, 3, 4, 5, 6, 7, 8,
+						},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key: ByteSlice{
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+								1, 2, 3, 4, 5, 6, 7, 8,
+							},
+						},
+					},
+				},
+			},
+			"Empty signature",
+		},
 	}
 	for idx, testCase := range testCases {
 		err := testCase.Fulfillment.IsStandardFulfillment()
@@ -2191,6 +2878,11 @@ func TestUnlockConditionFulfillable(t *testing.T) {
 		{
 			&TimeLockCondition{LockTime: 500000004},
 			FulfillableContext{BlockHeight: 500000002, BlockTime: 500000005},
+			true,
+		},
+		{
+			&MultiSignatureCondition{},
+			FulfillableContext{},
 			true,
 		},
 	}

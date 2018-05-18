@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
@@ -230,9 +231,23 @@ const (
 	// which locks another condition with a timestamp.
 	// The internal condition has to be one of: [
 	// NilCondition,
-	// UnlockHashCondition(0x01 unlock hash type is the only standard one at the moment, others are always fulfilled),
+	// UnlockHashCondition (0x01 unlock hash type is the only standard one at the moment, others aren't allowed),
+	// MultiSignatureCondition,
 	// ]
 	ConditionTypeTimeLock
+
+	// ConditionTypeMultiSignature defines an unlock condition which
+	// can only be unlocked by mutliple signatures. The
+	// accepted signatures are declared up front by
+	// specifying the unlockhash created from the public key
+	// which matches the private key that will be used for signing,
+	// for every person who is allowed to sign. Additionally, a minimum
+	// required amount of signatures must be specified, which is the minimum
+	// amount of signatures required to spend the output. More signatures
+	// can be given, but these additional signatures are not required.
+	//
+	// Implemented by the MultiSignatureCondition type
+	ConditionTypeMultiSignature
 )
 
 // The following enumeration defines the different possible and standard
@@ -268,6 +283,13 @@ const (
 	//
 	// Implemented by the AtomicSwapFulfillment.
 	FulfillmentTypeAtomicSwap
+	// FulfillmentTypeMultiSignature defines the multisig fulfillment, and is defined by a
+	// slice of public keys, and a slice of transaction-based signatures generated from
+	// the matching private keys. The index of the signature is the same as the corresponding
+	// public key
+	//
+	// Implemented by the MultiSignatureFulfillment type
+	FulfillmentTypeMultiSignature
 )
 
 // Constants that are used as part of AtomicSwap Conditions/Fulfillments.
@@ -313,6 +335,16 @@ var (
 	//
 	// NOTE That verification of unknown signing algorithm types does always succeed!
 	ErrUnknownSignAlgorithmType = errors.New("unknown signature algorithm type")
+
+	// ErrInsufficientSignatures is an error returned when a multisig
+	// condition is attempted to be fulfilled, but the fulfillment does not
+	// (yet) have the required amount of signatures
+	ErrInsufficientSignatures = errors.New("not enough signatures")
+
+	// ErrUnauthorizedPubKey is an error returned when a public key used in a multisig
+	// fulfillment is not allowed to unlock the input (as the associated pubkey hash is not
+	// listed in the conditions unlockhashes)
+	ErrUnauthorizedPubKey = errors.New("public key used which is not allowed to sign this input")
 )
 
 // RegisterUnlockConditionType is used to register a condition type, by linking it to
@@ -358,10 +390,11 @@ var (
 	// Manipulated by the RegisterUnlockConditionType function,
 	// and used by the UnlockConditionProxy.
 	_RegisteredUnlockConditionTypes = map[ConditionType]MarshalableUnlockConditionConstructor{
-		ConditionTypeNil:        func() MarshalableUnlockCondition { return &NilCondition{} },
-		ConditionTypeUnlockHash: func() MarshalableUnlockCondition { return &UnlockHashCondition{} },
-		ConditionTypeAtomicSwap: func() MarshalableUnlockCondition { return &AtomicSwapCondition{} },
-		ConditionTypeTimeLock:   func() MarshalableUnlockCondition { return &TimeLockCondition{} },
+		ConditionTypeNil:            func() MarshalableUnlockCondition { return &NilCondition{} },
+		ConditionTypeUnlockHash:     func() MarshalableUnlockCondition { return &UnlockHashCondition{} },
+		ConditionTypeAtomicSwap:     func() MarshalableUnlockCondition { return &AtomicSwapCondition{} },
+		ConditionTypeTimeLock:       func() MarshalableUnlockCondition { return &TimeLockCondition{} },
+		ConditionTypeMultiSignature: func() MarshalableUnlockCondition { return &MultiSignatureCondition{} },
 	}
 	// Manipulated by the RegisterUnlockFulfillmentType function,
 	// and used by the UnlockFulfillmentProxy.
@@ -369,6 +402,7 @@ var (
 		FulfillmentTypeNil:             func() MarshalableUnlockFulfillment { return &NilFulfillment{} },
 		FulfillmentTypeSingleSignature: func() MarshalableUnlockFulfillment { return &SingleSignatureFulfillment{} },
 		FulfillmentTypeAtomicSwap:      func() MarshalableUnlockFulfillment { return &anyAtomicSwapFulfillment{} },
+		FulfillmentTypeMultiSignature:  func() MarshalableUnlockFulfillment { return &MultiSignatureFulfillment{} },
 	}
 )
 
@@ -449,6 +483,32 @@ type (
 		// on top of the LockTime condition defined by this condition.
 		// See ConditionTypeTimeLock in order to know which conditions are supported.
 		Condition MarshalableUnlockCondition
+	}
+
+	// MultiSignatureCondition implements the ConditionTypeMultiSignature ConditionType.
+	// See ConditionTypeMultiSignature for more information.
+	MultiSignatureCondition struct {
+		UnlockHashes          UnlockHashSlice `json:"unlockhashes"`
+		MinimumSignatureCount uint64          `json:"minimumsignaturecount"`
+	}
+
+	// MultiSignatureFulfillment implements the FulfillmentTypeMultiSignature FulfillmentType.
+	// See FulfillmentTypeMultiSignature for more information.
+	MultiSignatureFulfillment struct {
+		Pairs []PublicKeySignaturePair `json:"pairs"`
+	}
+
+	// PublicKeySignaturePair is a public key and a signature created from the corresponding
+	// private key
+	PublicKeySignaturePair struct {
+		PublicKey SiaPublicKey `json:"publickey"`
+		Signature ByteSlice    `json:"signature"`
+	}
+
+	// KeyPair is a matching public and private key
+	KeyPair struct {
+		PublicKey  SiaPublicKey
+		PrivateKey ByteSlice
 	}
 )
 
@@ -1061,11 +1121,13 @@ var (
 	_ MarshalableUnlockCondition = (*NilCondition)(nil)
 	_ MarshalableUnlockCondition = (*UnlockHashCondition)(nil)
 	_ MarshalableUnlockCondition = (*AtomicSwapCondition)(nil)
+	_ MarshalableUnlockCondition = (*MultiSignatureCondition)(nil)
 
 	_ MarshalableUnlockFulfillment = (*NilFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*SingleSignatureFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*AtomicSwapFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*LegacyAtomicSwapFulfillment)(nil)
+	_ MarshalableUnlockFulfillment = (*MultiSignatureFulfillment)(nil)
 )
 
 // NewAtomicSwapHashedSecret creates a new atomic swap hashed secret,
@@ -1259,6 +1321,8 @@ func (tl *TimeLockCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillC
 	switch tf := fulfillment.(type) {
 	case *SingleSignatureFulfillment:
 		return tl.Condition.Fulfill(tf, ctx)
+	case *MultiSignatureFulfillment:
+		return tl.Condition.Fulfill(tf, ctx)
 	default:
 		return ErrUnexpectedUnlockFulfillment
 	}
@@ -1281,6 +1345,8 @@ func (tl *TimeLockCondition) IsStandardCondition() error {
 			return errors.New("nil crypto hash cannot be used as unlock hash")
 		}
 		return nil
+	case *MultiSignatureCondition:
+		return tc.IsStandardCondition()
 	case *NilCondition:
 		return nil
 	default:
@@ -1378,6 +1444,241 @@ func (tl *TimeLockCondition) UnmarshalJSON(b []byte) error {
 		tl.Condition = jtl.Condition.Condition
 	}
 	return nil
+}
+
+// NewMultiSignatureCondition creates a new multisig unlock condition,
+// using the given unlockhashes as a representation of the identities
+// who can unlock the output
+func NewMultiSignatureCondition(uhs UnlockHashSlice, minsigs uint64) *MultiSignatureCondition {
+	if build.DEBUG && minsigs == 0 {
+		panic("MultiSig outputs must require at least a single signature to unlock")
+	}
+	if build.DEBUG && len(uhs) == 0 {
+		panic("MultiSig outputs must specify at least a single address which can sign it as an input")
+	}
+	if build.DEBUG && uint64(len(uhs)) < minsigs {
+		panic("You can't create a multisig which requires more signatures to spent then there are addresses which can sign")
+	}
+	if build.DEBUG {
+		for _, uh := range uhs {
+			if uh.Type != UnlockTypePubKey {
+				panic("Unlock hashes used in multisig condition must have the UnlockTypePubKey type")
+			}
+		}
+
+	}
+	return &MultiSignatureCondition{UnlockHashes: uhs, MinimumSignatureCount: minsigs}
+}
+
+// Fulfill implements UnlockFulfillment.Fulfill
+func (ms *MultiSignatureCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	tf, ok := fulfillment.(*MultiSignatureFulfillment)
+	if !ok {
+		return ErrUnexpectedUnlockFulfillment
+	}
+
+	// Check if enough signatures have been provided
+	if ms.MinimumSignatureCount > uint64(len(tf.Pairs)) {
+		return ErrInsufficientSignatures
+	}
+
+	// Check if all the unlock keypairs have an associated unlock hash
+	uhs := make(UnlockHashSlice, len(ms.UnlockHashes))
+	copy(uhs, ms.UnlockHashes)
+
+	for _, kp := range tf.Pairs {
+		uh := NewPubKeyUnlockHash(kp.PublicKey)
+		for i, ouh := range uhs {
+			if ouh.Cmp(uh) == 0 {
+				uhs = append(uhs[:i], uhs[i+1:]...)
+				break
+			}
+		}
+	}
+	if len(uhs)+len(tf.Pairs) != len(ms.UnlockHashes) {
+		return ErrUnauthorizedPubKey
+	}
+
+	// Finally verify all the signatures
+	for _, pks := range tf.Pairs {
+		if err := verifyHashUsingSiaPublicKey(
+			pks.PublicKey, ctx.InputIndex, ctx.Transaction, pks.Signature, pks.PublicKey,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ConditionType implements UnlockCondition.ConditionType
+func (ms *MultiSignatureCondition) ConditionType() ConditionType { return ConditionTypeMultiSignature }
+
+// IsStandardCondition implements UnlockCondition.IsStandardCondition
+func (ms *MultiSignatureCondition) IsStandardCondition() error {
+	if ms.MinimumSignatureCount == 0 {
+		return errors.New("A minimum amount of required signatures must be specified")
+	}
+	if len(ms.UnlockHashes) == 0 {
+		return errors.New("At least a single unlockhash must be provided which identifies a possible signatory")
+	}
+	if ms.MinimumSignatureCount > uint64(len(ms.UnlockHashes)) {
+		return errors.New("The minimum amount of signatures can't be higher than the amount of unlockhashes")
+	}
+	return nil
+}
+
+// UnlockHash implements UnlockCondition.UnlockHash
+func (ms *MultiSignatureCondition) UnlockHash() UnlockHash {
+	// Copy the unlockhashes to a new slice and sort it,
+	// so the same unlockhash is produced for the same set
+	// of unlockhashes, regardless of their ordering
+	uhs := make(UnlockHashSlice, len(ms.UnlockHashes))
+	copy(uhs, ms.UnlockHashes)
+	sort.Sort(uhs)
+	hash := crypto.HashObject(uhs)
+	return UnlockHash{
+		Type: UnlockTypeMultiSig,
+		Hash: hash,
+	}
+}
+
+// Equal implements UnlockCondition.Equal
+func (ms *MultiSignatureCondition) Equal(c UnlockCondition) bool {
+	oms, ok := c.(*MultiSignatureCondition)
+	if !ok {
+		// Different type
+		return false
+	}
+	if ms.MinimumSignatureCount != oms.MinimumSignatureCount {
+		// Different amount of signatures required
+		return false
+	}
+
+	if len(ms.UnlockHashes) != len(oms.UnlockHashes) {
+		// Differrent amount of unlockhashes
+		return false
+	}
+
+	// Check and make sure that all addresses match,
+	// regardless of the ordering. Also make sure we check
+	// for duplicate addresses
+	omsC := make(UnlockHashSlice, len(oms.UnlockHashes))
+	copy(omsC, oms.UnlockHashes)
+	for _, uh := range ms.UnlockHashes {
+		for i, ouh := range omsC {
+			if uh.Cmp(ouh) == 0 {
+				omsC = append(omsC[:i], omsC[i+1:]...)
+				break
+			}
+		}
+	}
+
+	return len(omsC) == 0
+}
+
+// Fulfillable implements UnlockCondition.Fulfillable
+func (ms *MultiSignatureCondition) Fulfillable(ctx FulfillableContext) bool {
+	return true
+}
+
+// Marshal implements MarshalableUnlockCondition.Marshal
+func (ms *MultiSignatureCondition) Marshal() []byte {
+	return encoding.MarshalAll(ms.MinimumSignatureCount, ms.UnlockHashes)
+}
+
+// Unmarshal implements MarshalableUnlockCondition.Unmarshal
+func (ms *MultiSignatureCondition) Unmarshal(b []byte) error {
+	return encoding.UnmarshalAll(b, &ms.MinimumSignatureCount, &ms.UnlockHashes)
+}
+
+// NewMultiSignatureFulfillment creates a new unsigned multisig fulfillment from
+// the given public keys. The keys are later matched to the private keys used
+// for signing
+func NewMultiSignatureFulfillment(pairs []PublicKeySignaturePair) *MultiSignatureFulfillment {
+	return &MultiSignatureFulfillment{
+		Pairs: pairs,
+	}
+}
+
+// FulfillmentType implements UnlockFulfillment.FulfillmentType
+func (ms *MultiSignatureFulfillment) FulfillmentType() FulfillmentType {
+	return FulfillmentTypeMultiSignature
+}
+
+// IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
+func (ms *MultiSignatureFulfillment) IsStandardFulfillment() error {
+	var err error
+	for _, pair := range ms.Pairs {
+		err = strictSignatureCheck(pair.PublicKey, pair.Signature)
+		if err != nil {
+			break
+		}
+	}
+	return err
+}
+
+// Equal implements UnlockFulfillment.Equal
+func (ms *MultiSignatureFulfillment) Equal(f UnlockFulfillment) bool {
+	oms, ok := f.(*MultiSignatureFulfillment)
+	if !ok {
+		return false
+	}
+
+	if len(ms.Pairs) != len(oms.Pairs) {
+		return false
+	}
+
+	// Check that all key/signature pairs are the same, though
+	// the order does not matter
+	omsC := make([]PublicKeySignaturePair, len(oms.Pairs))
+	copy(omsC, oms.Pairs)
+
+	for _, pair := range ms.Pairs {
+		for i, op := range omsC {
+			if pair.PublicKey.Algorithm == op.PublicKey.Algorithm &&
+				bytes.Compare(pair.PublicKey.Key[:], op.PublicKey.Key[:]) == 0 &&
+				bytes.Compare(pair.Signature[:], op.Signature[:]) == 0 {
+				omsC = append(omsC[:i], omsC[i+1:]...)
+				break
+			}
+		}
+	}
+	return len(omsC) == 0
+}
+
+// Sign implements UnlockFulfillment.Sign
+func (ms *MultiSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err error) {
+	keypair, ok := ctx.Key.(KeyPair)
+	if !ok {
+		return errors.New("Invalid keypair to sign this input")
+	}
+
+	signature, err := signHashUsingSiaPublicKey(
+		keypair.PublicKey, ctx.InputIndex, ctx.Transaction, keypair.PrivateKey, keypair.PublicKey,
+	)
+	if err != nil {
+		return
+	}
+
+	// Only modify the fulfillment in case the signature was created succesfully
+	ms.Pairs = append(ms.Pairs, PublicKeySignaturePair{PublicKey: keypair.PublicKey, Signature: signature})
+	return
+}
+
+// UnlockHash implements UnlockFulfillment.UnlockHash
+func (ms *MultiSignatureFulfillment) UnlockHash() UnlockHash {
+	return UnlockHash{Type: UnlockTypeMultiSig, Hash: crypto.HashObject(ms.Pairs)}
+}
+
+// Marshal implements MarshalableUnlockFulfillment.Marshal
+func (ms *MultiSignatureFulfillment) Marshal() []byte {
+	return encoding.Marshal(ms.Pairs)
+}
+
+// Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
+func (ms *MultiSignatureFulfillment) Unmarshal(b []byte) error {
+	return encoding.Unmarshal(b, &ms.Pairs)
 }
 
 // MarshalSia implements encoding.SiaMarshaler.MarshalSia

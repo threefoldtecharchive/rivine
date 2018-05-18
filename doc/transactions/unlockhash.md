@@ -115,7 +115,7 @@ Where the binary encoded layout of a public key is as follows:
 > as the `NewPubKeyUnlockHash` function in [/types/unlockhash.go](/types/unlockhash.go).
 >
 > Documentation of this function, and reference to its source,
-> is available at [https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash](https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash).
+> is available at <https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash>.
 
 #### Atomic Swap Unlock Hash
 
@@ -143,7 +143,26 @@ Where the binary encoded layout of an atomic swap's condition is as follows:
 > as the `AtomicSwapCondition`'s `UnlockHash` method in [/types/unlockcondition.go](/types/unlockcondition.go).
 >
 > Documentation of this function, and reference to its source,
-> is available at [https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash](https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash).
+> is available at <https://godoc.org/github.com/rivine/rivine/types#AtomicSwapCondition.UnlockHash>.
+
+#### MultiSignature Unlock Hash
+
+A MultiSignature (`0x03`) unlock hash's hash,
+is not really useful at all, and is therefore not explained in detail in this document.
+
+Should you be curious though it is...
+
+> Implemented in the official/reference Golang implementation
+> as the `MultiSignatureCondition`'s `UnlockHash` method in [/types/unlockcondition.go](/types/unlockcondition.go).
+>
+> Documentation of this function, and reference to its source,
+> is available at <https://godoc.org/github.com/rivine/rivine/types#MultiSignatureCondition.UnlockHash>.
+
+The `MultiSignatureFulfillment` implements an even different version of how to compute this type of UnlockHash,
+decreasing the usefulness of this unlock hash even more.
+
+Note to the developers: check if we really need this type of unlock hash,
+and if so, if we cannot improve it, to make it actually useful for anything serious.
 
 ### checksum
 
