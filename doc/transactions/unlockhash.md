@@ -20,19 +20,18 @@ An unlock hash has a different representation, depending if its encoded in text 
 or in a raw binary format (byte slice). For JSON marshalling and print/debugging purposes the text format is used,
 while the binary encoding is used when used as part of a transaction in the Rivine protocol.
 
-
 #### text/string encoding
 
 The format of an address can be visually represented as:
 
-```
+```plain
 +---------+----------------------------------+-----------------------------+
-|  type   |    32-byte hex-formatted hash    | 6-byte hex-encoded checksum |
-|         |                                  |                             | description
-| 2 bytes |            64 bytes              |           12 bytes          | + byte length
-+----+----+---+-------------------------+----+----+-------------------+----+
-| 0  | 1  | 2 |           ...           | 66 | 67 |        ...        | 77 | byte positions
-+----+----+---+-------------------------+----+----+-------------------+----+
+|  type   |    32-byte hex-formatted hash    | 6-byte hex-encoded checksum | description
+|         |                                  |                             |
+| 2 bytes |            64 bytes              |           12 bytes          | byte length
++----+----+----+------------------------+----+----+-------------------+----+
+| 0  | 01 | 02 |           ...          | 66 | 67 |        ...        | 77 | byte positions
++----+----+----+------------------------+----+----+-------------------+----+
 ```
 
 As you can see an unlock hash consists out of a type, a hash and a checksum of the type and hash.
@@ -41,7 +40,7 @@ is doubled from 39 bytes to 78 bytes. Let's go over all parts of an unlock hash 
 
 #### binary encoding
 
-```
+```plain
 +--------+----------+
 | type   | hash     |
 +--------+----------+
@@ -60,15 +59,18 @@ in order to be able to spend the given output as a future input.
 
 Currently there are only 2 known (input) lock types:
 
-+ Single Signature (`0x01` -> `"01"`): the unlock hash identifies a wallet address (a public key linked to a wallet);
++ Public Key (`0x01` -> `"01"`): the unlock hash identifies a wallet address (a public key linked to a wallet);
 + Atomic Swap Contract (`0x02` -> `"02"`): the unlock hash identifies an atomic swap contract between two addresses;
+
+> NOTE: Atomic Swap Contract Unlock Hashes are no longer used (by default) as output conditions since v1 transactions.
+> They are however still used as to identify such an output by some modules, such as the explorer,
+> as to identify the outputs within a bucket.
 
 The default (input) lock type is `00` and should not be used for anything,
 as it identifies a `nil` input lock type, and is only expected for nil inputs.
 
-Any other (of the 253 available) input lock types can be used for soft-forks (e.g. future updates),
-and will be able to be used safely already, but the network (of blockc reators)
-won't use them for block creation until the transaction's types become known.
+Any other (of the 253 available) input lock types can be used in future updates,
+but remain unusable until the majority of active block stake owners accepts them.
 
 ### hash
 
@@ -80,16 +82,79 @@ A fixed length of 32 bytes (64 bytes in hex-encoded format) is the only requirem
 > It writes every byte (value range `0`-`255`) into
 > its 2-byte hex representation `"00"`-`"ff"`.
 
-For more information about the generation of these hash parts,
-I kindly refer you to the more extensive [transactions.md docs](transaction.md#unlock-hashs-hash).
+But how is that hash generated? Well, using the blake2b 256-bit algorithm,
+we compute a 32-byte crypto hash, using the binary encoding of
+the relevant input's unlock condition as hash input.
+
+How the unlock hash is binary encoded depends upon the unlock type used.
+When the unlock type is of a known type however, the enoding will depend on this type.
+
+#### Public Key Unlock Hash
+
+A public key (`0x01`) unlock hash's hash is computed as follows:
+
+```plain
+blake2b_256(binaryEncoding(publicKey))
+```
+
+Where the binary encoded layout of a public key is as follows:
+
+```plain
++----------------------+-----------------+------------------------+
+|     fixed-size       |  length N of    |                        |
+|  array, indicating   |   public key    |       public key       | description
+|  the signature algo  |  which follows  |                        |
+|                      |                 |                        |
+|       16 bytes       |     8 bytes     |        N bytes         | byte length
++----+----+-------+----+----+------------+----+----+-------+------+
+| 00 | 01 |  ...  | 15 | 16 |  ...  | 23 | 24 | 25 |  ...  | 23+N | byte positions
++----+----+-------+----+----+------------+----+----+-------+------+
+```
+
+> Implemented in the official/reference Golang implementation
+> as the `NewPubKeyUnlockHash` function in [/types/unlockhash.go](/types/unlockhash.go).
+>
+> Documentation of this function, and reference to its source,
+> is available at [https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash](https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash).
+
+#### Atomic Swap Unlock Hash
+
+A Atomic Swap (`0x02`) unlock hash's hash,
+remaining active for legacy reasons only, is computed as follows:
+
+```plain
+blake2b_256(binaryEncoding(atomicSwapCondition))
+```
+
+Where the binary encoded layout of an atomic swap's condition is as follows:
+
+```plain
++----------------+----------------+---------------+----------------+
+|    sender      |    receiver    |    hashed     |    timelock    |
+|   unlockhash   |   unlockhash   |    secret     |     uint64     | description
+|                |                |               |                |
+|    33 bytes    |    33 bytes    |   32 bytes    |     8 bytes    | byte length
++----+------+----+----+------+----+----+-----+----+----+-----+-----+
+| 00 | ...  | 32 | 33 | ...  | 65 | 66 | ... | 97 | 98 | ... | 105 | byte positions
++----+------+----+----+------+----+----+-----+----+----+-----+-----+
+```
+
+> Implemented in the official/reference Golang implementation
+> as the `AtomicSwapCondition`'s `UnlockHash` method in [/types/unlockcondition.go](/types/unlockcondition.go).
+>
+> Documentation of this function, and reference to its source,
+> is available at [https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash](https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash).
 
 ### checksum
 
-The last part of a unlock hash is the checksum of the type and hash (which were the previous 2 parts).
-Blake2b is used to generate a 256-bit checksum from the hash, of which the first 6 bytes are used
+When encoding the unlockhash in text/string format,
+the last part of a unlock hash is the checksum of the type and hash (which were the previous 2 parts).
+When encoding the unlockhash in binary format, no checksum is generated as part of the encoding.
+
+The blake2b algorithm is used to generate a 256-bit checksum from the hash, of which the first 6 bytes are used
 as checksum for this unlock hash. As the checksum is also hex-encoded its byte size doubles to 12.
 
-> ```
+> ```plain
 > checksum := first_6_bytes(blake2b_256(type, hash))
 > ```
 > > where type is one byte, and hash is a fixed-size byte array of 32 bytes
@@ -97,3 +162,6 @@ as checksum for this unlock hash. As the checksum is also hex-encoded its byte s
 
 Meaning that the input message used to generate a 256-bit checksum with Blake2b is 33 bytes,
 one byte of the (unlock type) and 32 bytes for the hash itself. The output (checksum) is 32 bytes.
+
+See [the text/string encoding section](#text/string-encoding) for more information about
+how this checksum is used as part of the text encoding.
