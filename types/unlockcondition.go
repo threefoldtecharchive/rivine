@@ -231,7 +231,8 @@ const (
 	// which locks another condition with a timestamp.
 	// The internal condition has to be one of: [
 	// NilCondition,
-	// UnlockHashCondition(0x01 unlock hash type is the only standard one at the moment, others are always fulfilled),
+	// UnlockHashCondition,
+	// MultiSignatureCondition,
 	// ]
 	ConditionTypeTimeLock
 
@@ -1320,6 +1321,8 @@ func (tl *TimeLockCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillC
 	switch tf := fulfillment.(type) {
 	case *SingleSignatureFulfillment:
 		return tl.Condition.Fulfill(tf, ctx)
+	case *MultiSignatureFulfillment:
+		return tl.Condition.Fulfill(tf, ctx)
 	default:
 		return ErrUnexpectedUnlockFulfillment
 	}
@@ -1342,6 +1345,8 @@ func (tl *TimeLockCondition) IsStandardCondition() error {
 			return errors.New("nil crypto hash cannot be used as unlock hash")
 		}
 		return nil
+	case *MultiSignatureCondition:
+		return tc.IsStandardCondition()
 	case *NilCondition:
 		return nil
 	default:

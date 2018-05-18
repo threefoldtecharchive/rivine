@@ -615,6 +615,27 @@ func TestUnlockConditionEqual(t *testing.T) {
 			"",
 		},
 		{
+			&TimeLockCondition{
+				Condition: &MultiSignatureCondition{
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+						unlockHashFromHex("01fe92204c6e413c765a39988605a80fe4273eda49b95ff7b6e57d8049afee13574ef6a04985f1"),
+					},
+					MinimumSignatureCount: 2,
+				},
+			},
+			&TimeLockCondition{
+				Condition: &MultiSignatureCondition{
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+						unlockHashFromHex("01fe92204c6e413c765a39988605a80fe4273eda49b95ff7b6e57d8049afee13574ef6a04985f1"),
+					},
+					MinimumSignatureCount: 2,
+				},
+			},
+			"",
+		},
+		{
 			&MultiSignatureCondition{},
 			&MultiSignatureCondition{},
 			"",
@@ -1815,6 +1836,25 @@ func TestValidFulFill(t *testing.T) {
 			},
 			sk,
 		},
+		{ // TimeLockedCondition (MultiSignatureCondition) -> MultiSignatureFulfillment
+			&TimeLockCondition{
+				LockTime: uint64(CurrentTimestamp()),
+				Condition: &MultiSignatureCondition{
+					UnlockHashes: UnlockHashSlice{
+						NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk))),
+						NewUnlockHash(UnlockTypePubKey, crypto.HashObject(encoding.Marshal(ed25519pk2))),
+					},
+					MinimumSignatureCount: 1,
+				},
+			},
+			func() MarshalableUnlockFulfillment {
+				return &MultiSignatureFulfillment{}
+			},
+			KeyPair{
+				PublicKey:  ed25519pk2,
+				PrivateKey: sk2[:],
+			},
+		},
 		{
 			&MultiSignatureCondition{
 				UnlockHashes: UnlockHashSlice{
@@ -2016,6 +2056,32 @@ func TestIsStandardCondition(t *testing.T) {
 				LockTime: 0,
 				Condition: &UnlockHashCondition{
 					TargetUnlockHash: unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				},
+			}, "no lock time provided",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &MultiSignatureCondition{
+					MinimumSignatureCount: 2,
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+						unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+					},
+				},
+			}, "",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 0,
+				Condition: &MultiSignatureCondition{
+					MinimumSignatureCount: 2,
+					UnlockHashes: UnlockHashSlice{
+						unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+						unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+					},
 				},
 			}, "no lock time provided",
 		},
