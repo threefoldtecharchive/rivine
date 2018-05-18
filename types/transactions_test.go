@@ -570,6 +570,51 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 				MinerFees: []Currency{NewCurrency64(3)},
 			},
 		},
+		{
+			"018101000000000000010000000000000022000000000000000000000000000000000000000000000000000000000000220388000000000000000100000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff020000000000000001000000000000000201210000000000000001cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc0100000000000000030452000000000000000200000000000000020000000000000001dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000000000000000000000000000000001000000000000000100000000000000010000000000000000",
+			Transaction{
+				Version: TransactionVersionOne,
+				CoinInputs: []CoinInput{
+					{
+						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
+						Fulfillment: NewFulfillment(&MultiSignatureFulfillment{
+							Pairs: []PublicKeySignaturePair{
+								{
+									PublicKey: SiaPublicKey{
+										Algorithm: SignatureEd25519,
+										Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+									},
+									Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+								},
+							},
+						}),
+					},
+				},
+				CoinOutputs: []CoinOutput{
+					{
+						Value: NewCurrency64(2),
+						Condition: NewCondition(NewUnlockHashCondition(UnlockHash{
+							Type: UnlockTypePubKey,
+							Hash: hs("cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"),
+						})),
+					},
+					{
+						Value: NewCurrency64(3),
+						Condition: NewCondition(NewMultiSignatureCondition(UnlockHashSlice{
+							{
+								Type: UnlockTypePubKey,
+								Hash: hs("dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"),
+							},
+							{
+								Type: UnlockTypePubKey,
+								Hash: hs("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+							},
+						}, 2)),
+					},
+				},
+				MinerFees: []Currency{NewCurrency64(1)},
+			},
+		},
 	}
 	for idx, example := range examples {
 		encodedTx, err := hex.DecodeString(example.HexEncoding)
@@ -1337,6 +1382,165 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 							},
 							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
+						}),
+					},
+				},
+				CoinOutputs: []CoinOutput{
+					{
+						Value: NewCurrency64(9),
+						Condition: NewCondition(&TimeLockCondition{
+							LockTime: 42,
+							Condition: &UnlockHashCondition{
+								TargetUnlockHash: UnlockHash{
+									Type: UnlockTypePubKey,
+									Hash: hs("e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70"),
+								},
+							},
+						}),
+					},
+				},
+				MinerFees: []Currency{NewCurrency64(3)},
+			},
+		},
+		{
+			`{
+	"version": 1,
+	"data": {
+		"coininputs": [
+			{
+				"parentid": "1100000000000000000000000000000000000000000000000000000000000011",
+				"fulfillment": {
+					"type": 1,
+					"data": {
+						"publickey": "ed25519:def123def123def123def123def123def123def123def123def123def123def1",
+						"signature": "ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"
+					}
+				}
+			}
+		],
+		"coinoutputs": [
+			{
+				"value": "9",
+				"condition": {
+					"type": 4,
+					"data": {
+						"unlockhashes": [
+							"01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105",
+							"01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"
+						],
+						"minimumsignaturecount": 2
+					}
+				}
+			}
+		],
+		"minerfees": [
+			"3"
+		]
+	}
+}`,
+			Transaction{
+				Version: TransactionVersionOne,
+				CoinInputs: []CoinInput{
+					{
+						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
+						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
+							PublicKey: SiaPublicKey{
+								Algorithm: SignatureEd25519,
+								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
+							},
+							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
+						}),
+					},
+				},
+				CoinOutputs: []CoinOutput{
+					{
+						Value: NewCurrency64(9),
+						Condition: NewCondition(&MultiSignatureCondition{
+							MinimumSignatureCount: 2,
+							UnlockHashes: UnlockHashSlice{
+								UnlockHash{
+									Type: UnlockTypePubKey,
+									Hash: hs("e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70"),
+								},
+								UnlockHash{
+									Type: UnlockTypePubKey,
+									Hash: hs("a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35"),
+								},
+							},
+						}),
+					},
+				},
+				MinerFees: []Currency{NewCurrency64(3)},
+			},
+		},
+		{
+			`{
+	"version": 1,
+	"data": {
+		"coininputs": [
+			{
+				"parentid": "1100000000000000000000000000000000000000000000000000000000000011",
+				"fulfillment": {
+					"type": 3,
+					"data": {
+						"pairs": [
+							{
+								"publickey": "ed25519:def123def123def123def123def123def123def123def123def123def123def1",
+								"signature": "ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"
+							},
+							{
+								"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+								"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
+							}
+						]
+					}
+				}
+			}
+		],
+		"coinoutputs": [
+			{
+				"value": "9",
+				"condition": {
+					"type": 3,
+					"data": {
+						"locktime": 42,
+						"condition": {
+							"type": 1,
+							"data": {
+								"unlockhash": "01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"
+							}
+						}
+					}
+				}
+			}
+		],
+		"minerfees": [
+			"3"
+		]
+	}
+}`,
+			Transaction{
+				Version: TransactionVersionOne,
+				CoinInputs: []CoinInput{
+					{
+						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
+						Fulfillment: NewFulfillment(&MultiSignatureFulfillment{
+							Pairs: []PublicKeySignaturePair{
+								{
+									PublicKey: SiaPublicKey{
+										Algorithm: SignatureEd25519,
+										Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
+									},
+									Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
+								},
+								{
+									PublicKey: SiaPublicKey{
+										Algorithm: SignatureEd25519,
+										Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
+									},
+									Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
+								},
+							},
 						}),
 					},
 				},

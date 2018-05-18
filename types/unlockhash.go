@@ -56,6 +56,12 @@ const (
 	// who has to give the secret in order to do so. After the TimeLock,
 	// the output can only be claimed by the sender, with no deadline in this phase.
 	UnlockTypeAtomicSwap
+
+	// UnlockTypeMultiSig provides a condition in which the receiving party
+	// consists of multiple (possibly separate) identities. The output can only
+	// be spent after at least the specified amount of identities have agreed,
+	// by means of providing their signature.
+	UnlockTypeMultiSig
 )
 
 var (
