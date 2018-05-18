@@ -162,6 +162,13 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 		Long:  "Decrypt and load the wallet into memory",
 		Run:   Wrap(walletunlockcmd),
 	}
+
+	walletSendTxnCmd = &cobra.Command{
+		Use:   "transaction <txnjson>",
+		Short: "Publish a raw transaction",
+		Long:  "Publish a raw transasction. The transaction must be given in json format. The inputs don't need to be related to the current wallet",
+		Run:   Wrap(walletsendtxncmd),
+	}
 }
 
 // still need to be initialized using createWalletCommands
@@ -183,6 +190,7 @@ var (
 	walletBalanceCmd         *cobra.Command
 	walletTransactionsCmd    *cobra.Command
 	walletUnlockCmd          *cobra.Command
+	walletSendTxnCmd         *cobra.Command
 )
 
 var (
@@ -607,4 +615,15 @@ func walletunlockcmd() {
 		Die("Could not unlock wallet:", err)
 	}
 	fmt.Println("Wallet unlocked")
+}
+
+// walletsendtxncmd sends commits a transaction in json format
+// to the transaction pool
+func walletsendtxncmd(txnjson string) {
+	var resp api.TransactionPoolPOST
+	err := _DefaultClient.httpClient.PostResp("/transactionpool/transactions", txnjson, &resp)
+	if err != nil {
+		Die("Could not publish transaction:", err)
+	}
+	fmt.Println("Transaction published, transaction id:", resp.TransactionID)
 }

@@ -175,7 +175,8 @@ func DefaultCLIClient(cfg Config) {
 
 	walletSendCmd.AddCommand(
 		walletSendCoinsCmd,
-		walletSendBlockStakesCmd)
+		walletSendBlockStakesCmd,
+		walletSendTxnCmd)
 
 	walletLoadCmd.AddCommand(walletLoadSeedCmd)
 
