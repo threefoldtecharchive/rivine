@@ -346,7 +346,7 @@ type (
 		// are also returned to the caller.
 		SendBlockStakes(amount types.Currency, cond types.UnlockConditionProxy) (types.Transaction, error)
 
-		// SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
+		// SendOutputs is a tool for sending coins and/or block stakes from the wallet, to one or multiple addreses.
 		// The transaction is automatically given to the transaction pool, and is also returned to the caller.
 		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte, version types.TransactionVersion) (types.Transaction, error)
 

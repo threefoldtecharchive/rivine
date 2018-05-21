@@ -1,10 +1,15 @@
 package wallet
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/types"
+)
+
+var (
+	ErrNilOutputs = errors.New("nil outputs cannot be send")
 )
 
 // sortedOutputs is a struct containing a slice of siacoin outputs and their
@@ -128,6 +133,11 @@ func (w *Wallet) SendBlockStakes(amount types.Currency, cond types.UnlockConditi
 // SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
 // The transaction is automatically given to the transaction pool, and is also returned to the caller.
 func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte, version types.TransactionVersion) (types.Transaction, error) {
+	if len(coinOutputs) == 0 && len(blockstakeOutputs) == 0 {
+		// at least one coin output OR one block stake output has to be send
+		return types.Transaction{}, ErrNilOutputs
+	}
+
 	if err := w.tg.Add(); err != nil {
 		return types.Transaction{}, err
 	}
