@@ -170,6 +170,16 @@ func TestTransactionNoRepeats_Vd(t *testing.T) {
 	txn.BlockStakeInputs = txn.BlockStakeInputs[:1]
 }
 
+func TestTransactionArbitraryDataFits_Vd(t *testing.T) {
+	txn := Transaction{
+		ArbitraryData: []byte{4, 2},
+	}
+	err := txn.arbitraryDataFits(1)
+	if err != ErrArbitraryDataTooLarge {
+		t.Fatal("expected ErrArbitraryDataTooLarge, but received: ", err)
+	}
+}
+
 func TestUnknownTransactionValidation(t *testing.T) {
 	cts := DefaultChainConstants()
 
@@ -178,11 +188,11 @@ func TestUnknownTransactionValidation(t *testing.T) {
 
 	// validation of unknown transactions should always succeed,
 	// as no validation is applied here
-	err := txn.ValidateTransaction(cts.BlockSizeLimit)
+	err := txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
 	if err != nil {
 		t.Errorf("expected no error, but received: %v", err)
 	}
-	err = txn.ValidateTransaction(0)
+	err = txn.ValidateTransaction(0, 0)
 	if err != nil {
 		t.Errorf("expected no error, but received: %v", err)
 	}
@@ -195,7 +205,7 @@ func TestLegacyTransactionValidation(t *testing.T) {
 
 	// Build a working transaction.
 	var txn Transaction
-	err := txn.ValidateTransaction(cts.BlockSizeLimit)
+	err := txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
 	if err != nil {
 		t.Error(err)
 	}
@@ -203,15 +213,28 @@ func TestLegacyTransactionValidation(t *testing.T) {
 	// Violate fitsInABlock.
 	data := make([]byte, cts.BlockSizeLimit)
 	txn.ArbitraryData = data
-	err = txn.ValidateTransaction(cts.BlockSizeLimit)
+	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger fitsInABlock error")
 	}
+	// Violate arbitraryDataFits
+	data = make([]byte, cts.ArbitraryDataSizeLimit+1)
+	txn.ArbitraryData = data
+	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	if err == nil {
+		t.Error("failed to trigger arbitraryDataFits error")
+	}
 	txn.ArbitraryData = nil
+
+	// ensure we still validate just fine
+	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	if err != nil {
+		t.Error(err)
+	}
 
 	// Violate noRepeats
 	txn.CoinInputs = []CoinInput{{}, {}}
-	err = txn.ValidateTransaction(cts.BlockSizeLimit)
+	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger noRepeats error")
 	}
@@ -219,7 +242,7 @@ func TestLegacyTransactionValidation(t *testing.T) {
 
 	// Violate followsMinimumValues
 	txn.CoinOutputs = []CoinOutput{{}}
-	err = txn.ValidateTransaction(cts.BlockSizeLimit)
+	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
 	if err == nil {
 		t.Error("failed to trigger followsMinimumValues error")
 	}

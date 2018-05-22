@@ -18,7 +18,11 @@ import (
 type ChainConstants struct {
 	// BlockSizeLimit is the maximum size a single block can have, in bytes
 	BlockSizeLimit uint64
-	RootDepth      Target
+	// ArbitraryDataSizeLimit is the maximum size an arbitrary data block
+	// within a single transaction can have, in bytes
+	ArbitraryDataSizeLimit uint64
+
+	RootDepth Target
 	// BlockFrequency is the average timespan between blocks, in seconds.
 	// I.E.: On average, 1 block will be created every 1 in *BlockFrequency* seconds
 	BlockFrequency BlockHeight
@@ -121,10 +125,11 @@ func DefaultChainConstants() ChainConstants {
 		// enough that there isn't much time wasted on waiting for things to
 		// happen.
 		cts := ChainConstants{
-			BlockSizeLimit:        2e6,
-			RootDepth:             Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
-			BlockCreatorFee:       currencyUnits.OneCoin.Mul64(10),
-			MinimumTransactionFee: currencyUnits.OneCoin.Mul64(1),
+			BlockSizeLimit:         2e6,
+			ArbitraryDataSizeLimit: 83,
+			RootDepth:              Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			BlockCreatorFee:        currencyUnits.OneCoin.Mul64(10),
+			MinimumTransactionFee:  currencyUnits.OneCoin.Mul64(1),
 			// 12 seconds, slow enough for developers to see
 			// ~each block, fast enough that blocks don't waste time
 			BlockFrequency: 12,
@@ -168,6 +173,7 @@ func DefaultChainConstants() ChainConstants {
 		// environments than a human can interact with.
 		return ChainConstants{
 			BlockSizeLimit:            2e6,
+			ArbitraryDataSizeLimit:    83,
 			RootDepth:                 Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 			BlockCreatorFee:           currencyUnits.OneCoin.Mul64(100),
 			MinimumTransactionFee:     currencyUnits.OneCoin.Mul64(1),
@@ -220,6 +226,7 @@ func DefaultChainConstants() ChainConstants {
 	// assume standard net (same as explicit 'standard' build tag)
 	cts := ChainConstants{
 		BlockSizeLimit:            2e6,
+		ArbitraryDataSizeLimit:    83,
 		RootDepth:                 Target{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		BlockCreatorFee:           currencyUnits.OneCoin.Mul64(10),
 		MinimumTransactionFee:     currencyUnits.OneCoin.Mul64(1),

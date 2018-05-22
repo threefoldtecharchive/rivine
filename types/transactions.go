@@ -408,17 +408,20 @@ var (
 )
 
 // ValidateTransaction validates this transaction in the given context.
-func (t Transaction) ValidateTransaction(blockSizeLimit uint64) error {
+func (t Transaction) ValidateTransaction(blockSizeLimit, arbitraryDataSizeLimit uint64) error {
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
 		// this will also trigger for v0 transactions
-		return defaultTransactionValidation(t, blockSizeLimit)
+		return defaultTransactionValidation(t, blockSizeLimit, arbitraryDataSizeLimit)
 	}
 	validator, ok := controller.(TransactionValidator)
 	if !ok {
-		return defaultTransactionValidation(t, blockSizeLimit)
+		return defaultTransactionValidation(t, blockSizeLimit, arbitraryDataSizeLimit)
 	}
-	return validator.ValidateTransaction(t, blockSizeLimit)
+	return validator.ValidateTransaction(t, TransactionValidationConstants{
+		BlockSizeLimit:         blockSizeLimit,
+		ArbitraryDataSizeLimit: arbitraryDataSizeLimit,
+	})
 }
 
 // IsStandardTransaction returns an error if this transaction is not
