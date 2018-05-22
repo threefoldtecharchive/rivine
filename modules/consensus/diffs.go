@@ -156,7 +156,7 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	// validated all at once because some transactions may not be valid until
 	// previous transactions have been applied.
 	for _, txn := range pb.Block.Transactions {
-		err := validTransaction(tx, txn, cs.chainCts.BlockSizeLimit, pb.Height, pb.Block.Timestamp)
+		err := validTransaction(tx, txn, cs.chainCts.BlockSizeLimit, cs.chainCts.ArbitraryDataSizeLimit, pb.Height, pb.Block.Timestamp)
 		if err != nil {
 			return err
 		}
