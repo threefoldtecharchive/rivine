@@ -12,11 +12,12 @@ import (
 )
 
 var (
-	ErrDoubleSpend         = errors.New("transaction uses a parent object twice")
-	ErrNonZeroRevision     = errors.New("new file contract has a nonzero revision number")
-	ErrTransactionTooLarge = errors.New("transaction is too large to fit in a block")
-	ErrZeroMinerFee        = errors.New("transaction has a zero value miner fee")
-	ErrZeroOutput          = errors.New("transaction cannot have an output or payout that has zero value")
+	ErrDoubleSpend           = errors.New("transaction uses a parent object twice")
+	ErrNonZeroRevision       = errors.New("new file contract has a nonzero revision number")
+	ErrTransactionTooLarge   = errors.New("transaction is too large to fit in a block")
+	ErrZeroMinerFee          = errors.New("transaction has a zero value miner fee")
+	ErrZeroOutput            = errors.New("transaction cannot have an output or payout that has zero value")
+	ErrArbitraryDataTooLarge = errors.New("arbitrary data is too large to fit in a transaction")
 )
 
 // fitsInABlock checks if the transaction is likely to fit in a block.
@@ -80,8 +81,19 @@ func (t Transaction) noRepeats() error {
 	return nil
 }
 
-func defaultTransactionValidation(t Transaction, blockSizeLimit uint64) (err error) {
+func (t Transaction) arbitraryDataFits(sizeLimit uint64) error {
+	if uint64(len(t.ArbitraryData)) > sizeLimit {
+		return ErrArbitraryDataTooLarge
+	}
+	return nil
+}
+
+func defaultTransactionValidation(t Transaction, blockSizeLimit, arbitraryDataSizeLimit uint64) (err error) {
 	err = t.fitsInABlock(blockSizeLimit)
+	if err != nil {
+		return
+	}
+	err = t.arbitraryDataFits(arbitraryDataSizeLimit)
 	if err != nil {
 		return
 	}

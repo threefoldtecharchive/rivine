@@ -52,6 +52,13 @@ type (
 		// in order to attach non-standard state to a transaction.
 		Extension interface{} `json:"-"` // omited from JSON
 	}
+
+	// TransactionValidationContext defines the contants that a TransactionValidator
+	// can use in order to validate the transaction, within its local scope.
+	TransactionValidationConstants struct {
+		BlockSizeLimit         uint64
+		ArbitraryDataSizeLimit uint64
+	}
 )
 
 // optional interfaces which a TransactionController can implement as well,
@@ -61,7 +68,7 @@ type (
 	// can optonally implement, in order to define custom validation logic
 	// for a transaction, overwriting the default validation logic.
 	TransactionValidator interface {
-		ValidateTransaction(t Transaction, blockSizeLimit uint64) error
+		ValidateTransaction(t Transaction, constants TransactionValidationConstants) error
 	}
 
 	// InputSigHasher defines the interface a transaction controller
