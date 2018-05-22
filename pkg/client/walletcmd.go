@@ -363,7 +363,9 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 		Die("Could not send coins:", err)
 	}
 	for _, co := range body.CoinOutputs {
-		fmt.Printf("Sent %s to %s\n", _CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.Condition.UnlockHash())
+		fmt.Printf("Sent %s to %s (using ConditionType %d)\n",
+			_CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.Condition.UnlockHash(),
+			co.Condition.ConditionType())
 	}
 }
 
@@ -394,7 +396,8 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 		Die("Could not send block stakes:", err)
 	}
 	for _, bo := range body.BlockStakeOutputs {
-		fmt.Printf("Sent %s BS to %s\n", bo.Value, bo.Condition.UnlockHash())
+		fmt.Printf("Sent %s BS to %s (using ConditionType %d)\n",
+			bo.Value, bo.Condition.UnlockHash(), bo.Condition.ConditionType())
 	}
 }
 
