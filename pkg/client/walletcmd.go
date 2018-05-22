@@ -3,6 +3,7 @@ package client
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/pkg/cli"
 	"github.com/rivine/rivine/types"
 )
 
@@ -100,40 +100,34 @@ func createWalletCommands() {
 	}
 
 	walletSendCoinsCmd = &cobra.Command{
-		Use:   "coins <dest> <amount> [<dest> <amount>]...",
+		Use:   "coins <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...",
 		Short: "Send coins one or multiple addresses.",
 		Long: `Send coins to one or multiple addresses.
-Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash).
+Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash),
+instead of an unlockHash, you can also give a JSON-encoded UnlockCondition directly,
+giving you more control and options over how exactly the block stake is to be unlocked.
 
 ` + _CurrencyConvertor.CoinArgDescription("amount") + `
 
 Miner fees will be added on top of the given amount automatically.
 
-` + lockTimeFlagDescriptionExtra,
+`,
 		Run: walletsendcoinscmd,
 	}
-	walletSendCoinsCmd.Flags().Var(
-		&walletCommonSendCmdConfig.LockTime, "locktime", lockTimeFlagDescription)
-	walletSendCoinsCmd.Flags().BoolVar(
-		&walletCommonSendCmdConfig.Legacy, "legacy", false,
-		"send the coins as a legacy v0 transaction")
 
 	walletSendBlockStakesCmd = &cobra.Command{
-		Use:   "blockstakes <dest> <amount> [<dest> <amount>]..",
+		Use:   "blockstakes <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]..",
 		Short: "Send blockstakes to one or multiple addresses",
 		Long: `Send blockstakes to one or multiple addresses.
-Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash).
+Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash),
+instead of an unlockHash, you can also give a JSON-encoded UnlockCondition directly,
+giving you more control and options over how exactly the block stake is to be unlocked.
 
 Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automatically.
 
-` + lockTimeFlagDescriptionExtra,
+`,
 		Run: walletsendblockstakescmd,
 	}
-	walletSendBlockStakesCmd.Flags().Var(
-		&walletCommonSendCmdConfig.LockTime, "locktime", lockTimeFlagDescription)
-	walletSendBlockStakesCmd.Flags().BoolVar(
-		&walletCommonSendCmdConfig.Legacy, "legacy", false,
-		"send the block stakes as a legacy v0 transaction")
 
 	walletRegisterDataCmd = &cobra.Command{
 		Use:   "registerdata <namespace> <data> <dest>",
@@ -192,23 +186,6 @@ var (
 	walletUnlockCmd          *cobra.Command
 	walletSendTxnCmd         *cobra.Command
 )
-
-var (
-	walletCommonSendCmdConfig struct {
-		LockTime cli.LockTimeFlag
-		Legacy   bool
-	}
-)
-
-const lockTimeFlagDescription = `optionally lock the outputs given a block time or height`
-const lockTimeFlagDescriptionExtra = `Regarding lock times:
-a block height is always specified as an uint64,
-but a block height can be specified in all given formats:
-  DD/MM/YYYY TZN            E.g.: 20/02/2018 UTC
-  DD Mon yy hh:mm TZN       E.g.: 20 Feb 18 12:30 UTC
-  Duration                  E.g.: +48h
-  Unix Epoch Seconds        E.g.: 1533254400
-`
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
 // receive coins.
@@ -361,44 +338,22 @@ func walletseedscmd() {
 
 // walletsendcoinscmd sends siacoins to one or multiple destination addresses.
 func walletsendcoinscmd(cmd *cobra.Command, args []string) {
-	argn := len(args)
-	if argn < 2 || argn%2 != 0 {
+	pairs, err := parsePairedOutputs(args)
+	if err != nil {
 		cmd.UsageFunc()(cmd)
-		os.Exit(exitCodeUsage)
+		Die(err)
 	}
+
 	body := api.WalletCoinsPOST{
-		CoinOutputs: make([]types.CoinOutput, argn/2),
+		CoinOutputs: make([]types.CoinOutput, len(pairs)),
 	}
-	if walletCommonSendCmdConfig.Legacy {
-		body.TransactionVersion = types.TransactionVersionZero
-	} else {
-		body.TransactionVersion = _DefaultTransactionVersion
+	for i, pair := range pairs {
+		body.CoinOutputs[i] = types.CoinOutput{
+			Value:     pair.Value,
+			Condition: pair.Condition,
+		}
 	}
 
-	// Get optionally defined lock time
-	lockTime := walletCommonSendCmdConfig.LockTime.LockTime()
-
-	for i, co := range body.CoinOutputs {
-		idx := i * 2
-		var uh types.UnlockHash
-		err := uh.LoadString(args[idx])
-		if err != nil {
-			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for coin output #%d: %v", idx, err))
-		}
-		co.Condition.Condition = &types.UnlockHashCondition{TargetUnlockHash: uh}
-		if lockTime != 0 {
-			// lock time is defined, ensure the condition is block time/height-locked
-			co.Condition.Condition = &types.TimeLockCondition{
-				LockTime:  lockTime,
-				Condition: co.Condition.Condition,
-			}
-		}
-		co.Value, err = _CurrencyConvertor.ParseCoinString(args[idx+1])
-		if err != nil {
-			Die(fmt.Sprintf("failed to parse coin amount/value for coin output #%d: %v", idx, err))
-		}
-		body.CoinOutputs[i] = co
-	}
 	bytes, err := json.Marshal(&body)
 	if err != nil {
 		Die("Failed to JSON Marshal the input body:", err)
@@ -414,44 +369,22 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 
 // walletsendblockstakescmd sends block stakes to one or multiple destination addresses.
 func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
-	argn := len(args)
-	if argn < 2 || argn%2 != 0 {
+	pairs, err := parsePairedOutputs(args)
+	if err != nil {
 		cmd.UsageFunc()(cmd)
-		os.Exit(exitCodeUsage)
+		Die(err)
 	}
+
 	body := api.WalletBlockStakesPOST{
-		BlockStakeOutputs: make([]types.BlockStakeOutput, argn/2),
+		BlockStakeOutputs: make([]types.BlockStakeOutput, len(pairs)),
 	}
-	if walletCommonSendCmdConfig.Legacy {
-		body.TransactionVersion = types.TransactionVersionZero
-	} else {
-		body.TransactionVersion = _DefaultTransactionVersion
+	for i, pair := range pairs {
+		body.BlockStakeOutputs[i] = types.BlockStakeOutput{
+			Value:     pair.Value,
+			Condition: pair.Condition,
+		}
 	}
 
-	// Get optionally defined lock time
-	lockTime := walletCommonSendCmdConfig.LockTime.LockTime()
-
-	for i, bo := range body.BlockStakeOutputs {
-		idx := i * 2
-		var uh types.UnlockHash
-		err := uh.LoadString(args[idx])
-		if err != nil {
-			Die(fmt.Sprintf("failed to parse dest (address/unlockhash) for blockstake output #%d: %v", idx, err))
-		}
-		bo.Condition.Condition = &types.UnlockHashCondition{TargetUnlockHash: uh}
-		if lockTime != 0 {
-			// lock time is defined, ensure the condition is block time/height-locked
-			bo.Condition.Condition = &types.TimeLockCondition{
-				LockTime:  lockTime,
-				Condition: bo.Condition.Condition,
-			}
-		}
-		_, err = fmt.Sscan(args[idx+1], &bo.Value)
-		if err != nil {
-			Die(fmt.Sprintf("failed to parse block stake amount/value for blockstake output #%d: %v", idx, err))
-		}
-		body.BlockStakeOutputs[i] = bo
-	}
 	bytes, err := json.Marshal(&body)
 	if err != nil {
 		Die("Failed to JSON Marshal the input body:", err)
@@ -463,6 +396,52 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 	for _, bo := range body.BlockStakeOutputs {
 		fmt.Printf("Sent %s BS to %s\n", bo.Value, bo.Condition.UnlockHash())
 	}
+}
+
+type outputPair struct {
+	Condition types.UnlockConditionProxy
+	Value     types.Currency
+}
+
+func parsePairedOutputs(args []string) (pairs []outputPair, err error) {
+	argn := len(args)
+	if argn < 2 {
+		err = errors.New("not enough arguments, at least 2 required")
+		return
+	}
+	if argn%2 != 0 {
+		err = errors.New("arguments have to be given in pairs of '<dest>|<rawCondition>'+'<value>'")
+		return
+	}
+
+	for i := 0; i < argn; i += 2 {
+		// parse value first, as it's the one without any possibility of ambiguity
+		var pair outputPair
+		pair.Value, err = _CurrencyConvertor.ParseCoinString(args[i+1])
+		if err != nil {
+			err = fmt.Errorf("failed to parse amount/value for output #%d: %v", i/2, err)
+			return
+		}
+
+		// try to parse it as an unlock hash
+		var uh types.UnlockHash
+		err = uh.LoadString(args[i])
+		if err == nil {
+			// parsing as an unlock hash was succesfull, store the pair and continue to the next pair
+			pair.Condition = types.NewCondition(types.NewUnlockHashCondition(uh))
+			pairs = append(pairs, pair)
+			continue
+		}
+
+		// try to parse it as a JSON-encoded unlock condition
+		err = pair.Condition.UnmarshalJSON([]byte(args[i]))
+		if err != nil {
+			err = fmt.Errorf("condition has to be UnlockHash or JSON-encoded UnlockCondition, output #%d's was neither", i/2)
+			return
+		}
+		pairs = append(pairs, pair)
+	}
+	return
 }
 
 // walletregisterdatacmd registers data on the blockchain by making a minimal transaction to the designated address

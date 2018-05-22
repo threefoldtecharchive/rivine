@@ -116,7 +116,7 @@ func (w *Wallet) SendCoins(amount types.Currency, cond types.UnlockConditionProx
 			Condition: cond,
 			Value:     amount,
 		},
-	}, nil, data, w.chainCts.DefaultTransactionVersion)
+	}, nil, nil)
 }
 
 // SendBlockStakes creates a transaction sending 'amount' to whoever can fulfill the condition. The transaction
@@ -127,12 +127,12 @@ func (w *Wallet) SendBlockStakes(amount types.Currency, cond types.UnlockConditi
 			Condition: cond,
 			Value:     amount,
 		},
-	}, nil, w.chainCts.DefaultTransactionVersion)
+	}, nil)
 }
 
 // SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
 // The transaction is automatically given to the transaction pool, and is also returned to the caller.
-func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte, version types.TransactionVersion) (types.Transaction, error) {
+func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte) (types.Transaction, error) {
 	if len(coinOutputs) == 0 && len(blockstakeOutputs) == 0 {
 		// at least one coin output OR one block stake output has to be send
 		return types.Transaction{}, ErrNilOutputs
@@ -145,7 +145,7 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 
 	tpoolFee := w.chainCts.MinimumTransactionFee.Mul64(1) // TODO better fee algo
 	totalAmount := types.NewCurrency64(0).Add(tpoolFee)
-	txnBuilder := w.StartTransactionWithVersion(version)
+	txnBuilder := w.StartTransaction()
 	for _, co := range coinOutputs {
 		txnBuilder.AddCoinOutput(co)
 		totalAmount = totalAmount.Add(co.Value)

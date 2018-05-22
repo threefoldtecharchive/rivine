@@ -81,8 +81,7 @@ type (
 	// WalletCoinsPOST is given by the user
 	// to indicate to where to send how much coins
 	WalletCoinsPOST struct {
-		CoinOutputs        []types.CoinOutput       `json:"coinoutputs`
-		TransactionVersion types.TransactionVersion `json:"version"`
+		CoinOutputs []types.CoinOutput `json:"coinoutputs`
 	}
 	// WalletCoinsPOSTResp Resp contains the ID of the transaction
 	// that was created as a result of a POST call to /wallet/coins.
@@ -93,8 +92,7 @@ type (
 	// WalletBlockStakesPOST is given by the user
 	// to indicate to where to send how much blockstakes
 	WalletBlockStakesPOST struct {
-		BlockStakeOutputs  []types.BlockStakeOutput `json:"blockstakeoutputs`
-		TransactionVersion types.TransactionVersion `json:"version"`
+		BlockStakeOutputs []types.BlockStakeOutput `json:"blockstakeoutputs`
 	}
 	// WalletBlockStakesPOSTResp Resp contains the ID of the transaction
 	// that was created as a result of a POST call to /wallet/blockstakes.
@@ -397,7 +395,7 @@ func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ h
 		WriteError(w, Error{"error decoding the supplied coin outputs: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
-	tx, err := api.wallet.SendOutputs(body.CoinOutputs, nil, nil, body.TransactionVersion)
+	tx, err := api.wallet.SendOutputs(body.CoinOutputs, nil, nil)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
 		return
@@ -414,7 +412,7 @@ func (api *API) walletBlockStakesHandler(w http.ResponseWriter, req *http.Reques
 		WriteError(w, Error{"error decoding the supplied blockstake outputs: " + err.Error()}, http.StatusBadRequest)
 		return
 	}
-	tx, err := api.wallet.SendOutputs(nil, body.BlockStakeOutputs, nil, body.TransactionVersion)
+	tx, err := api.wallet.SendOutputs(nil, body.BlockStakeOutputs, nil)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, http.StatusInternalServerError)
 		return
