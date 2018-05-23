@@ -205,6 +205,8 @@ func New(requiredUserAgent string, requiredPassword string, cs modules.Consensus
 		router.GET("/wallet/transactions", api.walletTransactionsHandler)
 		router.GET("/wallet/transactions/:addr", api.walletTransactionsAddrHandler)
 		router.POST("/wallet/unlock", RequirePassword(api.walletUnlockHandler, requiredPassword))
+		router.GET("/wallet/unlocked", RequirePassword(api.walletListUnlockedHandler, requiredPassword))
+		router.GET("/wallet/locked", RequirePassword(api.walletListLockedHandler, requiredPassword))
 	}
 
 	// Apply UserAgent middleware and return the API
