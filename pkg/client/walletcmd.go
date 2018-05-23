@@ -163,6 +163,27 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 		Long:  "Publish a raw transasction. The transaction must be given in json format. The inputs don't need to be related to the current wallet",
 		Run:   Wrap(walletsendtxncmd),
 	}
+
+	walletListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "List either locked or unlocked unspent outputs",
+		// Run field is not set, as the list command itself is not a valid command.
+		// A subcommand must be provided.
+	}
+
+	walletListUnlockedCmd = &cobra.Command{
+		Use:   "unlocked",
+		Short: "List unlocked coin and blockstake outputs",
+		Long:  "List all the unlocked coin and blockstake outputs that belong to this wallet",
+		Run:   Wrap(walletlistunlocked),
+	}
+
+	walletListLockedCmd = &cobra.Command{
+		Use:   "locked",
+		Short: "List locked coin and blockstake outputs",
+		Long:  "List all the locked coin and blockstake outputs that belong to this wallet",
+		Run:   Wrap(walletlistlocked),
+	}
 }
 
 // still need to be initialized using createWalletCommands
@@ -185,6 +206,9 @@ var (
 	walletTransactionsCmd    *cobra.Command
 	walletUnlockCmd          *cobra.Command
 	walletSendTxnCmd         *cobra.Command
+	walletListCmd            *cobra.Command
+	walletListUnlockedCmd    *cobra.Command
+	walletListLockedCmd      *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
@@ -608,4 +632,78 @@ func walletsendtxncmd(txnjson string) {
 		Die("Could not publish transaction:", err)
 	}
 	fmt.Println("Transaction published, transaction id:", resp.TransactionID)
+}
+
+func walletlistunlocked() {
+	var resp api.WalletListUnlockedGET
+	err := _DefaultClient.httpClient.GetAPI("/wallet/unlocked", &resp)
+	if err != nil {
+		Die("Could not get unlocked outputs: ", err)
+	}
+
+	if len(resp.UnlockedBlockstakeOutputs) == 0 && len(resp.UnlockedCoinOutputs) == 0 {
+		fmt.Println("No unlocked outputs")
+		return
+	}
+
+	jsonOutput := json.NewEncoder(os.Stdout)
+
+	if len(resp.UnlockedCoinOutputs) > 0 {
+		fmt.Println("Unlocked unspent coin outputs:")
+		for _, uco := range resp.UnlockedCoinOutputs {
+			fmt.Println("ID:", uco.ID)
+			fmt.Println("Value:", _CurrencyConvertor.ToCoinStringWithUnit(uco.Output.Value))
+			jsonOutput.Encode(uco.Output)
+			fmt.Println()
+		}
+	}
+
+	if len(resp.UnlockedBlockstakeOutputs) > 0 {
+		fmt.Println("Unlocked unspent blockstake outputs:")
+		for _, ubso := range resp.UnlockedBlockstakeOutputs {
+			fmt.Println("ID:", ubso.ID)
+			fmt.Println("Value:", ubso.Output.Value, "BS")
+			fmt.Println("Condition:")
+			jsonOutput.Encode(ubso.Output)
+			fmt.Println()
+		}
+	}
+}
+
+func walletlistlocked() {
+	var resp api.WalletListLockedGET
+	err := _DefaultClient.httpClient.GetAPI("/wallet/locked", &resp)
+	if err != nil {
+		Die("Could not get unlocked outputs: ", err)
+	}
+
+	if len(resp.LockedBlockstakeOutputs) == 0 && len(resp.LockedCoinOutputs) == 0 {
+		fmt.Println("No locked outputs")
+		return
+	}
+
+	jsonOutput := json.NewEncoder(os.Stdout)
+
+	if len(resp.LockedCoinOutputs) > 0 {
+		fmt.Println("Locked unspent coin outputs:")
+		for _, uco := range resp.LockedCoinOutputs {
+			fmt.Println("ID:", uco.ID)
+			fmt.Println("Value:", _CurrencyConvertor.ToCoinStringWithUnit(uco.Output.Value))
+			fmt.Println("Condition:")
+			jsonOutput.Encode(uco.Output)
+			fmt.Println()
+		}
+	}
+
+	if len(resp.LockedBlockstakeOutputs) > 0 {
+		fmt.Println("Locked unspent blockstake outputs:")
+		for _, ubso := range resp.LockedBlockstakeOutputs {
+			fmt.Println("ID:", ubso.ID)
+			fmt.Println("Value:", ubso.Output.Value, "BS")
+			fmt.Println("Condition:")
+			jsonOutput.Encode(ubso.Output)
+			fmt.Println()
+		}
+	}
+
 }

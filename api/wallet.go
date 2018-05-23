@@ -134,6 +134,32 @@ type (
 		ConfirmedTransactions   []modules.ProcessedTransaction `json:"confirmedtransactions"`
 		UnconfirmedTransactions []modules.ProcessedTransaction `json:"unconfirmedtransactions"`
 	}
+
+	// WalletListUnlockedGET contains the set of unspent, unlocked coin
+	// and blockstake outputs owned by the wallet.
+	WalletListUnlockedGET struct {
+		UnlockedCoinOutputs       []UnspentCoinOutput       `json:"unlockedcoinoutputs"`
+		UnlockedBlockstakeOutputs []UnspentBlockstakeOutput `json:"unlockedblockstakeoutputs"`
+	}
+
+	// WalletListLockedGET contains the set of unspent, locked coin and
+	// blockstake outputs owned by the wallet
+	WalletListLockedGET struct {
+		LockedCoinOutputs       []UnspentCoinOutput       `json:"lockedcoinoutputs"`
+		LockedBlockstakeOutputs []UnspentBlockstakeOutput `json:"lockedblockstakeoutputs"`
+	}
+
+	// UnspentCoinOutput is a coin output and its associated ID
+	UnspentCoinOutput struct {
+		ID     types.CoinOutputID `json:"id"`
+		Output types.CoinOutput   `json:"coinoutput"`
+	}
+
+	// UnspentBlockstakeOutput is a blockstake output and its associated ID
+	UnspentBlockstakeOutput struct {
+		ID     types.BlockStakeOutputID `json:"id"`
+		Output types.BlockStakeOutput   `json:"output"`
+	}
 )
 
 // walletHander handles API calls to /wallet.
@@ -538,4 +564,44 @@ func (api *API) walletUnlockHandler(w http.ResponseWriter, req *http.Request, _ 
 	}
 
 	WriteError(w, Error{"error when calling /wallet/unlock: " + modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+}
+
+// walletListUnlcokedHandler handles API calls to /wallet/unlocked
+func (api *API) walletListUnlockedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	ucos, ubsos := api.wallet.UnlockedUnspendOutputs()
+	ucor := []UnspentCoinOutput{}
+	ubsor := []UnspentBlockstakeOutput{}
+
+	for id, co := range ucos {
+		ucor = append(ucor, UnspentCoinOutput{ID: id, Output: co})
+	}
+
+	for id, bso := range ubsos {
+		ubsor = append(ubsor, UnspentBlockstakeOutput{ID: id, Output: bso})
+	}
+
+	WriteJSON(w, WalletListUnlockedGET{
+		UnlockedCoinOutputs:       ucor,
+		UnlockedBlockstakeOutputs: ubsor,
+	})
+}
+
+// walletListUnlcokedHandler handles API calls to /wallet/locked
+func (api *API) walletListLockedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	ucos, ubsos := api.wallet.LockedUnspendOutputs()
+	ucor := []UnspentCoinOutput{}
+	ubsor := []UnspentBlockstakeOutput{}
+
+	for id, co := range ucos {
+		ucor = append(ucor, UnspentCoinOutput{ID: id, Output: co})
+	}
+
+	for id, bso := range ubsos {
+		ubsor = append(ubsor, UnspentBlockstakeOutput{ID: id, Output: bso})
+	}
+
+	WriteJSON(w, WalletListUnlockedGET{
+		UnlockedCoinOutputs:       ucor,
+		UnlockedBlockstakeOutputs: ubsor,
+	})
 }
