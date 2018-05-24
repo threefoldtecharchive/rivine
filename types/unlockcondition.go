@@ -1525,6 +1525,11 @@ func (ms *MultiSignatureCondition) IsStandardCondition() error {
 	if ms.MinimumSignatureCount > uint64(len(ms.UnlockHashes)) {
 		return errors.New("The minimum amount of signatures can't be higher than the amount of unlockhashes")
 	}
+	for idx, uh := range ms.UnlockHashes {
+		if uh.Type != UnlockTypePubKey {
+			return fmt.Errorf("unsupported unlock hash #%d type: %d", idx, uh.Type)
+		}
+	}
 	return nil
 }
 
