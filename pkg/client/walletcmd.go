@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 	"text/tabwriter"
 
 	"github.com/bgentry/speakeasy"
@@ -193,6 +194,14 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 		// A subcommand must be provided.
 	}
 
+	walletCreateMultisisgAddress = &cobra.Command{
+		Use:   "multisigaddress <minsigsrequired> <address1> <address2> [<address>]...",
+		Short: "Create a multisig address",
+		Long: `Create a multisig address from the given addresses, which requires at least <minsigrequired>
+signatures to unlock`,
+		Run: walletcreatemultisigaddress,
+	}
+
 	walletCreateCoinTxnCmd = &cobra.Command{
 		Use:   "cointransaction <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...",
 		Short: "Create a new coin transaction",
@@ -205,29 +214,30 @@ address, which resolved to a singlesignature condition).`,
 
 // still need to be initialized using createWalletCommands
 var (
-	walletCmd                *cobra.Command
-	walletBlockStakeStatCmd  *cobra.Command
-	walletAddressCmd         *cobra.Command
-	walletAddressesCmd       *cobra.Command
-	walletInitCmd            *cobra.Command
-	walletRecoverCmd         *cobra.Command
-	walletLoadCmd            *cobra.Command
-	walletLoadSeedCmd        *cobra.Command
-	walletLockCmd            *cobra.Command
-	walletSendCmd            *cobra.Command
-	walletSeedsCmd           *cobra.Command
-	walletSendCoinsCmd       *cobra.Command
-	walletSendBlockStakesCmd *cobra.Command
-	walletRegisterDataCmd    *cobra.Command
-	walletBalanceCmd         *cobra.Command
-	walletTransactionsCmd    *cobra.Command
-	walletUnlockCmd          *cobra.Command
-	walletSendTxnCmd         *cobra.Command
-	walletListCmd            *cobra.Command
-	walletListUnlockedCmd    *cobra.Command
-	walletListLockedCmd      *cobra.Command
-	walletCreateCmd          *cobra.Command
-	walletCreateCoinTxnCmd   *cobra.Command
+	walletCmd                    *cobra.Command
+	walletBlockStakeStatCmd      *cobra.Command
+	walletAddressCmd             *cobra.Command
+	walletAddressesCmd           *cobra.Command
+	walletInitCmd                *cobra.Command
+	walletRecoverCmd             *cobra.Command
+	walletLoadCmd                *cobra.Command
+	walletLoadSeedCmd            *cobra.Command
+	walletLockCmd                *cobra.Command
+	walletSendCmd                *cobra.Command
+	walletSeedsCmd               *cobra.Command
+	walletSendCoinsCmd           *cobra.Command
+	walletSendBlockStakesCmd     *cobra.Command
+	walletRegisterDataCmd        *cobra.Command
+	walletBalanceCmd             *cobra.Command
+	walletTransactionsCmd        *cobra.Command
+	walletUnlockCmd              *cobra.Command
+	walletSendTxnCmd             *cobra.Command
+	walletListCmd                *cobra.Command
+	walletListUnlockedCmd        *cobra.Command
+	walletListLockedCmd          *cobra.Command
+	walletCreateCmd              *cobra.Command
+	walletCreateMultisisgAddress *cobra.Command
+	walletCreateCoinTxnCmd       *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
@@ -724,6 +734,34 @@ func walletlistlocked() {
 			fmt.Println()
 		}
 	}
+}
+
+func walletcreatemultisigaddress(cmd *cobra.Command, args []string) {
+	if len(args) < 3 {
+		cmd.UsageFunc()(cmd)
+		Die("Invalid arguments. Arguments must be of the form <minsigsrequired> <address1> <address2> [<address>]...")
+	}
+	msr, err := strconv.ParseUint(args[0], 10, 64)
+	if err != nil {
+		Die(err)
+	}
+
+	if uint64(len(args[1:])) < msr {
+		Die("Invalid amount of signatures required")
+	}
+
+	uhs := types.UnlockHashSlice{}
+	var uh types.UnlockHash
+	for _, addr := range args[1:] {
+		err = uh.LoadString(addr)
+		if err != nil {
+			Die("Failed to load unlock hash:", err)
+		}
+		uhs = append(uhs, uh)
+	}
+
+	multiSigCond := types.NewMultiSignatureCondition(uhs, msr)
+	fmt.Println("Multisig address:", multiSigCond.UnlockHash())
 }
 
 func walletcreatecointxn(cmd *cobra.Command, args []string) {
