@@ -2091,6 +2091,15 @@ func TestIsStandardCondition(t *testing.T) {
 		},
 		{
 			&MultiSignatureCondition{
+				MinimumSignatureCount: 1,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				},
+			},
+			"at least one unlock hash is required",
+		},
+		{
+			&MultiSignatureCondition{
 				MinimumSignatureCount: 2,
 				UnlockHashes: UnlockHashSlice{
 					unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
@@ -2509,6 +2518,10 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Secret: AtomicSwapSecret{1, 2, 3},
 			},
 			"",
+		},
+		{
+			new(MultiSignatureFulfillment),
+			"no pairs given",
 		},
 		{
 			&MultiSignatureFulfillment{
