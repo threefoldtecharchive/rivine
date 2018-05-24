@@ -362,6 +362,11 @@ type (
 		// LockedUnspendOutputs returns all locked and unspend coin and blockstake outputs owned
 		// by this wallet
 		LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput)
+
+		// CreateRawTransaction creates a new transaction with the given inputs and outputs.
+		// All inputs must exist in the consensus set at the time this method is called. The total
+		// value of the inputs must match the sum of all respective outputs and the transaction fee.
+		CreateRawTransaction([]types.CoinOutputID, []types.BlockStakeOutputID, []types.CoinOutput, []types.BlockStakeOutput, []byte) (types.Transaction, error)
 	}
 )
 

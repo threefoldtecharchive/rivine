@@ -162,7 +162,8 @@ func DefaultCLIClient(cfg Config) {
 		walletUnlockCmd,
 		walletBlockStakeStatCmd,
 		walletRegisterDataCmd,
-		walletListCmd)
+		walletListCmd,
+		walletCreateCmd)
 
 	root.AddCommand(atomicSwapCmd)
 	atomicSwapCmd.AddCommand(
@@ -184,6 +185,9 @@ func DefaultCLIClient(cfg Config) {
 	walletListCmd.AddCommand(
 		walletListUnlockedCmd,
 		walletListLockedCmd)
+
+	walletCreateCmd.AddCommand(
+		walletCreateCoinTxnCmd)
 
 	root.AddCommand(gatewayCmd)
 	gatewayCmd.AddCommand(

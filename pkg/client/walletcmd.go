@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -184,6 +185,22 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 		Long:  "List all the locked coin and blockstake outputs that belong to this wallet",
 		Run:   Wrap(walletlistlocked),
 	}
+
+	walletCreateCmd = &cobra.Command{
+		Use:   "create",
+		Short: "Create a coin or blockstake transaction",
+		// Run field is not set, as the create command itself is not a valid command.
+		// A subcommand must be provided.
+	}
+
+	walletCreateCoinTxnCmd = &cobra.Command{
+		Use:   "cointransaction <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...",
+		Short: "Create a new coin transaction",
+		Long: `Create a new coin transaction using the given parentID's and outputs.
+The outputs can be given as a pair of value and a raw output condition (or
+address, which resolved to a singlesignature condition).`,
+		Run: walletcreatecointxn,
+	}
 }
 
 // still need to be initialized using createWalletCommands
@@ -209,6 +226,8 @@ var (
 	walletListCmd            *cobra.Command
 	walletListUnlockedCmd    *cobra.Command
 	walletListLockedCmd      *cobra.Command
+	walletCreateCmd          *cobra.Command
+	walletCreateCoinTxnCmd   *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
@@ -705,5 +724,48 @@ func walletlistlocked() {
 			fmt.Println()
 		}
 	}
+}
 
+func walletcreatecointxn(cmd *cobra.Command, args []string) {
+	// parse first arguments as coin inputs
+	inputs := []types.CoinOutputID{}
+	var id types.CoinOutputID
+	for _, possibleInputID := range args {
+		if err := id.LoadString(possibleInputID); err != nil {
+			break
+		}
+		inputs = append(inputs, id)
+	}
+
+	// Check that the remaining args are condition + value pairs
+	if (len(args)-len(inputs))%2 != 0 {
+		cmd.UsageFunc()(cmd)
+		Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
+	}
+
+	// parse the remainder as output coditions and values
+	pairs, err := parsePairedOutputs(args[len(inputs):])
+	if err != nil {
+		cmd.UsageFunc()(cmd)
+		Die(err)
+	}
+
+	body := api.WalletCreateCoinTransactionPOST{}
+	body.Inputs = inputs
+	for _, pair := range pairs {
+		body.Outputs = append(body.Outputs, types.CoinOutput{Value: pair.Value, Condition: pair.Condition})
+	}
+
+	buffer := bytes.NewBuffer(nil)
+	err = json.NewEncoder(buffer).Encode(body)
+	if err != nil {
+		Die("Could not create raw transaction from inputs and outputs: ", err)
+	}
+	var resp api.WalletCreateCoinTransactionRESP
+	err = _DefaultClient.httpClient.PostResp("/wallet/create/cointransaction", buffer.String(), &resp)
+	if err != nil {
+		Die("Failed to create transaction:", err)
+	}
+
+	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
 }

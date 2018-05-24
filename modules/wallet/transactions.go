@@ -154,3 +154,73 @@ func (w *Wallet) UnconfirmedTransactions() []modules.ProcessedTransaction {
 	defer w.mu.Unlock()
 	return w.unconfirmedProcessedTransactions
 }
+
+// CreateRawTransaction with the given inputs and outputs
+func (w *Wallet) CreateRawTransaction(coids []types.CoinOutputID, bsoids []types.BlockStakeOutputID,
+	cos []types.CoinOutput, bsos []types.BlockStakeOutput, arb []byte) (types.Transaction, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	coinInputCount := types.ZeroCurrency
+	blockStakeInputCount := types.ZeroCurrency
+
+	// Make sure coin inputs and outputs + txnfee match
+	for _, id := range coids {
+		co, err := w.cs.GetCoinOutput(id)
+		if err != nil {
+			return types.Transaction{}, err
+		}
+		coinInputCount = coinInputCount.Add(co.Value)
+	}
+	requiredCoins := w.chainCts.MinimumTransactionFee
+	for _, co := range cos {
+		requiredCoins = requiredCoins.Add(co.Value)
+	}
+
+	if requiredCoins.Cmp(coinInputCount) != 0 {
+		return types.Transaction{}, errors.New("Mismatched coin input - output count")
+	}
+
+	for _, id := range bsoids {
+		bso, err := w.cs.GetBlockStakeOutput(id)
+		if err != nil {
+			return types.Transaction{}, err
+		}
+		blockStakeInputCount = blockStakeInputCount.Add(bso.Value)
+	}
+	requiredBlockStakes := types.ZeroCurrency
+	for _, bso := range bsos {
+		requiredBlockStakes = requiredBlockStakes.Add(bso.Value)
+	}
+
+	if requiredBlockStakes.Cmp(blockStakeInputCount) != 0 {
+		return types.Transaction{}, errors.New("Mismatched blockstake input - output count")
+	}
+
+	if uint64(len(arb)) > w.chainCts.ArbitraryDataSizeLimit {
+		return types.Transaction{}, errors.New("Aribtrary data too large")
+	}
+
+	txnBuilder := w.StartTransaction()
+	// We can't drop the builder since that causes a deadlock.
+	// But that shouldn't be an issue since we manually add the inputs,
+	// so they should not be consumed from the wallet
+
+	for _, ci := range coids {
+		txnBuilder.AddCoinInput(types.CoinInput{ParentID: ci})
+	}
+	for _, bsi := range bsoids {
+		txnBuilder.AddBlockStakeInput(types.BlockStakeInput{ParentID: bsi})
+	}
+	for _, co := range cos {
+		txnBuilder.AddCoinOutput(co)
+	}
+	for _, bso := range bsos {
+		txnBuilder.AddBlockStakeOutput(bso)
+	}
+	txnBuilder.AddMinerFee(w.chainCts.MinimumTransactionFee)
+	txnBuilder.SetArbitraryData(arb)
+
+	txn, _ := txnBuilder.View()
+	return txn, nil
+}

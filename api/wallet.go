@@ -160,6 +160,18 @@ type (
 		ID     types.BlockStakeOutputID `json:"id"`
 		Output types.BlockStakeOutput   `json:"output"`
 	}
+
+	// WalletCreateCoinTransactionPOST is a coin list of coin output ID's
+	// to use as inputs, and coin outputs
+	WalletCreateCoinTransactionPOST struct {
+		Inputs  []types.CoinOutputID `json:"inputs"`
+		Outputs []types.CoinOutput   `json:"outputs"`
+	}
+
+	// WalletCreateCoinTransactionRESP returns an unsigned transaction
+	WalletCreateCoinTransactionRESP struct {
+		Transaction types.Transaction `json:"transaction"`
+	}
 )
 
 // walletHander handles API calls to /wallet.
@@ -603,5 +615,22 @@ func (api *API) walletListLockedHandler(w http.ResponseWriter, req *http.Request
 	WriteJSON(w, WalletListUnlockedGET{
 		UnlockedCoinOutputs:       ucor,
 		UnlockedBlockstakeOutputs: ubsor,
+	})
+}
+
+// walletCreateCoinTransactionHandler handles API calls to POST /wallet/create/cointransaction
+func (api *API) walletCreateCoinTransactionHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var body WalletCreateCoinTransactionPOST
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied coin inputs and outputs: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	tx, err := api.wallet.CreateRawTransaction(body.Inputs, nil, body.Outputs, nil, nil)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/create/cointransaction: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, WalletCreateCoinTransactionRESP{
+		Transaction: tx,
 	})
 }
