@@ -1,0 +1,77 @@
+# btcatomicswap
+Technical details of the contracts created by the btcatomicswap command.
+
+Examples were executed on btc testnet.
+
+To start bitcoin core qt in server mode on testnet: 
+`./Bitcoin-Qt  -testnet -server -rpcuser=user -rpcpassword=pass -rpcport=18332`
+
+##initiate
+command: `initiate <participant address> <amount>`
+```
+$btcatomicswap --testnet --rpcuser=user --rpcpass=pass initiate mgmNWZN29WeFz3X4Na8thcbLB12JA5vj9j 0.1234
+Secret:      abcdef01234567890abcdef01234567890abcdef01234567890abcdef0123452
+Secret hash: 2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988
+num
+Contract fee: 0.00000166 BTC (0.00000672 BTC/kB)
+Refund fee:   0.00000297 BTC (0.00001021 BTC/kB)
+
+Contract (2NAfLwhThYzB1kGYVxmjYqS98yXF8JBVc3v):
+6382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac
+
+Contract transaction (afbc4dc719d9f79a9413945c92752bef644c618a4362fc8e8be0764a1b888e10):
+0200000000010106a85a242263768b81554b0ccab63ec124146014338ec962ef0197a1043b867e0c00000017160014ad430d1ed266d7130b5207a9bef00f8030947c3ffeffffff02204bbc000000000017a914bf09ed70b0c505d750f333bad8ca0520e48370fb87104772000000000017a914616aac51e9c239f6f85fe6db12249f264dd5ff2987024730440220441058ac56f1db678f955610adc264d7982da25dc7079a36c9022bc72827311c0220209d552d7e5ac04cef5ab615edea6c7836e7276ae7dbe0c2950eb44c781c7c7b01210335c272b2cfbd3c0a02bb38bfd859e4a44175545eb12ce93e7a2bac690068f92f00000000
+
+Refund transaction (028bcba1f15cc1ae6df1bd55881e8fdde2e36a863798bee71c969053d392ab90):
+0200000001108e881b4a76e08b8efc62438a614c64ef2b75925c9413949af7d919c74dbcaf00000000ce47304402207382af301fc6fea74131929235696894daadba674576ebc991790ff8bbe54f4d02200c5f55bab13d0b336528bb6dc3e51b993a30f2071618b7e1298df582ff913cce01210272a09bdefb4d12536fbf2f782166daceef3113bf06898a0f46b9066b3de9e449004c616382012088a8202891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed9888876a9140db229d573c1ca5042f1f6f8d95b0e48dd30f54c670418daac5ab17576a914dbb79258a0200feeef593cc753e3c0c21757a1306888ac0000000001f749bc00000000001976a914328e89e0e93df379e593deb10ee9efafca53e08988ac18daac5a
+
+Publish contract transaction? [y/N] y
+Published contract transaction (afbc4dc719d9f79a9413945c92752bef644c618a4362fc8e8be0764a1b888e10)
+```
+**Decoded initiatecontract:**
+```
+OP_IF   // top of Stack: secret
+    OP_SIZE 32 OP_EQUALVERIFY  //length of the secret is 32 bytes
+     OP_SHA256 2891f924fde4cc3c43af0d501a9fb52acb47b9a2e650c16ef0abb0a02c0ed988 OP_EQUALVERIFY // Sha256hash of the secret = hashsecret 
+     OP_DUP OP_HASH160 0db229d573c1ca5042f1f6f8d95b0e48dd30f54c 
+     // combined with OP_EQUALVERIFY OP_CHECKSIG, checks if 
+     // mgmNWZN29WeFz3X4Na8thcbLB12JA5vj9j  (participant ) claims  the output.
+ OP_ELSE    //top of stack: False
+    1521277464  // 48hours timestamp 
+    OP_CHECKLOCKTIMEVERIFY  // check if the 48 hours have passed 
+    OP_DROP    //pop the 48hours timestamp from the stack
+    OP_DUP OP_HASH160 dbb79258a0200feeef593cc753e3c0c21757a130 // combined with OP_EQUALVERIFY OP_CHECKSIG, checks if initiator claims the output.
+ OP_ENDIF 
+ OP_EQUALVERIFY OP_CHECKSIG
+ ```
+## participate 
+command:` btcatomicswap participate <initiator address> <amount> <secret hash>`
+```
+./btcatomicswap  --testnet --rpcuser=user --rpcpass=pass participate muQ1J2UMfekrRJqEgXM59AuFm2az7y94V3 0.12 d83bde8f3e94ec1fc4dddeabfd84bcf4f6cd142fb60192888725eaf2cac4a2c7
+Contract fee: 0.00000317 BTC (0.00000801 BTC/kB)
+Refund fee:   0.00000299 BTC (0.00001024 BTC/kB)
+
+Contract (2N726MiNHMSeGmCtYoNxGr4XgSENNiWhfjY):
+6382012088a820d83bde8f3e94ec1fc4dddeabfd84bcf4f6cd142fb60192888725eaf2cac4a2c78876a91498415a65a8b96b72a3cc26b81e37af698d4ff4ba67043d1a095bb17576a9146c7d5f0b5b1c65aca56a3a3c64855e647de178226888ac
+
+Contract transaction (09c65a22dd32e1492224826054b30d12794cabb8317c41b9bcdc6efbf0c5c705):
+02000000000102215d7d1855d16bf9d3c9c349ef8d0b7b58cb5c89922148bf4912d462ff4caef6010000001716001437c1c3347cb976780fe386f0631582fb751e21d8feffffff9400ee75b3ea0600ce429ecb9a0d5d6565e027d9d8dfd051285388169a676ed8000000006a47304402201ac2d20f78e282c161f1fcf8d9dc46409bd261d03cb60ee09f6773c051480f9f02202768f1aa54f868640c83aea8dd8c18402a98ce41407ba48d0a5d7335ee605fd50121039eb1a57645dd67e5c90fcc3fc0b5b5c4e0590156cfee2baa3f8662c10e193b9bfeffffff02353777000000000017a9144296b525c4557546da928a879660653b20eadf9987001bb7000000000017a9149715fbdcaac397b4bcd841c859c86e011e63cec887024830450221008b007f438abcc82c0a402fa53cf8400ba995572b170de9c02d9c24da70fb05510220602bea6f6249c0acd0b0cf91c75bce0987b3d66d79d26031dec04237b0cead6f012103286e9acec10501ff78da4e4e5b956a060bab9a6898f193829a6b20ef98b1ebdb0000000000
+
+Refund transaction (1121bfe140b9294e9bd7da03e143f55208efdf46b8dcc1d97b5cf08d948ea10a):
+020000000105c7c5f0fb6edcbcb9417c31b8ab4c79120db3546082242249e132dd225ac60901000000cf4830450221009ad3bb5f98be1764dcd7fba3f12a825de209b455b74c3b9d9a01c83059bbc746022006a8df3c19fe151906e5b97b98102d7e151c458c7b8bc7f7e78344c5b1498dbe012102ca5f7ca3980018c9ba14d5dcfe78d68dba19266e04e5bf97623641b4b7eed640004c616382012088a820d83bde8f3e94ec1fc4dddeabfd84bcf4f6cd142fb60192888725eaf2cac4a2c78876a91498415a65a8b96b72a3cc26b81e37af698d4ff4ba67043d1a095bb17576a9146c7d5f0b5b1c65aca56a3a3c64855e647de178226888ac0000000001d519b700000000001976a914bac21f86a4579ea112bd7c1ed5bacb7e93cd193588ac3d1a095b
+```
+
+**Decoded participate contract:**
+```
+OP_IF // top of Stack: secret
+	OP_SIZE 32 OP_EQUALVERIFY //length of the secret is 32 bytes
+	OP_SHA256 d83bde8f3e94ec1fc4dddeabfd84bcf4f6cd142fb60192888725eaf2cac4a2c7 OP_EQUALVERIFY 
+    OP_DUP OP_HASH160 98415a65a8b96b72a3cc26b81e37af698d4ff4ba 
+OP_ELSE 
+	1527323197 // 24hours timestamp 
+	OP_CHECKLOCKTIMEVERIFY 
+	OP_DROP  /pop the 24hours timestamp from the stack
+	OP_DUP OP_HASH160 6c7d5f0b5b1c65aca56a3a3c64855e647de17822 
+OP_ENDIF 
+OP_EQUALVERIFY OP_CHECKSIG
+```
