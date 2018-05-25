@@ -199,7 +199,8 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 		Short: "Create a multisig address",
 		Long: `Create a multisig address from the given addresses, which requires at least <minsigrequired>
 signatures to unlock`,
-		Run: walletcreatemultisigaddress,
+		Args: cobra.MinimumNArgs(3),
+		Run:  walletcreatemultisigaddress,
 	}
 
 	walletCreateCoinTxnCmd = &cobra.Command{
@@ -209,6 +210,15 @@ signatures to unlock`,
 The outputs can be given as a pair of value and a raw output condition (or
 address, which resolved to a singlesignature condition).`,
 		Run: walletcreatecointxn,
+	}
+
+	walletCreateBlockStakeTxnCmd = &cobra.Command{
+		Use:   "blockstaketransaction <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...",
+		Short: "Create a new blockstake transaction",
+		Long: `Create a new blockstake transaction using the given parentID's and outputs.
+The outputs can be given as a pair of value and a raw output condition (or
+address, which resolved to a singlesignature condition).`,
+		Run: walletcreateblockstaketxn,
 	}
 
 	walletSignCmd = &cobra.Command{
@@ -246,6 +256,7 @@ var (
 	walletCreateCmd              *cobra.Command
 	walletCreateMultisisgAddress *cobra.Command
 	walletCreateCoinTxnCmd       *cobra.Command
+	walletCreateBlockStakeTxnCmd *cobra.Command
 	walletSignCmd                *cobra.Command
 )
 
@@ -400,7 +411,7 @@ func walletseedscmd() {
 
 // walletsendcoinscmd sends siacoins to one or multiple destination addresses.
 func walletsendcoinscmd(cmd *cobra.Command, args []string) {
-	pairs, err := parsePairedOutputs(args)
+	pairs, err := parsePairedOutputs(args, _CurrencyConvertor.ParseCoinString)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
 		Die(err)
@@ -433,7 +444,7 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 
 // walletsendblockstakescmd sends block stakes to one or multiple destination addresses.
 func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
-	pairs, err := parsePairedOutputs(args)
+	pairs, err := parsePairedOutputs(args, stringToBlockStakes)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
 		Die(err)
@@ -468,7 +479,15 @@ type outputPair struct {
 	Value     types.Currency
 }
 
-func parsePairedOutputs(args []string) (pairs []outputPair, err error) {
+// parseCurrencyString takes the string representation of a currency value
+type parseCurrencyString func(string) (types.Currency, error)
+
+func stringToBlockStakes(input string) (types.Currency, error) {
+	bsv, err := strconv.ParseUint(input, 10, 64)
+	return types.NewCurrency64(bsv), err
+}
+
+func parsePairedOutputs(args []string, parseCurrency parseCurrencyString) (pairs []outputPair, err error) {
 	argn := len(args)
 	if argn < 2 {
 		err = errors.New("not enough arguments, at least 2 required")
@@ -482,7 +501,7 @@ func parsePairedOutputs(args []string) (pairs []outputPair, err error) {
 	for i := 0; i < argn; i += 2 {
 		// parse value first, as it's the one without any possibility of ambiguity
 		var pair outputPair
-		pair.Value, err = _CurrencyConvertor.ParseCoinString(args[i+1])
+		pair.Value, err = parseCurrency(args[i+1])
 		if err != nil {
 			err = fmt.Errorf("failed to parse amount/value for output #%d: %v", i/2, err)
 			return
@@ -746,10 +765,6 @@ func walletlistlocked() {
 }
 
 func walletcreatemultisigaddress(cmd *cobra.Command, args []string) {
-	if len(args) < 3 {
-		cmd.UsageFunc()(cmd)
-		Die("Invalid arguments. Arguments must be of the form <minsigsrequired> <address1> <address2> [<address>]...")
-	}
 	msr, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
 		Die(err)
@@ -791,16 +806,16 @@ func walletcreatecointxn(cmd *cobra.Command, args []string) {
 	}
 
 	// parse the remainder as output coditions and values
-	pairs, err := parsePairedOutputs(args[len(inputs):])
+	pairs, err := parsePairedOutputs(args[len(inputs):], _CurrencyConvertor.ParseCoinString)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
 		Die(err)
 	}
 
-	body := api.WalletCreateCoinTransactionPOST{}
-	body.Inputs = inputs
+	body := api.WalletCreateTransactionPOST{}
+	body.CoinInputs = inputs
 	for _, pair := range pairs {
-		body.Outputs = append(body.Outputs, types.CoinOutput{Value: pair.Value, Condition: pair.Condition})
+		body.CoinOutputs = append(body.CoinOutputs, types.CoinOutput{Value: pair.Value, Condition: pair.Condition})
 	}
 
 	buffer := bytes.NewBuffer(nil)
@@ -808,8 +823,52 @@ func walletcreatecointxn(cmd *cobra.Command, args []string) {
 	if err != nil {
 		Die("Could not create raw transaction from inputs and outputs: ", err)
 	}
-	var resp api.WalletCreateCoinTransactionRESP
-	err = _DefaultClient.httpClient.PostResp("/wallet/create/cointransaction", buffer.String(), &resp)
+	var resp api.WalletCreateTransactionRESP
+	err = _DefaultClient.httpClient.PostResp("/wallet/create/transaction", buffer.String(), &resp)
+	if err != nil {
+		Die("Failed to create transaction:", err)
+	}
+
+	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
+}
+
+func walletcreateblockstaketxn(cmd *cobra.Command, args []string) {
+	// parse first arguments as coin inputs
+	inputs := []types.BlockStakeOutputID{}
+	var id types.BlockStakeOutputID
+	for _, possibleInputID := range args {
+		if err := id.LoadString(possibleInputID); err != nil {
+			break
+		}
+		inputs = append(inputs, id)
+	}
+
+	// Check that the remaining args are condition + value pairs
+	if (len(args)-len(inputs))%2 != 0 {
+		cmd.UsageFunc()(cmd)
+		Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
+	}
+
+	// parse the remainder as output coditions and values
+	pairs, err := parsePairedOutputs(args[len(inputs):], stringToBlockStakes)
+	if err != nil {
+		cmd.UsageFunc()(cmd)
+		Die(err)
+	}
+
+	body := api.WalletCreateTransactionPOST{}
+	body.BlockStakeInputs = inputs
+	for _, pair := range pairs {
+		body.BlockStakeOutputs = append(body.BlockStakeOutputs, types.BlockStakeOutput{Value: pair.Value, Condition: pair.Condition})
+	}
+
+	buffer := bytes.NewBuffer(nil)
+	err = json.NewEncoder(buffer).Encode(body)
+	if err != nil {
+		Die("Could not create raw transaction from inputs and outputs: ", err)
+	}
+	var resp api.WalletCreateTransactionRESP
+	err = _DefaultClient.httpClient.PostResp("/wallet/create/transaction", buffer.String(), &resp)
 	if err != nil {
 		Die("Failed to create transaction:", err)
 	}

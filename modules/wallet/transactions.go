@@ -226,7 +226,7 @@ func (w *Wallet) CreateRawTransaction(coids []types.CoinOutputID, bsoids []types
 // using the keys loaded in this wallet. The transaction is assumed to be valid
 func (w *Wallet) GreedySign(txn types.Transaction) (types.Transaction, error) {
 	txnBuilder := w.RegisterTransaction(txn, nil)
-	err := txnBuilder.AttemptSigning()
+	err := txnBuilder.SignAllPossibleInputs()
 	signedTxn, _ := txnBuilder.View()
 	return signedTxn, err
 }

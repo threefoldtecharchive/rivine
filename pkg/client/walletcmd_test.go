@@ -152,7 +152,7 @@ func TestParsePairedOutputs(t *testing.T) {
 		}, // no error, a more complex example
 	}
 	for idx, testCase := range testCases {
-		pairs, err := parsePairedOutputs(testCase.Arguments)
+		pairs, err := parsePairedOutputs(testCase.Arguments, _CurrencyConvertor.ParseCoinString)
 		if len(testCase.ExpectedPairs) == 0 {
 			// expecting error
 			if err == nil {

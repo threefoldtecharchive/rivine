@@ -192,9 +192,9 @@ type (
 		// should only be used before signatures are added.
 		Drop()
 
-		// AttemptSigning tries to sign as much of the inputs in the tranaction
+		// SignAllPossibleInputs tries to sign as much of the inputs in the tranaction
 		// using the keys loaded in the wallet
-		AttemptSigning() error
+		SignAllPossibleInputs() error
 	}
 
 	// EncryptionManager can encrypt, lock, unlock, and indicate the current

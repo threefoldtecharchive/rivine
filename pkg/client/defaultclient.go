@@ -189,7 +189,8 @@ func DefaultCLIClient(cfg Config) {
 
 	walletCreateCmd.AddCommand(
 		walletCreateMultisisgAddress,
-		walletCreateCoinTxnCmd)
+		walletCreateCoinTxnCmd,
+		walletCreateBlockStakeTxnCmd)
 
 	root.AddCommand(gatewayCmd)
 	gatewayCmd.AddCommand(
