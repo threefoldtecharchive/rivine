@@ -2066,7 +2066,7 @@ func TestIsStandardCondition(t *testing.T) {
 					MinimumSignatureCount: 2,
 					UnlockHashes: UnlockHashSlice{
 						unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
-						unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+						unlockHashFromHex("01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51"),
 						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 					},
 				},
@@ -2079,7 +2079,7 @@ func TestIsStandardCondition(t *testing.T) {
 					MinimumSignatureCount: 2,
 					UnlockHashes: UnlockHashSlice{
 						unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
-						unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+						unlockHashFromHex("01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51"),
 						unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 					},
 				},
@@ -2088,6 +2088,15 @@ func TestIsStandardCondition(t *testing.T) {
 		{
 			&MultiSignatureCondition{},
 			"amount of required signatures must be greater than one",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 1,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				},
+			},
+			"at least one unlock hash is required",
 		},
 		{
 			&MultiSignatureCondition{
@@ -2103,7 +2112,7 @@ func TestIsStandardCondition(t *testing.T) {
 				MinimumSignatureCount: 2,
 				UnlockHashes: UnlockHashSlice{
 					unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
-					unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+					unlockHashFromHex("01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51"),
 					unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				},
 			},
@@ -2112,9 +2121,13 @@ func TestIsStandardCondition(t *testing.T) {
 		{
 			&MultiSignatureCondition{
 				MinimumSignatureCount: 2,
-				UnlockHashes:          UnlockHashSlice{},
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+					unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+					unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				},
 			},
-			"need at least a single unlockhash",
+			"only pubKey unlockhashes are allowed",
 		},
 	}
 	for idx, testCase := range testCases {
@@ -2509,6 +2522,10 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Secret: AtomicSwapSecret{1, 2, 3},
 			},
 			"",
+		},
+		{
+			new(MultiSignatureFulfillment),
+			"no pairs given",
 		},
 		{
 			&MultiSignatureFulfillment{

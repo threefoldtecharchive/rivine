@@ -1519,11 +1519,16 @@ func (ms *MultiSignatureCondition) IsStandardCondition() error {
 	if ms.MinimumSignatureCount == 0 {
 		return errors.New("A minimum amount of required signatures must be specified")
 	}
-	if len(ms.UnlockHashes) == 0 {
-		return errors.New("At least a single unlockhash must be provided which identifies a possible signatory")
+	if len(ms.UnlockHashes) < 2 {
+		return errors.New("At least two unlockhashes must be provided which identifies to possible signatories")
 	}
 	if ms.MinimumSignatureCount > uint64(len(ms.UnlockHashes)) {
 		return errors.New("The minimum amount of signatures can't be higher than the amount of unlockhashes")
+	}
+	for idx, uh := range ms.UnlockHashes {
+		if uh.Type != UnlockTypePubKey {
+			return fmt.Errorf("unsupported unlock hash #%d type: %d", idx, uh.Type)
+		}
 	}
 	return nil
 }
@@ -1608,6 +1613,9 @@ func (ms *MultiSignatureFulfillment) FulfillmentType() FulfillmentType {
 
 // IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
 func (ms *MultiSignatureFulfillment) IsStandardFulfillment() error {
+	if len(ms.Pairs) == 0 {
+		return errors.New("At least one pair must be provided")
+	}
 	var err error
 	for _, pair := range ms.Pairs {
 		err = strictSignatureCheck(pair.PublicKey, pair.Signature)
