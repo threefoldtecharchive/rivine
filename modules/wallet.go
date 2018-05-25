@@ -191,6 +191,10 @@ type (
 		// broadcast, and that all of the outputs can be reclaimed. 'Drop'
 		// should only be used before signatures are added.
 		Drop()
+
+		// AttemptSigning tries to sign as much of the inputs in the tranaction
+		// using the keys loaded in the wallet
+		AttemptSigning() error
 	}
 
 	// EncryptionManager can encrypt, lock, unlock, and indicate the current
@@ -367,6 +371,10 @@ type (
 		// All inputs must exist in the consensus set at the time this method is called. The total
 		// value of the inputs must match the sum of all respective outputs and the transaction fee.
 		CreateRawTransaction([]types.CoinOutputID, []types.BlockStakeOutputID, []types.CoinOutput, []types.BlockStakeOutput, []byte) (types.Transaction, error)
+
+		// GreedySign attempts to sign every input which can be signed by the keys loaded
+		// in this wallet.
+		GreedySign(types.Transaction) (types.Transaction, error)
 	}
 )
 

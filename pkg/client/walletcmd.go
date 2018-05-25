@@ -210,6 +210,14 @@ The outputs can be given as a pair of value and a raw output condition (or
 address, which resolved to a singlesignature condition).`,
 		Run: walletcreatecointxn,
 	}
+
+	walletSignCmd = &cobra.Command{
+		Use:   "sign <txnjson>",
+		Short: "Sign inputs from the transaction",
+		Long: `Signs as much of the inputs transaction. Iterate over every input, and check if they can be signed
+by any of the keys in the wallet.`,
+		Run: Wrap(walletsigntxn),
+	}
 }
 
 // still need to be initialized using createWalletCommands
@@ -238,6 +246,7 @@ var (
 	walletCreateCmd              *cobra.Command
 	walletCreateMultisisgAddress *cobra.Command
 	walletCreateCoinTxnCmd       *cobra.Command
+	walletSignCmd                *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
@@ -806,4 +815,14 @@ func walletcreatecointxn(cmd *cobra.Command, args []string) {
 	}
 
 	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
+}
+
+func walletsigntxn(txnjson string) {
+	var txn types.Transaction
+	err := _DefaultClient.httpClient.PostResp("/wallet/sign", txnjson, &txn)
+	if err != nil {
+		Die("Failed to sign transaction:", err)
+	}
+
+	json.NewEncoder(os.Stdout).Encode(txn)
 }

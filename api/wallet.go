@@ -634,3 +634,18 @@ func (api *API) walletCreateCoinTransactionHandler(w http.ResponseWriter, req *h
 		Transaction: tx,
 	})
 }
+
+// walletSignHandler handles API calls to POST /wallet/sign
+func (api *API) walletSignHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var body types.Transaction
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied transaction: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	txn, err := api.wallet.GreedySign(body)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/sign: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, txn)
+}

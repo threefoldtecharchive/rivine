@@ -1,12 +1,13 @@
 package wallet
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
 
 	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
@@ -413,6 +414,136 @@ func (tb *transactionBuilder) Sign() ([]types.Transaction, error) {
 	return txnSet, nil
 }
 
+// AttemptSigning tries to sign any input for which keys are loaded in the wallet
+func (tb *transactionBuilder) AttemptSigning() error {
+	if tb.signed {
+		return errBuilderAlreadySigned
+	}
+
+	tb.wallet.mu.Lock()
+	defer tb.wallet.mu.Unlock()
+
+	// Use an inner function so we can drill down into wrapper conditions
+	var f func(int, *types.CoinInput, types.MarshalableUnlockCondition) error
+	var g func(int, *types.BlockStakeInput, types.MarshalableUnlockCondition) error
+	f = func(idx int, ci *types.CoinInput, cond types.MarshalableUnlockCondition) error {
+		switch condition := cond.(type) {
+		case *types.MultiSignatureCondition:
+			for _, uh := range condition.UnlockHashes {
+				if key, exists := tb.wallet.keys[uh]; exists {
+					if ci.Fulfillment.Fulfillment == nil || ci.Fulfillment.Fulfillment.Equal(nil) {
+						ci.Fulfillment = types.NewFulfillment(&types.MultiSignatureFulfillment{})
+					}
+					err := ci.Fulfillment.Sign(types.FulfillmentSignContext{
+						InputIndex:  uint64(idx),
+						Transaction: tb.transaction,
+						Key: types.KeyPair{
+							PublicKey:  types.Ed25519PublicKey(key.PublicKey),
+							PrivateKey: types.ByteSlice(key.SecretKey[:]),
+						},
+					})
+					if err != nil {
+						return err
+					}
+					tb.signed = true
+				}
+			}
+		case *types.UnlockHashCondition:
+			if key, exists := tb.wallet.keys[condition.UnlockHash()]; exists {
+				if ci.Fulfillment.Fulfillment == nil || ci.Fulfillment.Fulfillment.Equal(nil) {
+					ci.Fulfillment = types.NewFulfillment(types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(key.PublicKey)))
+				}
+				err := ci.Fulfillment.Sign(types.FulfillmentSignContext{
+					InputIndex:  uint64(idx),
+					Transaction: tb.transaction,
+					Key:         key.SecretKey,
+				})
+				if err != nil {
+					return err
+				}
+				tb.signed = true
+			}
+		case *types.TimeLockCondition:
+			f(idx, ci, condition.Condition)
+		default:
+			return errors.New("Unable to sign unknown coin input type")
+		}
+		return nil
+	}
+
+	for i := range tb.transaction.CoinInputs {
+		ci := &tb.transaction.CoinInputs[i]
+		uco, err := tb.wallet.cs.GetCoinOutput(ci.ParentID)
+		if err != nil {
+			return err
+		}
+
+		if err = f(i, ci, uco.Condition.Condition); err != nil {
+			return err
+		}
+
+	}
+
+	// Use f for blockstake inputs
+	g = func(idx int, bsi *types.BlockStakeInput, cond types.MarshalableUnlockCondition) error {
+		switch condition := cond.(type) {
+		case *types.MultiSignatureCondition:
+			for _, uh := range condition.UnlockHashes {
+				if key, exists := tb.wallet.keys[uh]; exists {
+					if bsi.Fulfillment.Fulfillment == nil {
+						bsi.Fulfillment.Fulfillment = &types.MultiSignatureFulfillment{}
+					}
+					err := bsi.Fulfillment.Sign(types.FulfillmentSignContext{
+						InputIndex:  uint64(idx),
+						Transaction: tb.transaction,
+						Key: types.KeyPair{
+							PublicKey:  types.Ed25519PublicKey(key.PublicKey),
+							PrivateKey: types.ByteSlice(key.SecretKey[:]),
+						},
+					})
+					if err != nil {
+						return err
+					}
+					tb.signed = true
+				}
+			}
+		case *types.UnlockHashCondition:
+			if key, exists := tb.wallet.keys[condition.UnlockHash()]; exists {
+				if bsi.Fulfillment.Fulfillment == nil || bsi.Fulfillment.Fulfillment.Equal(nil) {
+					bsi.Fulfillment.Fulfillment = types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(key.PublicKey))
+				}
+				err := bsi.Fulfillment.Sign(types.FulfillmentSignContext{
+					InputIndex:  uint64(idx),
+					Transaction: tb.transaction,
+					Key:         key.SecretKey,
+				})
+				if err != nil {
+					return err
+				}
+				tb.signed = true
+			}
+		case *types.TimeLockCondition:
+			g(idx, bsi, condition.Condition)
+		default:
+			return errors.New("Unable to sign unknown blockstake input type")
+		}
+		return nil
+	}
+
+	for i := range tb.transaction.BlockStakeInputs {
+		bsi := &tb.transaction.BlockStakeInputs[i]
+		ubso, err := tb.wallet.cs.GetBlockStakeOutput(bsi.ParentID)
+		if err != nil {
+			return err
+		}
+		if err = g(i, bsi, ubso.Condition.Condition); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // ViewTransaction returns a transaction-in-progress along with all of its
 // parents, specified by id. An error is returned if the id is invalid.  Note
 // that ids become invalid for a transaction after 'SignTransaction' has been
@@ -444,17 +575,25 @@ func (w *Wallet) RegisterTransaction(t types.Transaction, parents []types.Transa
 	// the builder will be working directly on the transaction, and the
 	// transaction may be in use elsewhere (in this case, the host is using the
 	// transaction.
-	pBytes := encoding.Marshal(parents)
-	var pCopy []types.Transaction
-	err := encoding.Unmarshal(pBytes, &pCopy)
-	if err != nil {
-		panic(err)
+	pBytes := bytes.NewBuffer(nil)
+	err := json.NewEncoder(pBytes).Encode(parents)
+	if build.DEBUG && err != nil {
+		panic("Failed to encode parent transactions: " + err.Error())
 	}
-	tBytes := encoding.Marshal(t)
+	var pCopy []types.Transaction
+	err = json.NewDecoder(pBytes).Decode(&pCopy)
+	if build.DEBUG && err != nil {
+		panic("Failed to decode parent transactions: " + err.Error())
+	}
+	tbytes := bytes.NewBuffer(nil)
+	err = json.NewEncoder(tbytes).Encode(t)
+	if build.DEBUG && err != nil {
+		panic("Failed to encode transaction: " + err.Error())
+	}
 	var tCopy types.Transaction
-	err = encoding.Unmarshal(tBytes, &tCopy)
-	if err != nil {
-		panic(err)
+	err = json.NewDecoder(tbytes).Decode(&tCopy)
+	if build.DEBUG && err != nil {
+		panic("Failed to decode transaction: " + err.Error())
 	}
 	return &transactionBuilder{
 		parents:     pCopy,

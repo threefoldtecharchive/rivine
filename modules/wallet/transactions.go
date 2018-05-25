@@ -158,8 +158,6 @@ func (w *Wallet) UnconfirmedTransactions() []modules.ProcessedTransaction {
 // CreateRawTransaction with the given inputs and outputs
 func (w *Wallet) CreateRawTransaction(coids []types.CoinOutputID, bsoids []types.BlockStakeOutputID,
 	cos []types.CoinOutput, bsos []types.BlockStakeOutput, arb []byte) (types.Transaction, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
 
 	coinInputCount := types.ZeroCurrency
 	blockStakeInputCount := types.ZeroCurrency
@@ -202,9 +200,8 @@ func (w *Wallet) CreateRawTransaction(coids []types.CoinOutputID, bsoids []types
 	}
 
 	txnBuilder := w.StartTransaction()
-	// We can't drop the builder since that causes a deadlock.
-	// But that shouldn't be an issue since we manually add the inputs,
-	// so they should not be consumed from the wallet
+	// No need to drop the builder since we manually added inputs,
+	// so they won't be consumed from the wallet
 
 	for _, ci := range coids {
 		txnBuilder.AddCoinInput(types.CoinInput{ParentID: ci})
@@ -223,4 +220,13 @@ func (w *Wallet) CreateRawTransaction(coids []types.CoinOutputID, bsoids []types
 
 	txn, _ := txnBuilder.View()
 	return txn, nil
+}
+
+// GreedySign attempts to sign every input in the transaction that can be signed
+// using the keys loaded in this wallet. The transaction is assumed to be valid
+func (w *Wallet) GreedySign(txn types.Transaction) (types.Transaction, error) {
+	txnBuilder := w.RegisterTransaction(txn, nil)
+	err := txnBuilder.AttemptSigning()
+	signedTxn, _ := txnBuilder.View()
+	return signedTxn, err
 }

@@ -163,7 +163,8 @@ func DefaultCLIClient(cfg Config) {
 		walletBlockStakeStatCmd,
 		walletRegisterDataCmd,
 		walletListCmd,
-		walletCreateCmd)
+		walletCreateCmd,
+		walletSignCmd)
 
 	root.AddCommand(atomicSwapCmd)
 	atomicSwapCmd.AddCommand(
