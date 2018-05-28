@@ -11,6 +11,10 @@ import (
 	"github.com/rivine/rivine/api"
 )
 
+var (
+	errStatusNotFound = errors.New("expecting a response, but API returned status code 204 No Content")
+)
+
 // Non2xx returns true for non-success HTTP status codes.
 func Non2xx(code int) bool {
 	return code < 200 || code > 299
@@ -76,7 +80,7 @@ func (c *HTTPClient) GetAPI(call string, obj interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNoContent {
-		return errors.New("expecting a response, but API returned status code 204 No Content")
+		return errStatusNotFound
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(obj)

@@ -120,7 +120,7 @@ func (api *API) consensusGetUnspentCoinOutputHandler(w http.ResponseWriter, req 
 		id       = ps.ByName("id")
 	)
 
-	if len(id) != len(outputID) {
+	if len(id) != len(outputID)*2 {
 		WriteError(w, Error{errInvalidIDLength.Error()}, http.StatusBadRequest)
 		return
 	}
@@ -152,7 +152,7 @@ func (api *API) consensusGetUnspentBlockstakeOutputHandler(w http.ResponseWriter
 		id       = ps.ByName("id")
 	)
 
-	if len(id) != len(outputID) {
+	if len(id) != len(outputID)*2 {
 		WriteError(w, Error{errInvalidIDLength.Error()}, http.StatusBadRequest)
 		return
 	}
