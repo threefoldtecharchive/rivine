@@ -232,6 +232,12 @@ type (
 		// allowing for garbage collection and rescanning. If the subscriber is
 		// not found in the subscriber database, no action is taken.
 		Unsubscribe(ConsensusSetSubscriber)
+
+		// GetCoinOutput takes a coin output ID and returns the appropriate coin output
+		GetCoinOutput(types.CoinOutputID) (types.CoinOutput, error)
+
+		// GetBlockStakeOutput takes a blockstake output ID and returns the appropriate blockstake output
+		GetBlockStakeOutput(types.BlockStakeOutputID) (types.BlockStakeOutput, error)
 	}
 )
 
