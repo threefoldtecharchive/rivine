@@ -362,8 +362,8 @@ func auditAtomicSwapContract(co types.CoinOutput, confirmed bool) {
 
 Contract value: %s
 
-Participator's address: %s
-Initiator's address: %s
+Receiver's address: %s
+Sender's (contract creator) address: %s
 Secret Hash: %s
 TimeLock: %[5]d (%[5]s)
 TimeLock reached in: %s
@@ -563,9 +563,13 @@ func atomicswaprefundcmd(outputIDStr string) {
 }
 
 func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwapSecret) {
-	var keyWord string // define keyword for communication purposes
+	var (
+		isSender bool
+		keyWord  string // define keyword for communication purposes
+	)
 	if secret == (types.AtomicSwapSecret{}) {
 		keyWord = "refund"
+		isSender = true
 	} else {
 		keyWord = "redeem"
 	}
@@ -587,10 +591,16 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 			"Received unexpected condition of type %T, while type *types.AtomicSwapCondition was expected",
 			unspentCoinOutputResp.Output.Condition.Condition))
 	}
-	pk, sk := getSpendableKey(condition.Receiver)
+	var ourUH types.UnlockHash
+	if isSender {
+		ourUH = condition.Sender
+	} else {
+		ourUH = condition.Receiver
+	}
+	pk, sk := getSpendableKey(ourUH)
 	// quickly validate if returned sk matches the known unlock hash (sanity check)
 	uh := types.NewPubKeyUnlockHash(pk)
-	if uh.Cmp(condition.Receiver) != 0 {
+	if uh.Cmp(ourUH) != 0 {
 		Die("Unexpected wallet public key returned:", sk)
 	}
 
@@ -711,8 +721,8 @@ Secret: %s`, secret)
 	cuh := condition.UnlockHash()
 
 	fmt.Printf(`Contract address: %s%s
-Participator's address: %s
-Initiator's address: %s
+Receiver's address: %s
+Sender's (contract creator) address: %s
 
 SecretHash: %s%s
 
