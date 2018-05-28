@@ -527,7 +527,11 @@ type (
 	// anyAtomicSwapFulfillment is used to be able to unmarshal an atomic swap fulfillment,
 	// no matter if it's in the legacy format or in the original format.
 	anyAtomicSwapFulfillment struct {
+		atomicSwapFulfillment
+	}
+	atomicSwapFulfillment interface {
 		MarshalableUnlockFulfillment
+		AtomicSwapSecret() AtomicSwapSecret
 	}
 )
 
@@ -687,7 +691,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			tf.PublicKey)
 
 	case *anyAtomicSwapFulfillment:
-		return uh.Fulfill(tf.MarshalableUnlockFulfillment, ctx)
+		return uh.Fulfill(tf.atomicSwapFulfillment, ctx)
 
 	default:
 		return ErrUnexpectedUnlockFulfillment
@@ -867,7 +871,7 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		}, ctx)
 
 	case *anyAtomicSwapFulfillment:
-		return as.Fulfill(tf.MarshalableUnlockFulfillment, ctx)
+		return as.Fulfill(tf.atomicSwapFulfillment, ctx)
 
 	default:
 		return ErrUnexpectedUnlockFulfillment
@@ -1237,14 +1241,14 @@ func (as *anyAtomicSwapFulfillment) Unmarshal(b []byte) error {
 	// be positive, first try the new format
 	err := encoding.Unmarshal(b, asf)
 	if err == nil {
-		as.MarshalableUnlockFulfillment = asf
+		as.atomicSwapFulfillment = asf
 		return nil
 	}
 
 	// didn't work out, let's try the legacy atomic swap fulfillment
 	lasf := new(LegacyAtomicSwapFulfillment)
 	err = encoding.Unmarshal(b, lasf)
-	as.MarshalableUnlockFulfillment = lasf
+	as.atomicSwapFulfillment = lasf
 	return err
 }
 
@@ -1255,7 +1259,7 @@ func (as *anyAtomicSwapFulfillment) Unmarshal(b []byte) error {
 // rather than as part of this in-memory structure,
 // as it is not supposed to be visible from an encoded perspective.
 func (as *anyAtomicSwapFulfillment) MarshalJSON() ([]byte, error) {
-	return json.Marshal(as.MarshalableUnlockFulfillment)
+	return json.Marshal(as.atomicSwapFulfillment)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.UnmarshalJSON
@@ -1286,9 +1290,9 @@ func (as *anyAtomicSwapFulfillment) UnmarshalJSON(b []byte) error {
 	}
 	switch undefOptArgCount {
 	case 0:
-		as.MarshalableUnlockFulfillment = lasf
+		as.atomicSwapFulfillment = lasf
 	case 4:
-		as.MarshalableUnlockFulfillment = &AtomicSwapFulfillment{
+		as.atomicSwapFulfillment = &AtomicSwapFulfillment{
 			PublicKey: lasf.PublicKey,
 			Signature: lasf.Signature,
 			Secret:    lasf.Secret,

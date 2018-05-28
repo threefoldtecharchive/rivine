@@ -3,6 +3,8 @@ package cli
 import (
 	"strconv"
 	"time"
+
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -65,6 +67,38 @@ func (f *LockTimeFlag) LockTime() uint64 {
 	return f.lockTime
 }
 
+type (
+	// StringLoaderFlag defines a utility type,
+	// allowing any StringLoader to be turned into a pflag-interface compatible type.
+	StringLoaderFlag struct {
+		StringLoader
+	}
+	// StringLoader defines the interface of a type (t),
+	// which can be loaded from a string,
+	// as well as being turned back into a string,
+	// such that `t.LoadString(str) == nil && t.String() == str`.
+	StringLoader interface {
+		LoadString(string) error
+		String() string
+	}
+)
+
+// Set implements pflag.Value.Set,
+// which parses the string using the StringLoader's LoadString method.
+func (s StringLoaderFlag) Set(str string) error {
+	return s.LoadString(str)
+}
+
+// Type implements pflag.Value.Type
+func (s StringLoaderFlag) Type() string {
+	return "StringLoader"
+}
+
 var computeTimeNow = func() time.Time {
 	return time.Now()
 }
+
+var (
+	_ pflag.Value = (*LockTimeFlag)(nil)
+	_ pflag.Value = StringLoaderFlag{}
+)

@@ -14,8 +14,9 @@ import (
 // exit codes
 // inspired by sysexits.h
 const (
-	exitCodeGeneral = 1  // Not in sysexits.h, but is standard practice.
-	exitCodeUsage   = 64 // EX_USAGE in sysexits.h
+	ExitCodeGeneral  = 1 // Not in sysexits.h, but is standard practice.
+	ExitCodeNotFound = 2
+	ExitCodeUsage    = 64 // EX_USAGE in sysexits.h
 )
 
 // Config defines the configuration for the default (CLI) client.
@@ -62,7 +63,7 @@ func Wrap(fn interface{}) func(*cobra.Command, []string) {
 	return func(cmd *cobra.Command, args []string) {
 		if len(args) != fnType.NumIn() {
 			cmd.UsageFunc()(cmd)
-			os.Exit(exitCodeUsage)
+			os.Exit(ExitCodeUsage)
 		}
 		argVals := make([]reflect.Value, fnType.NumIn())
 		for i := range args {
@@ -75,8 +76,14 @@ func Wrap(fn interface{}) func(*cobra.Command, []string) {
 // Die prints its arguments to stderr, then exits the program with the default
 // error code.
 func Die(args ...interface{}) {
+	DieWithExitCode(ExitCodeGeneral, args...)
+}
+
+// DieWithExitCode prints its arguments to stderr,
+// then exits the program with the given exit code.
+func DieWithExitCode(code int, args ...interface{}) {
 	fmt.Fprintln(os.Stderr, args...)
-	os.Exit(exitCodeGeneral)
+	os.Exit(code)
 }
 
 // clientVersion prints the client version and exits
@@ -170,7 +177,7 @@ func DefaultCLIClient(cfg Config) {
 		atomicSwapInitiateCmd,
 		atomicSwapAuditCmd,
 		atomicSwapExtractSecretCmd,
-		atomicSwapClaimCmd,
+		atomicSwapRedeemCmd,
 		atomicSwapRefundCmd,
 	)
 
@@ -208,7 +215,7 @@ func DefaultCLIClient(cfg Config) {
 		// Command.RunE), Command.Execute() should only return an error on an
 		// invalid command or flag. Therefore Command.Usage() was called (assuming
 		// Command.SilenceUsage is false) and we should exit with exitCodeUsage.
-		os.Exit(exitCodeUsage)
+		os.Exit(ExitCodeUsage)
 	}
 }
 
