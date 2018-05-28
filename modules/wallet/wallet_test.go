@@ -586,3 +586,29 @@ func (css *consensusSetStub) ConsensusSetSubscribe(subscriber modules.ConsensusS
 func (css *consensusSetStub) Unsubscribe(subscriber modules.ConsensusSetSubscriber) {
 	delete(css.subscribers, subscriber)
 }
+
+func (css *consensusSetStub) GetCoinOutput(id types.CoinOutputID) (co types.CoinOutput, err error) {
+	for _, block := range css.blocks {
+		for _, txn := range block.Transactions {
+			for i, co := range txn.CoinOutputs {
+				if txn.CoinOutputID(uint64(i)) == id {
+					return co, nil
+				}
+			}
+		}
+	}
+	return types.CoinOutput{}, errors.New("Coin output not found in database")
+}
+
+func (css *consensusSetStub) GetBlockStakeOutput(id types.BlockStakeOutputID) (bso types.BlockStakeOutput, err error) {
+	for _, block := range css.blocks {
+		for _, txn := range block.Transactions {
+			for i, bso := range txn.BlockStakeOutputs {
+				if txn.BlockStakeOutputID(uint64(i)) == id {
+					return bso, nil
+				}
+			}
+		}
+	}
+	return types.BlockStakeOutput{}, errors.New("BlockStake output not found in database")
+}
