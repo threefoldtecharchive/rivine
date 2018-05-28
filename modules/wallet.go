@@ -102,6 +102,27 @@ type (
 		Outputs []ProcessedOutput `json:"outputs"`
 	}
 
+	// MultiSigWallet is a collection of coin and blockstake outputs, which have the same
+	// unlockhash.
+	MultiSigWallet struct {
+		Address             types.UnlockHash           `json:"address"`
+		CoinOutputIDs       []types.CoinOutputID       `json:"coinoutputids"`
+		BlockStakeOutputIDs []types.BlockStakeOutputID `json:"blockstakeoutputids"`
+
+		ConfirmedCoinBalance       types.Currency `json:"confirmedcoinbalance"`
+		ConfirmedLockedCoinBalance types.Currency `json:"confirmedlockedcoinbalance"`
+		UnconfirmedOutgoingCoins   types.Currency `json:"unconfirmedoutgoingcoins"`
+		UnconfirmedIncomingCoins   types.Currency `json:"unconfirmedincomingcoins"`
+
+		ConfirmedBlockStakeBalance       types.Currency `json:"confirmedblockstakebalance"`
+		ConfirmedLockedBlockStakeBalance types.Currency `json:"confirmedlockedblockstakebalance"`
+		UnconfirmedOutgoingBlockStakes   types.Currency `json:"unconfirmedoutgoingblockstakes"`
+		UnconfirmedIncomingBlockStakes   types.Currency `json:"unconfirmedincomingblockstakes"`
+
+		Owners  []types.UnlockHash `json:"owners"`
+		MinSigs uint64             `json:"minsigs"`
+	}
+
 	// TransactionBuilder is used to construct custom transactions. A transaction
 	// builder is initialized via 'RegisterTransaction' and then can be modified by
 	// adding funds or other fields. The transaction is completed by calling
@@ -326,6 +347,12 @@ type (
 		// UnconfirmedTransactions returns all unconfirmed transactions
 		// relative to the wallet.
 		UnconfirmedTransactions() []ProcessedTransaction
+
+		// MultiSigWallets returns all multisig wallets which contain at least one unlock hash owned by this wallet.
+		// A multisig wallet is in this context defined as a (group of) coin and or blockstake outputs, where the unlockhash
+		// of these outputs are exactly the same. In practice, this means that the collection of unlock hashes in the condition,
+		// as well as the minimum amount of signatures required, must match
+		MultiSigWallets() []MultiSigWallet
 
 		// RegisterTransaction takes a transaction and its parents and returns
 		// a TransactionBuilder which can be used to expand the transaction.
