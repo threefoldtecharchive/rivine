@@ -661,10 +661,25 @@ func getSpendableKey(unlockHash types.UnlockHash) (types.SiaPublicKey, types.Byt
 	if err != nil {
 		Die("Could not get a matching wallet public/secret key pair for the given unlock hash:", err)
 	}
+	if isNilByteSlice(resp.PublicKey) {
+		Die("Could not get a wallet public key pair for the given unlock hash")
+	}
+	if isNilByteSlice(resp.SecretKey) {
+		Die("Received matching public key, but no secret key was returned, is your wallet unlocked?!")
+	}
 	return types.SiaPublicKey{
 		Algorithm: resp.AlgorithmSpecifier,
 		Key:       resp.PublicKey,
 	}, resp.SecretKey
+}
+
+func isNilByteSlice(bs types.ByteSlice) bool {
+	for _, b := range bs {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // commitTxn sends a transaction to the used node's transaction pool
