@@ -672,18 +672,26 @@ func wallettransactionscmd() {
 		Die("Could not fetch transaction history:", err)
 	}
 
+	multiSigWalletTxns := make(map[types.UnlockHash][]modules.ProcessedTransaction)
 	fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
 	txns := append(wtg.ConfirmedTransactions, wtg.UnconfirmedTransactions...)
 	for _, txn := range txns {
+		var relatedMultiSigUnlockHashes []types.UnlockHash
 		// Determine the number of outgoing siacoins and siafunds.
 		var outgoingSiacoins types.Currency
 		var outgoingBlockStakes types.Currency
+		var rootWalletOwned bool
 		for _, input := range txn.Inputs {
 			if input.FundType == types.SpecifierCoinInput && input.WalletAddress {
+				rootWalletOwned = true
 				outgoingSiacoins = outgoingSiacoins.Add(input.Value)
 			}
 			if input.FundType == types.SpecifierBlockStakeInput && input.WalletAddress {
+				rootWalletOwned = true
 				outgoingBlockStakes = outgoingBlockStakes.Add(input.Value)
+			}
+			if input.RelatedAddress.Type == types.UnlockTypeMultiSig {
+				relatedMultiSigUnlockHashes = append(relatedMultiSigUnlockHashes, input.RelatedAddress)
 			}
 		}
 
@@ -692,14 +700,29 @@ func wallettransactionscmd() {
 		var incomingBlockStakes types.Currency
 		for _, output := range txn.Outputs {
 			if output.FundType == types.SpecifierMinerPayout {
+				rootWalletOwned = true
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
 			}
 			if output.FundType == types.SpecifierCoinOutput && output.WalletAddress {
+				rootWalletOwned = true
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
 			}
 			if output.FundType == types.SpecifierBlockStakeOutput && output.WalletAddress {
+				rootWalletOwned = true
 				incomingBlockStakes = incomingBlockStakes.Add(output.Value)
 			}
+			if output.RelatedAddress.Type == types.UnlockTypeMultiSig {
+				relatedMultiSigUnlockHashes = append(relatedMultiSigUnlockHashes, output.RelatedAddress)
+			}
+		}
+
+		// Remember the txn to print it in case there are related special conditions
+		for _, uh := range relatedMultiSigUnlockHashes {
+			multiSigWalletTxns[uh] = append(multiSigWalletTxns[uh], txn)
+		}
+		// Only print here if there is a direct relation to the root wallet
+		if !rootWalletOwned {
+			continue
 		}
 
 		// Convert the siacoins to a float.
@@ -716,6 +739,64 @@ func wallettransactionscmd() {
 		incomingBlockStakeBigInt := incomingBlockStakes.Big()
 		outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
 		fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
+
+	}
+
+	if len(multiSigWalletTxns) > 0 {
+
+		for uh, txns := range multiSigWalletTxns {
+			for _, txn := range txns {
+				fmt.Println()
+				fmt.Println("=====================================================================================================================")
+				fmt.Println()
+
+				fmt.Println("Wallet Address:", uh)
+				fmt.Println()
+				fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
+
+				// Determine the number of outgoing siacoins and siafunds.
+				var outgoingSiacoins types.Currency
+				var outgoingBlockStakes types.Currency
+				for _, input := range txn.Inputs {
+					if input.FundType == types.SpecifierCoinInput && input.RelatedAddress.Cmp(uh) == 0 {
+						outgoingSiacoins = outgoingSiacoins.Add(input.Value)
+					}
+					if input.FundType == types.SpecifierBlockStakeInput && input.RelatedAddress.Cmp(uh) == 0 {
+						outgoingBlockStakes = outgoingBlockStakes.Add(input.Value)
+					}
+				}
+
+				// Determine the number of incoming siacoins and siafunds.
+				var incomingSiacoins types.Currency
+				var incomingBlockStakes types.Currency
+				for _, output := range txn.Outputs {
+					if output.FundType == types.SpecifierMinerPayout {
+						incomingSiacoins = incomingSiacoins.Add(output.Value)
+					}
+					if output.FundType == types.SpecifierCoinOutput && output.RelatedAddress.Cmp(uh) == 0 {
+						incomingSiacoins = incomingSiacoins.Add(output.Value)
+					}
+					if output.FundType == types.SpecifierBlockStakeOutput && output.RelatedAddress.Cmp(uh) == 0 {
+						incomingBlockStakes = incomingBlockStakes.Add(output.Value)
+					}
+				}
+
+				// Convert the siacoins to a float.
+				incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
+				outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
+
+				// Print the results.
+				if txn.ConfirmationHeight < 1e9 {
+					fmt.Printf("%12v", txn.ConfirmationHeight)
+				} else {
+					fmt.Printf(" unconfirmed")
+				}
+				fmt.Printf("%67v%15.2f", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
+				incomingBlockStakeBigInt := incomingBlockStakes.Big()
+				outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
+				fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
+			}
+		}
 	}
 }
 
