@@ -105,7 +105,7 @@ func getMultiSigCondition(condition types.MarshalableUnlockCondition) *types.Mul
 	case *types.MultiSignatureCondition:
 		return c
 	case *types.TimeLockCondition:
-		return getMultiSigCondition(c)
+		return getMultiSigCondition(c.Condition)
 	default:
 		return nil
 	}
