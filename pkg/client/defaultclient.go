@@ -204,6 +204,12 @@ func DefaultCLIClient(cfg Config) {
 		consensusTransactionCmd,
 	)
 
+	root.AddCommand(exploreCmd)
+	exploreCmd.AddCommand(
+		exploreBlockCmd,
+		exploreHashCmd,
+	)
+
 	// parse flags
 	root.PersistentFlags().StringVarP(&_DefaultClient.httpClient.RootURL, "addr", "a",
 		_DefaultClient.httpClient.RootURL, fmt.Sprintf(
