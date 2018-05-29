@@ -27,6 +27,8 @@ type (
 
 		BlockStakeBalance       types.Currency `json:"blockstakebalance"`
 		LockedBlockStakeBalance types.Currency `json:"lockedblockstakebalance"`
+
+		MultiSigWallets []modules.MultiSigWallet `json:"multisigwallets"`
 	}
 
 	// WalletBlockStakeStatsGET contains blockstake statistical info of the wallet.
@@ -194,6 +196,8 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 
 		BlockStakeBalance:       blockstakeBal,
 		LockedBlockStakeBalance: blockstakeLockBal,
+
+		MultiSigWallets: api.wallet.MultiSigWallets(),
 	})
 }
 

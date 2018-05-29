@@ -13,43 +13,101 @@ import (
 func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 	for _, diff := range cc.CoinOutputDiffs {
 		// Verify that the diff is relevant to the wallet.
-		_, exists := w.keys[diff.CoinOutput.Condition.UnlockHash()]
-		if !exists {
+		if _, exists := w.keys[diff.CoinOutput.Condition.UnlockHash()]; exists {
+
+			_, exists = w.coinOutputs[diff.ID]
+			if diff.Direction == modules.DiffApply {
+				if build.DEBUG && exists {
+					panic("adding an existing output to wallet")
+				}
+				w.coinOutputs[diff.ID] = diff.CoinOutput
+			} else {
+				if build.DEBUG && !exists {
+					panic("deleting nonexisting output from wallet")
+				}
+				delete(w.coinOutputs, diff.ID)
+			}
 			continue
 		}
 
-		_, exists = w.coinOutputs[diff.ID]
-		if diff.Direction == modules.DiffApply {
-			if build.DEBUG && exists {
-				panic("adding an existing output to wallet")
+		// Check if this is a multisig condition
+		// If it is, then check if it contains any of our addresses
+		condition := getMultiSigCondition(diff.CoinOutput.Condition.Condition)
+		if condition == nil {
+			continue
+		}
+		for _, uh := range condition.UnlockHashes {
+			if _, exists := w.keys[uh]; exists {
+				_, exists = w.multiSigCoinOutputs[diff.ID]
+				if diff.Direction == modules.DiffApply {
+					if build.DEBUG && exists {
+						panic("adding an existing multisig output to wallet")
+					}
+					w.multiSigCoinOutputs[diff.ID] = diff.CoinOutput
+				} else {
+					if build.DEBUG && !exists {
+						panic("deleting nonexisting multisig output from wallet")
+					}
+					delete(w.multiSigCoinOutputs, diff.ID)
+				}
+				break
 			}
-			w.coinOutputs[diff.ID] = diff.CoinOutput
-		} else {
-			if build.DEBUG && !exists {
-				panic("deleting nonexisting output from wallet")
-			}
-			delete(w.coinOutputs, diff.ID)
 		}
 	}
+
 	for _, diff := range cc.BlockStakeOutputDiffs {
 		// Verify that the diff is relevant to the wallet.
-		_, exists := w.keys[diff.BlockStakeOutput.Condition.UnlockHash()]
-		if !exists {
+		if _, exists := w.keys[diff.BlockStakeOutput.Condition.UnlockHash()]; exists {
+
+			_, exists = w.blockstakeOutputs[diff.ID]
+			if diff.Direction == modules.DiffApply {
+				if build.DEBUG && exists {
+					panic("adding an existing output to wallet")
+				}
+				w.blockstakeOutputs[diff.ID] = diff.BlockStakeOutput
+			} else {
+				if build.DEBUG && !exists {
+					panic("deleting nonexisting output from wallet")
+				}
+				delete(w.blockstakeOutputs, diff.ID)
+			}
 			continue
 		}
 
-		_, exists = w.blockstakeOutputs[diff.ID]
-		if diff.Direction == modules.DiffApply {
-			if build.DEBUG && exists {
-				panic("adding an existing output to wallet")
-			}
-			w.blockstakeOutputs[diff.ID] = diff.BlockStakeOutput
-		} else {
-			if build.DEBUG && !exists {
-				panic("deleting nonexisting output from wallet")
-			}
-			delete(w.blockstakeOutputs, diff.ID)
+		// Check if this is a multisig condition
+		// If it is, then check if it contains any of our addresses
+		condition := getMultiSigCondition(diff.BlockStakeOutput.Condition.Condition)
+		if condition == nil {
+			continue
 		}
+		for _, uh := range condition.UnlockHashes {
+			if _, exists := w.keys[uh]; exists {
+				_, exists = w.multiSigBlockStakeOutputs[diff.ID]
+				if diff.Direction == modules.DiffApply {
+					if build.DEBUG && exists {
+						panic("adding an existing multisig output to wallet")
+					}
+					w.multiSigBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
+				} else {
+					if build.DEBUG && !exists {
+						panic("deleting nonexisting multisig output from wallet")
+					}
+					delete(w.multiSigBlockStakeOutputs, diff.ID)
+				}
+				break
+			}
+		}
+	}
+}
+
+func getMultiSigCondition(condition types.MarshalableUnlockCondition) *types.MultiSignatureCondition {
+	switch c := condition.(type) {
+	case *types.MultiSignatureCondition:
+		return c
+	case *types.TimeLockCondition:
+		return getMultiSigCondition(c)
+	default:
+		return nil
 	}
 }
 

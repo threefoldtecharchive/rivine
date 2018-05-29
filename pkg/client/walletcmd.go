@@ -607,6 +607,60 @@ BlockStakes:         %v BS
 	if !status.LockedBlockStakeBalance.IsZero() {
 		fmt.Printf("Locked BlockStakes:  %v BS\n", status.LockedBlockStakeBalance)
 	}
+
+	if len(status.MultiSigWallets) > 0 {
+		fmt.Println()
+		fmt.Println("Multisig Wallets:")
+	}
+
+	for _, wallet := range status.MultiSigWallets {
+		// Print separator
+		fmt.Println()
+		fmt.Println("==============================================================================")
+		fmt.Println()
+
+		unconfirmedBalance := wallet.ConfirmedCoinBalance.Add(wallet.UnconfirmedIncomingCoins).Sub(wallet.UnconfirmedOutgoingCoins)
+		var coindelta string
+		if unconfirmedBalance.Cmp(wallet.ConfirmedCoinBalance) >= 0 {
+			coindelta = "+ " + _CurrencyConvertor.ToCoinStringWithUnit(unconfirmedBalance.Sub(wallet.ConfirmedCoinBalance))
+		} else {
+			coindelta = "- " + _CurrencyConvertor.ToCoinStringWithUnit(wallet.ConfirmedCoinBalance.Sub(unconfirmedBalance))
+		}
+
+		unconfirmedBlockStakeBalance := wallet.ConfirmedBlockStakeBalance.Add(wallet.UnconfirmedIncomingBlockStakes).Sub(wallet.UnconfirmedOutgoingBlockStakes)
+		var bsdelta string
+		if unconfirmedBlockStakeBalance.Cmp(wallet.ConfirmedBlockStakeBalance) >= 0 {
+			bsdelta = "+ " + unconfirmedBalance.Sub(wallet.ConfirmedBlockStakeBalance).String()
+		} else {
+			bsdelta = "- " + wallet.ConfirmedBlockStakeBalance.Sub(unconfirmedBlockStakeBalance).String()
+		}
+
+		fmt.Printf("%v\n", wallet.Address)
+		fmt.Printf("Confirmed Balance:            %v\n", _CurrencyConvertor.ToCoinStringWithUnit(wallet.ConfirmedCoinBalance))
+		if !wallet.ConfirmedLockedCoinBalance.IsZero() {
+			fmt.Printf("Locked Balance:               %v\n", _CurrencyConvertor.ToCoinStringWithUnit(wallet.ConfirmedLockedCoinBalance))
+		}
+		if wallet.UnconfirmedIncomingCoins.Cmp(wallet.UnconfirmedOutgoingCoins) != 0 {
+			fmt.Printf("Unconfirmed Delta:            %v\n", coindelta)
+		}
+		if !wallet.ConfirmedBlockStakeBalance.IsZero() {
+			fmt.Printf("BlockStakes:                  %v BS\n", wallet.ConfirmedBlockStakeBalance)
+		}
+		if !wallet.ConfirmedLockedBlockStakeBalance.IsZero() {
+			fmt.Printf("Locked BlockStakes:           %v BS\n", wallet.ConfirmedLockedBlockStakeBalance)
+		}
+		if wallet.UnconfirmedIncomingBlockStakes.Cmp(wallet.UnconfirmedOutgoingBlockStakes) != 0 {
+			fmt.Printf("Unconfirmed blockstake delta: %v BS\n", bsdelta)
+		}
+
+		fmt.Println()
+		fmt.Println("Possible signatories:")
+		for _, uh := range wallet.Owners {
+			fmt.Println(uh)
+		}
+		fmt.Println()
+		fmt.Println("Minimum signatures required:", wallet.MinSigs)
+	}
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,
