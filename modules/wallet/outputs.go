@@ -19,7 +19,20 @@ func (w *Wallet) UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutp
 			ucom[id] = co
 		}
 	}
+	// same for multisig
+	for id, co := range w.multiSigCoinOutputs {
+		if co.Condition.Fulfillable(ctx) {
+			ucom[id] = co
+		}
+	}
+	// block stakes
 	for id, bso := range w.blockstakeOutputs {
+		if bso.Condition.Fulfillable(ctx) {
+			ubsom[id] = bso
+		}
+	}
+	// block stake multisigs
+	for id, bso := range w.multiSigBlockStakeOutputs {
 		if bso.Condition.Fulfillable(ctx) {
 			ubsom[id] = bso
 		}
@@ -44,7 +57,20 @@ func (w *Wallet) LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput
 			ucom[id] = co
 		}
 	}
+	// same for multisig
+	for id, co := range w.multiSigCoinOutputs {
+		if !co.Condition.Fulfillable(ctx) {
+			ucom[id] = co
+		}
+	}
+	// block stakes
 	for id, bso := range w.blockstakeOutputs {
+		if !bso.Condition.Fulfillable(ctx) {
+			ubsom[id] = bso
+		}
+	}
+	// block stake multisigs
+	for id, bso := range w.multiSigBlockStakeOutputs {
 		if !bso.Condition.Fulfillable(ctx) {
 			ubsom[id] = bso
 		}
