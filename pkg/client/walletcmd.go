@@ -1,12 +1,14 @@
 package client
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
 	"os"
+	"strconv"
 	"text/tabwriter"
 
 	"github.com/bgentry/speakeasy"
@@ -184,31 +186,78 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 		Long:  "List all the locked coin and blockstake outputs that belong to this wallet",
 		Run:   Wrap(walletlistlocked),
 	}
+
+	walletCreateCmd = &cobra.Command{
+		Use:   "create",
+		Short: "Create a coin or blockstake transaction",
+		// Run field is not set, as the create command itself is not a valid command.
+		// A subcommand must be provided.
+	}
+
+	walletCreateMultisisgAddress = &cobra.Command{
+		Use:   "multisigaddress <minsigsrequired> <address1> <address2> [<address>]...",
+		Short: "Create a multisig address",
+		Long: `Create a multisig address from the given addresses, which requires at least <minsigrequired>
+signatures to unlock`,
+		Args: cobra.MinimumNArgs(3),
+		Run:  walletcreatemultisigaddress,
+	}
+
+	walletCreateCoinTxnCmd = &cobra.Command{
+		Use:   "cointransaction <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...",
+		Short: "Create a new coin transaction",
+		Long: `Create a new coin transaction using the given parentID's and outputs.
+The outputs can be given as a pair of value and a raw output condition (or
+address, which resolved to a singlesignature condition).`,
+		Run: walletcreatecointxn,
+	}
+
+	walletCreateBlockStakeTxnCmd = &cobra.Command{
+		Use:   "blockstaketransaction <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...",
+		Short: "Create a new blockstake transaction",
+		Long: `Create a new blockstake transaction using the given parentID's and outputs.
+The outputs can be given as a pair of value and a raw output condition (or
+address, which resolved to a singlesignature condition).`,
+		Run: walletcreateblockstaketxn,
+	}
+
+	walletSignCmd = &cobra.Command{
+		Use:   "sign <txnjson>",
+		Short: "Sign inputs from the transaction",
+		Long: `Signs as much of the inputs transaction. Iterate over every input, and check if they can be signed
+by any of the keys in the wallet.`,
+		Run: Wrap(walletsigntxn),
+	}
 }
 
 // still need to be initialized using createWalletCommands
 var (
-	walletCmd                *cobra.Command
-	walletBlockStakeStatCmd  *cobra.Command
-	walletAddressCmd         *cobra.Command
-	walletAddressesCmd       *cobra.Command
-	walletInitCmd            *cobra.Command
-	walletRecoverCmd         *cobra.Command
-	walletLoadCmd            *cobra.Command
-	walletLoadSeedCmd        *cobra.Command
-	walletLockCmd            *cobra.Command
-	walletSendCmd            *cobra.Command
-	walletSeedsCmd           *cobra.Command
-	walletSendCoinsCmd       *cobra.Command
-	walletSendBlockStakesCmd *cobra.Command
-	walletRegisterDataCmd    *cobra.Command
-	walletBalanceCmd         *cobra.Command
-	walletTransactionsCmd    *cobra.Command
-	walletUnlockCmd          *cobra.Command
-	walletSendTxnCmd         *cobra.Command
-	walletListCmd            *cobra.Command
-	walletListUnlockedCmd    *cobra.Command
-	walletListLockedCmd      *cobra.Command
+	walletCmd                    *cobra.Command
+	walletBlockStakeStatCmd      *cobra.Command
+	walletAddressCmd             *cobra.Command
+	walletAddressesCmd           *cobra.Command
+	walletInitCmd                *cobra.Command
+	walletRecoverCmd             *cobra.Command
+	walletLoadCmd                *cobra.Command
+	walletLoadSeedCmd            *cobra.Command
+	walletLockCmd                *cobra.Command
+	walletSendCmd                *cobra.Command
+	walletSeedsCmd               *cobra.Command
+	walletSendCoinsCmd           *cobra.Command
+	walletSendBlockStakesCmd     *cobra.Command
+	walletRegisterDataCmd        *cobra.Command
+	walletBalanceCmd             *cobra.Command
+	walletTransactionsCmd        *cobra.Command
+	walletUnlockCmd              *cobra.Command
+	walletSendTxnCmd             *cobra.Command
+	walletListCmd                *cobra.Command
+	walletListUnlockedCmd        *cobra.Command
+	walletListLockedCmd          *cobra.Command
+	walletCreateCmd              *cobra.Command
+	walletCreateMultisisgAddress *cobra.Command
+	walletCreateCoinTxnCmd       *cobra.Command
+	walletCreateBlockStakeTxnCmd *cobra.Command
+	walletSignCmd                *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
@@ -362,7 +411,7 @@ func walletseedscmd() {
 
 // walletsendcoinscmd sends siacoins to one or multiple destination addresses.
 func walletsendcoinscmd(cmd *cobra.Command, args []string) {
-	pairs, err := parsePairedOutputs(args)
+	pairs, err := parsePairedOutputs(args, _CurrencyConvertor.ParseCoinString)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
 		Die(err)
@@ -395,7 +444,7 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 
 // walletsendblockstakescmd sends block stakes to one or multiple destination addresses.
 func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
-	pairs, err := parsePairedOutputs(args)
+	pairs, err := parsePairedOutputs(args, stringToBlockStakes)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
 		Die(err)
@@ -430,7 +479,15 @@ type outputPair struct {
 	Value     types.Currency
 }
 
-func parsePairedOutputs(args []string) (pairs []outputPair, err error) {
+// parseCurrencyString takes the string representation of a currency value
+type parseCurrencyString func(string) (types.Currency, error)
+
+func stringToBlockStakes(input string) (types.Currency, error) {
+	bsv, err := strconv.ParseUint(input, 10, 64)
+	return types.NewCurrency64(bsv), err
+}
+
+func parsePairedOutputs(args []string, parseCurrency parseCurrencyString) (pairs []outputPair, err error) {
 	argn := len(args)
 	if argn < 2 {
 		err = errors.New("not enough arguments, at least 2 required")
@@ -444,7 +501,7 @@ func parsePairedOutputs(args []string) (pairs []outputPair, err error) {
 	for i := 0; i < argn; i += 2 {
 		// parse value first, as it's the one without any possibility of ambiguity
 		var pair outputPair
-		pair.Value, err = _CurrencyConvertor.ParseCoinString(args[i+1])
+		pair.Value, err = parseCurrency(args[i+1])
 		if err != nil {
 			err = fmt.Errorf("failed to parse amount/value for output #%d: %v", i/2, err)
 			return
@@ -550,6 +607,60 @@ BlockStakes:         %v BS
 	if !status.LockedBlockStakeBalance.IsZero() {
 		fmt.Printf("Locked BlockStakes:  %v BS\n", status.LockedBlockStakeBalance)
 	}
+
+	if len(status.MultiSigWallets) > 0 {
+		fmt.Println()
+		fmt.Println("Multisig Wallets:")
+	}
+
+	for _, wallet := range status.MultiSigWallets {
+		// Print separator
+		fmt.Println()
+		fmt.Println("==============================================================================")
+		fmt.Println()
+
+		unconfirmedBalance := wallet.ConfirmedCoinBalance.Add(wallet.UnconfirmedIncomingCoins).Sub(wallet.UnconfirmedOutgoingCoins)
+		var coindelta string
+		if unconfirmedBalance.Cmp(wallet.ConfirmedCoinBalance) >= 0 {
+			coindelta = "+ " + _CurrencyConvertor.ToCoinStringWithUnit(unconfirmedBalance.Sub(wallet.ConfirmedCoinBalance))
+		} else {
+			coindelta = "- " + _CurrencyConvertor.ToCoinStringWithUnit(wallet.ConfirmedCoinBalance.Sub(unconfirmedBalance))
+		}
+
+		unconfirmedBlockStakeBalance := wallet.ConfirmedBlockStakeBalance.Add(wallet.UnconfirmedIncomingBlockStakes).Sub(wallet.UnconfirmedOutgoingBlockStakes)
+		var bsdelta string
+		if unconfirmedBlockStakeBalance.Cmp(wallet.ConfirmedBlockStakeBalance) >= 0 {
+			bsdelta = "+ " + unconfirmedBalance.Sub(wallet.ConfirmedBlockStakeBalance).String()
+		} else {
+			bsdelta = "- " + wallet.ConfirmedBlockStakeBalance.Sub(unconfirmedBlockStakeBalance).String()
+		}
+
+		fmt.Printf("%v\n", wallet.Address)
+		fmt.Printf("Confirmed Balance:            %v\n", _CurrencyConvertor.ToCoinStringWithUnit(wallet.ConfirmedCoinBalance))
+		if !wallet.ConfirmedLockedCoinBalance.IsZero() {
+			fmt.Printf("Locked Balance:               %v\n", _CurrencyConvertor.ToCoinStringWithUnit(wallet.ConfirmedLockedCoinBalance))
+		}
+		if wallet.UnconfirmedIncomingCoins.Cmp(wallet.UnconfirmedOutgoingCoins) != 0 {
+			fmt.Printf("Unconfirmed Delta:            %v\n", coindelta)
+		}
+		if !wallet.ConfirmedBlockStakeBalance.IsZero() {
+			fmt.Printf("BlockStakes:                  %v BS\n", wallet.ConfirmedBlockStakeBalance)
+		}
+		if !wallet.ConfirmedLockedBlockStakeBalance.IsZero() {
+			fmt.Printf("Locked BlockStakes:           %v BS\n", wallet.ConfirmedLockedBlockStakeBalance)
+		}
+		if wallet.UnconfirmedIncomingBlockStakes.Cmp(wallet.UnconfirmedOutgoingBlockStakes) != 0 {
+			fmt.Printf("Unconfirmed blockstake delta: %v BS\n", bsdelta)
+		}
+
+		fmt.Println()
+		fmt.Println("Possible signatories:")
+		for _, uh := range wallet.Owners {
+			fmt.Println(uh)
+		}
+		fmt.Println()
+		fmt.Println("Minimum signatures required:", wallet.MinSigs)
+	}
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,
@@ -561,18 +672,26 @@ func wallettransactionscmd() {
 		Die("Could not fetch transaction history:", err)
 	}
 
+	multiSigWalletTxns := make(map[types.UnlockHash][]modules.ProcessedTransaction)
 	fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
 	txns := append(wtg.ConfirmedTransactions, wtg.UnconfirmedTransactions...)
 	for _, txn := range txns {
+		var relatedMultiSigUnlockHashes []types.UnlockHash
 		// Determine the number of outgoing siacoins and siafunds.
 		var outgoingSiacoins types.Currency
 		var outgoingBlockStakes types.Currency
+		var rootWalletOwned bool
 		for _, input := range txn.Inputs {
 			if input.FundType == types.SpecifierCoinInput && input.WalletAddress {
+				rootWalletOwned = true
 				outgoingSiacoins = outgoingSiacoins.Add(input.Value)
 			}
 			if input.FundType == types.SpecifierBlockStakeInput && input.WalletAddress {
+				rootWalletOwned = true
 				outgoingBlockStakes = outgoingBlockStakes.Add(input.Value)
+			}
+			if input.RelatedAddress.Type == types.UnlockTypeMultiSig {
+				relatedMultiSigUnlockHashes = append(relatedMultiSigUnlockHashes, input.RelatedAddress)
 			}
 		}
 
@@ -581,14 +700,29 @@ func wallettransactionscmd() {
 		var incomingBlockStakes types.Currency
 		for _, output := range txn.Outputs {
 			if output.FundType == types.SpecifierMinerPayout {
+				rootWalletOwned = true
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
 			}
 			if output.FundType == types.SpecifierCoinOutput && output.WalletAddress {
+				rootWalletOwned = true
 				incomingSiacoins = incomingSiacoins.Add(output.Value)
 			}
 			if output.FundType == types.SpecifierBlockStakeOutput && output.WalletAddress {
+				rootWalletOwned = true
 				incomingBlockStakes = incomingBlockStakes.Add(output.Value)
 			}
+			if output.RelatedAddress.Type == types.UnlockTypeMultiSig {
+				relatedMultiSigUnlockHashes = append(relatedMultiSigUnlockHashes, output.RelatedAddress)
+			}
+		}
+
+		// Remember the txn to print it in case there are related special conditions
+		for _, uh := range relatedMultiSigUnlockHashes {
+			multiSigWalletTxns[uh] = append(multiSigWalletTxns[uh], txn)
+		}
+		// Only print here if there is a direct relation to the root wallet
+		if !rootWalletOwned {
+			continue
 		}
 
 		// Convert the siacoins to a float.
@@ -605,6 +739,64 @@ func wallettransactionscmd() {
 		incomingBlockStakeBigInt := incomingBlockStakes.Big()
 		outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
 		fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
+
+	}
+
+	if len(multiSigWalletTxns) > 0 {
+
+		for uh, txns := range multiSigWalletTxns {
+			for _, txn := range txns {
+				fmt.Println()
+				fmt.Println("=====================================================================================================================")
+				fmt.Println()
+
+				fmt.Println("Wallet Address:", uh)
+				fmt.Println()
+				fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
+
+				// Determine the number of outgoing siacoins and siafunds.
+				var outgoingSiacoins types.Currency
+				var outgoingBlockStakes types.Currency
+				for _, input := range txn.Inputs {
+					if input.FundType == types.SpecifierCoinInput && input.RelatedAddress.Cmp(uh) == 0 {
+						outgoingSiacoins = outgoingSiacoins.Add(input.Value)
+					}
+					if input.FundType == types.SpecifierBlockStakeInput && input.RelatedAddress.Cmp(uh) == 0 {
+						outgoingBlockStakes = outgoingBlockStakes.Add(input.Value)
+					}
+				}
+
+				// Determine the number of incoming siacoins and siafunds.
+				var incomingSiacoins types.Currency
+				var incomingBlockStakes types.Currency
+				for _, output := range txn.Outputs {
+					if output.FundType == types.SpecifierMinerPayout {
+						incomingSiacoins = incomingSiacoins.Add(output.Value)
+					}
+					if output.FundType == types.SpecifierCoinOutput && output.RelatedAddress.Cmp(uh) == 0 {
+						incomingSiacoins = incomingSiacoins.Add(output.Value)
+					}
+					if output.FundType == types.SpecifierBlockStakeOutput && output.RelatedAddress.Cmp(uh) == 0 {
+						incomingBlockStakes = incomingBlockStakes.Add(output.Value)
+					}
+				}
+
+				// Convert the siacoins to a float.
+				incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
+				outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
+
+				// Print the results.
+				if txn.ConfirmationHeight < 1e9 {
+					fmt.Printf("%12v", txn.ConfirmationHeight)
+				} else {
+					fmt.Printf(" unconfirmed")
+				}
+				fmt.Printf("%67v%15.2f", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
+				incomingBlockStakeBigInt := incomingBlockStakes.Big()
+				outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
+				fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
+			}
+		}
 	}
 }
 
@@ -705,5 +897,126 @@ func walletlistlocked() {
 			fmt.Println()
 		}
 	}
+}
 
+func walletcreatemultisigaddress(cmd *cobra.Command, args []string) {
+	msr, err := strconv.ParseUint(args[0], 10, 64)
+	if err != nil {
+		Die(err)
+	}
+
+	if uint64(len(args[1:])) < msr {
+		Die("Invalid amount of signatures required")
+	}
+
+	uhs := types.UnlockHashSlice{}
+	var uh types.UnlockHash
+	for _, addr := range args[1:] {
+		err = uh.LoadString(addr)
+		if err != nil {
+			Die("Failed to load unlock hash:", err)
+		}
+		uhs = append(uhs, uh)
+	}
+
+	multiSigCond := types.NewMultiSignatureCondition(uhs, msr)
+	fmt.Println("Multisig address:", multiSigCond.UnlockHash())
+}
+
+func walletcreatecointxn(cmd *cobra.Command, args []string) {
+	// parse first arguments as coin inputs
+	inputs := []types.CoinOutputID{}
+	var id types.CoinOutputID
+	for _, possibleInputID := range args {
+		if err := id.LoadString(possibleInputID); err != nil {
+			break
+		}
+		inputs = append(inputs, id)
+	}
+
+	// Check that the remaining args are condition + value pairs
+	if (len(args)-len(inputs))%2 != 0 {
+		cmd.UsageFunc()(cmd)
+		Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
+	}
+
+	// parse the remainder as output coditions and values
+	pairs, err := parsePairedOutputs(args[len(inputs):], _CurrencyConvertor.ParseCoinString)
+	if err != nil {
+		cmd.UsageFunc()(cmd)
+		Die(err)
+	}
+
+	body := api.WalletCreateTransactionPOST{}
+	body.CoinInputs = inputs
+	for _, pair := range pairs {
+		body.CoinOutputs = append(body.CoinOutputs, types.CoinOutput{Value: pair.Value, Condition: pair.Condition})
+	}
+
+	buffer := bytes.NewBuffer(nil)
+	err = json.NewEncoder(buffer).Encode(body)
+	if err != nil {
+		Die("Could not create raw transaction from inputs and outputs: ", err)
+	}
+	var resp api.WalletCreateTransactionRESP
+	err = _DefaultClient.httpClient.PostResp("/wallet/create/transaction", buffer.String(), &resp)
+	if err != nil {
+		Die("Failed to create transaction:", err)
+	}
+
+	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
+}
+
+func walletcreateblockstaketxn(cmd *cobra.Command, args []string) {
+	// parse first arguments as coin inputs
+	inputs := []types.BlockStakeOutputID{}
+	var id types.BlockStakeOutputID
+	for _, possibleInputID := range args {
+		if err := id.LoadString(possibleInputID); err != nil {
+			break
+		}
+		inputs = append(inputs, id)
+	}
+
+	// Check that the remaining args are condition + value pairs
+	if (len(args)-len(inputs))%2 != 0 {
+		cmd.UsageFunc()(cmd)
+		Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
+	}
+
+	// parse the remainder as output coditions and values
+	pairs, err := parsePairedOutputs(args[len(inputs):], stringToBlockStakes)
+	if err != nil {
+		cmd.UsageFunc()(cmd)
+		Die(err)
+	}
+
+	body := api.WalletCreateTransactionPOST{}
+	body.BlockStakeInputs = inputs
+	for _, pair := range pairs {
+		body.BlockStakeOutputs = append(body.BlockStakeOutputs, types.BlockStakeOutput{Value: pair.Value, Condition: pair.Condition})
+	}
+
+	buffer := bytes.NewBuffer(nil)
+	err = json.NewEncoder(buffer).Encode(body)
+	if err != nil {
+		Die("Could not create raw transaction from inputs and outputs: ", err)
+	}
+	var resp api.WalletCreateTransactionRESP
+	err = _DefaultClient.httpClient.PostResp("/wallet/create/transaction", buffer.String(), &resp)
+	if err != nil {
+		Die("Failed to create transaction:", err)
+	}
+
+	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
+}
+
+func walletsigntxn(txnjson string) {
+	var txn types.Transaction
+	err := _DefaultClient.httpClient.PostResp("/wallet/sign", txnjson, &txn)
+	if err != nil {
+		Die("Failed to sign transaction:", err)
+	}
+
+	json.NewEncoder(os.Stdout).Encode(txn)
 }

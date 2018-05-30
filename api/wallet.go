@@ -27,6 +27,8 @@ type (
 
 		BlockStakeBalance       types.Currency `json:"blockstakebalance"`
 		LockedBlockStakeBalance types.Currency `json:"lockedblockstakebalance"`
+
+		MultiSigWallets []modules.MultiSigWallet `json:"multisigwallets"`
 	}
 
 	// WalletBlockStakeStatsGET contains blockstake statistical info of the wallet.
@@ -160,6 +162,22 @@ type (
 		ID     types.BlockStakeOutputID `json:"id"`
 		Output types.BlockStakeOutput   `json:"output"`
 	}
+
+	// WalletCreateTransactionPOST is a list of coin and blockstake inputs and outputs
+	// The values in the coin and blockstake input and outputs pair must match exactly (also
+	// accounting for miner fees)
+	WalletCreateTransactionPOST struct {
+		CoinInputs        []types.CoinOutputID       `json:"coininputs"`
+		BlockStakeInputs  []types.BlockStakeOutputID `json:"blockstakeinputs"`
+		CoinOutputs       []types.CoinOutput         `json:"coinoutputs"`
+		BlockStakeOutputs []types.BlockStakeOutput   `json:"blockstakeoutputs"`
+	}
+
+	// WalletCreateTransactionRESP wraps the transaction returned by the walletcreatetransaction
+	// endpoint
+	WalletCreateTransactionRESP struct {
+		Transaction types.Transaction `json:"transaction"`
+	}
 )
 
 // walletHander handles API calls to /wallet.
@@ -178,6 +196,8 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 
 		BlockStakeBalance:       blockstakeBal,
 		LockedBlockStakeBalance: blockstakeLockBal,
+
+		MultiSigWallets: api.wallet.MultiSigWallets(),
 	})
 }
 
@@ -605,4 +625,36 @@ func (api *API) walletListLockedHandler(w http.ResponseWriter, req *http.Request
 		UnlockedCoinOutputs:       ucor,
 		UnlockedBlockstakeOutputs: ubsor,
 	})
+}
+
+// walletCreateTransactionHandler handles API calls to POST /wallet/create/transaction
+func (api *API) walletCreateTransactionHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var body WalletCreateTransactionPOST
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied inputs and outputs: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	tx, err := api.wallet.CreateRawTransaction(body.CoinInputs, body.BlockStakeInputs, body.CoinOutputs, body.BlockStakeOutputs, nil)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/create/transaction: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, WalletCreateTransactionRESP{
+		Transaction: tx,
+	})
+}
+
+// walletSignHandler handles API calls to POST /wallet/sign
+func (api *API) walletSignHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var body types.Transaction
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied transaction: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	txn, err := api.wallet.GreedySign(body)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/sign: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, txn)
 }

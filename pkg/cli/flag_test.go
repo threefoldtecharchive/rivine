@@ -138,6 +138,134 @@ func TestStringLoaderFlag(t *testing.T) {
 	}
 }
 
+func TestEncodingTypeFlagString(t *testing.T) {
+	testCases := []struct {
+		f EncodingTypeFlag
+		s string
+	}{
+		{EncodingTypeFlag{et: func() *EncodingType { et := EncodingTypeHuman; return &et }()}, "human"},
+		{EncodingTypeFlag{et: func() *EncodingType { et := EncodingTypeJSON; return &et }()}, "json"},
+		{EncodingTypeFlag{et: func() *EncodingType { et := EncodingTypeHex; return &et }()}, "hex"},
+		{EncodingTypeFlag{et: func() *EncodingType { et := EncodingTypeJSON | EncodingTypeHex; return &et }()}, "human"}, // def = human
+		{EncodingTypeFlag{et: func() *EncodingType { et := EncodingType(128); return &et }()}, "human"},                  // def = human
+	}
+	for idx, testCase := range testCases {
+		str := testCase.f.String()
+		if str != testCase.s {
+			t.Error(idx, "unexpected result", str, "!=", testCase.s)
+		}
+	}
+}
+
+func TestNewEncodingTypeFlag(t *testing.T) {
+	var et EncodingType
+	testPanic(t, "no reference given", func() {
+		NewEncodingTypeFlag(0, nil, 0)
+	})
+	testPanic(t, "no human encoding is allowed", func() {
+		NewEncodingTypeFlag(EncodingTypeHuman, &et, EncodingTypeJSON|EncodingTypeHex)
+	})
+	testPanic(t, "no hex encoding is allowed", func() {
+		NewEncodingTypeFlag(EncodingTypeHex, &et, EncodingTypeJSON|EncodingTypeHuman)
+	})
+	testPanic(t, "no json encoding is allowed", func() {
+		NewEncodingTypeFlag(EncodingTypeJSON, &et, EncodingTypeHex|EncodingTypeHuman)
+	})
+
+	NewEncodingTypeFlag(EncodingTypeHex, &et, 0)
+	if et != EncodingTypeHex {
+		t.Error("expected et to be EncodingHEX, but it was instead: ", et)
+	}
+}
+
+func TestEncodingTypeFlagSet(t *testing.T) {
+	// create new encoding type and flag
+	var et EncodingType
+	f := NewEncodingTypeFlag(0, &et, 0) // mask=0: means all is allowed
+	// test if we can set JSON
+	err := f.Set("json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if et != EncodingTypeJSON {
+		t.Fatal("et was supposed to be EncodingTypeJSON, but was instead:", et)
+	}
+	// test if we can set JSON using all caps
+	err = f.Set("JSON")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if et != EncodingTypeJSON {
+		t.Fatal("et was supposed to be EncodingTypeJSON, but was instead:", et)
+	}
+	// test if we can set hex
+	err = f.Set("hex")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if et != EncodingTypeHex {
+		t.Fatal("et was supposed to be EncodingTypeHex, but was instead:", et)
+	}
+	// test if we can set human explicitly
+	err = f.Set("human")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if et != EncodingTypeHuman {
+		t.Fatal("et was supposed to be EncodingTypeHuman, but was instead:", et)
+	}
+	// test if we can set a flag in a case insensitive manner
+	err = f.Set("HeX")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if et != EncodingTypeHex {
+		t.Fatal("et was supposed to be EncodingTypeHex, but was instead:", et)
+	}
+	// set mask to 0, as to allow nothing
+	f.mask = 0
+	// nothing should be allowed now
+	err = f.Set("human")
+	if err == nil {
+		t.Fatal("setting to human should fail, given that nothing is allowed, but now et is: ", et)
+	}
+	err = f.Set("json")
+	if err == nil {
+		t.Fatal("setting to json should fail, given that nothing is allowed, but now et is: ", et)
+	}
+	err = f.Set("hex")
+	if err == nil {
+		t.Fatal("setting to hex should fail, given that nothing is allowed, but now et is: ", et)
+	}
+	// set mask to Human, as to allow only Human
+	f.mask = EncodingTypeHuman
+	err = f.Set("human")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if et != EncodingTypeHuman {
+		t.Fatal("et was supposed to be EncodingTypeHuman, but was instead:", et)
+	}
+	err = f.Set("json")
+	if err == nil {
+		t.Fatal("setting to json should fail, given that nothing is allowed, but now et is: ", et)
+	}
+	err = f.Set("hex")
+	if err == nil {
+		t.Fatal("setting to hex should fail, given that nothing is allowed, but now et is: ", et)
+	}
+}
+
+func testPanic(t *testing.T, label string, f func()) {
+	defer func() {
+		e := recover()
+		if e == nil {
+			t.Error(label + ": expected a panic, but received none")
+		}
+	}()
+	f()
+}
+
 const testTimeNow = 1525600388
 
 func init() {

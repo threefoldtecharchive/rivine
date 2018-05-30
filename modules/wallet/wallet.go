@@ -87,6 +87,10 @@ type Wallet struct {
 	unspentblockstakeoutputs map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput
 	spentOutputs             map[types.OutputID]types.BlockHeight
 
+	// multiSigOutputs holds all the multisig addresses this wallet is part of
+	multiSigCoinOutputs       map[types.CoinOutputID]types.CoinOutput
+	multiSigBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
+
 	// The following fields are kept to track transaction history.
 	// processedTransactions are stored in chronological order, and have a map for
 	// constant time random access. The set of full transactions is kept as
@@ -136,11 +140,13 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		cs:    cs,
 		tpool: tpool,
 
-		keys:                     make(map[types.UnlockHash]spendableKey),
-		coinOutputs:              make(map[types.CoinOutputID]types.CoinOutput),
-		blockstakeOutputs:        make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
-		spentOutputs:             make(map[types.OutputID]types.BlockHeight),
-		unspentblockstakeoutputs: make(map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput),
+		keys:                      make(map[types.UnlockHash]spendableKey),
+		coinOutputs:               make(map[types.CoinOutputID]types.CoinOutput),
+		blockstakeOutputs:         make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+		spentOutputs:              make(map[types.OutputID]types.BlockHeight),
+		unspentblockstakeoutputs:  make(map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput),
+		multiSigCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+		multiSigBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 
 		processedTransactionMap: make(map[types.TransactionID]*modules.ProcessedTransaction),
 

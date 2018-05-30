@@ -102,6 +102,27 @@ type (
 		Outputs []ProcessedOutput `json:"outputs"`
 	}
 
+	// MultiSigWallet is a collection of coin and blockstake outputs, which have the same
+	// unlockhash.
+	MultiSigWallet struct {
+		Address             types.UnlockHash           `json:"address"`
+		CoinOutputIDs       []types.CoinOutputID       `json:"coinoutputids"`
+		BlockStakeOutputIDs []types.BlockStakeOutputID `json:"blockstakeoutputids"`
+
+		ConfirmedCoinBalance       types.Currency `json:"confirmedcoinbalance"`
+		ConfirmedLockedCoinBalance types.Currency `json:"confirmedlockedcoinbalance"`
+		UnconfirmedOutgoingCoins   types.Currency `json:"unconfirmedoutgoingcoins"`
+		UnconfirmedIncomingCoins   types.Currency `json:"unconfirmedincomingcoins"`
+
+		ConfirmedBlockStakeBalance       types.Currency `json:"confirmedblockstakebalance"`
+		ConfirmedLockedBlockStakeBalance types.Currency `json:"confirmedlockedblockstakebalance"`
+		UnconfirmedOutgoingBlockStakes   types.Currency `json:"unconfirmedoutgoingblockstakes"`
+		UnconfirmedIncomingBlockStakes   types.Currency `json:"unconfirmedincomingblockstakes"`
+
+		Owners  []types.UnlockHash `json:"owners"`
+		MinSigs uint64             `json:"minsigs"`
+	}
+
 	// TransactionBuilder is used to construct custom transactions. A transaction
 	// builder is initialized via 'RegisterTransaction' and then can be modified by
 	// adding funds or other fields. The transaction is completed by calling
@@ -191,6 +212,10 @@ type (
 		// broadcast, and that all of the outputs can be reclaimed. 'Drop'
 		// should only be used before signatures are added.
 		Drop()
+
+		// SignAllPossibleInputs tries to sign as much of the inputs in the tranaction
+		// using the keys loaded in the wallet
+		SignAllPossibleInputs() error
 	}
 
 	// EncryptionManager can encrypt, lock, unlock, and indicate the current
@@ -327,6 +352,12 @@ type (
 		// relative to the wallet.
 		UnconfirmedTransactions() []ProcessedTransaction
 
+		// MultiSigWallets returns all multisig wallets which contain at least one unlock hash owned by this wallet.
+		// A multisig wallet is in this context defined as a (group of) coin and or blockstake outputs, where the unlockhash
+		// of these outputs are exactly the same. In practice, this means that the collection of unlock hashes in the condition,
+		// as well as the minimum amount of signatures required, must match
+		MultiSigWallets() []MultiSigWallet
+
 		// RegisterTransaction takes a transaction and its parents and returns
 		// a TransactionBuilder which can be used to expand the transaction.
 		RegisterTransaction(t types.Transaction, parents []types.Transaction) TransactionBuilder
@@ -362,6 +393,15 @@ type (
 		// LockedUnspendOutputs returns all locked and unspend coin and blockstake outputs owned
 		// by this wallet
 		LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput)
+
+		// CreateRawTransaction creates a new transaction with the given inputs and outputs.
+		// All inputs must exist in the consensus set at the time this method is called. The total
+		// value of the inputs must match the sum of all respective outputs and the transaction fee.
+		CreateRawTransaction([]types.CoinOutputID, []types.BlockStakeOutputID, []types.CoinOutput, []types.BlockStakeOutput, []byte) (types.Transaction, error)
+
+		// GreedySign attempts to sign every input which can be signed by the keys loaded
+		// in this wallet.
+		GreedySign(types.Transaction) (types.Transaction, error)
 	}
 )
 
