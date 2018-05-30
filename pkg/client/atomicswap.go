@@ -447,8 +447,39 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 		outputIDGiven = true
 	}
 
-	// get transaction from consensus
-	var txnResp api.ConsensusGetTransaction
+	var (
+		txnPoolGetResp api.TransactionPoolGET
+		txnResp        api.ConsensusGetTransaction
+	)
+
+	// first try to get the transaction from transaction pool,
+	// this is OK for extracting the secret, as the secret will already be validated
+	// against the condition's secret hash, prior to being able to add it to the transaction pool.
+	// ALl we care here is extracting the secret, as soon as possible.
+	err = _DefaultClient.httpClient.GetAPI("/transactionpool/transactions", &txnPoolGetResp)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Getting unconfirmed transactions from the transactionpool failed: "+err.Error())
+	}
+	for _, txn := range txnPoolGetResp.Transactions {
+		for _, ci := range txn.CoinInputs {
+			if outputIDGiven && ci.ParentID != outputID {
+				continue
+			}
+			if ft := ci.Fulfillment.FulfillmentType(); ft != types.FulfillmentTypeAtomicSwap {
+				continue
+			}
+			getter, ok := ci.Fulfillment.Fulfillment.(atomicSwapSecretGetter)
+			if !ok {
+				Die(fmt.Sprintf(
+					"Received unexpected fulfillment type of type %T", ci.Fulfillment.Fulfillment))
+			}
+			secret = getter.AtomicSwapSecret()
+			goto secretCheck
+		}
+	}
+
+	// get transaction from consensus, assuming that the transactionID is valid,
+	// it should mean that the transaction is already part of a created block
 	err = _DefaultClient.httpClient.GetAPI("/consensus/transactions/"+txnID.String(), &txnResp)
 	if err != nil {
 		Die("failed to get transaction:", err, "; Long ID:", txnID)
@@ -471,10 +502,11 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 		secret = getter.AtomicSwapSecret()
 		break
 	}
+
+secretCheck:
 	if secret == (types.AtomicSwapSecret{}) {
 		Die("Couldn't find a matching atomic swap contract fulfillment in transaction with LongID: ", txnID)
 	}
-
 	if atomicSwapExtractSecretcfg.HashedSecret != (types.AtomicSwapHashedSecret{}) {
 		hs := types.NewAtomicSwapHashedSecret(secret)
 		if hs != atomicSwapExtractSecretcfg.HashedSecret {
@@ -489,37 +521,6 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 
 type atomicSwapSecretGetter interface {
 	AtomicSwapSecret() types.AtomicSwapSecret
-}
-
-func auditAtomicSwapFindSpendCoinSecret(coinOutputID types.CoinOutputID, txns []api.ExplorerTransaction) types.AtomicSwapSecret {
-	for _, txn := range txns {
-		for _, ci := range txn.RawTransaction.CoinInputs {
-			if bytes.Compare(coinOutputID[:], ci.ParentID[:]) == 0 {
-				asf, ok := ci.Fulfillment.Fulfillment.(atomicSwapSecretGetter)
-				if !ok {
-					Die("Given output was spend as a coin input, but fulfillment was not of type atomic swap!")
-				}
-				return asf.AtomicSwapSecret()
-			}
-		}
-	}
-	Die("Output was spend as a coin input, but couldn't find the transaction! (BUG?!")
-	return types.AtomicSwapSecret{}
-}
-func auditAtomicSwapFindSpendBlockStakeSecret(blockStakeOutputID types.BlockStakeOutputID, txns []api.ExplorerTransaction) types.AtomicSwapSecret {
-	for _, txn := range txns {
-		for _, bsi := range txn.RawTransaction.BlockStakeInputs {
-			if bytes.Compare(blockStakeOutputID[:], bsi.ParentID[:]) == 0 {
-				asf, ok := bsi.Fulfillment.Fulfillment.(atomicSwapSecretGetter)
-				if !ok {
-					Die("Given output was spend as a block stake input, but fulfillment was not of type atomic swap!")
-				}
-				return asf.AtomicSwapSecret()
-			}
-		}
-	}
-	Die("Output was spend as a block stake input, but couldn't find the transaction! (BUG?!")
-	return types.AtomicSwapSecret{}
 }
 
 // redeem outputid secret
