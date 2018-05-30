@@ -174,17 +174,25 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 	}
 
 	walletListUnlockedCmd = &cobra.Command{
-		Use:   "unlocked",
+		Use:   "unlocked [address]",
+		Args:  cobra.RangeArgs(0, 1),
 		Short: "List unlocked coin and blockstake outputs",
-		Long:  "List all the unlocked coin and blockstake outputs that belong to this wallet",
-		Run:   Wrap(walletlistunlocked),
+		Long: `List all the unlocked coin and blockstake outputs that belong to this wallet.
+		
+If an address is given, only unspent unlocked outputs of the wallet linked to that address are shown.
+`,
+		Run: walletlistunlocked,
 	}
 
 	walletListLockedCmd = &cobra.Command{
-		Use:   "locked",
+		Use:   "locked [address]",
+		Args:  cobra.RangeArgs(0, 1),
 		Short: "List locked coin and blockstake outputs",
-		Long:  "List all the locked coin and blockstake outputs that belong to this wallet",
-		Run:   Wrap(walletlistlocked),
+		Long: `List all the locked coin and blockstake outputs that belong to this wallet.
+
+If an address is given, only unspent unlocked outputs of the wallet linked to that address are shown.
+`,
+		Run: walletlistlocked,
 	}
 
 	walletCreateCmd = &cobra.Command{
@@ -826,15 +834,53 @@ func walletsendtxncmd(txnjson string) {
 	fmt.Println("Transaction published, transaction id:", resp.TransactionID)
 }
 
-func walletlistunlocked() {
+func walletlistunlocked(_ *cobra.Command, args []string) {
+	var (
+		err          error
+		address      types.UnlockHash
+		addressGiven = len(args) == 1
+	)
+	if addressGiven {
+		err = address.LoadString(args[0])
+		if err != nil {
+			Die("failed to parse given wallet address: ", err)
+		}
+	}
+
 	var resp api.WalletListUnlockedGET
-	err := _DefaultClient.httpClient.GetAPI("/wallet/unlocked", &resp)
+	err = _DefaultClient.httpClient.GetAPI("/wallet/unlocked", &resp)
 	if err != nil {
-		Die("Could not get unlocked outputs: ", err)
+		Die("failed to get unlocked outputs: ", err)
+	}
+
+	if addressGiven {
+		// filter out all outputs we do not care about
+		for idx := 0; idx < len(resp.UnlockedCoinOutputs); {
+			if resp.UnlockedCoinOutputs[idx].Output.Condition.UnlockHash().Cmp(address) == 0 {
+				idx++
+				continue
+			}
+			resp.UnlockedCoinOutputs = append(
+				resp.UnlockedCoinOutputs[:idx],
+				resp.UnlockedCoinOutputs[idx+1:]...)
+		}
+		for idx := 0; idx < len(resp.UnlockedBlockstakeOutputs); {
+			if resp.UnlockedBlockstakeOutputs[idx].Output.Condition.UnlockHash().Cmp(address) == 0 {
+				idx++
+				continue
+			}
+			resp.UnlockedBlockstakeOutputs = append(
+				resp.UnlockedBlockstakeOutputs[:idx],
+				resp.UnlockedBlockstakeOutputs[idx+1:]...)
+		}
 	}
 
 	if len(resp.UnlockedBlockstakeOutputs) == 0 && len(resp.UnlockedCoinOutputs) == 0 {
-		fmt.Println("No unlocked outputs")
+		if addressGiven {
+			fmt.Println("No unlocked outputs matched to address: " + address.String())
+		} else {
+			fmt.Println("No unlocked outputs")
+		}
 		return
 	}
 
@@ -845,6 +891,7 @@ func walletlistunlocked() {
 		for _, uco := range resp.UnlockedCoinOutputs {
 			fmt.Println("ID:", uco.ID)
 			fmt.Println("Value:", _CurrencyConvertor.ToCoinStringWithUnit(uco.Output.Value))
+			fmt.Println("Condition:")
 			jsonOutput.Encode(uco.Output)
 			fmt.Println()
 		}
@@ -862,15 +909,53 @@ func walletlistunlocked() {
 	}
 }
 
-func walletlistlocked() {
+func walletlistlocked(_ *cobra.Command, args []string) {
+	var (
+		err          error
+		address      types.UnlockHash
+		addressGiven = len(args) == 1
+	)
+	if addressGiven {
+		err = address.LoadString(args[0])
+		if err != nil {
+			Die("failed to parse given wallet address: ", err)
+		}
+	}
+
 	var resp api.WalletListLockedGET
-	err := _DefaultClient.httpClient.GetAPI("/wallet/locked", &resp)
+	err = _DefaultClient.httpClient.GetAPI("/wallet/locked", &resp)
 	if err != nil {
 		Die("Could not get unlocked outputs: ", err)
 	}
 
+	if addressGiven {
+		// filter out all outputs we do not care about
+		for idx := 0; idx < len(resp.LockedCoinOutputs); {
+			if resp.LockedCoinOutputs[idx].Output.Condition.UnlockHash().Cmp(address) == 0 {
+				idx++
+				continue
+			}
+			resp.LockedCoinOutputs = append(
+				resp.LockedCoinOutputs[:idx],
+				resp.LockedCoinOutputs[idx+1:]...)
+		}
+		for idx := 0; idx < len(resp.LockedBlockstakeOutputs); {
+			if resp.LockedBlockstakeOutputs[idx].Output.Condition.UnlockHash().Cmp(address) == 0 {
+				idx++
+				continue
+			}
+			resp.LockedBlockstakeOutputs = append(
+				resp.LockedBlockstakeOutputs[:idx],
+				resp.LockedBlockstakeOutputs[idx+1:]...)
+		}
+	}
+
 	if len(resp.LockedBlockstakeOutputs) == 0 && len(resp.LockedCoinOutputs) == 0 {
-		fmt.Println("No locked outputs")
+		if addressGiven {
+			fmt.Println("No unlocked outputs matched to address: " + address.String())
+		} else {
+			fmt.Println("No unlocked outputs")
+		}
 		return
 	}
 
