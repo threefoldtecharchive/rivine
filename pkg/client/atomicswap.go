@@ -99,10 +99,10 @@ var (
 		sourceUnlockHash types.UnlockHash
 	}
 	atomicSwapAuditcfg struct {
-		ParticipatorAddress types.UnlockHash
-		CoinAmount          coinFlag
-		HashedSecret        types.AtomicSwapHashedSecret
-		MinDurationLeft     time.Duration
+		ReceiverAddress types.UnlockHash
+		CoinAmount      coinFlag
+		HashedSecret    types.AtomicSwapHashedSecret
+		MinDurationLeft time.Duration
 	}
 	atomicSwapExtractSecretcfg struct {
 		HashedSecret types.AtomicSwapHashedSecret
@@ -392,14 +392,14 @@ TimeLock reached in: %s
 				atomicSwapAuditcfg.HashedSecret.String() + "!")
 		}
 	}
-	if atomicSwapAuditcfg.ParticipatorAddress != (types.UnlockHash{}) {
+	if atomicSwapAuditcfg.ReceiverAddress != (types.UnlockHash{}) {
 		// optionally validate participator's address (unlockhash)
-		if atomicSwapAuditcfg.ParticipatorAddress.Cmp(condition.Receiver) != 0 {
+		if atomicSwapAuditcfg.ReceiverAddress.Cmp(condition.Receiver) != 0 {
 			invalidContract = true
-			fmt.Println("Found contract's participator's address " +
+			fmt.Println("Found contract's receiver's address " +
 				condition.Receiver.String() +
-				" does not match the expected participator's address " +
-				atomicSwapAuditcfg.ParticipatorAddress.String() + "!")
+				" does not match the expected receiver's address " +
+				atomicSwapAuditcfg.ReceiverAddress.String() + "!")
 		}
 	}
 	if atomicSwapAuditcfg.MinDurationLeft != 0 {
@@ -794,8 +794,8 @@ func init() {
 		cli.StringLoaderFlag{StringLoader: &atomicSwapAuditcfg.HashedSecret}, "secrethash",
 		"optionally validate the expected secret hash to the secret hash of the found atomic swap contract condition")
 	atomicSwapAuditCmd.Flags().Var(
-		cli.StringLoaderFlag{StringLoader: &atomicSwapAuditcfg.ParticipatorAddress}, "participator",
-		"optionally validate the given participator's address (unlockhash) to the one found in the atomic swap contract condition")
+		cli.StringLoaderFlag{StringLoader: &atomicSwapAuditcfg.ReceiverAddress}, "receiver",
+		"optionally validate the given receiver's address (unlockhash) to the one found in the atomic swap contract condition")
 	atomicSwapAuditCmd.Flags().Var(
 		&atomicSwapAuditcfg.CoinAmount, "amount",
 		"optionally validate the given coin amount to the one found in the unspent coin output")
