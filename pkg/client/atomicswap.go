@@ -33,9 +33,7 @@ using the secret hash given by the initiator.`,
 	atomicSwapInitiateCmd = &cobra.Command{
 		Use:   "initiate <participant address> <amount>",
 		Short: "Create an atomic swap contract as initiator.",
-		Long: `Create an atomic swap contract as an initiator,
-such that you can share its public information with the participant.`,
-		Run: Wrap(atomicswapinitiatecmd),
+		Run:   Wrap(atomicswapinitiatecmd),
 	}
 
 	atomicSwapAuditCmd = &cobra.Command{
@@ -43,15 +41,14 @@ such that you can share its public information with the participant.`,
 		Short: "Audit a created atomic swap contract.",
 		Long: `Audit a created atomic swap contract.
 
-It will try to look for the given outputid in the consensus as an unspent coin output.
-Should it not be find as an unspent output it will try to look in the transaction pool
-as to confirm it might be not part of a created block yet.
+Look up the given outputid in the consensus as an unspent coin output,
+and fall back to a search in the transaction pool if the output has not been confirmed yet.
 
-Optionally the participant's address, currency amount and secret hash can be validated,
+Optionally the participant's address, currency amount and secret hash is validated,
 by giving one, some or all of them as flag arguments.
 
-Should an unspent atomic swap contract be found, it will be printed to the STDOUT formatted
-in a human-optimized format.
+When an unspent atomic swap contract is found, it will be printed to the STDOUT,
+formatted in a human-optimized format.
 `,
 		Run: atomicswapauditcmd,
 	}
@@ -61,16 +58,18 @@ in a human-optimized format.
 		Short: "Extract the secret from a redeemed swap contract.",
 		Long: `Extract the secret from a redeemed atomic swap contract.
 
-It will look for a transaction in the consensus set, using the given transactionID.
-The transaction should contain at least one atomic swap contract fulfillment.
+Look for a transaction in the consensus set, using the given transactionID.
+The transaction has to contain at least one atomic swap contract fulfillment.
 If an outputID is given, the (coin) input, from which the secret is to be extracted,
 has to have the given outputID as parent ID, otherwise the first input is used,
 which has an atomic swap contract fulfillment.
 
-If it was spend as a refund, than no secret can be extracted.
+If it was spend as a refund, this comment will exit with an error,
+and no secret will be extracted.
 
-Optionally the expected hashedsecret can be given (as a flag), as to ensure that the
-secret hash is as expected, and also matches the found/extracted secret.`,
+Optionally, the extracted secret is validated,
+by comparing its hashed version to the secret hash given using the --secrethash flag.
+`,
 		Run: atomicswapextractsecretcmd,
 	}
 
@@ -110,139 +109,118 @@ var (
 )
 
 func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
-	var (
-		condition types.AtomicSwapCondition
-	)
-
+	// parse hastings
 	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
-		Die("Could not parse amount:", err)
-	}
-	if hastings.Cmp(_MinimumTransactionFee) != 1 {
-		Die("Cannot create atomic swap contract! Contracts which lock a value less than or equal to miner fees are currently not supported!")
+		Die("failed to parse amount:", err)
 	}
 
-	err = condition.Receiver.LoadString(participantAddress)
+	// parse receiver (=participant) and sender (=initiator)
+	var (
+		receiver, sender types.UnlockHash
+	)
+	err = receiver.LoadString(participantAddress)
 	if err != nil {
-		Die("Could not parse participant address (unlock hash):", err)
+		Die("failed to parse participant address (unlock hash):", err)
 	}
-
 	if atomicSwapParticipatecfg.sourceUnlockHash.Type != 0 {
 		// use the hash given by the user explicitly
-		condition.Sender = atomicSwapParticipatecfg.sourceUnlockHash
+		sender = atomicSwapParticipatecfg.sourceUnlockHash
 	} else {
 		// get new one from the wallet
 		resp := new(api.WalletAddressGET)
 		err := _DefaultClient.httpClient.GetAPI("/wallet/address", resp)
 		if err != nil {
-			Die("Could not generate new address:", err)
+			Die("failed to generate new address:", err)
 		}
-		condition.Sender = resp.Address
+		sender = resp.Address
 	}
 
-	if hsl := len(hashedSecret); hsl == types.AtomicSwapHashedSecretLen*2 {
-		_, err := hex.Decode(condition.HashedSecret[:], []byte(hashedSecret))
-		if err != nil {
-			Die("Invalid secret hash:", err)
-		}
-	} else {
-		Die("Invalid secret hash length")
+	// parse secret hash
+	if hsl := len(hashedSecret); hsl != types.AtomicSwapHashedSecretLen*2 {
+		Die("invalid secret hash length")
 	}
-	if atomicSwapParticipatecfg.duration == 0 {
-		Die("Duration is required")
-	}
-	condition.TimeLock = types.OffsetTimestamp(atomicSwapParticipatecfg.duration)
-
-	// print contract for review
-	printContractInfo(hastings, condition, types.AtomicSwapSecret{})
-	fmt.Println("")
-
-	// ensure user wants to continue with creating the contract as it is (aka publishing it)
-	if !askYesNoQuestion("Publish atomic swap (participation) transaction?") {
-		Die("Atomic swap participation cancelled!")
-	}
-
-	// publish contract
-	body, err := json.Marshal(api.WalletTransactionPOST{
-		Condition: types.NewCondition(&condition),
-		Amount:    hastings,
-	})
+	var hash types.AtomicSwapHashedSecret
+	_, err = hex.Decode(hash[:], []byte(hashedSecret))
 	if err != nil {
-		Die("Couldn't create/marshal JSOn body:", err)
-	}
-	var response api.WalletTransactionPOSTResponse
-	err = _DefaultClient.httpClient.PostResp("/wallet/transaction", string(body), &response)
-	if err != nil {
-		Die("Couldn't create transaction:", err)
+		Die("invalid secret hash:", err)
 	}
 
-	// find coinOutput and return its ID if possible
-	coinOutputIndex, unlockHash := -1, condition.UnlockHash()
-	for idx, co := range response.Transaction.CoinOutputs {
-		if unlockHash.Cmp(co.Condition.UnlockHash()) == 0 {
-			coinOutputIndex = idx
-			break
-		}
-	}
-	if coinOutputIndex == -1 {
-		panic("didn't find atomic swap contract registered in any returned coin output")
-	}
-	fmt.Println("published contract transaction")
-	fmt.Println("OutputID:", response.Transaction.CoinOutputID(uint64(coinOutputIndex)))
-	fmt.Println("TransactionID:", response.Transaction.ID())
+	// create the contract
+	createAtomicSwapContract(hastings, sender, receiver, hash, atomicSwapParticipatecfg.duration)
 }
 
 func atomicswapinitiatecmd(participatorAddress, amount string) {
-	var (
-		condition types.AtomicSwapCondition
-	)
-
+	// parse hastings
 	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
-		Die("Could not parse amount:", err)
-	}
-	if hastings.Cmp(_MinimumTransactionFee) != 1 {
-		Die("Cannot create atomic swap contract! Contracts which lock a value less than or equal to miner fees are currently not supported!")
+		Die("failed to parse amount:", err)
 	}
 
-	err = condition.Receiver.LoadString(participatorAddress)
+	// parse receiver (=participant) and sender (=initiator)
+	var (
+		receiver, sender types.UnlockHash
+	)
+	err = receiver.LoadString(participatorAddress)
 	if err != nil {
-		Die("Could not parse participator address (unlock hash):", err)
+		Die("failed to parse participator address (unlock hash):", err)
 	}
-
 	if atomicSwapInitiatecfg.sourceUnlockHash.Type != 0 {
 		// use the hash given by the user explicitly
-		condition.Sender = atomicSwapInitiatecfg.sourceUnlockHash
+		sender = atomicSwapInitiatecfg.sourceUnlockHash
 	} else {
 		// get new one from the wallet
 		resp := new(api.WalletAddressGET)
 		err := _DefaultClient.httpClient.GetAPI("/wallet/address", resp)
 		if err != nil {
-			Die("Could not generate new address:", err)
+			Die("failed to generate new address:", err)
 		}
-		condition.Sender = resp.Address
+		sender = resp.Address
 	}
 
-	secret, err := types.NewAtomicSwapSecret()
-	if err != nil {
-		Die("failed to crypto-generate secret:", err)
-	}
-	condition.HashedSecret = types.NewAtomicSwapHashedSecret(secret)
+	// create the contract
+	createAtomicSwapContract(hastings, sender, receiver,
+		types.AtomicSwapHashedSecret{}, atomicSwapInitiatecfg.duration)
+}
 
-	if atomicSwapInitiatecfg.duration == 0 {
-		Die("Duration is required")
+func createAtomicSwapContract(hastings types.Currency, sender, receiver types.UnlockHash, hash types.AtomicSwapHashedSecret, duration time.Duration) {
+	if hastings.Cmp(_MinimumTransactionFee) != 1 {
+		Die("an atomic swap contract has to have a coin value higher than the minimum transaction fee of 1")
 	}
-	condition.TimeLock = types.OffsetTimestamp(atomicSwapInitiatecfg.duration)
+
+	var (
+		err    error
+		secret types.AtomicSwapSecret
+	)
+
+	if hash == (types.AtomicSwapHashedSecret{}) {
+		secret, err = types.NewAtomicSwapSecret()
+		if err != nil {
+			Die("failed to crypto-generate secret:", err)
+		}
+		hash = types.NewAtomicSwapHashedSecret(secret)
+	}
+
+	if duration == 0 {
+		Die("duration is required and has to be greater than 0")
+	}
+
+	condition := types.AtomicSwapCondition{
+		Sender:       sender,
+		Receiver:     receiver,
+		HashedSecret: hash,
+		TimeLock:     types.OffsetTimestamp(atomicSwapInitiatecfg.duration),
+	}
 
 	// print contract for review
 	printContractInfo(hastings, condition, secret)
 	fmt.Println("")
 
 	// ensure user wants to continue with creating the contract as it is (aka publishing it)
-	if !askYesNoQuestion("Publish atomic swap (initiating) transaction?") {
-		Die("Atomic swap initiating cancelled!")
+	if !askYesNoQuestion("Publish atomic swap transaction?") {
+		Die("cancelled atomic swap contract")
 	}
 
 	// publish contract
@@ -251,12 +229,12 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 		Amount:    hastings,
 	})
 	if err != nil {
-		Die("Couldn't create/marshal JSOn body:", err)
+		Die("failed to create/marshal JSON body:", err)
 	}
 	var response api.WalletTransactionPOSTResponse
 	err = _DefaultClient.httpClient.PostResp("/wallet/transaction", string(body), &response)
 	if err != nil {
-		Die("Couldn't create transaction:", err)
+		Die("failed to create transaction:", err)
 	}
 
 	// find coinOutput and return its ID if possible
@@ -268,7 +246,7 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 		}
 	}
 	if coinOutputIndex == -1 {
-		panic("didn't find atomic swap contract registered in any returned coin output")
+		Die("didn't find atomic swap contract registered in any returned coin output")
 	}
 	fmt.Println("published contract transaction")
 	fmt.Println("OutputID:", response.Transaction.CoinOutputID(uint64(coinOutputIndex)))
@@ -306,14 +284,14 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 		return
 	}
 	if err != errStatusNotFound {
-		Die("Unexpected error occured while getting (unspent) coin output from consensus:", err)
+		Die("unexpected error occured while getting (unspent) coin output from consensus:", err)
 	}
 	// output couldn't be found as an unspent coin output
 	// therefore the last positive hope is if it wasn't yet part of the transaction pool
 	var txnPoolGetResp api.TransactionPoolGET
 	err = _DefaultClient.httpClient.GetAPI("/transactionpool/transactions", &txnPoolGetResp)
 	if err != nil {
-		Die("Contract couldn't be found as part of an unspent coin output, and getting unconfirmed transactions from the transactionpool failed:", err)
+		Die("contract no found as part of an unspent coin output, and getting unconfirmed transactions from the transactionpool failed:", err)
 	}
 	for _, txn := range txnPoolGetResp.Transactions {
 		for idx, co := range txn.CoinOutputs {
@@ -334,26 +312,26 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 		return
 	}
 	if err != errStatusNotFound {
-		Die("Unexpected error occured while getting (unspent) coin output from consensus (a second try):", err)
+		Die("unexpected error occured while getting (unspent) coin output from consensus:", err)
 	}
 	fmt.Printf(`Failed to find atomic swap contract using outputid %s.
-It couldn't be found as part of a confirmed and unspent coin output in the consensus set,
-neither could it be found as an unconfirmed coin output in the transaction pool.
+It wasn't found as part of a confirmed unspent coin output in the consensus set,
+neither was it found as an unconfirmed coin output in the transaction pool.
 
-This might mean one of 2 things:
+This might mean one of two things:
 
 + Most likely it means that the given outputID is invalid;
-+ It might instead mean that the atomic swap contract was already refunded or redeemed,
++ Another possibility is that the atomic swap contract was already refunded or redeemed,
   this can be confirmed by looking the outputID up in a local, remote or public explorer;
 `, outputID)
-	DieWithExitCode(ExitCodeNotFound, "No unspent coin output could be found for ID "+outputID.String())
+	DieWithExitCode(ExitCodeNotFound, "no unspent coin output could be found for ID "+outputID.String())
 }
 
 func auditAtomicSwapContract(co types.CoinOutput, confirmed bool) {
 	condition, ok := co.Condition.Condition.(*types.AtomicSwapCondition)
 	if !ok {
 		Die(fmt.Sprintf(
-			"Received unexpected condition of type %T, while type *types.AtomicSwapCondition was expected in order to be able to audit",
+			"received unexpected condition of type %T, while type *types.AtomicSwapCondition was expected in order to be able to audit",
 			co.Condition.Condition))
 	}
 	durationLeft := time.Unix(int64(condition.TimeLock), 0).Sub(computeTimeNow())
@@ -376,48 +354,48 @@ TimeLock reached in: %s
 		// optionally validate coin amount
 		if !atomicSwapAuditcfg.CoinAmount.Amount.Equals(co.Value) {
 			invalidContract = true
-			fmt.Println("Unspent out's value " +
+			fmt.Println("unspent out's value " +
 				_CurrencyConvertor.ToCoinStringWithUnit(co.Value) +
 				" does not match the expected value " +
-				_CurrencyConvertor.ToCoinStringWithUnit(atomicSwapAuditcfg.CoinAmount.Amount) + "!")
+				_CurrencyConvertor.ToCoinStringWithUnit(atomicSwapAuditcfg.CoinAmount.Amount))
 		}
 	}
 	if atomicSwapAuditcfg.HashedSecret != (types.AtomicSwapHashedSecret{}) {
 		// optionally validate hashed secret
 		if atomicSwapAuditcfg.HashedSecret != condition.HashedSecret {
 			invalidContract = true
-			fmt.Println("Found contract's secret hash " +
+			fmt.Println("found contract's secret hash " +
 				condition.HashedSecret.String() +
 				" does not match the expected secret hash " +
-				atomicSwapAuditcfg.HashedSecret.String() + "!")
+				atomicSwapAuditcfg.HashedSecret.String())
 		}
 	}
 	if atomicSwapAuditcfg.ReceiverAddress != (types.UnlockHash{}) {
 		// optionally validate participator's address (unlockhash)
 		if atomicSwapAuditcfg.ReceiverAddress.Cmp(condition.Receiver) != 0 {
 			invalidContract = true
-			fmt.Println("Found contract's receiver's address " +
+			fmt.Println("found contract's receiver's address " +
 				condition.Receiver.String() +
 				" does not match the expected receiver's address " +
-				atomicSwapAuditcfg.ReceiverAddress.String() + "!")
+				atomicSwapAuditcfg.ReceiverAddress.String())
 		}
 	}
 	if atomicSwapAuditcfg.MinDurationLeft != 0 {
 		// optionally validate participator's address (unlockhash)
 		if durationLeft < atomicSwapAuditcfg.MinDurationLeft {
 			invalidContract = true
-			fmt.Println("Found contract's duration left " +
+			fmt.Println("found contract's duration left " +
 				durationLeft.String() +
 				" is not sufficient, when compared the expected duration left of " +
-				atomicSwapAuditcfg.MinDurationLeft.String() + "!")
+				atomicSwapAuditcfg.MinDurationLeft.String())
 		}
 	}
 	if invalidContract {
-		Die("Found Atomic Swap Contract does not meet the given expectations!")
+		Die("found Atomic Swap Contract does not meet the given expectations")
 	}
-	fmt.Println("Found Atomic Swap Contract is valid :)")
+	fmt.Println("found Atomic Swap Contract is valid")
 	if !confirmed {
-		fmt.Println("NOTE that this contract is still in the transaction pool and thus UNCONFIRMED!!!")
+		fmt.Println("note that this contract is still in the transaction pool and thus unconfirmed")
 	}
 }
 
@@ -437,12 +415,12 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 	)
 	err := txnID.LoadString(args[0])
 	if err != nil {
-		Die("Couldn't parse first argment as a transaction (long) ID:", err)
+		Die("failed to parse first argment as a transaction (long) ID:", err)
 	}
 	if argn == 2 {
 		err = outputID.LoadString(args[1])
 		if err != nil {
-			Die("Couldn't parse optional second argment as a coin outputID:", err)
+			Die("failed to parse optional second argment as a coin outputID:", err)
 		}
 		outputIDGiven = true
 	}
@@ -458,7 +436,7 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 	// ALl we care here is extracting the secret, as soon as possible.
 	err = _DefaultClient.httpClient.GetAPI("/transactionpool/transactions", &txnPoolGetResp)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Getting unconfirmed transactions from the transactionpool failed: "+err.Error())
+		fmt.Fprintln(os.Stderr, "getting unconfirmed transactions from the transactionpool failed: "+err.Error())
 	}
 	for _, txn := range txnPoolGetResp.Transactions {
 		for _, ci := range txn.CoinInputs {
@@ -471,7 +449,7 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 			getter, ok := ci.Fulfillment.Fulfillment.(atomicSwapSecretGetter)
 			if !ok {
 				Die(fmt.Sprintf(
-					"Received unexpected fulfillment type of type %T", ci.Fulfillment.Fulfillment))
+					"received unexpected fulfillment type of type %T", ci.Fulfillment.Fulfillment))
 			}
 			secret = getter.AtomicSwapSecret()
 			goto secretCheck
@@ -497,7 +475,7 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 		getter, ok := ci.Fulfillment.Fulfillment.(atomicSwapSecretGetter)
 		if !ok {
 			Die(fmt.Sprintf(
-				"Received unexpected fulfillment type of type %T", ci.Fulfillment.Fulfillment))
+				"received unexpected fulfillment type of type %T", ci.Fulfillment.Fulfillment))
 		}
 		secret = getter.AtomicSwapSecret()
 		break
@@ -505,7 +483,7 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 
 secretCheck:
 	if secret == (types.AtomicSwapSecret{}) {
-		Die("Couldn't find a matching atomic swap contract fulfillment in transaction with LongID: ", txnID)
+		Die("failed to find a matching atomic swap contract fulfillment in transaction with LongID: ", txnID)
 	}
 	if atomicSwapExtractSecretcfg.HashedSecret != (types.AtomicSwapHashedSecret{}) {
 		hs := types.NewAtomicSwapHashedSecret(secret)
@@ -515,8 +493,8 @@ secretCheck:
 		}
 	}
 
-	fmt.Println("Atomic swap contract was redeemed by participator! Success! :)")
-	fmt.Println("Extracted secret:", secret.String())
+	fmt.Println("atomic swap contract was redeemed by participator")
+	fmt.Println("extracted secret:", secret.String())
 }
 
 type atomicSwapSecretGetter interface {
@@ -579,17 +557,17 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 	var unspentCoinOutputResp api.ConsensusGetUnspentCoinOutput
 	err := _DefaultClient.httpClient.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err != nil {
-		Die("Could not get unspent coinoutput from consensus:", err)
+		Die("failed to get unspent coinoutput from consensus:", err)
 	}
 
 	// step 2: get correct spendable key from wallet
 	if ct := unspentCoinOutputResp.Output.Condition.ConditionType(); ct != types.ConditionTypeAtomicSwap {
-		Die("Only atomic swap conditions are supported, while referenced output is of type: ", ct)
+		Die("only atomic swap conditions are supported, while referenced output is of type: ", ct)
 	}
 	condition, ok := unspentCoinOutputResp.Output.Condition.Condition.(*types.AtomicSwapCondition)
 	if !ok {
 		Die(fmt.Sprintf(
-			"Received unexpected condition of type %T, while type *types.AtomicSwapCondition was expected",
+			"received unexpected condition of type %T, while type *types.AtomicSwapCondition was expected",
 			unspentCoinOutputResp.Output.Condition.Condition))
 	}
 	var ourUH types.UnlockHash
@@ -602,11 +580,11 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 	// quickly validate if returned sk matches the known unlock hash (sanity check)
 	uh := types.NewPubKeyUnlockHash(pk)
 	if uh.Cmp(ourUH) != 0 {
-		Die("Unexpected wallet public key returned:", sk)
+		Die("unexpected wallet public key returned:", sk)
 	}
 
 	if unspentCoinOutputResp.Output.Value.Cmp(_MinimumTransactionFee) != 1 {
-		Die("Cannot " + keyWord + " atomic swap contracts which lock a value less than or equal to miner fees are currently not supported!")
+		Die("failed to " + keyWord + " atomic swap contract, as it locks a value less than or equal to the minimum transaction fee of 1")
 	}
 
 	// step 3: confirm contract details with user, before continuing
@@ -615,7 +593,7 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 	fmt.Println("")
 	// ensure user wants to continue with redeeming the contract!
 	if !askYesNoQuestion("Publish atomic swap " + keyWord + " transaction?") {
-		Die("Atomic swap " + keyWord + " transaction cancelled!")
+		Die("atomic swap " + keyWord + " transaction cancelled")
 	}
 
 	// step 4: create a transaction
@@ -646,19 +624,19 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 		Key:         sk,
 	})
 	if err != nil {
-		Die("Cannot "+keyWord+" atomic swap's locked coins! Couldn't sign transaction:", err)
+		Die("failed to "+keyWord+" atomic swap's locked coins, couldn't sign transaction:", err)
 	}
 
 	// step 6: submit transaction to transaction pool and celebrate if possible
 	txnid, err := commitTxn(txn)
 	if err != nil {
-		Die("Failed to "+keyWord+" atomic swaps locked tokens, as transaction couldn't commit:", err)
+		Die("failed to "+keyWord+" atomic swaps locked tokens, as transaction couldn't commit:", err)
 	}
 
 	fmt.Println("")
-	fmt.Println("Published atomic swap " + keyWord + " transaction!")
-	fmt.Println("Transaction ID:", txnid)
-	fmt.Println(`>   NOTE that this does NOT mean for 100% you'll have the money!
+	fmt.Println("published atomic swap " + keyWord + " transaction")
+	fmt.Println("transaction ID:", txnid)
+	fmt.Println(`>   Note that this does not mean for 100% you'll have the money.
 > Due to potential forks, double spending, and any other possible issues your
 > ` + keyWord + ` might be declined by the network. Please check the network
 > (e.g. using a public explorer node or your own full node) to ensure
@@ -670,13 +648,13 @@ func getSpendableKey(unlockHash types.UnlockHash) (types.SiaPublicKey, types.Byt
 	resp := new(api.WalletKeyGet)
 	err := _DefaultClient.httpClient.GetAPI("/wallet/key/"+unlockHash.String(), resp)
 	if err != nil {
-		Die("Could not get a matching wallet public/secret key pair for the given unlock hash:", err)
+		Die("failed to get a matching wallet public/secret key pair for the given unlock hash:", err)
 	}
 	if isNilByteSlice(resp.PublicKey) {
-		Die("Could not get a wallet public key pair for the given unlock hash")
+		Die("failed to get a wallet public key pair for the given unlock hash")
 	}
 	if isNilByteSlice(resp.SecretKey) {
-		Die("Received matching public key, but no secret key was returned, is your wallet unlocked?!")
+		Die("received matching public key, but no secret key was returned, is your wallet unlocked?")
 	}
 	return types.SiaPublicKey{
 		Algorithm: resp.AlgorithmSpecifier,
@@ -749,7 +727,7 @@ func askYesNoQuestion(str string) bool {
 		return false
 	}
 
-	fmt.Println("Please answer using 'yes' or 'no'")
+	fmt.Println("please answer using 'yes' or 'no'")
 	return askYesNoQuestion(str)
 }
 
@@ -793,7 +771,7 @@ func init() {
 
 	atomicSwapAuditCmd.Flags().Var(
 		cli.StringLoaderFlag{StringLoader: &atomicSwapAuditcfg.HashedSecret}, "secrethash",
-		"optionally validate the expected secret hash to the secret hash of the found atomic swap contract condition")
+		"optionally validate the secret of the found atomic swap contract condition by comparing its hashed version with this secret hash")
 	atomicSwapAuditCmd.Flags().Var(
 		cli.StringLoaderFlag{StringLoader: &atomicSwapAuditcfg.ReceiverAddress}, "receiver",
 		"optionally validate the given receiver's address (unlockhash) to the one found in the atomic swap contract condition")
@@ -806,5 +784,5 @@ func init() {
 
 	atomicSwapExtractSecretCmd.Flags().Var(
 		cli.StringLoaderFlag{StringLoader: &atomicSwapExtractSecretcfg.HashedSecret}, "secrethash",
-		"optionally validate the given secret hash with the secret hash of the found atomic swap contract condition")
+		"optionally validate the secret of the found atomic swap contract condition by comparing its hashed version with this secret hash")
 }
