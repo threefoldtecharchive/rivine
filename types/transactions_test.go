@@ -421,7 +421,7 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("3300000000000000000000000000000000000000000000000000000000000033")),
 						Fulfillment: NewFulfillment(&anyAtomicSwapFulfillment{
-							MarshalableUnlockFulfillment: &AtomicSwapFulfillment{
+							atomicSwapFulfillment: &AtomicSwapFulfillment{
 								PublicKey: SiaPublicKey{
 									Algorithm: SignatureEd25519,
 									Key:       hbs("abababababababababababababababababababababababababababababababab"),
@@ -434,7 +434,7 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("4400000000000000000000000000000000000000000000000000000000000044")),
 						Fulfillment: NewFulfillment(&anyAtomicSwapFulfillment{
-							MarshalableUnlockFulfillment: &LegacyAtomicSwapFulfillment{
+							atomicSwapFulfillment: &LegacyAtomicSwapFulfillment{
 								Sender: UnlockHash{
 									Type: UnlockTypePubKey,
 									Hash: hs("1234567891234567891234567891234567891234567891234567891234567891"),
@@ -1168,7 +1168,7 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("012345defabc012345defabc012345defabc012345defabc012345defabc0123")),
 						Fulfillment: NewFulfillment(&anyAtomicSwapFulfillment{
-							MarshalableUnlockFulfillment: &AtomicSwapFulfillment{
+							atomicSwapFulfillment: &AtomicSwapFulfillment{
 								PublicKey: SiaPublicKey{
 									Algorithm: SignatureEd25519,
 									Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -1181,7 +1181,7 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("045645defabc012345defabc012345defabc012345defabc012345defabc0123")),
 						Fulfillment: NewFulfillment(&anyAtomicSwapFulfillment{
-							MarshalableUnlockFulfillment: &LegacyAtomicSwapFulfillment{
+							atomicSwapFulfillment: &LegacyAtomicSwapFulfillment{
 								Sender: UnlockHash{
 									Type: UnlockTypePubKey,
 									Hash: hs("654f96b317efe5fd6cd8ba1a394dce7b6ebe8c9621d6c44cbe3c8f1b58ce632a"),

@@ -3,6 +3,8 @@ package cli
 import (
 	"testing"
 	"time"
+
+	"github.com/rivine/rivine/types"
 )
 
 // TestDateOnlyLayout tests that our custom DateOnly timestamp Layout
@@ -93,6 +95,45 @@ func TestLockTimeSetStringLoop(t *testing.T) {
 		}
 		if raw := ltf.String(); raw != testCase.Raw {
 			t.Error(idx, raw, "!=", testCase.Raw)
+		}
+	}
+}
+
+func TestStringLoaderFlag(t *testing.T) {
+	// test loader->string->loader->string
+	stringLoaders := []StringLoader{
+		&types.CoinOutputID{},
+		&types.CoinOutputID{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF},
+		&types.TransactionID{},
+		&types.TransactionID{1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2},
+	}
+	for idx, stringLoader := range stringLoaders {
+		str := stringLoader.String()
+		err := stringLoader.LoadString(str)
+		if err != nil {
+			t.Errorf("error while loading string for loader #%d: %v", idx, err)
+		}
+		str2 := stringLoader.String()
+		if str != str2 {
+			t.Errorf("loader #%d isn't deterministic: %s != %s", idx, str, str2)
+		}
+	}
+
+	// test string->loader->string
+	testCases := []string{
+		"0112210f9efa5441ab705226b0628679ed190eb4588b662991747ea3809d93932c7b41cbe4b732",
+		"01450aeb140c58012cb4afb48e068f976272fefa44ffe0991a8a4350a3687558d66c8fc753c37e",
+		"01e56d03c7818179c1d21ab1fe99be91ec7fa48a21ca1b0818ad55e0b241d55067e740e11c08f5",
+	}
+	for idx, testCase := range testCases {
+		var uh types.UnlockHash
+		err := uh.LoadString(testCase)
+		if err != nil {
+			t.Errorf("error while loading string for unlockhash #%d: %v", idx, err)
+		}
+		str := uh.String()
+		if testCase != str {
+			t.Errorf("unlockhash #%d string loading isn't deterministic: %s != %s", idx, testCase, str)
 		}
 	}
 }
