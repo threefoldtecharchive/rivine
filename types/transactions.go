@@ -99,25 +99,6 @@ type (
 		Extension interface{}
 	}
 
-	// TransactionInputs hold the transaction version and the transaction data. Only
-	// the inputs are fully decoded
-	TransactionInputs struct {
-		Version TransactionVersion   `json:"version"`
-		Data    TransactionInputData `json:"data"`
-	}
-
-	// TransactionInputData are all relevant fields of a transaction, with only the coin
-	// and blockstake inputs properly decoded. This allows for easy equality checking of
-	// other fields
-	TransactionInputData struct {
-		CoinInputs        []CoinInput       `json:"coininputs"`
-		CoinOutputs       json.RawMessage   `json:"coinoutputs,omitempty"`
-		BlockStakeInputs  []BlockStakeInput `json:"blockstakeinputs,omitempty"`
-		BlockStakeOutputs json.RawMessage   `json:"blockstakeoutputs,omitempty"`
-		MinerFees         json.RawMessage   `json:"minerfees,omitempty"`
-		ArbitraryData     json.RawMessage   `json:"arbitrarydata,omitempty"`
-	}
-
 	// A CoinInput consumes a CoinInput and adds the coins to the set of
 	// coins that can be spent in the transaction. The ParentID points to the
 	// output that is getting consumed, and the UnlockConditions contain the rules

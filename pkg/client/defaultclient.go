@@ -217,10 +217,9 @@ func DefaultCLIClient(cfg Config) {
 		exploreHashCmd,
 	)
 
-	createMergeCommands()
 	root.AddCommand(mergeCmd)
 	mergeCmd.AddCommand(
-		mergeTransactionCmd,
+		mergeTransactionsCmd,
 	)
 
 	// parse flags
