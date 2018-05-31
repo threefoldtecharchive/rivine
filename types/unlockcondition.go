@@ -1517,6 +1517,13 @@ func (ms *MultiSignatureCondition) IsStandardCondition() error {
 }
 
 // UnlockHash implements UnlockCondition.UnlockHash
+//
+// UnlockHash calculates the root hash of a Merkle tree of the
+// MultiSignatureCondition object. The leaves of this tree are formed by taking the
+// hash of the length of unlock hashes, the hash of the sorted unlock hashes (one leaf each), and the
+// hash of the number of minimum signatures required. The unlock hashes are put in the middle because
+// unlockhash length and MinimumSignatureCount are both low entropy fields; they can be
+// protected by having random unlock hashes next to them.
 func (ms *MultiSignatureCondition) UnlockHash() UnlockHash {
 	// Copy the unlockhashes to a new slice and sort it,
 	// so the same unlockhash is produced for the same set
@@ -1524,11 +1531,22 @@ func (ms *MultiSignatureCondition) UnlockHash() UnlockHash {
 	uhs := make(UnlockHashSlice, len(ms.UnlockHashes))
 	copy(uhs, ms.UnlockHashes)
 	sort.Sort(uhs)
-	hash := crypto.HashObject(uhs)
-	return UnlockHash{
-		Type: UnlockTypeMultiSig,
-		Hash: hash,
+
+	// compute the hash
+	var buf bytes.Buffer
+	e := encoder(&buf)
+	tree := crypto.NewTree()
+	e.WriteUint64(uint64(len(uhs)))
+	tree.Push(buf.Bytes())
+	buf.Reset()
+	for _, uh := range uhs {
+		uh.MarshalSia(e)
+		tree.Push(buf.Bytes())
+		buf.Reset()
 	}
+	e.WriteUint64(ms.MinimumSignatureCount)
+	tree.Push(buf.Bytes())
+	return NewUnlockHash(UnlockTypeMultiSig, tree.Root())
 }
 
 // Equal implements UnlockCondition.Equal

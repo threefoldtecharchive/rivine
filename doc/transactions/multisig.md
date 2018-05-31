@@ -97,18 +97,17 @@ the 5-step flow from above could be represented in bash as follows:
 
 ```bash
 # create a transaction and sign it
-$ TXN="$(rivinec create cointransaction \
+TXN="$(rivinec wallet sign "$(rivinec wallet create cointransaction \
     97495f5c40d392046bd45c27acc860c6a93581930a735e0990a1e42a05cbe55e \
-    01907fef3ba1c3905021ae2d1486adf9bc8721821229a8a858f567b7303a26dfba454db47fa71d 1000 | \
-    rivinec wallet sign)"
+    01907fef3ba1c3905021ae2d1486adf9bc8721821229a8a858f567b7303a26dfba454db47fa71d 1000)")"
 
 # send signed raw transaction to our partner
 # so that they can sign the same way:
-$ rivinec wallet sign "$TXN"
+TXN="$(rivinec wallet sign "$TXN")"
 
 # either they submit it, or they send it back to us so we submit the transaction,
 # whatever the case, it will be submitted using following command:
-$ rivinec wallet send "$TXN"
+rivinec wallet send transaction "$TXN"
 ```
 
 ### Partner wallet with 3 owners
@@ -169,20 +168,19 @@ Using the `rivinec` binary CLI client,
 this parallel flow from above could be represented in bash as follows:
 
 ```bash
-# create a transaction
-$ TXN="$(rivinec create cointransaction \
+# create a transaction and sign it
+TXN="$(rivinec wallet sign "$(rivinec wallet create cointransaction \
     97495f5c40d392046bd45c27acc860c6a93581930a735e0990a1e42a05cbe55e \
-    01907fef3ba1c3905021ae2d1486adf9bc8721821229a8a858f567b7303a26dfba454db47fa71d 1000 | \
-    rivinec wallet sign)"
+    01907fef3ba1c3905021ae2d1486adf9bc8721821229a8a858f567b7303a26dfba454db47fa71d 1000)")"
 
 # send unsigned raw transaction to Alice and Carlos,
 # so they can sign it each and send the signed transaction back to Bob:
-$ TXN_ALICE="$(rivinec wallet sign "$TXN")" | sendto Bob
-$ TXN_CARLOS="$(rivinec wallet sign "$TXN")" | sendto Bob
+$ TXN_ALICE="$(rivinec wallet sign "$TXN")" && sendto "$Bob" "$TXN_ALICE"
+$ TXN_CARLOS="$(rivinec wallet sign "$TXN")" && sendto "$Bob" "$TXN_ALICE"
 # (sendto is a fictional command)
 
 # bob merges the transactions and submits the end result
-$ rivinec merge inputs "$TXN_ALICE" "$TXN_CARLOS" | rivinec wallet send
+$ rivinec wallet send transaction "$(rivinec merge transactions "$TXN_ALICE" "$TXN_CARLOS")"
 ```
 
 [multisigout]: /doc/transactions/transaction.md#json-encoding-of-a-multisignaturecondition

@@ -2926,3 +2926,34 @@ func TestUnlockConditionFulfillable(t *testing.T) {
 		}
 	}
 }
+
+// Test to ensure that multisig wallet addresses are different
+// depending upon all properties, including the MinimumSignatureCount property,
+// but are the same even if the address order is different.
+func TestMultisigAddresses(t *testing.T) {
+	// create a multisig condition and take the unlock hash
+	msc := NewMultiSignatureCondition(UnlockHashSlice{
+		unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+		unlockHashFromHex("01d3a8d366864f5f368bd73959139c55da5f1f8beaa07cb43519cc87d2a51135ae0b3ba93cf2d9"),
+		unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
+	}, 3)
+	uh1 := msc.UnlockHash()
+
+	// change the count property of it, and take another unlock hash,
+	// the new unlockhash should be different from the previous one
+	msc.MinimumSignatureCount = 2
+	uh2 := msc.UnlockHash()
+	if uh1.Cmp(uh2) == 0 {
+		t.Fatal("expected uh1 to be not equal to uh2, but the ywere both: ", uh1.String())
+	}
+
+	// switch two unlock hashes in the slice of the multisig condition,
+	// this should remain the unlock hash generated from it identical to the previous one
+	var uh UnlockHash
+	uh, msc.UnlockHashes[0] = msc.UnlockHashes[0], msc.UnlockHashes[2]
+	msc.UnlockHashes[2] = uh
+	uh3 := msc.UnlockHash()
+	if uh2.Cmp(uh3) != 0 {
+		t.Fatalf("expected uh2 (%s) to be equal to uh3 (%s), but the they weren't", uh2.String(), uh3.String())
+	}
+}
