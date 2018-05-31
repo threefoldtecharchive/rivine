@@ -356,7 +356,7 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 	argn := len(args)
 	if argn < 2 || argn%2 != 0 {
 		cmd.UsageFunc()(cmd)
-		os.Exit(exitCodeUsage)
+		os.Exit(ExitCodeUsage)
 	}
 	body := api.WalletCoinsPOST{
 		CoinOutputs: make([]types.CoinOutput, argn/2),
@@ -409,7 +409,7 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 	argn := len(args)
 	if argn < 2 || argn%2 != 0 {
 		cmd.UsageFunc()(cmd)
-		os.Exit(exitCodeUsage)
+		os.Exit(ExitCodeUsage)
 	}
 	body := api.WalletBlockStakesPOST{
 		BlockStakeOutputs: make([]types.BlockStakeOutput, argn/2),
