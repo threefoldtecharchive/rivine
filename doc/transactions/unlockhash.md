@@ -148,21 +148,31 @@ Where the binary encoded layout of an atomic swap's condition is as follows:
 #### MultiSignature Unlock Hash
 
 A MultiSignature (`0x03`) unlock hash's hash,
-is not really useful at all, and is therefore not explained in detail in this document.
+defines the address of a multisig wallet, and is s computed as follows:
 
-Should you be curious though it is...
+```plain
+tree = newMerkleTree()
+tree.Push(binaryEncoding(len(unlockhashes)))
+tree.Push(binaryEncoding(uh)) foreach uh in unlockhashes
+tree.Push(binaryEncoding(MinimumSignatureCount))
+hash = tree.Root()
+```
+
+Read [the "binary encoding" chapter](#binary-encoding) to learn how each unlock hash is binary encoded.
+
+The unlockhashes length is binary encoded as a 64 unsigned integer, using [the Little Endian layout][litend],
+as is exaplined in [the "Binary Encoding of Types" chapter of /doc/transactions/transaction.md](/doc/transactions/transaction.md#binary-encoding-of-types).
+The MinimumSignatureCount property is encoded the same way (as the unlockhashes length).
 
 > Implemented in the official/reference Golang implementation
 > as the `MultiSignatureCondition`'s `UnlockHash` method in [/types/unlockcondition.go](/types/unlockcondition.go).
 >
 > Documentation of this function, and reference to its source,
 > is available at <https://godoc.org/github.com/rivine/rivine/types#MultiSignatureCondition.UnlockHash>.
-
-The `MultiSignatureFulfillment` implements an even different version of how to compute this type of UnlockHash,
-decreasing the usefulness of this unlock hash even more.
-
-Note to the developers: check if we really need this type of unlock hash,
-and if so, if we cannot improve it, to make it actually useful for anything serious.
+>
+> The Rivine Golang reference implementation uses
+> <https://github.com/NebulousLabs/merkletree> in order to compute root hashes of merkle trees,
+> where the blake2b algorithm is used internally for hashing.
 
 ### checksum
 
@@ -184,3 +194,5 @@ one byte of the (unlock type) and 32 bytes for the hash itself. The output (chec
 
 See [the text/string encoding section](#text/string-encoding) for more information about
 how this checksum is used as part of the text encoding.
+
+[litend]: https://en.wikipedia.org/wiki/Endianness#Little-endian
