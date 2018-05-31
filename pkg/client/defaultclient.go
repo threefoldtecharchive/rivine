@@ -217,6 +217,12 @@ func DefaultCLIClient(cfg Config) {
 		exploreHashCmd,
 	)
 
+	createMergeCommands()
+	root.AddCommand(mergeCmd)
+	mergeCmd.AddCommand(
+		mergeTransactionCmd,
+	)
+
 	// parse flags
 	root.PersistentFlags().StringVarP(&_DefaultClient.httpClient.RootURL, "addr", "a",
 		_DefaultClient.httpClient.RootURL, fmt.Sprintf(
