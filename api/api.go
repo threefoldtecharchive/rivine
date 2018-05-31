@@ -227,9 +227,7 @@ func UnrecognizedCallHandler(w http.ResponseWriter, req *http.Request) {
 func WriteError(w http.ResponseWriter, err Error, code int) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
-	if json.NewEncoder(w).Encode(err) != nil {
-		http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-	}
+	json.NewEncoder(w).Encode(err) // ignore error, as it probably means that the status code does not allow a body
 }
 
 // WriteJSON writes the object to the ResponseWriter. If the encoding fails, an
