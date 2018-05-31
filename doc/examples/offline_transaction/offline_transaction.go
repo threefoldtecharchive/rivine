@@ -181,7 +181,9 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 func (w *MyWallet) signTxn(txn types.Transaction) error {
 	// sign every coin input
 	for idx, input := range txn.CoinInputs {
-		key := w.keys[input.Fulfillment.UnlockHash()]
+		// coinOutput has been checked during creation time, in the parent function,
+		// hence we no longer need to check it here
+		key := w.keys[w.unspentCoinOutputs[input.ParentID].Condition.UnlockHash()]
 		err := input.Fulfillment.Sign(types.FulfillmentSignContext{
 			InputIndex:  uint64(idx),
 			Transaction: txn,
@@ -191,18 +193,9 @@ func (w *MyWallet) signTxn(txn types.Transaction) error {
 			return err
 		}
 	}
-	// sign every blockstake input
-	for idx, input := range txn.BlockStakeInputs {
-		key := w.keys[input.Fulfillment.UnlockHash()]
-		err := input.Fulfillment.Sign(types.FulfillmentSignContext{
-			InputIndex:  uint64(idx),
-			Transaction: txn,
-			Key:         key.SecretKey,
-		})
-		if err != nil {
-			return err
-		}
-	}
+	// in our simple example we never send block stakes,
+	// hence we don't need to ever sign those,
+	// it would however work the same as coin inputs, should we have the need for it
 	return nil
 }
 
@@ -307,9 +300,7 @@ func (w *MyWallet) SyncWallet() error {
 			// Remove the ones we've spent already
 			for _, txn := range resp.Transactions {
 				for _, ci := range txn.RawTransaction.CoinInputs {
-					if _, exists := w.unspentCoinOutputs[ci.ParentID]; exists {
-						delete(w.unspentCoinOutputs, ci.ParentID)
-					}
+					delete(w.unspentCoinOutputs, ci.ParentID)
 				}
 			}
 		}(address)
