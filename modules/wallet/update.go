@@ -167,7 +167,10 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				RelatedAddress: mp.UnlockHash,
 				Value:          mp.Value,
 			})
-			w.historicOutputs[types.OutputID(block.MinerPayoutID(uint64(i)))] = mp.Value
+			w.historicOutputs[types.OutputID(block.MinerPayoutID(uint64(i)))] = historicOutput{
+				UnlockHash: mp.UnlockHash,
+				Value:      mp.Value,
+			}
 		}
 		if relevant {
 			w.processedTransactions = append(w.processedTransactions, minerPT)
@@ -188,7 +191,8 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				ConfirmationTimestamp: block.Timestamp,
 			}
 			for _, sci := range txn.CoinInputs {
-				_, exists := w.keys[sci.Fulfillment.UnlockHash()]
+				output := w.historicOutputs[types.OutputID(sci.ParentID)]
+				_, exists := w.keys[output.UnlockHash]
 				if exists {
 					relevant = true
 				} else if _, exists = w.multiSigCoinOutputs[sci.ParentID]; exists {
@@ -202,8 +206,8 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 					FundType:       types.SpecifierCoinInput,
 					WalletAddress:  exists,
-					RelatedAddress: sci.Fulfillment.UnlockHash(),
-					Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
+					RelatedAddress: output.UnlockHash,
+					Value:          output.Value,
 				})
 			}
 			for i, sco := range txn.CoinOutputs {
@@ -217,17 +221,22 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					// set "exists" to false since the output is not owned by the wallet.
 					exists = false
 				}
+				uh := sco.Condition.UnlockHash()
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
 					FundType:       types.SpecifierCoinOutput,
 					MaturityHeight: w.consensusSetHeight,
 					WalletAddress:  exists,
-					RelatedAddress: sco.Condition.UnlockHash(),
+					RelatedAddress: uh,
 					Value:          sco.Value,
 				})
-				w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = sco.Value
+				w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = historicOutput{
+					UnlockHash: uh,
+					Value:      sco.Value,
+				}
 			}
 			for _, sfi := range txn.BlockStakeInputs {
-				_, exists := w.keys[sfi.Fulfillment.UnlockHash()]
+				output := w.historicOutputs[types.OutputID(sfi.ParentID)]
+				_, exists := w.keys[output.UnlockHash]
 				if exists {
 					relevant = true
 				} else if _, exists = w.multiSigBlockStakeOutputs[sfi.ParentID]; exists {
@@ -238,12 +247,11 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					// set "exists" to false since the output is not owned by the wallet.
 					exists = false
 				}
-				sfiValue := w.historicOutputs[types.OutputID(sfi.ParentID)]
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 					FundType:       types.SpecifierBlockStakeInput,
 					WalletAddress:  exists,
-					RelatedAddress: sfi.Fulfillment.UnlockHash(),
-					Value:          sfiValue,
+					RelatedAddress: output.UnlockHash,
+					Value:          output.Value,
 				})
 			}
 			for i, sfo := range txn.BlockStakeOutputs {
@@ -257,11 +265,12 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					// set "exists" to false since the output is not owned by the wallet.
 					exists = false
 				}
+				uh := sfo.Condition.UnlockHash()
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
 					FundType:       types.SpecifierBlockStakeOutput,
 					MaturityHeight: w.consensusSetHeight,
 					WalletAddress:  exists,
-					RelatedAddress: sfo.Condition.UnlockHash(),
+					RelatedAddress: uh,
 					Value:          sfo.Value,
 				})
 				bsoid := txn.BlockStakeOutputID(uint64(i))
@@ -278,7 +287,10 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 						Condition: sfo.Condition,
 					}
 				}
-				w.historicOutputs[types.OutputID(bsoid)] = sfo.Value
+				w.historicOutputs[types.OutputID(bsoid)] = historicOutput{
+					UnlockHash: uh,
+					Value:      sfo.Value,
+				}
 			}
 			for _, fee := range txn.MinerFees {
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
@@ -335,7 +347,8 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			ConfirmationTimestamp: types.Timestamp(math.MaxUint64),
 		}
 		for _, sci := range txn.CoinInputs {
-			_, exists := w.keys[sci.Fulfillment.UnlockHash()]
+			output := w.historicOutputs[types.OutputID(sci.ParentID)]
+			_, exists := w.keys[output.UnlockHash]
 			if exists {
 				relevant = true
 			} else if _, exists = w.multiSigCoinOutputs[sci.ParentID]; exists {
@@ -349,12 +362,13 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 				FundType:       types.SpecifierCoinInput,
 				WalletAddress:  exists,
-				RelatedAddress: sci.Fulfillment.UnlockHash(),
-				Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
+				RelatedAddress: output.UnlockHash,
+				Value:          output.Value,
 			})
 		}
 		for i, sco := range txn.CoinOutputs {
-			_, exists := w.keys[sco.Condition.UnlockHash()]
+			uh := sco.Condition.UnlockHash()
+			_, exists := w.keys[uh]
 			if exists {
 				relevant = true
 			} else if _, exists = w.multiSigCoinOutputs[txn.CoinOutputID(uint64(i))]; exists {
@@ -368,10 +382,13 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 				FundType:       types.SpecifierCoinOutput,
 				MaturityHeight: types.BlockHeight(math.MaxUint64),
 				WalletAddress:  exists,
-				RelatedAddress: sco.Condition.UnlockHash(),
+				RelatedAddress: uh,
 				Value:          sco.Value,
 			})
-			w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = sco.Value
+			w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = historicOutput{
+				UnlockHash: uh,
+				Value:      sco.Value,
+			}
 		}
 		for _, fee := range txn.MinerFees {
 			pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{

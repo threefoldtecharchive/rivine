@@ -100,7 +100,7 @@ type Wallet struct {
 	// random access. It is assumed that the list of unconfirmed transactions
 	// will be small enough that this will not be a problem.
 	//
-	// historicOutputs is kept so that the values of transaction inputs can be
+	// historicOutputs is kept so that the values and addresses of transaction inputs can be
 	// determined. historicOutputs is never cleared, but in general should be
 	// small compared to the list of transactions.
 	processedTransactions            []modules.ProcessedTransaction
@@ -109,7 +109,7 @@ type Wallet struct {
 
 	// TODO: Storing the whole set of historic outputs is expensive and
 	// unnecessary. There's a better way to do it.
-	historicOutputs map[types.OutputID]types.Currency
+	historicOutputs map[types.OutputID]historicOutput
 
 	persistDir string
 	log        *persist.Logger
@@ -120,6 +120,11 @@ type Wallet struct {
 
 	bcInfo   types.BlockchainInfo
 	chainCts types.ChainConstants
+}
+
+type historicOutput struct {
+	UnlockHash types.UnlockHash
+	Value      types.Currency
 }
 
 // New creates a new wallet, loading any known addresses from the input file
@@ -150,7 +155,7 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 
 		processedTransactionMap: make(map[types.TransactionID]*modules.ProcessedTransaction),
 
-		historicOutputs: make(map[types.OutputID]types.Currency),
+		historicOutputs: make(map[types.OutputID]historicOutput),
 
 		persistDir: persistDir,
 

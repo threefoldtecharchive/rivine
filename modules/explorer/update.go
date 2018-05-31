@@ -63,22 +63,28 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbRemoveCoinOutputID(tx, sci.ParentID, txid)
-					dbRemoveUnlockHash(tx, sci.Fulfillment.UnlockHash(), txid)
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err != nil {
+						dbRemoveUnlockHash(tx, uh, txid)
+					}
 				}
 				for k, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(k))
 					dbRemoveCoinOutputID(tx, scoid, txid)
 					dbRemoveUnlockHash(tx, sco.Condition.UnlockHash(), txid)
 					dbRemoveCoinOutput(tx, scoid)
+					dbDeleteUnlockHashForOutputID(tx, types.OutputID(scoid))
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
-					dbRemoveUnlockHash(tx, sfi.Fulfillment.UnlockHash(), txid)
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err != nil {
+						dbRemoveUnlockHash(tx, uh, txid)
+					}
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbRemoveBlockStakeOutputID(tx, sfoid, txid)
 					dbRemoveUnlockHash(tx, sfo.Condition.UnlockHash(), txid)
+					dbDeleteUnlockHashForOutputID(tx, types.OutputID(sfoid))
 				}
 			}
 
@@ -128,21 +134,29 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbAddCoinOutputID(tx, sci.ParentID, txid)
-					dbAddUnlockHash(tx, sci.Fulfillment.UnlockHash(), txid)
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err != nil {
+						dbAddUnlockHash(tx, uh, txid)
+					}
 				}
 				for j, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(j))
 					dbAddCoinOutputID(tx, scoid, txid)
-					dbAddUnlockHash(tx, sco.Condition.UnlockHash(), txid)
+					uh := sco.Condition.UnlockHash()
+					dbAddUnlockHash(tx, uh, txid)
+					dbSetUnlockHashForOutputID(tx, types.OutputID(scoid), uh)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
-					dbAddUnlockHash(tx, sfi.Fulfillment.UnlockHash(), txid)
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err != nil {
+						dbAddUnlockHash(tx, uh, txid)
+					}
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbAddBlockStakeOutputID(tx, sfoid, txid)
-					dbAddUnlockHash(tx, sfo.Condition.UnlockHash(), txid)
+					uh := sfo.Condition.UnlockHash()
+					dbAddUnlockHash(tx, uh, txid)
+					dbSetUnlockHashForOutputID(tx, types.OutputID(sfoid), uh)
 				}
 			}
 

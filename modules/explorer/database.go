@@ -24,6 +24,9 @@ var (
 	bucketBlockStakeOutputs   = []byte("BlockStakeOutputs")
 	bucketTransactionIDs      = []byte("TransactionIDs")
 	bucketUnlockHashes        = []byte("UnlockHashes")
+	// used to map outputIDs to an unlock hash,
+	// this way we can know for fulfillments what the unlockHash was for it.
+	bucketOutputIDUnlockHashMapping = []byte("parentIDUnlockHashMapping")
 
 	errNotExist = errors.New("entry does not exist")
 
@@ -98,6 +101,24 @@ func (e *Explorer) dbGetBlockFacts(height types.BlockHeight, bf *blockFacts) fun
 		}
 		return dbGetAndDecode(bucketBlockFacts, block.ID(), bf)(tx)
 	}
+}
+
+// used to link parentIDs of fulfillments with the correct unlock hash
+func dbGetUnlockHashForFulfillfment(tx *bolt.Tx, parentID types.OutputID, fulfillment types.UnlockFulfillmentProxy) (uh types.UnlockHash, err error) {
+	v := tx.Bucket(bucketOutputIDUnlockHashMapping).Get(encoding.Marshal(parentID))
+	if len(v) == 0 {
+		// fallback for those rare cases where someone already used an atomic swap in a previous release
+		uh = types.ComputeLegacyFulfillmentUnlockHash(fulfillment.Fulfillment)
+		return
+	}
+	err = encoding.Unmarshal(v, &uh)
+	return
+}
+func dbSetUnlockHashForOutputID(tx *bolt.Tx, parentID types.OutputID, uh types.UnlockHash) error {
+	return tx.Bucket(bucketOutputIDUnlockHashMapping).Put(encoding.Marshal(parentID), encoding.Marshal(uh))
+}
+func dbDeleteUnlockHashForOutputID(tx *bolt.Tx, parentID types.OutputID) error {
+	return tx.Bucket(bucketOutputIDUnlockHashMapping).Delete(encoding.Marshal(parentID))
 }
 
 // dbSetInternal sets the specified key of bucketInternal to the encoded value.
