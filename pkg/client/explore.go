@@ -82,7 +82,7 @@ func explorehashcmd(hash string) {
 	}
 
 	// print depending on the encoding type
-	switch exploreBlockcfg.EncodingType {
+	switch exploreHashcfg.EncodingType {
 	case cli.EncodingTypeJSON:
 		json.NewEncoder(os.Stdout).Encode(resp)
 	default:
