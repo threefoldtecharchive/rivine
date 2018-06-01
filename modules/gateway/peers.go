@@ -308,7 +308,7 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 	}
 
 	// continue handshake based on lowest version
-	lowestVersion := version // be positive, asume ours is lowest
+	lowestVersion := version // be positive, assume ours is lowest
 	if remoteInfo.Version.Compare(lowestVersion) < 0 {
 		// theirs is lower, use that one
 		lowestVersion = remoteInfo.Version
@@ -450,7 +450,7 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 	}
 
 	// continue handshake based on lowest version
-	lowestVersion := version // be positive, asume ours is lowest
+	lowestVersion := version // be positive, assume ours is lowest
 	if remoteInfo.Version.Compare(lowestVersion) < 0 {
 		// theirs is lower, use that one
 		lowestVersion = remoteInfo.Version

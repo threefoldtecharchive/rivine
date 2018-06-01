@@ -30,7 +30,7 @@ func (api *API) gatewayHandler(w http.ResponseWriter, req *http.Request, _ httpr
 func (api *API) gatewayConnectHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	addr := modules.NetAddress(ps.ByName("netaddress"))
 	// Try to resolve a possible (domain) name
-	// Catching an error here is not particularly usefull I feel, so ignore it
+	// Catching an error here is not particularly useful I feel, so ignore it
 	addr.TryNameResolution()
 	err := api.gateway.Connect(addr)
 	if err != nil {
@@ -44,8 +44,8 @@ func (api *API) gatewayConnectHandler(w http.ResponseWriter, req *http.Request, 
 // gatewayDisconnectHandler handles the API call to remove a peer from the gateway.
 func (api *API) gatewayDisconnectHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 	addr := modules.NetAddress(ps.ByName("netaddress"))
-	// I don't feel like this is particularly usefull here, but I suppose its nice to have nonetheless
-	// Handeling a possible error is not really that usefull
+	// I don't feel like this is particularly useful here, but I suppose its nice to have nonetheless
+	// Handeling a possible error is not really that useful
 	addr.TryNameResolution()
 	err := api.gateway.Disconnect(addr)
 	if err != nil {

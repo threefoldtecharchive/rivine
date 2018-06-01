@@ -9,10 +9,10 @@ import (
 func TestCoinFlag(t *testing.T) {
 	// test coin->string->coin->string
 	coins := []coinFlag{
-		coinFlag{},
-		coinFlag{types.NewCurrency64(1)},
-		coinFlag{types.NewCurrency64(42)},
-		coinFlag{types.NewCurrency64(1234567890123456789)},
+		{},
+		{types.NewCurrency64(1)},
+		{types.NewCurrency64(42)},
+		{types.NewCurrency64(1234567890123456789)},
 	}
 	for idx, coin := range coins {
 		str := coin.String()

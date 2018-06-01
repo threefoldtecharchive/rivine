@@ -112,7 +112,7 @@ Explorer (e):
 }
 
 // SetupDefaultDaemon sets up and starts a default daemon. The chain options and constants
-// need to be configured prior to this. This function does not return untill the daemon is stopped
+// need to be configured prior to this. This function does not return until the daemon is stopped
 func SetupDefaultDaemon(cfg Config) {
 	root := &cobra.Command{
 		Use: os.Args[0],

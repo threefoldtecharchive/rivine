@@ -284,7 +284,7 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 		return
 	}
 	if err != errStatusNotFound {
-		Die("unexpected error occured while getting (unspent) coin output from consensus:", err)
+		Die("unexpected error occurred while getting (unspent) coin output from consensus:", err)
 	}
 	// output couldn't be found as an unspent coin output
 	// therefore the last positive hope is if it wasn't yet part of the transaction pool
@@ -312,7 +312,7 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 		return
 	}
 	if err != errStatusNotFound {
-		Die("unexpected error occured while getting (unspent) coin output from consensus:", err)
+		Die("unexpected error occurred while getting (unspent) coin output from consensus:", err)
 	}
 	fmt.Printf(`Failed to find atomic swap contract using outputid %s.
 It wasn't found as part of a confirmed unspent coin output in the consensus set,

@@ -134,7 +134,7 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 	walletRegisterDataCmd = &cobra.Command{
 		Use:   "registerdata <namespace> <data> <dest>",
 		Short: "Register data on the blockchain",
-		Long:  "Register data on the blockcahin by sending a minimal transaction to the destination address, and including the data in the transaction",
+		Long:  "Register data on the blockchain by sending a minimal transaction to the destination address, and including the data in the transaction",
 		Run:   Wrap(walletregisterdatacmd),
 	}
 

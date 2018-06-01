@@ -83,7 +83,7 @@ func (rd *Redis) LoadFieldsForKey(key string) (map[string][]byte, error) {
 	return resultMap, nil
 }
 
-// Subscribe starts a subscription to the replication channel. Once the subscribtion ends
+// Subscribe starts a subscription to the replication channel. Once the subscription ends
 // after a call to Unsubscribe, the channel is also closed
 func (rd *Redis) Subscribe(seChan chan<- *SubEvent) {
 	ps := rd.cl.Subscribe(replicationChannel)

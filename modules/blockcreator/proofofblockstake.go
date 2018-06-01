@@ -9,7 +9,7 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-// SolveBlocks participates in the Proof Of Block Stake protocol by continously checking if
+// SolveBlocks participates in the Proof Of Block Stake protocol by continuously checking if
 // unspent block stake outputs make a solution for the current unsolved block.
 // If a match is found, the block is submitted to the consensus set.
 // This function does not return until the blockcreator threadgroup is stopped.
@@ -128,7 +128,7 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 // in the block to avoid the BlockStakeAging for later use of this block stake.
 func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) {
 
-	// There is a special case: When the unspent block stake output is allready
+	// There is a special case: When the unspent block stake output is already
 	// used in another transaction in this unsolved block, this extra transaction
 	// is obsolete
 	for _, ubstr := range bc.unsolvedBlock.Transactions {

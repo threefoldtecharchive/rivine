@@ -108,7 +108,7 @@ func (nsm *namespaceManager) handleBlockApply(block types.Block) {
 }
 
 // getArbitraryData returns all parsed data for the tracked namespace. Only the data which is written to
-// the namespace tracked by this manager will be returned. Correclty formated data (for this namespace),
+// the namespace tracked by this manager will be returned. Correctly formated data (for this namespace),
 // which is otherwise empty (only prefix and namespace), is ignored.
 func (nsm *namespaceManager) getArbitraryData(txn types.Transaction) []byte {
 	if len(txn.ArbitraryData) == 0 {

@@ -196,7 +196,7 @@ func (w *Wallet) CreateRawTransaction(coids []types.CoinOutputID, bsoids []types
 	}
 
 	if uint64(len(arb)) > w.chainCts.ArbitraryDataSizeLimit {
-		return types.Transaction{}, errors.New("Aribtrary data too large")
+		return types.Transaction{}, errors.New("Arbitrary data too large")
 	}
 
 	txnBuilder := w.StartTransaction()

@@ -34,7 +34,7 @@ type (
 		Transactions []Transaction           `json:"transactions"`
 	}
 
-	// MinerPayout defines a miner payout, as (to be) payed out,
+	// MinerPayout defines a miner payout, as (to be) paid out,
 	// as orchestrated by this block's transactions.
 	//
 	// It is a structure created as to keep the Block Structure unchanged,

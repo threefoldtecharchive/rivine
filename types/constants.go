@@ -137,7 +137,7 @@ func DefaultChainConstants() ChainConstants {
 			// as it's expressed in units of blocks
 			MaturityDelay:         10,
 			MedianTimestampWindow: 11,
-			// difficulity is adjusted based on prior 20 blocks
+			// difficulty is adjusted based on prior 20 blocks
 			TargetWindow: 20,
 			// Difficulty adjusts quickly.
 			MaxAdjustmentUp: big.NewRat(120, 100),
@@ -154,7 +154,7 @@ func DefaultChainConstants() ChainConstants {
 			DefaultTransactionVersion: defaultTxnVersion,
 			GenesisTimestamp:          Timestamp(1424139000),
 		}
-		// Seed for the addres given below twice:
+		// Seed for the address given below twice:
 		// carbon boss inject cover mountain fetch fiber fit tornado cloth wing dinosaur proof joy intact fabric thumb rebel borrow poet chair network expire else
 		cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, BlockStakeOutput{
 			Value:     NewCurrency64(1000000),

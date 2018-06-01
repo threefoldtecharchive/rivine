@@ -35,8 +35,10 @@ var (
 
 const (
 	// TransactionVersionZero defines the initial (and currently only)
-	// version format. Any other version number is concidered invalid.
+	// version format. Any other version number is considered invalid.
 	TransactionVersionZero TransactionVersion = iota
+	// TransactionVersionOne defines the new (default) transaction version,
+	// which deprecates and is based upon TransactionVersionZero.
 	TransactionVersionOne
 )
 

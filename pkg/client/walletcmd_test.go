@@ -31,7 +31,7 @@ func TestParsePairedOutputs(t *testing.T) {
 		{[]string{"01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"}, nil}, // error not enough
 		{
 			[]string{"01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893", "42"},
-			[]outputPair{outputPair{
+			[]outputPair{{
 				Value: types.NewCurrency64(42000000000),
 				Condition: types.NewCondition(types.NewUnlockHashCondition(types.UnlockHash{
 					Type: types.UnlockTypePubKey,
@@ -56,14 +56,14 @@ func TestParsePairedOutputs(t *testing.T) {
 				"01ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543c992e6fba1c4", "10000",
 			},
 			[]outputPair{
-				outputPair{
+				{
 					Value: types.NewCurrency64(42000000000),
 					Condition: types.NewCondition(types.NewUnlockHashCondition(types.UnlockHash{
 						Type: types.UnlockTypePubKey,
 						Hash: hs("746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a"),
 					})),
 				},
-				outputPair{
+				{
 					Value: types.NewCurrency64(10000000000000),
 					Condition: types.NewCondition(types.NewUnlockHashCondition(types.UnlockHash{
 						Type: types.UnlockTypePubKey,
@@ -74,7 +74,7 @@ func TestParsePairedOutputs(t *testing.T) {
 		}, // no error
 		{
 			[]string{`{"type":1,"data":{"unlockhash":"01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"}}`, "4.2"},
-			[]outputPair{outputPair{
+			[]outputPair{{
 				Value: types.NewCurrency64(4200000000),
 				Condition: types.NewCondition(types.NewUnlockHashCondition(types.UnlockHash{
 					Type: types.UnlockTypePubKey,
@@ -84,7 +84,7 @@ func TestParsePairedOutputs(t *testing.T) {
 		}, // no error, more explicit version of first non-error example
 		{
 			[]string{`{"type":3,"data":{"locktime":42,"condition":{"type":1,"data":{"unlockhash":"01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"}}}}`, "42"},
-			[]outputPair{outputPair{
+			[]outputPair{{
 				Value: types.NewCurrency64(42000000000),
 				Condition: types.NewCondition(types.NewTimeLockCondition(42, types.NewUnlockHashCondition(types.UnlockHash{
 					Type: types.UnlockTypePubKey,
@@ -110,28 +110,28 @@ func TestParsePairedOutputs(t *testing.T) {
 				`{}`, "100",
 			},
 			[]outputPair{
-				outputPair{
+				{
 					Value: types.NewCurrency64(1000000000000),
 					Condition: types.NewCondition(types.NewUnlockHashCondition(types.UnlockHash{
 						Type: types.UnlockTypePubKey,
 						Hash: hs("ad4f73417476f8b8350298681dd0fa8640baa53a91915417b1dd8103d118b543"),
 					})),
 				},
-				outputPair{
+				{
 					Value: types.NewCurrency64(90000500000000),
 					Condition: types.NewCondition(types.NewTimeLockCondition(42, types.NewUnlockHashCondition(types.UnlockHash{
 						Type: types.UnlockTypePubKey,
 						Hash: hs("746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a"),
 					}))),
 				},
-				outputPair{
+				{
 					Value: types.NewCurrency64(200000000000),
 					Condition: types.NewCondition(types.NewUnlockHashCondition(types.UnlockHash{
 						Type: types.UnlockTypePubKey,
 						Hash: hs("746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a"),
 					})),
 				},
-				outputPair{
+				{
 					Value: types.NewCurrency64(12345000000),
 					Condition: types.NewCondition(types.NewMultiSignatureCondition(types.UnlockHashSlice{
 						types.UnlockHash{
@@ -144,7 +144,7 @@ func TestParsePairedOutputs(t *testing.T) {
 						},
 					}, 1)),
 				},
-				outputPair{
+				{
 					Value:     types.NewCurrency64(100000000000),
 					Condition: types.NewCondition(&types.NilCondition{}),
 				},

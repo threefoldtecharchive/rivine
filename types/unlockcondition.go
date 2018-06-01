@@ -50,7 +50,7 @@ type (
 		// equals the called unlock condition.
 		Equal(UnlockCondition) bool
 
-		// Fulfillable returns true if the unlock condition can be fullfilled,
+		// Fulfillable returns true if the unlock condition can be fulfilled,
 		// should the right fulfillment be given with the same (fulfill)
 		// context as given.
 		//
@@ -228,7 +228,7 @@ const (
 	ConditionTypeTimeLock
 
 	// ConditionTypeMultiSignature defines an unlock condition which
-	// can only be unlocked by mutliple signatures. The
+	// can only be unlocked by multiple signatures. The
 	// accepted signatures are declared up front by
 	// specifying the unlockhash created from the public key
 	// which matches the private key that will be used for signing,
@@ -295,11 +295,11 @@ const (
 
 // Various errors returned by unlock conditions and fulfillments.
 var (
-	// ErrUnexpectedUnlockCondition is returnd when a fulfillment is given
+	// ErrUnexpectedUnlockCondition is returned when a fulfillment is given
 	// an UnlockCondition of an unexpected type.
 	ErrUnexpectedUnlockCondition = errors.New("unexpected unlock condition")
 
-	// ErrUnexpectedUnlockFulfillment is returnd when an UnlockCondition is given
+	// ErrUnexpectedUnlockFulfillment is returned when an UnlockCondition is given
 	// an UnlockFulfillment of an unexpected type.
 	ErrUnexpectedUnlockFulfillment = errors.New("unexpected unlock fulfillment")
 
@@ -346,7 +346,7 @@ var (
 // a constructor which constructs a fresh MarshalableUnlockCondition each time it is called.
 //
 // RegisterUnlockConditionType can also used to unregister a condition type,
-// by calling this funciton with nil as the MarshalableUnlockConditionConstructor.
+// by calling this function with nil as the MarshalableUnlockConditionConstructor.
 func RegisterUnlockConditionType(ct ConditionType, cc MarshalableUnlockConditionConstructor) {
 	if cc == nil {
 		delete(_RegisteredUnlockConditionTypes, ct)
@@ -359,7 +359,7 @@ func RegisterUnlockConditionType(ct ConditionType, cc MarshalableUnlockCondition
 // a constructor which constructs a fresh MarshalableUnlockFulfillment each time it is called.
 //
 // RegisterUnlockFulfillmentType can also used to unregister a fulfillment type,
-// by calling this funciton with nil as the MarshalableUnlockFulfillmentConstructor.
+// by calling this function with nil as the MarshalableUnlockFulfillmentConstructor.
 func RegisterUnlockFulfillmentType(ft FulfillmentType, fc MarshalableUnlockFulfillmentConstructor) {
 	if fc == nil {
 		delete(_RegisteredUnlockFulfillmentTypes, ft)
@@ -471,7 +471,7 @@ type (
 	// which both have to be fulfilled in order to unlock/spend/use the unspend output as an input.
 	TimeLockCondition struct {
 		// LockTime defines either a block height or a timestamp.
-		// If the value is less than LockTimeMinTimestampValue it is concidered a lock based on block height,
+		// If the value is less than LockTimeMinTimestampValue it is considered a lock based on block height,
 		// otherwise it is used as a unix epoch value expressed in seconds.
 		LockTime uint64
 		// Condition defines the condition which has to be fulfilled
@@ -1670,7 +1670,7 @@ func (ms *MultiSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err error
 		return
 	}
 
-	// Only modify the fulfillment in case the signature was created succesfully
+	// Only modify the fulfillment in case the signature was created successfully
 	ms.Pairs = append(ms.Pairs, PublicKeySignaturePair{PublicKey: keypair.PublicKey, Signature: signature})
 	return
 }

@@ -373,7 +373,7 @@ func TestWalletRelativePathErrorSiag(t *testing.T) {
 		t.Fatal(err)
 	}
 	// This is not the actual wallet password. The createServerTester does not
-	// return the string password. So for the sucess tests we check if we make
+	// return the string password. So for the success tests we check if we make
 	// it past the absolute value check and instead error because of the key.
 	seed, err := modules.NewMnemonic(rawSeed)
 	if err != nil {

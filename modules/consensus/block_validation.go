@@ -83,10 +83,10 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	// cs function returns the block at the given height, but that is the block from the active chain, while the block we are validating
 	// could potentially be extending a currently inactive fork. Since the blocks are only keyed by height from the active chain, this convenient
 	// approach won't work here. The only way to retrieve the correct block, is to lookup the parent of the validating block, to backtrack in the fork,
-	// untill the block at the given blockheight is retrieved.
+	// until the block at the given blockheight is retrieved.
 	//
 	// But counting back from the current block to the given block is an expensive action, as it requires n database lookup, where n is the amount of blocks
-	// since the blockstake was last used. In normal operation of the chain (which we asume), most of the time we should be on the active chain. Which means
+	// since the blockstake was last used. In normal operation of the chain (which we assume), most of the time we should be on the active chain. Which means
 	// that we can get the targeted block in 2 lookups in the "blockatheight" helper function. If we have, for example, 100 active block creators, with equal
 	// blockstake distribution, then every node should create a block (thus using their blockstake) every 100 blocks. And thuse we would need to always traverse
 	// about 100 blocks for the check. So given normal operation, it is much less intensive to first do the check assuming the active chain, and then only do the

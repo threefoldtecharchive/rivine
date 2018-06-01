@@ -70,7 +70,7 @@ func getBlockBufferPopTest(bufferSize int, blocks []types.Block) func(*testing.T
 			}
 		}
 
-		// Push 2, then pop one untill all blocks are in the buffer. Then check if the correct blocks are poped again
+		// Push 2, then pop one until all blocks are in the buffer. Then check if the correct blocks are poped again
 		buf = newSizedBlockBuffer(int32(bufferSize))
 		for i := 0; i < blockCount; i++ {
 			// First pop the previous element.

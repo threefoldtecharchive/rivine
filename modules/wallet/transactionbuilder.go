@@ -161,7 +161,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	return nil
 }
 
-// FundBlockStakes will add a blockstake input of exaclty 'amount' to the
+// FundBlockStakes will add a blockstake input of exactly 'amount' to the
 // transaction. The blockstake input will not be signed until 'Sign' is called
 // on the transaction builder.
 func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {

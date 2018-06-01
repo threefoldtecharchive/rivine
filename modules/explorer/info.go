@@ -241,7 +241,7 @@ func (e *Explorer) getStats(start types.BlockHeight, end types.BlockHeight) (*mo
 	return stats, err
 }
 
-// Constants retuns all of the constants in use by the chain
+// Constants returns all of the constants in use by the chain
 func (e *Explorer) Constants() modules.ExplorerConstants {
 	return modules.ExplorerConstants{
 		GenesisTimestamp:       e.chainCts.GenesisTimestamp,

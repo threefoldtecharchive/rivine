@@ -215,7 +215,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				if exists {
 					relevant = true
 				} else if _, exists = w.multiSigCoinOutputs[txn.CoinOutputID(uint64(i))]; exists {
-					// If the coin ouput is a relevant multisig output, it's ID will already
+					// If the coin output is a relevant multisig output, it's ID will already
 					// be present in the multisigCoinOutputs map
 					relevant = true
 					// set "exists" to false since the output is not owned by the wallet.
@@ -372,7 +372,7 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			if exists {
 				relevant = true
 			} else if _, exists = w.multiSigCoinOutputs[txn.CoinOutputID(uint64(i))]; exists {
-				// If the coin ouput is a relevant multisig output, it's ID will already
+				// If the coin output is a relevant multisig output, it's ID will already
 				// be present in the multisigCoinOutputs map
 				relevant = true
 				// set "exists" to false since the output is not owned by the wallet.

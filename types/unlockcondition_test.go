@@ -1889,7 +1889,7 @@ func TestValidFulFill(t *testing.T) {
 		},
 	}
 	for idx, testCase := range testCases {
-		// test each testcase seperately
+		// test each testcase separately
 		testValidSignAndFulfill(t, idx, []signAndFulfillInput{testCase})
 	}
 	// test all test cases at once
@@ -2765,7 +2765,7 @@ func TestAtomicSwapHashedSecretJSON(t *testing.T) {
 
 		b, err := hs.MarshalJSON()
 		if err != nil || len(b) == 0 {
-			t.Error(i, "hex-encoded string is empty or an error occured", err, b)
+			t.Error(i, "hex-encoded string is empty or an error occurred", err, b)
 		}
 
 		var hs2 AtomicSwapHashedSecret
@@ -2851,7 +2851,7 @@ func TestAtomicSwapSecretJSON(t *testing.T) {
 
 		b, err := s.MarshalJSON()
 		if err != nil || len(b) == 0 {
-			t.Error(i, "hex-encoded string is empty or an error occured", err, b)
+			t.Error(i, "hex-encoded string is empty or an error occurred", err, b)
 		}
 
 		var s2 AtomicSwapHashedSecret

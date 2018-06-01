@@ -50,7 +50,7 @@ type (
 
 		// Extension is an optional field that can be used,
 		// in order to attach non-standard state to a transaction.
-		Extension interface{} `json:"-"` // omited from JSON
+		Extension interface{} `json:"-"` // omitted from JSON
 	}
 
 	// TransactionValidationContext defines the contants that a TransactionValidator
@@ -80,7 +80,7 @@ type (
 
 	// TransactionIsStandardChecker defines the interface a transaction controller
 	// can optionally implement, in order to define logic,
-	// which defines if a transaction is to be concidered standard.
+	// which defines if a transaction is to be considered standard.
 	TransactionIsStandardChecker interface {
 		IsStandardTransaction(t Transaction) error
 	}
@@ -93,12 +93,12 @@ type (
 // doing it anywhere else can result in undefined behavior.
 func RegisterTransactionVersion(v TransactionVersion, c TransactionController) {
 	// version 0x00 is off limits,
-	// as it's decoding logic is now concidered non-standard,
+	// as it's decoding logic is now considered non-standard,
 	// which doesn't work with the current expected format,
 	// in which the data slice is encoded as a raw slice,
 	// as to support unknown versions properly.
 	if v == TransactionVersionZero {
-		panic("transaction version 0x00 (legacy) cannot be overriden")
+		panic("transaction version 0x00 (legacy) cannot be overridden")
 	}
 	if c == nil {
 		delete(_RegisteredTransactionVersions, v)
@@ -109,7 +109,7 @@ func RegisterTransactionVersion(v TransactionVersion, c TransactionController) {
 
 var (
 	// ErrUnexpectedExtensionType is an error returned by a transaction controller,
-	// in case it expects an extention type it didn't expect.
+	// in case it expects an extension type it didn't expect.
 	ErrUnexpectedExtensionType = errors.New("unexpected transaction data extension type")
 )
 

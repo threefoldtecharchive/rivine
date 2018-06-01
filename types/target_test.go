@@ -44,7 +44,7 @@ func TestTargetCmp(t *testing.T) {
 }
 
 // TestTargetDifficulty probes the Difficulty function of the target type.
-// TODO: target.Difficulty() has been changed to return a new Difficutly type: https://github.com/rivine/rivine/commit/6c00f3be7798c017b84434a97f8b1cd895bf734a#diff-3e315e2069bf2cb7e545291ccc110377
+// TODO: target.Difficulty() has been changed to return a new Difficulty type: https://github.com/rivine/rivine/commit/6c00f3be7798c017b84434a97f8b1cd895bf734a#diff-3e315e2069bf2cb7e545291ccc110377
 // Need to rework test to compile and work with the new type
 func TestTargetDifficulty(t *testing.T) {
 	cts := DefaultChainConstants()

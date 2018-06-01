@@ -4,10 +4,10 @@ import "github.com/rivine/rivine/types"
 
 // The actions which can be passed through a channel
 const (
-	// SubStart indicates that a new subscribtion must begin, with an optional
+	// SubStart indicates that a new subscription must begin, with an optional
 	// starttime indicating the earliest block which must be tracked
 	SubStart SubAction = "start"
-	// SubEnd indicates that a subscription ends immediatly
+	// SubEnd indicates that a subscription ends immediately
 	SubEnd SubAction = "end"
 )
 

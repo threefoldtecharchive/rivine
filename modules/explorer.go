@@ -40,7 +40,7 @@ type (
 	ChainStats struct {
 		BlockCount uint32 `json:"blockcount"`
 		// The following fields all have the same length,
-		// and are in the same order. The lenght is equal
+		// and are in the same order. The length is equal
 		// to `BlockCount`.
 		BlockHeights           []types.BlockHeight `json:"blockheights"`
 		BlockTimeStamps        []types.Timestamp   `json:"blocktimestamps"`

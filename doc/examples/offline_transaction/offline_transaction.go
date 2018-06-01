@@ -77,13 +77,15 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("Transaction successfull")
+	fmt.Println("Transaction successful")
 }
 
-// CreateTxn creates a new transaction of the specified ammount to a specified address. A remainder address
-// to which the leftover coins will be transfered (if any) is chosen automatically. An error is returned if the coins
-// available in the coininputs are insufficient to cover the amount specified for transfer (+ the miner fee).
-// A miner fee is automatically added. This example does not add any arbitrary data.
+// CreateTxn creates a new transaction of the specified amount to a specified address.
+// A remainder address to which the leftover coins will be transferred (if any)
+// is chosen automatically. An error is returned if the coins
+// available in the coininputs are insufficient to cover the amount specified for transfer
+// (+ the miner fee). A miner fee is automatically added.
+// This example does not add any arbitrary data.
 func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) (*types.Transaction, error) {
 	// Count the funds in our wallet
 	walletFunds := types.NewCurrency64(0)
@@ -233,7 +235,7 @@ func NewWallet(seed modules.Seed) *MyWallet {
 	w.seed = seed
 	w.unspentCoinOutputs = make(map[types.CoinOutputID]types.CoinOutput)
 	w.keys = make(map[types.UnlockHash]spendableKey)
-	// Create the adress -> key map
+	// Create the address -> key map
 	for i := 0; i < generateAddressAmount; i++ {
 		key := generateSpendableKey(w.seed, uint64(i))
 		w.keys[key.UnlockHash()] = key
@@ -264,7 +266,7 @@ func (w *MyWallet) SyncWallet() error {
 			if resp.HashType != unlockHashType {
 				panic("Address is not recognized as an unlock hash")
 			}
-			// We scann the blocks here for the miner fees, and the transactions for actual transations
+			// We scann the blocks here for the miner fees, and the transactions for actual transactions
 			for _, block := range resp.Blocks {
 				// Collect the miner fees
 				// But only those that have matured already

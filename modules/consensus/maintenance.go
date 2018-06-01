@@ -104,7 +104,7 @@ func applyMaturedCoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 }
 
 // applyMaintenance applies block-level alterations to the consensus set.
-// Maintenance is applied after all of the transcations for the block have been
+// Maintenance is applied after all of the transactions for the block have been
 // applied.
 func (cs *ConsensusSet) applyMaintenance(tx *bolt.Tx, pb *processedBlock) {
 	cs.applyMinerPayouts(tx, pb)
