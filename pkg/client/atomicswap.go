@@ -213,16 +213,16 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 		HashedSecret: hash,
 		TimeLock:     types.OffsetTimestamp(atomicSwapInitiatecfg.duration),
 	}
+	if !yesToAll {
+		// print contract for review
+		printContractInfo(hastings, condition, secret)
+		fmt.Println("")
 
-	// print contract for review
-	printContractInfo(hastings, condition, secret)
-	fmt.Println("")
-
-	// ensure user wants to continue with creating the contract as it is (aka publishing it)
-	if !askYesNoQuestion("Publish atomic swap transaction?") {
-		Die("cancelled atomic swap contract")
+		// ensure user wants to continue with creating the contract as it is (aka publishing it)
+		if !askYesNoQuestion("Publish atomic swap transaction?") {
+			Die("cancelled atomic swap contract")
+		}
 	}
-
 	// publish contract
 	body, err := json.Marshal(api.WalletTransactionPOST{
 		Condition: types.NewCondition(&condition),
@@ -248,6 +248,16 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 	if coinOutputIndex == -1 {
 		Die("didn't find atomic swap contract registered in any returned coin output")
 	}
+	if atomicswapCfg.EncodingType == cli.EncodingTypeJSON {
+		m := map[string]interface{}{
+			"outputId":      response.Transaction.CoinOutputID(uint64(coinOutputIndex)),
+			"transactionID": response.Transaction.ID(),
+		}
+		b, _ := json.Marshal(m)
+		fmt.Println(string(b))
+		return
+	}
+
 	fmt.Println("published contract transaction")
 	fmt.Println("OutputID:", response.Transaction.CoinOutputID(uint64(coinOutputIndex)))
 	fmt.Println("TransactionID:", response.Transaction.ID())
@@ -493,6 +503,15 @@ secretCheck:
 		}
 	}
 
+	if atomicswapCfg.EncodingType == cli.EncodingTypeJSON {
+		m := map[string]interface{}{
+			"secret": secret.String(),
+		}
+		b, _ := json.Marshal(m)
+		fmt.Println(string(b))
+		return
+	}
+
 	fmt.Println("atomic swap contract was redeemed by participator")
 	fmt.Println("extracted secret:", secret.String())
 }
@@ -589,13 +608,14 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 
 	// step 3: confirm contract details with user, before continuing
 	// print contract for review
-	printContractInfo(unspentCoinOutputResp.Output.Value, *condition, secret)
-	fmt.Println("")
-	// ensure user wants to continue with redeeming the contract!
-	if !askYesNoQuestion("Publish atomic swap " + keyWord + " transaction?") {
-		Die("atomic swap " + keyWord + " transaction cancelled")
+	if !yesToAll {
+		printContractInfo(unspentCoinOutputResp.Output.Value, *condition, secret)
+		fmt.Println("")
+		// ensure user wants to continue with redeeming the contract!
+		if !askYesNoQuestion("Publish atomic swap " + keyWord + " transaction?") {
+			Die("atomic swap " + keyWord + " transaction cancelled")
+		}
 	}
-
 	// step 4: create a transaction
 	txn := types.Transaction{
 		Version: _DefaultTransactionVersion,
@@ -631,6 +651,15 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 	txnid, err := commitTxn(txn)
 	if err != nil {
 		Die("failed to "+keyWord+" atomic swaps locked tokens, as transaction couldn't commit:", err)
+	}
+
+	if atomicswapCfg.EncodingType == cli.EncodingTypeJSON {
+		m := map[string]interface{}{
+			"transactionId": txnid,
+		}
+		b, _ := json.Marshal(m)
+		fmt.Println(string(b))
+		return
 	}
 
 	fmt.Println("")
@@ -750,6 +779,11 @@ func containsString(slice []string, element string) bool {
 var (
 	okayResponses  = []string{"y", "ye", "yes"}
 	nokayResponses = []string{"n", "no", "noo", "nope"}
+
+	atomicswapCfg struct {
+		EncodingType cli.EncodingType
+	}
+	yesToAll = false
 )
 
 var computeTimeNow = func() time.Time {
@@ -757,6 +791,14 @@ var computeTimeNow = func() time.Time {
 }
 
 func init() {
+
+	atomicSwapCmd.PersistentFlags().BoolVarP(&yesToAll, "yes", "y",
+		yesToAll, "Default answer 'yes' to all questions.")
+
+	atomicSwapCmd.Flags().Var(
+		cli.NewEncodingTypeFlag(0, &atomicswapCfg.EncodingType, 0), "encoding",
+		cli.EncodingTypeFlagDescription(0))
+
 	atomicSwapParticipateCmd.Flags().DurationVarP(
 		&atomicSwapParticipatecfg.duration, "duration", "d",
 		time.Hour*24, "the duration of the atomic swap contract, the amount of time the participator has to collect")
