@@ -67,7 +67,7 @@ func (e InvalidVersionError) Error() string {
 }
 
 // Compare returns an integer comparing this version with another version.
-func (pv *ProtocolVersion) Compare(other ProtocolVersion) int {
+func (pv ProtocolVersion) Compare(other ProtocolVersion) int {
 	if pv.Version < other.Version {
 		return -1
 	} else if pv.Version > other.Version {
@@ -90,7 +90,7 @@ func (pv *ProtocolVersion) Compare(other ProtocolVersion) int {
 }
 
 // String returns the string version of this ProtocolVersion
-func (pv *ProtocolVersion) String() string {
+func (pv ProtocolVersion) String() string {
 	str := fmt.Sprintf("%d.%d.%d",
 		(pv.Version>>24)&0xFF, // major
 		(pv.Version>>16)&0xFF, // minor
@@ -133,7 +133,7 @@ var (
 
 var (
 	// rawVersion used to generate rivine's protocol version
-	rawVersion = "v1.0.5-alpha"
+	rawVersion = "v1.0.6-alpha"
 	// Version is the current version of rivined.
 	Version ProtocolVersion
 )

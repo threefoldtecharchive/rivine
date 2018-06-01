@@ -13,7 +13,7 @@ import (
 var (
 	// errNotFound is returned when a transaction is not found for a (short) id, but the ID itself is otherwise valid
 	errNotFound = errors.New("Transaction not found")
-	// errInvalidIDLength is returned when a supposed transaction id does not have the length to be either a short or standard transaction id
+	// errInvalidIDLength is returned when a supposed id does not have the correct length
 	errInvalidIDLength = errors.New("ID does not have the right length")
 )
 
@@ -105,4 +105,68 @@ func (api *API) getTransactionByLongID(longid string) (types.Transaction, types.
 		err = errNotFound
 	}
 	return txn, txShortID, err
+}
+
+// ConsensusGetUnspentCoinOutput is the object returned by a GET request to
+// /consensus/unspent/coinoutput/:id
+type ConsensusGetUnspentCoinOutput struct {
+	Output types.CoinOutput `json:"output"`
+}
+
+// consensusGetUnspentCoinOutputHandler handles lookups of unspent coin outputs
+func (api *API) consensusGetUnspentCoinOutputHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	var (
+		outputID types.CoinOutputID
+		id       = ps.ByName("id")
+	)
+
+	if len(id) != len(outputID)*2 {
+		WriteError(w, Error{errInvalidIDLength.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	err := outputID.LoadString(id)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	output, err := api.cs.GetCoinOutput(outputID)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusNoContent)
+		return
+	}
+	WriteJSON(w, ConsensusGetUnspentCoinOutput{Output: output})
+}
+
+// ConsensusGetUnspentBlockstakeOutput is the object returned by a GET request to
+// /consensus/unspent/blockstakeoutput/:id
+type ConsensusGetUnspentBlockstakeOutput struct {
+	Output types.BlockStakeOutput `json:"output"`
+}
+
+// consensusGetUnspentBlockstakeOutputHandler handles lookups of unspent blockstake outputs
+func (api *API) consensusGetUnspentBlockstakeOutputHandler(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+	var (
+		outputID types.BlockStakeOutputID
+		id       = ps.ByName("id")
+	)
+
+	if len(id) != len(outputID)*2 {
+		WriteError(w, Error{errInvalidIDLength.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	err := outputID.LoadString(id)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	output, err := api.cs.GetBlockStakeOutput(outputID)
+	if err != nil {
+		WriteError(w, Error{err.Error()}, http.StatusNoContent)
+		return
+	}
+	WriteJSON(w, ConsensusGetUnspentBlockstakeOutput{Output: output})
 }

@@ -8,7 +8,7 @@ Atomic swaps involve each party paying into a double-contract transaction, one c
 
 # Example
 
-Let's assume Bob wants to buy 9876 Rivine Based Tokens (RBT) from Alice for 0.1234BTC, and they agree on both this exchange price and the fact that they want to trade using an atomic swap.
+Let's assume Bob wants to buy 9876 Rivine Based Tokens (RBT) from Alice for 0.1234BTC, and they agree on both this  price and the fact that they want to trade using an atomic swap.
 
 Bob creates a bitcoin address and Alice creates a Rivine address.
 
@@ -17,19 +17,19 @@ using the SHA256 algorithm, resulting in a 32-byte hashed secret.
 
 Bob now creates a swap transaction, as a smart contract, and publishes it on the Bitcoin chain, it has 0.1234BTC as an output and the output can be redeemed (used as input) using either 1 of the following conditions:
 - timeout has passed (48hours) and claimed by Bob's refund address;
-- the money is claimed by Alice's registered address, prior to that 48 hour deadline, by providing the secret received from bob on a side channel (e.g. an encrypted chat/messenging service);
+- the money is claimed by Alice's registered address and the secret is given that hashes to the hashed secret created by Bob 
 
-It should be noted that at any given point, only one (and only one) party can claim the money, given the relevant conditions are fulfilled. This means Alice can claim the bitcoin if she has the secret and she does so prior to the agreed upon deadline. Should Alice fail to claim the locked BTC before the 48 hours deadline, for whatever reason, Bob can reclaim it whenever he wants.
+This means Alice can claim the bitcoin if she has the secret and if the atomic swap process fails, Bob can always reclaim it's btc after the timeout.
 
-Once Bob created the contract, using a 48 hour timeout and correct hashed secret, he has to send the transaction ID, of the created bitcoin transaction, to Alice. At this point he should only share the transaction ID, NOT the secret. This is important as otherwise Alice can claim the money already, without having to pay the promised RBT to Bob.
+ Bob sends this contract to Alice, making sure he does not share the secret of course.
+Now Alice validates if everything is as agreed (=audit) after which She creates a similar transaction on the Rivine chain but with a timeout for refund of only 24 hours and she uses the same hashsecret as the first contract for Bob to claim the tokens.
+ This transaction has 9876 tokens as an output and the output can be redeemed( used as input) using either 1 of the following conditions:
+- timeout has passed ( 24hours) and claimed by the sellers refund address
+- the secret is given that hashes to the hashed secret Bob created (= same one as used in the bitcoin swap transaction) and claimed by Bob's address
 
-Upon the receival of the transaction ID, over the used side channel, Alice can validate (=audit) if the Bitcoin contract is as agreed. Meaning that she can validate if the Bitcoin transaction exists, it contains the correct type of contract, with the correct deadline and target address. Whether it's a valid hash secret isn't something she can validate beyeond the fact that it's 32 bytes. After agreeing what has happened so far, she (Alice) will have to create a similar contract, but this time on the Rivine-based blockchain, not on Bitcoin. She will use a 24 hour timeout, not a 48 hour timeout, and use the same hashed secret as used by Bob in the earlier created Bitcoin contract. This transaction has 9876 RBT as an output and the output can be redeemed (used as input) using either 1 of the following conditions:
-- timeout has passed (24 hours) and claimed by Alice's refund address;
-- the money is claimed by Bob's registered address, prior to that 24 hour deadline, by providing the secret he choose himself while creating the Bitcoin contract;
+In order for Bob to claim the threefold tokens, he has to use and as such disclose the secret.
 
-This means that Bob has to claim the Rivine tokens prior to the 24 hours deadline. If he fails to do so, Alice can reclaim her tokens whenever she wants. In order for Bob to claim the tokens, he has to use and as such disclose the secret choosen by him. Having made that secret public, by claiming his tokens, Alice can use this secret as well to claim her promised BTC locked in the bitcoin contract created by Bob. It should be noted however that if Alice does not claim this money prior to the 48 hour deadline, she will not be able to receive that money, and Bob will have both the BTC as well as the RBT. When both timeouts are configured reasonable however, it should mean that Alice has at least 24 hours to do so, and usually even closer to 48 hours.
-
-The magic of the atomic swap lies in the fact that the same secret is used to claim the tokens in both swap transactions (contracts) but it is not disclosed in the contracts because only the hash of the secret is used there. Therefore only the hashed secret is public, while the secret should remain private up until the point that Bob discloses it, by claiming the Rivine-based tokens. The moment Bob claims those, he discloses the secret and Alice still has renough time to claim the bitcoin because the timeout of the first contract is longer than the one of the second contract. Because the secret is only disclosed when both contracts already exists with as targets one another, it isn't possible that one party runs of with the other's tokens, prior to the creation of its own contract.
+The magic of the atomic swap lies in the fact that the same secret is used to claim the tokens in both swap transactions but it is not disclosed in the contracts because only the hash of the secret is used there. The moment Bob claims the Rivine tokens, he discloses the secret and Alice has enough time left to claim the bitcoin because the timeout of the first contract is longer than the one of the second contract
 
 Of course, either Bob or Alice can be the initiator or the participant.
 

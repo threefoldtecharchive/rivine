@@ -193,3 +193,24 @@ func TestIntegrationSortedOutputsSorting(t *testing.T) {
 		}
 	}
 }
+
+// Test to confirm that a call with nil outputs (no outputs),
+// results in the ErrNilOutputs error.
+// Tests the solution for: https://github.com/rivine/rivine/issues/327
+func TestNilOutputs(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	_, err = wt.wallet.SendOutputs(nil, nil, []byte("data"))
+	if err != ErrNilOutputs {
+		t.Fatal("expected ErrNilOutput, but receiver: ", err)
+	}
+}

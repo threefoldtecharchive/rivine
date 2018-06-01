@@ -27,6 +27,8 @@ type (
 
 		BlockStakeBalance       types.Currency `json:"blockstakebalance"`
 		LockedBlockStakeBalance types.Currency `json:"lockedblockstakebalance"`
+
+		MultiSigWallets []modules.MultiSigWallet `json:"multisigwallets"`
 	}
 
 	// WalletBlockStakeStatsGET contains blockstake statistical info of the wallet.
@@ -134,6 +136,48 @@ type (
 		ConfirmedTransactions   []modules.ProcessedTransaction `json:"confirmedtransactions"`
 		UnconfirmedTransactions []modules.ProcessedTransaction `json:"unconfirmedtransactions"`
 	}
+
+	// WalletListUnlockedGET contains the set of unspent, unlocked coin
+	// and blockstake outputs owned by the wallet.
+	WalletListUnlockedGET struct {
+		UnlockedCoinOutputs       []UnspentCoinOutput       `json:"unlockedcoinoutputs"`
+		UnlockedBlockstakeOutputs []UnspentBlockstakeOutput `json:"unlockedblockstakeoutputs"`
+	}
+
+	// WalletListLockedGET contains the set of unspent, locked coin and
+	// blockstake outputs owned by the wallet
+	WalletListLockedGET struct {
+		LockedCoinOutputs       []UnspentCoinOutput       `json:"lockedcoinoutputs"`
+		LockedBlockstakeOutputs []UnspentBlockstakeOutput `json:"lockedblockstakeoutputs"`
+	}
+
+	// UnspentCoinOutput is a coin output and its associated ID
+	UnspentCoinOutput struct {
+		ID     types.CoinOutputID `json:"id"`
+		Output types.CoinOutput   `json:"coinoutput"`
+	}
+
+	// UnspentBlockstakeOutput is a blockstake output and its associated ID
+	UnspentBlockstakeOutput struct {
+		ID     types.BlockStakeOutputID `json:"id"`
+		Output types.BlockStakeOutput   `json:"output"`
+	}
+
+	// WalletCreateTransactionPOST is a list of coin and blockstake inputs and outputs
+	// The values in the coin and blockstake input and outputs pair must match exactly (also
+	// accounting for miner fees)
+	WalletCreateTransactionPOST struct {
+		CoinInputs        []types.CoinOutputID       `json:"coininputs"`
+		BlockStakeInputs  []types.BlockStakeOutputID `json:"blockstakeinputs"`
+		CoinOutputs       []types.CoinOutput         `json:"coinoutputs"`
+		BlockStakeOutputs []types.BlockStakeOutput   `json:"blockstakeoutputs"`
+	}
+
+	// WalletCreateTransactionRESP wraps the transaction returned by the walletcreatetransaction
+	// endpoint
+	WalletCreateTransactionRESP struct {
+		Transaction types.Transaction `json:"transaction"`
+	}
 )
 
 // walletHander handles API calls to /wallet.
@@ -152,6 +196,8 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 
 		BlockStakeBalance:       blockstakeBal,
 		LockedBlockStakeBalance: blockstakeLockBal,
+
+		MultiSigWallets: api.wallet.MultiSigWallets(),
 	})
 }
 
@@ -433,6 +479,7 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 	data, err := base64.StdEncoding.DecodeString(dataString)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/coins: Failed to decode arbitrary data"}, http.StatusBadRequest)
+		return
 	}
 	// Since zero outputs are not allowed, just send one of the smallest unit, the minimal amount.
 	// The transaction fee should be much higher anyway
@@ -538,4 +585,76 @@ func (api *API) walletUnlockHandler(w http.ResponseWriter, req *http.Request, _ 
 	}
 
 	WriteError(w, Error{"error when calling /wallet/unlock: " + modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+}
+
+// walletListUnlcokedHandler handles API calls to /wallet/unlocked
+func (api *API) walletListUnlockedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	ucos, ubsos := api.wallet.UnlockedUnspendOutputs()
+	ucor := []UnspentCoinOutput{}
+	ubsor := []UnspentBlockstakeOutput{}
+
+	for id, co := range ucos {
+		ucor = append(ucor, UnspentCoinOutput{ID: id, Output: co})
+	}
+
+	for id, bso := range ubsos {
+		ubsor = append(ubsor, UnspentBlockstakeOutput{ID: id, Output: bso})
+	}
+
+	WriteJSON(w, WalletListUnlockedGET{
+		UnlockedCoinOutputs:       ucor,
+		UnlockedBlockstakeOutputs: ubsor,
+	})
+}
+
+// walletListUnlcokedHandler handles API calls to /wallet/locked
+func (api *API) walletListLockedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	ucos, ubsos := api.wallet.LockedUnspendOutputs()
+	ucor := []UnspentCoinOutput{}
+	ubsor := []UnspentBlockstakeOutput{}
+
+	for id, co := range ucos {
+		ucor = append(ucor, UnspentCoinOutput{ID: id, Output: co})
+	}
+
+	for id, bso := range ubsos {
+		ubsor = append(ubsor, UnspentBlockstakeOutput{ID: id, Output: bso})
+	}
+
+	WriteJSON(w, WalletListUnlockedGET{
+		UnlockedCoinOutputs:       ucor,
+		UnlockedBlockstakeOutputs: ubsor,
+	})
+}
+
+// walletCreateTransactionHandler handles API calls to POST /wallet/create/transaction
+func (api *API) walletCreateTransactionHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var body WalletCreateTransactionPOST
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied inputs and outputs: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	tx, err := api.wallet.CreateRawTransaction(body.CoinInputs, body.BlockStakeInputs, body.CoinOutputs, body.BlockStakeOutputs, nil)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/create/transaction: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, WalletCreateTransactionRESP{
+		Transaction: tx,
+	})
+}
+
+// walletSignHandler handles API calls to POST /wallet/sign
+func (api *API) walletSignHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var body types.Transaction
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		WriteError(w, Error{"error decoding the supplied transaction: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	txn, err := api.wallet.GreedySign(body)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/sign: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, txn)
 }

@@ -1,6 +1,9 @@
 package consensus
 
 import (
+	"bytes"
+	"encoding/hex"
+
 	bolt "github.com/rivine/bbolt"
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
@@ -13,7 +16,7 @@ import (
 // convertLegacyDatabase converts a 0.5.0 consensus database,
 // to a database of the current version as defined by dbMetadata.
 // It keeps the database open and returns it for further usage.
-func convertLegacyDatabase(filePath string) (db *persist.BoltDatabase, err error) {
+func convertLegacyDatabase(filePath string, log *persist.Logger) (db *persist.BoltDatabase, err error) {
 	var legacyDBMetadata = persist.Metadata{
 		Header:  "Consensus Set Database",
 		Version: "0.5.0",
@@ -24,19 +27,30 @@ func convertLegacyDatabase(filePath string) (db *persist.BoltDatabase, err error
 	}
 	err = db.Update(func(tx *bolt.Tx) error {
 		if bucket := tx.Bucket(BlockMap); bucket != nil {
-			if err := updateLegacyBlockMapBucket(bucket); err != nil {
+			log.Printf("upgrading bucket %s format from 0.5.0 to %v...\n", string(BlockMap), dbMetadata.Version)
+			if err := updateLegacyBlockMapBucket(bucket, log); err != nil {
 				return err
 			}
 		}
 		if bucket := tx.Bucket(CoinOutputs); bucket != nil {
-			if err := updateLegacyCoinOutputBucket(bucket); err != nil {
+			log.Printf("upgrading bucket %s format from 0.5.0 to %v...\n", string(CoinOutputs), dbMetadata.Version)
+			if err := updateLegacyCoinOutputBucket(bucket, log); err != nil {
 				return err
 			}
 		}
 		if bucket := tx.Bucket(BlockStakeOutputs); bucket != nil {
-			return updateLegacyBlockstakeOutputBucket(bucket)
+			log.Printf("upgrading bucket %s format from 0.5.0 to %v...\n", string(BlockStakeOutputs), dbMetadata.Version)
+			if err := updateLegacyBlockstakeOutputBucket(bucket, log); err != nil {
+				return err
+			}
 		}
-		return nil
+		return tx.ForEach(func(name []byte, bucket *bolt.Bucket) error {
+			if !bytes.HasPrefix(name, prefixDCO) {
+				return nil
+			}
+			log.Printf("upgrading legacy DCO bucket 0x%s format from 0.5.0 to %v...\n", hex.EncodeToString(name), dbMetadata.Version)
+			return updateLegacyCoinOutputBucket(bucket, log)
+		})
 	})
 	if err == nil {
 		// set the new metadata, and save it,
@@ -53,7 +67,7 @@ func convertLegacyDatabase(filePath string) (db *persist.BoltDatabase, err error
 	return
 }
 
-func updateLegacyBlockMapBucket(bucket *bolt.Bucket) error {
+func updateLegacyBlockMapBucket(bucket *bolt.Bucket, log *persist.Logger) error {
 	var (
 		err    error
 		cursor = bucket.Cursor()
@@ -70,6 +84,8 @@ func updateLegacyBlockMapBucket(bucket *bolt.Bucket) error {
 				return err
 			}
 		}
+		log.Printf("overwriting legacy block #%d with binary ID 0x%s created at %d to format as known since %v...\n",
+			legacyBlock.Height, hex.EncodeToString(k), legacyBlock.Block.Timestamp, dbMetadata.Version)
 		// it's in the legacy format, as expected, we overwrite it using the new format
 		err = legacyBlock.storeAsNewFormat(bucket, k)
 		if err != nil {
@@ -79,7 +95,7 @@ func updateLegacyBlockMapBucket(bucket *bolt.Bucket) error {
 	return nil
 }
 
-func updateLegacyCoinOutputBucket(bucket *bolt.Bucket) error {
+func updateLegacyCoinOutputBucket(bucket *bolt.Bucket, log *persist.Logger) error {
 	var (
 		err    error
 		cursor = bucket.Cursor()
@@ -96,6 +112,8 @@ func updateLegacyCoinOutputBucket(bucket *bolt.Bucket) error {
 				return err
 			}
 		}
+		log.Printf("overwriting legacy coin output (%s, %s) with binary ID 0x%s to format as known since %v...\n",
+			out.UnlockHash.String(), out.Value.String(), hex.EncodeToString(k), dbMetadata.Version)
 		// it's in the legacy format, as expected, we overwrite it using the new format
 		err = bucket.Put(k, encoding.Marshal(types.CoinOutput{
 			Value: out.Value,
@@ -110,7 +128,7 @@ func updateLegacyCoinOutputBucket(bucket *bolt.Bucket) error {
 	return nil
 }
 
-func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket) error {
+func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket, log *persist.Logger) error {
 	var (
 		err    error
 		cursor = bucket.Cursor()
@@ -127,6 +145,8 @@ func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket) error {
 				return err
 			}
 		}
+		log.Printf("overwriting legacy block stake output (%s, %s) with binary ID 0x%s to format as known since %v...\n",
+			out.UnlockHash.String(), out.Value.String(), hex.EncodeToString(k), dbMetadata.Version)
 		// it's in the legacy format, as expected, we overwrite it using the new format
 		err = bucket.Put(k, encoding.Marshal(types.BlockStakeOutput{
 			Value: out.Value,

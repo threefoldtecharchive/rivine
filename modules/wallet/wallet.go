@@ -87,6 +87,10 @@ type Wallet struct {
 	unspentblockstakeoutputs map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput
 	spentOutputs             map[types.OutputID]types.BlockHeight
 
+	// multiSigOutputs holds all the multisig addresses this wallet is part of
+	multiSigCoinOutputs       map[types.CoinOutputID]types.CoinOutput
+	multiSigBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
+
 	// The following fields are kept to track transaction history.
 	// processedTransactions are stored in chronological order, and have a map for
 	// constant time random access. The set of full transactions is kept as
@@ -96,7 +100,7 @@ type Wallet struct {
 	// random access. It is assumed that the list of unconfirmed transactions
 	// will be small enough that this will not be a problem.
 	//
-	// historicOutputs is kept so that the values of transaction inputs can be
+	// historicOutputs is kept so that the values and addresses of transaction inputs can be
 	// determined. historicOutputs is never cleared, but in general should be
 	// small compared to the list of transactions.
 	processedTransactions            []modules.ProcessedTransaction
@@ -105,7 +109,7 @@ type Wallet struct {
 
 	// TODO: Storing the whole set of historic outputs is expensive and
 	// unnecessary. There's a better way to do it.
-	historicOutputs map[types.OutputID]types.Currency
+	historicOutputs map[types.OutputID]historicOutput
 
 	persistDir string
 	log        *persist.Logger
@@ -116,6 +120,11 @@ type Wallet struct {
 
 	bcInfo   types.BlockchainInfo
 	chainCts types.ChainConstants
+}
+
+type historicOutput struct {
+	UnlockHash types.UnlockHash
+	Value      types.Currency
 }
 
 // New creates a new wallet, loading any known addresses from the input file
@@ -136,15 +145,17 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		cs:    cs,
 		tpool: tpool,
 
-		keys:                     make(map[types.UnlockHash]spendableKey),
-		coinOutputs:              make(map[types.CoinOutputID]types.CoinOutput),
-		blockstakeOutputs:        make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
-		spentOutputs:             make(map[types.OutputID]types.BlockHeight),
-		unspentblockstakeoutputs: make(map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput),
+		keys:                      make(map[types.UnlockHash]spendableKey),
+		coinOutputs:               make(map[types.CoinOutputID]types.CoinOutput),
+		blockstakeOutputs:         make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+		spentOutputs:              make(map[types.OutputID]types.BlockHeight),
+		unspentblockstakeoutputs:  make(map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput),
+		multiSigCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+		multiSigBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 
 		processedTransactionMap: make(map[types.TransactionID]*modules.ProcessedTransaction),
 
-		historicOutputs: make(map[types.OutputID]types.Currency),
+		historicOutputs: make(map[types.OutputID]historicOutput),
 
 		persistDir: persistDir,
 

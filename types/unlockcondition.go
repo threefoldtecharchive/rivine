@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
@@ -90,15 +91,6 @@ type (
 		//
 		// The signing is to be done within the given (fulfillment sign) context.
 		Sign(ctx FulfillmentSignContext) error
-
-		// UnlockHash returns the unlock hash of this UnlockFulfillment.
-		// It identifies the spender of the output linked by the input's parent ID.
-		//
-		// The UnlockHash, as returned by the UnlockFulfillment,
-		// does not have to be deterministic and can depend on how it fulfills a condition.
-		// (e.g. if multiple people can fulfill by means of signing,
-		//       than the returned unlock hash might depend upon who signed it)
-		UnlockHash() UnlockHash
 
 		// Equal returns if the given unlock fulfillment
 		// equals the called unlock fulfillment.
@@ -230,9 +222,23 @@ const (
 	// which locks another condition with a timestamp.
 	// The internal condition has to be one of: [
 	// NilCondition,
-	// UnlockHashCondition(0x01 unlock hash type is the only standard one at the moment, others are always fulfilled),
+	// UnlockHashCondition (0x01 unlock hash type is the only standard one at the moment, others aren't allowed),
+	// MultiSignatureCondition,
 	// ]
 	ConditionTypeTimeLock
+
+	// ConditionTypeMultiSignature defines an unlock condition which
+	// can only be unlocked by mutliple signatures. The
+	// accepted signatures are declared up front by
+	// specifying the unlockhash created from the public key
+	// which matches the private key that will be used for signing,
+	// for every person who is allowed to sign. Additionally, a minimum
+	// required amount of signatures must be specified, which is the minimum
+	// amount of signatures required to spend the output. More signatures
+	// can be given, but these additional signatures are not required.
+	//
+	// Implemented by the MultiSignatureCondition type
+	ConditionTypeMultiSignature
 )
 
 // The following enumeration defines the different possible and standard
@@ -268,12 +274,13 @@ const (
 	//
 	// Implemented by the AtomicSwapFulfillment.
 	FulfillmentTypeAtomicSwap
-
-	// FulfillmentTypeTimeLock defines an unlock fulfillment
-	// which can be unlocked if the timestamp has been reached
-	// as well as the internal condition of the parent output's condition
-	// has been fulfilled.
-	FulfillmentTypeTimeLock
+	// FulfillmentTypeMultiSignature defines the multisig fulfillment, and is defined by a
+	// slice of public keys, and a slice of transaction-based signatures generated from
+	// the matching private keys. The index of the signature is the same as the corresponding
+	// public key
+	//
+	// Implemented by the MultiSignatureFulfillment type
+	FulfillmentTypeMultiSignature
 )
 
 // Constants that are used as part of AtomicSwap Conditions/Fulfillments.
@@ -319,6 +326,20 @@ var (
 	//
 	// NOTE That verification of unknown signing algorithm types does always succeed!
 	ErrUnknownSignAlgorithmType = errors.New("unknown signature algorithm type")
+
+	// ErrInsufficientSignatures is an error returned when a multisig
+	// condition is attempted to be fulfilled, but the fulfillment does not
+	// (yet) have the required amount of signatures
+	ErrInsufficientSignatures = errors.New("not enough signatures")
+
+	// ErrUnauthorizedPubKey is an error returned when a public key used in a multisig
+	// fulfillment is not allowed to unlock the input (as the associated pubkey hash is not
+	// listed in the conditions unlockhashes)
+	ErrUnauthorizedPubKey = errors.New("public key used which is not allowed to sign this input")
+
+	// ErrPrematureRefund is an error returned when a refund is requested for a contract,
+	// while the contract is still active, and thus not yet expired.
+	ErrPrematureRefund = errors.New("contract cannot yet be refunded")
 )
 
 // RegisterUnlockConditionType is used to register a condition type, by linking it to
@@ -364,10 +385,11 @@ var (
 	// Manipulated by the RegisterUnlockConditionType function,
 	// and used by the UnlockConditionProxy.
 	_RegisteredUnlockConditionTypes = map[ConditionType]MarshalableUnlockConditionConstructor{
-		ConditionTypeNil:        func() MarshalableUnlockCondition { return &NilCondition{} },
-		ConditionTypeUnlockHash: func() MarshalableUnlockCondition { return &UnlockHashCondition{} },
-		ConditionTypeAtomicSwap: func() MarshalableUnlockCondition { return &AtomicSwapCondition{} },
-		ConditionTypeTimeLock:   func() MarshalableUnlockCondition { return &TimeLockCondition{} },
+		ConditionTypeNil:            func() MarshalableUnlockCondition { return &NilCondition{} },
+		ConditionTypeUnlockHash:     func() MarshalableUnlockCondition { return &UnlockHashCondition{} },
+		ConditionTypeAtomicSwap:     func() MarshalableUnlockCondition { return &AtomicSwapCondition{} },
+		ConditionTypeTimeLock:       func() MarshalableUnlockCondition { return &TimeLockCondition{} },
+		ConditionTypeMultiSignature: func() MarshalableUnlockCondition { return &MultiSignatureCondition{} },
 	}
 	// Manipulated by the RegisterUnlockFulfillmentType function,
 	// and used by the UnlockFulfillmentProxy.
@@ -375,7 +397,7 @@ var (
 		FulfillmentTypeNil:             func() MarshalableUnlockFulfillment { return &NilFulfillment{} },
 		FulfillmentTypeSingleSignature: func() MarshalableUnlockFulfillment { return &SingleSignatureFulfillment{} },
 		FulfillmentTypeAtomicSwap:      func() MarshalableUnlockFulfillment { return &anyAtomicSwapFulfillment{} },
-		FulfillmentTypeTimeLock:        func() MarshalableUnlockFulfillment { return &TimeLockFulfillment{} },
+		FulfillmentTypeMultiSignature:  func() MarshalableUnlockFulfillment { return &MultiSignatureFulfillment{} },
 	}
 )
 
@@ -458,14 +480,30 @@ type (
 		Condition MarshalableUnlockCondition
 	}
 
-	// TimeLockFulfillment defines an unlock fulfillment which implicitly
-	// ensures the lock time are reached as part of the fulfillment,
-	// together with the layered fulfillment logic handled by the internal fulfillment.
-	TimeLockFulfillment struct {
-		// Fulfillment which will be used to fulfill the internal condition
-		// defined as part of the TimeLockCondition,
-		// but only if the LockTime as defined by that TimeLockCondition has been reached.
-		Fulfillment MarshalableUnlockFulfillment
+	// MultiSignatureCondition implements the ConditionTypeMultiSignature ConditionType.
+	// See ConditionTypeMultiSignature for more information.
+	MultiSignatureCondition struct {
+		UnlockHashes          UnlockHashSlice `json:"unlockhashes"`
+		MinimumSignatureCount uint64          `json:"minimumsignaturecount"`
+	}
+
+	// MultiSignatureFulfillment implements the FulfillmentTypeMultiSignature FulfillmentType.
+	// See FulfillmentTypeMultiSignature for more information.
+	MultiSignatureFulfillment struct {
+		Pairs []PublicKeySignaturePair `json:"pairs"`
+	}
+
+	// PublicKeySignaturePair is a public key and a signature created from the corresponding
+	// private key
+	PublicKeySignaturePair struct {
+		PublicKey SiaPublicKey `json:"publickey"`
+		Signature ByteSlice    `json:"signature"`
+	}
+
+	// KeyPair is a matching public and private key
+	KeyPair struct {
+		PublicKey  SiaPublicKey
+		PrivateKey ByteSlice
 	}
 )
 
@@ -480,7 +518,11 @@ type (
 	// anyAtomicSwapFulfillment is used to be able to unmarshal an atomic swap fulfillment,
 	// no matter if it's in the legacy format or in the original format.
 	anyAtomicSwapFulfillment struct {
+		atomicSwapFulfillment
+	}
+	atomicSwapFulfillment interface {
 		MarshalableUnlockFulfillment
+		AtomicSwapSecret() AtomicSwapSecret
 	}
 )
 
@@ -537,9 +579,6 @@ func (n *NilCondition) Unmarshal(b []byte) error { return nil } // nothing to un
 // Sign implements UnlockFulfillment.Sign
 func (n *NilFulfillment) Sign(FulfillmentSignContext) error { return ErrNilFulfillmentType }
 
-// UnlockHash implements UnlockFulfillment.UnlockHash
-func (n *NilFulfillment) UnlockHash() UnlockHash { return NilUnlockHash }
-
 // Equal implements UnlockFulfillment.Equal
 func (n *NilFulfillment) Equal(f UnlockFulfillment) bool {
 	if f == nil {
@@ -581,7 +620,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			return ErrUnexpectedUnlockType
 		}
 
-		euh := tf.UnlockHash()
+		euh := NewPubKeyUnlockHash(tf.PublicKey)
 		if euh != uh.TargetUnlockHash {
 			return errors.New("single signature fulfillment provides wrong public key")
 		}
@@ -595,7 +634,9 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		}
 
 		// ensure the condition equals the ours
-		ourHS := tf.UnlockHash()
+		ourHS := NewUnlockHash(UnlockTypeAtomicSwap,
+			crypto.HashObject(encoding.MarshalAll(
+				tf.Sender, tf.Receiver, tf.HashedSecret, tf.TimeLock)))
 		if ourHS.Cmp(uh.TargetUnlockHash) != 0 {
 			return errors.New("produced unlock hash doesn't equal the expected unlock hash")
 		}
@@ -638,6 +679,9 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		return verifyHashUsingSiaPublicKey(
 			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
 			tf.PublicKey)
+
+	case *anyAtomicSwapFulfillment:
+		return uh.Fulfill(tf.atomicSwapFulfillment, ctx)
 
 	default:
 		return ErrUnexpectedUnlockFulfillment
@@ -703,11 +747,6 @@ func (ss *SingleSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err erro
 	return
 }
 
-// UnlockHash implements UnlockFulfillment.UnlockHash
-func (ss *SingleSignatureFulfillment) UnlockHash() UnlockHash {
-	return NewPubKeyUnlockHash(ss.PublicKey)
-}
-
 // FulfillmentType implements UnlockFulfillment.FulfillmentType
 func (ss *SingleSignatureFulfillment) FulfillmentType() FulfillmentType {
 	return FulfillmentTypeSingleSignature
@@ -747,24 +786,22 @@ func (ss *SingleSignatureFulfillment) Unmarshal(b []byte) error {
 func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
 	switch tf := fulfillment.(type) {
 	case *AtomicSwapFulfillment:
+		// An atomic swap c ontract can only be fulfilled in 1 of 2 ways:
+		//  1) By revealing the preimage (secret) for the secret hash /and/
+		//     a valid signature for the participator's address is provided
+		//  2) Once the timelock expires /and/
+		//     a valid signature for the initiator's address is provided.
+
 		// create the unlockHash for the given public Ke
 		unlockHash := NewUnlockHash(UnlockTypePubKey,
 			crypto.HashObject(encoding.Marshal(tf.PublicKey)))
-		// prior to our timelock, only the receiver can claim the unspend output
-		if ctx.BlockTime <= as.TimeLock {
-			// verify that receiver public key was given
+
+		// if secret is given, we'll assume that the participator (receiver) wants to claim
+		if tf.Secret != (AtomicSwapSecret{}) {
+			// verify that receiver's (participator) public key was given
 			if unlockHash.Cmp(as.Receiver) != 0 {
 				return ErrInvalidRedeemer
 			}
-
-			// verify signature
-			err := verifyHashUsingSiaPublicKey(
-				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
-				tf.PublicKey, tf.Secret)
-			if err != nil {
-				return err
-			}
-
 			// in order for the receiver to spend,
 			// the secret has to be known
 			hashedSecret := NewAtomicSwapHashedSecret(tf.Secret)
@@ -772,16 +809,24 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 				return ErrInvalidPreImageSha256
 			}
 
-			return nil
+			// verify signature
+			return verifyHashUsingSiaPublicKey(
+				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
+				tf.PublicKey, tf.Secret)
 		}
 
-		// verify that sender public key was given
+		// if no secret is given, we'll assume that the initiator wants to refund,
+		// in which case we'll want to make sure the contract has expired,
+		// otherwise a refund is not (yet) possible
+		if ctx.BlockTime <= as.TimeLock {
+			return ErrPrematureRefund
+		}
+
+		// verify the given unlockhash is indeed the one of the inititiator (sender)
 		if unlockHash.Cmp(as.Sender) != 0 {
 			return ErrInvalidRedeemer
 		}
-
-		// after the deadline (timelock),
-		// only the original sender can reclaim the unspend output
+		// verify the signature is indeed done by
 		return verifyHashUsingSiaPublicKey(
 			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
 			tf.PublicKey)
@@ -809,6 +854,9 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			Signature: tf.Signature,
 			Secret:    tf.Secret,
 		}, ctx)
+
+	case *anyAtomicSwapFulfillment:
+		return as.Fulfill(tf.atomicSwapFulfillment, ctx)
 
 	default:
 		return ErrUnexpectedUnlockFulfillment
@@ -921,12 +969,6 @@ func (as *AtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 	return err
 }
 
-// UnlockHash implements UnlockFulfillment.UnlockHash
-func (as *AtomicSwapFulfillment) UnlockHash() UnlockHash {
-	return NewUnlockHash(UnlockTypeAtomicSwap,
-		crypto.HashObject(encoding.Marshal(as.PublicKey)))
-}
-
 // FulfillmentType implements UnlockFulfillment.FulfillmentType
 func (as *AtomicSwapFulfillment) FulfillmentType() FulfillmentType { return FulfillmentTypeAtomicSwap }
 
@@ -988,16 +1030,6 @@ func (as *LegacyAtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 		as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
 		as.PublicKey)
 	return err
-}
-
-// UnlockHash implements UnlockFulfillment.UnlockHash
-func (as *LegacyAtomicSwapFulfillment) UnlockHash() UnlockHash {
-	return NewUnlockHash(UnlockTypeAtomicSwap, crypto.HashObject(encoding.MarshalAll(
-		as.Sender,
-		as.Receiver,
-		as.HashedSecret,
-		as.TimeLock,
-	)))
 }
 
 // FulfillmentType implements UnlockFulfillment.FulfillmentType
@@ -1072,11 +1104,13 @@ var (
 	_ MarshalableUnlockCondition = (*NilCondition)(nil)
 	_ MarshalableUnlockCondition = (*UnlockHashCondition)(nil)
 	_ MarshalableUnlockCondition = (*AtomicSwapCondition)(nil)
+	_ MarshalableUnlockCondition = (*MultiSignatureCondition)(nil)
 
 	_ MarshalableUnlockFulfillment = (*NilFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*SingleSignatureFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*AtomicSwapFulfillment)(nil)
 	_ MarshalableUnlockFulfillment = (*LegacyAtomicSwapFulfillment)(nil)
+	_ MarshalableUnlockFulfillment = (*MultiSignatureFulfillment)(nil)
 )
 
 // NewAtomicSwapHashedSecret creates a new atomic swap hashed secret,
@@ -1176,14 +1210,14 @@ func (as *anyAtomicSwapFulfillment) Unmarshal(b []byte) error {
 	// be positive, first try the new format
 	err := encoding.Unmarshal(b, asf)
 	if err == nil {
-		as.MarshalableUnlockFulfillment = asf
+		as.atomicSwapFulfillment = asf
 		return nil
 	}
 
 	// didn't work out, let's try the legacy atomic swap fulfillment
 	lasf := new(LegacyAtomicSwapFulfillment)
 	err = encoding.Unmarshal(b, lasf)
-	as.MarshalableUnlockFulfillment = lasf
+	as.atomicSwapFulfillment = lasf
 	return err
 }
 
@@ -1194,7 +1228,7 @@ func (as *anyAtomicSwapFulfillment) Unmarshal(b []byte) error {
 // rather than as part of this in-memory structure,
 // as it is not supposed to be visible from an encoded perspective.
 func (as *anyAtomicSwapFulfillment) MarshalJSON() ([]byte, error) {
-	return json.Marshal(as.MarshalableUnlockFulfillment)
+	return json.Marshal(as.atomicSwapFulfillment)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.UnmarshalJSON
@@ -1225,9 +1259,9 @@ func (as *anyAtomicSwapFulfillment) UnmarshalJSON(b []byte) error {
 	}
 	switch undefOptArgCount {
 	case 0:
-		as.MarshalableUnlockFulfillment = lasf
+		as.atomicSwapFulfillment = lasf
 	case 4:
-		as.MarshalableUnlockFulfillment = &AtomicSwapFulfillment{
+		as.atomicSwapFulfillment = &AtomicSwapFulfillment{
 			PublicKey: lasf.PublicKey,
 			Signature: lasf.Signature,
 			Secret:    lasf.Secret,
@@ -1261,15 +1295,17 @@ func NewTimeLockCondition(lockTime uint64, condition MarshalableUnlockCondition)
 //
 // The TimeLockFulfillment can only be used to fulfill a TimeLockCondition.
 func (tl *TimeLockCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
-	switch tf := fulfillment.(type) {
-	case *TimeLockFulfillment:
-		if !tl.Fulfillable(FulfillableContext{BlockHeight: ctx.BlockHeight, BlockTime: ctx.BlockTime}) {
-			return errors.New("time lock has not yet been reached")
-		}
-		// time lock hash been reached,
-		// delegate the rest of the fulfillment to the internally layered logic
-		return tl.Condition.Fulfill(tf.Fulfillment, ctx)
+	if !tl.Fulfillable(FulfillableContext{BlockHeight: ctx.BlockHeight, BlockTime: ctx.BlockTime}) {
+		return errors.New("time lock has not yet been reached")
+	}
 
+	// time lock hash been reached,
+	// delegate the actual fulfillment to the given fulfillment, if supported
+	switch tf := fulfillment.(type) {
+	case *SingleSignatureFulfillment:
+		return tl.Condition.Fulfill(tf, ctx)
+	case *MultiSignatureFulfillment:
+		return tl.Condition.Fulfill(tf, ctx)
 	default:
 		return ErrUnexpectedUnlockFulfillment
 	}
@@ -1292,6 +1328,8 @@ func (tl *TimeLockCondition) IsStandardCondition() error {
 			return errors.New("nil crypto hash cannot be used as unlock hash")
 		}
 		return nil
+	case *MultiSignatureCondition:
+		return tc.IsStandardCondition()
 	case *NilCondition:
 		return nil
 	default:
@@ -1391,133 +1429,260 @@ func (tl *TimeLockCondition) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// NewTimeLockFulfillment creates a new TimeLockFulfillment.
-// If no MarshalableUnlockFulfillment is given, the NilFulfillment is assumed.
-// NOTE That the NilFulfillment is not standard and cannot ever be used,
-// so that makes the returned TimeLockFulfillment essentially useless.
-func NewTimeLockFulfillment(fulfillment MarshalableUnlockFulfillment) *TimeLockFulfillment {
-	if fulfillment == nil {
-		if build.DEBUG {
-			panic("nil fulfillment is not standard and shouldn't be used as the timelock's internal fulfillment")
+// NewMultiSignatureCondition creates a new multisig unlock condition,
+// using the given unlockhashes as a representation of the identities
+// who can unlock the output
+func NewMultiSignatureCondition(uhs UnlockHashSlice, minsigs uint64) *MultiSignatureCondition {
+	if build.DEBUG && minsigs == 0 {
+		panic("MultiSig outputs must require at least a single signature to unlock")
+	}
+	if build.DEBUG && len(uhs) == 0 {
+		panic("MultiSig outputs must specify at least a single address which can sign it as an input")
+	}
+	if build.DEBUG && uint64(len(uhs)) < minsigs {
+		panic("You can't create a multisig which requires more signatures to spent then there are addresses which can sign")
+	}
+	if build.DEBUG {
+		for _, uh := range uhs {
+			if uh.Type != UnlockTypePubKey {
+				panic("Unlock hashes used in multisig condition must have the UnlockTypePubKey type")
+			}
 		}
-		fulfillment = &NilFulfillment{}
+
 	}
-	return &TimeLockFulfillment{
-		Fulfillment: fulfillment,
-	}
+	return &MultiSignatureCondition{UnlockHashes: uhs, MinimumSignatureCount: minsigs}
 }
 
-// Sign implements UnlockFulfillment.Sign
-func (tl *TimeLockFulfillment) Sign(ctx FulfillmentSignContext) error {
-	return tl.Fulfillment.Sign(ctx)
+// Fulfill implements UnlockFulfillment.Fulfill
+func (ms *MultiSignatureCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	tf, ok := fulfillment.(*MultiSignatureFulfillment)
+	if !ok {
+		return ErrUnexpectedUnlockFulfillment
+	}
+
+	// Check if enough signatures have been provided
+	if ms.MinimumSignatureCount > uint64(len(tf.Pairs)) {
+		return ErrInsufficientSignatures
+	}
+
+	// Check if all the unlock keypairs have an associated unlock hash
+	uhs := make(UnlockHashSlice, len(ms.UnlockHashes))
+	copy(uhs, ms.UnlockHashes)
+
+	for _, kp := range tf.Pairs {
+		uh := NewPubKeyUnlockHash(kp.PublicKey)
+		for i, ouh := range uhs {
+			if ouh.Cmp(uh) == 0 {
+				uhs = append(uhs[:i], uhs[i+1:]...)
+				break
+			}
+		}
+	}
+	if len(uhs)+len(tf.Pairs) != len(ms.UnlockHashes) {
+		return ErrUnauthorizedPubKey
+	}
+
+	// Finally verify all the signatures
+	for _, pks := range tf.Pairs {
+		if err := verifyHashUsingSiaPublicKey(
+			pks.PublicKey, ctx.InputIndex, ctx.Transaction, pks.Signature, pks.PublicKey,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-// UnlockHash implements UnlockFulfillment.UnlockHash
-func (tl *TimeLockFulfillment) UnlockHash() UnlockHash {
-	return tl.Fulfillment.UnlockHash()
+// ConditionType implements UnlockCondition.ConditionType
+func (ms *MultiSignatureCondition) ConditionType() ConditionType { return ConditionTypeMultiSignature }
+
+// IsStandardCondition implements UnlockCondition.IsStandardCondition
+func (ms *MultiSignatureCondition) IsStandardCondition() error {
+	if ms.MinimumSignatureCount == 0 {
+		return errors.New("A minimum amount of required signatures must be specified")
+	}
+	if len(ms.UnlockHashes) < 2 {
+		return errors.New("At least two unlockhashes must be provided which identifies to possible signatories")
+	}
+	if ms.MinimumSignatureCount > uint64(len(ms.UnlockHashes)) {
+		return errors.New("The minimum amount of signatures can't be higher than the amount of unlockhashes")
+	}
+	for idx, uh := range ms.UnlockHashes {
+		if uh.Type != UnlockTypePubKey {
+			return fmt.Errorf("unsupported unlock hash #%d type: %d", idx, uh.Type)
+		}
+	}
+	return nil
+}
+
+// UnlockHash implements UnlockCondition.UnlockHash
+//
+// UnlockHash calculates the root hash of a Merkle tree of the
+// MultiSignatureCondition object. The leaves of this tree are formed by taking the
+// hash of the length of unlock hashes, the hash of the sorted unlock hashes (one leaf each), and the
+// hash of the number of minimum signatures required. The unlock hashes are put in the middle because
+// unlockhash length and MinimumSignatureCount are both low entropy fields; they can be
+// protected by having random unlock hashes next to them.
+func (ms *MultiSignatureCondition) UnlockHash() UnlockHash {
+	// Copy the unlockhashes to a new slice and sort it,
+	// so the same unlockhash is produced for the same set
+	// of unlockhashes, regardless of their ordering
+	uhs := make(UnlockHashSlice, len(ms.UnlockHashes))
+	copy(uhs, ms.UnlockHashes)
+	sort.Sort(uhs)
+
+	// compute the hash
+	var buf bytes.Buffer
+	e := encoder(&buf)
+	tree := crypto.NewTree()
+	e.WriteUint64(uint64(len(uhs)))
+	tree.Push(buf.Bytes())
+	buf.Reset()
+	for _, uh := range uhs {
+		uh.MarshalSia(e)
+		tree.Push(buf.Bytes())
+		buf.Reset()
+	}
+	e.WriteUint64(ms.MinimumSignatureCount)
+	tree.Push(buf.Bytes())
+	return NewUnlockHash(UnlockTypeMultiSig, tree.Root())
+}
+
+// Equal implements UnlockCondition.Equal
+func (ms *MultiSignatureCondition) Equal(c UnlockCondition) bool {
+	oms, ok := c.(*MultiSignatureCondition)
+	if !ok {
+		// Different type
+		return false
+	}
+	if ms.MinimumSignatureCount != oms.MinimumSignatureCount {
+		// Different amount of signatures required
+		return false
+	}
+
+	if len(ms.UnlockHashes) != len(oms.UnlockHashes) {
+		// Differrent amount of unlockhashes
+		return false
+	}
+
+	// Check and make sure that all addresses match,
+	// regardless of the ordering. Also make sure we check
+	// for duplicate addresses
+	omsC := make(UnlockHashSlice, len(oms.UnlockHashes))
+	copy(omsC, oms.UnlockHashes)
+	for _, uh := range ms.UnlockHashes {
+		for i, ouh := range omsC {
+			if uh.Cmp(ouh) == 0 {
+				omsC = append(omsC[:i], omsC[i+1:]...)
+				break
+			}
+		}
+	}
+
+	return len(omsC) == 0
+}
+
+// Fulfillable implements UnlockCondition.Fulfillable
+func (ms *MultiSignatureCondition) Fulfillable(ctx FulfillableContext) bool {
+	return true
+}
+
+// Marshal implements MarshalableUnlockCondition.Marshal
+func (ms *MultiSignatureCondition) Marshal() []byte {
+	return encoding.MarshalAll(ms.MinimumSignatureCount, ms.UnlockHashes)
+}
+
+// Unmarshal implements MarshalableUnlockCondition.Unmarshal
+func (ms *MultiSignatureCondition) Unmarshal(b []byte) error {
+	return encoding.UnmarshalAll(b, &ms.MinimumSignatureCount, &ms.UnlockHashes)
+}
+
+// NewMultiSignatureFulfillment creates a new unsigned multisig fulfillment from
+// the given public keys. The keys are later matched to the private keys used
+// for signing
+func NewMultiSignatureFulfillment(pairs []PublicKeySignaturePair) *MultiSignatureFulfillment {
+	return &MultiSignatureFulfillment{
+		Pairs: pairs,
+	}
 }
 
 // FulfillmentType implements UnlockFulfillment.FulfillmentType
-func (tl *TimeLockFulfillment) FulfillmentType() FulfillmentType { return FulfillmentTypeTimeLock }
+func (ms *MultiSignatureFulfillment) FulfillmentType() FulfillmentType {
+	return FulfillmentTypeMultiSignature
+}
 
 // IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (tl *TimeLockFulfillment) IsStandardFulfillment() error {
-	switch tc := tl.Fulfillment.(type) {
-	case *SingleSignatureFulfillment:
-		return tc.IsStandardFulfillment()
-	default:
-		return errors.New("unexpected internal unlock fulfillment used as part of time lock fulfillment")
+func (ms *MultiSignatureFulfillment) IsStandardFulfillment() error {
+	if len(ms.Pairs) == 0 {
+		return errors.New("At least one pair must be provided")
 	}
+	var err error
+	for _, pair := range ms.Pairs {
+		err = strictSignatureCheck(pair.PublicKey, pair.Signature)
+		if err != nil {
+			break
+		}
+	}
+	return err
 }
 
 // Equal implements UnlockFulfillment.Equal
-func (tl *TimeLockFulfillment) Equal(f UnlockFulfillment) bool {
-	otl, ok := f.(*TimeLockFulfillment)
+func (ms *MultiSignatureFulfillment) Equal(f UnlockFulfillment) bool {
+	oms, ok := f.(*MultiSignatureFulfillment)
 	if !ok {
 		return false
 	}
-	return tl.Fulfillment.Equal(otl.Fulfillment)
+
+	if len(ms.Pairs) != len(oms.Pairs) {
+		return false
+	}
+
+	// Check that all key/signature pairs are the same, though
+	// the order does not matter
+	omsC := make([]PublicKeySignaturePair, len(oms.Pairs))
+	copy(omsC, oms.Pairs)
+
+	for _, pair := range ms.Pairs {
+		for i, op := range omsC {
+			if pair.PublicKey.Algorithm == op.PublicKey.Algorithm &&
+				bytes.Compare(pair.PublicKey.Key[:], op.PublicKey.Key[:]) == 0 &&
+				bytes.Compare(pair.Signature[:], op.Signature[:]) == 0 {
+				omsC = append(omsC[:i], omsC[i+1:]...)
+				break
+			}
+		}
+	}
+	return len(omsC) == 0
+}
+
+// Sign implements UnlockFulfillment.Sign
+func (ms *MultiSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err error) {
+	keypair, ok := ctx.Key.(KeyPair)
+	if !ok {
+		return errors.New("Invalid keypair to sign this input")
+	}
+
+	signature, err := signHashUsingSiaPublicKey(
+		keypair.PublicKey, ctx.InputIndex, ctx.Transaction, keypair.PrivateKey, keypair.PublicKey,
+	)
+	if err != nil {
+		return
+	}
+
+	// Only modify the fulfillment in case the signature was created succesfully
+	ms.Pairs = append(ms.Pairs, PublicKeySignaturePair{PublicKey: keypair.PublicKey, Signature: signature})
+	return
 }
 
 // Marshal implements MarshalableUnlockFulfillment.Marshal
-func (tl *TimeLockFulfillment) Marshal() []byte {
-	return append(
-		encoding.Marshal(tl.Fulfillment.FulfillmentType()),
-		tl.Fulfillment.Marshal()...)
+func (ms *MultiSignatureFulfillment) Marshal() []byte {
+	return encoding.Marshal(ms.Pairs)
 }
 
 // Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
-func (tl *TimeLockFulfillment) Unmarshal(b []byte) error {
-	if len(b) == 0 {
-		// at least 1 byte is required (fulfillment type)
-		// as to enforce we can decode the time lock fulfillment's properties,
-		// whether or not the internal fulfillment requires bytes is of no concern of us.
-		return io.ErrUnexpectedEOF
-	}
-	// interpret the fulfillment type, and continue decoding based on that,
-	// by getting the correct constructor from the registration mapping
-	ft := FulfillmentType(b[0])
-	fc, ok := _RegisteredUnlockFulfillmentTypes[ft]
-	if !ok {
-		return ErrUnknownFulfillmentType
-	}
-	// known fulfillment type, create and decode it
-	tl.Fulfillment = fc()
-	return tl.Fulfillment.Unmarshal(b[1:])
-}
-
-type jsonTimeLockFulfillment struct {
-	Type        FulfillmentType `json:"type"`
-	Fulfillment json.RawMessage `json:"fulfillment,omitempty"`
-}
-
-type jsonTimeLockFulfillmentWithNilFulfillment struct {
-	Type FulfillmentType `json:"type"`
-}
-
-// MarshalJSON implements json.Marshaler.MarshalJSON
-//
-// This function is required, as to ensure
-// the fulfillment is encoded as if it was an unlock fulfillment proxy itself.
-func (tl *TimeLockFulfillment) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(tl.Fulfillment)
-	if err != nil {
-		return nil, err
-	}
-	if string(data) == "{}" {
-		return json.Marshal(jsonTimeLockFulfillmentWithNilFulfillment{
-			Type: tl.Fulfillment.FulfillmentType(),
-		})
-	}
-	return json.Marshal(jsonTimeLockFulfillment{
-		Type:        tl.Fulfillment.FulfillmentType(),
-		Fulfillment: data,
-	})
-}
-
-// UnmarshalJSON implements json.Unmarshaler.UnmarshalJSON
-//
-// This function is required, as to ensure
-// the fulfillment is decoded as if it was an unlock fulfillment proxy itself.
-func (tl *TimeLockFulfillment) UnmarshalJSON(b []byte) error {
-	var rf jsonTimeLockFulfillment
-	err := json.Unmarshal(b, &rf)
-	if err != nil {
-		return err
-	}
-	fc, ok := _RegisteredUnlockFulfillmentTypes[rf.Type]
-	if !ok {
-		return ErrUnknownFulfillmentType
-	}
-	f := fc()
-	if rf.Fulfillment != nil {
-		err = json.Unmarshal(rf.Fulfillment, &f)
-	}
-	if f == nil {
-		f = &NilFulfillment{}
-	}
-	tl.Fulfillment = f
-	return err
+func (ms *MultiSignatureFulfillment) Unmarshal(b []byte) error {
+	return encoding.Unmarshal(b, &ms.Pairs)
 }
 
 // MarshalSia implements encoding.SiaMarshaler.MarshalSia
@@ -1645,18 +1810,6 @@ func (fp UnlockFulfillmentProxy) Sign(ctx FulfillmentSignContext) error {
 		fulfillment = &NilFulfillment{}
 	}
 	return fulfillment.Sign(ctx)
-}
-
-// UnlockHash implements UnlockFulfillment.UnlockHash
-//
-// If no child is defined, the Nil UnlockHash will be returned,
-// otherwise the child fulfillment's unlock hash will be returned.
-func (fp UnlockFulfillmentProxy) UnlockHash() UnlockHash {
-	fulfillment := fp.Fulfillment
-	if fulfillment == nil {
-		fulfillment = &NilFulfillment{}
-	}
-	return fulfillment.UnlockHash()
 }
 
 // FulfillmentType implements UnlockFulfillment.FulfillmentType
@@ -2016,4 +2169,26 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 		err = ErrUnknownSignAlgorithmType
 	}
 	return
+}
+
+// ComputeLegacyFulfillmentUnlockHash computes unlock hashes as they used to be computed,
+// back when fulfillments had an unlock hash function
+func ComputeLegacyFulfillmentUnlockHash(ff UnlockFulfillment) UnlockHash {
+	switch tf := ff.(type) {
+	case *SingleSignatureFulfillment:
+		return NewPubKeyUnlockHash(tf.PublicKey)
+	case *LegacyAtomicSwapFulfillment:
+		return NewUnlockHash(UnlockTypeAtomicSwap,
+			crypto.HashObject(encoding.MarshalAll(
+				tf.Sender, tf.Receiver, tf.HashedSecret, tf.TimeLock)))
+	case *AtomicSwapFulfillment:
+		return NewUnlockHash(UnlockTypeAtomicSwap,
+			crypto.HashObject(encoding.Marshal(tf.PublicKey)))
+	case *MultiSignatureFulfillment:
+		return UnlockHash{Type: UnlockTypeMultiSig, Hash: crypto.HashObject(tf.Pairs)}
+	case *anyAtomicSwapFulfillment:
+		return ComputeLegacyFulfillmentUnlockHash(tf.atomicSwapFulfillment)
+	default: // unlock fulfillment and unknown fulfillments
+		return NilUnlockHash
+	}
 }

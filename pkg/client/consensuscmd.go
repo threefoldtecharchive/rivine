@@ -1,12 +1,15 @@
 package client
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/pkg/cli"
 	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
 )
@@ -20,10 +23,16 @@ var (
 	}
 
 	consensusTransactionCmd = &cobra.Command{
-		Use:   "transaction <shortID>",
+		Use:   "transaction <shortID>|<longID>",
 		Short: "Get an existing transaction",
-		Long:  "Get an existing transaction from the blockchain, using its given shortID.",
+		Long:  "Get an existing transaction from the blockchain, using its given shortID or longID.",
 		Run:   Wrap(consensustransactioncmd),
+	}
+)
+
+var (
+	consensusTransactioncfg struct {
+		EncodingType cli.EncodingType
 	}
 )
 
@@ -75,9 +84,30 @@ func consensustransactioncmd(id string) {
 		Die("failed to get transaction:", err, "; ID:", id)
 	}
 
-	encoder := json.NewEncoder(os.Stdout)
-	err = encoder.Encode(txn)
+	var encode func(interface{}) error
+	switch consensusTransactioncfg.EncodingType {
+	case cli.EncodingTypeHuman:
+		e := json.NewEncoder(os.Stdout)
+		e.SetIndent("", "  ")
+		encode = e.Encode
+	case cli.EncodingTypeJSON:
+		encode = json.NewEncoder(os.Stdout).Encode
+	case cli.EncodingTypeHex:
+		encode = func(v interface{}) error {
+			b := encoding.Marshal(v)
+			fmt.Println(hex.EncodeToString(b))
+			return nil
+		}
+	}
+
+	err = encode(txn)
 	if err != nil {
 		Die("failed to encode transaction:", err, "; ID:", id)
 	}
+}
+
+func init() {
+	consensusTransactionCmd.Flags().Var(
+		cli.NewEncodingTypeFlag(0, &consensusTransactioncfg.EncodingType, 0), "encoding",
+		cli.EncodingTypeFlagDescription(0))
 }

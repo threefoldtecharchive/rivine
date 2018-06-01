@@ -75,7 +75,7 @@ func (cs *ConsensusSet) replaceDatabase(filename string) error {
 func (cs *ConsensusSet) openDB(filename string) (err error) {
 	cs.db, err = persist.OpenDatabase(dbMetadata, filename)
 	if err == persist.ErrBadVersion {
-		cs.db, err = convertLegacyDatabase(filename)
+		cs.db, err = convertLegacyDatabase(filename, cs.log)
 		if err == persist.ErrBadVersion {
 			return cs.replaceDatabase(filename)
 		}

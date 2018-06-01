@@ -53,6 +53,7 @@ func (e *Explorer) initPersist() error {
 			bucketBlockStakeOutputs,
 			bucketTransactionIDs,
 			bucketUnlockHashes,
+			bucketOutputIDUnlockHashMapping,
 		}
 		for _, b := range buckets {
 			_, err := tx.CreateBucketIfNotExists(b)

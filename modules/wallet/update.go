@@ -13,43 +13,101 @@ import (
 func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 	for _, diff := range cc.CoinOutputDiffs {
 		// Verify that the diff is relevant to the wallet.
-		_, exists := w.keys[diff.CoinOutput.Condition.UnlockHash()]
-		if !exists {
+		if _, exists := w.keys[diff.CoinOutput.Condition.UnlockHash()]; exists {
+
+			_, exists = w.coinOutputs[diff.ID]
+			if diff.Direction == modules.DiffApply {
+				if build.DEBUG && exists {
+					panic("adding an existing output to wallet")
+				}
+				w.coinOutputs[diff.ID] = diff.CoinOutput
+			} else {
+				if build.DEBUG && !exists {
+					panic("deleting nonexisting output from wallet")
+				}
+				delete(w.coinOutputs, diff.ID)
+			}
 			continue
 		}
 
-		_, exists = w.coinOutputs[diff.ID]
-		if diff.Direction == modules.DiffApply {
-			if build.DEBUG && exists {
-				panic("adding an existing output to wallet")
+		// Check if this is a multisig condition
+		// If it is, then check if it contains any of our addresses
+		condition := getMultiSigCondition(diff.CoinOutput.Condition.Condition)
+		if condition == nil {
+			continue
+		}
+		for _, uh := range condition.UnlockHashes {
+			if _, exists := w.keys[uh]; exists {
+				_, exists = w.multiSigCoinOutputs[diff.ID]
+				if diff.Direction == modules.DiffApply {
+					if build.DEBUG && exists {
+						panic("adding an existing multisig output to wallet")
+					}
+					w.multiSigCoinOutputs[diff.ID] = diff.CoinOutput
+				} else {
+					if build.DEBUG && !exists {
+						panic("deleting nonexisting multisig output from wallet")
+					}
+					delete(w.multiSigCoinOutputs, diff.ID)
+				}
+				break
 			}
-			w.coinOutputs[diff.ID] = diff.CoinOutput
-		} else {
-			if build.DEBUG && !exists {
-				panic("deleting nonexisting output from wallet")
-			}
-			delete(w.coinOutputs, diff.ID)
 		}
 	}
+
 	for _, diff := range cc.BlockStakeOutputDiffs {
 		// Verify that the diff is relevant to the wallet.
-		_, exists := w.keys[diff.BlockStakeOutput.Condition.UnlockHash()]
-		if !exists {
+		if _, exists := w.keys[diff.BlockStakeOutput.Condition.UnlockHash()]; exists {
+
+			_, exists = w.blockstakeOutputs[diff.ID]
+			if diff.Direction == modules.DiffApply {
+				if build.DEBUG && exists {
+					panic("adding an existing output to wallet")
+				}
+				w.blockstakeOutputs[diff.ID] = diff.BlockStakeOutput
+			} else {
+				if build.DEBUG && !exists {
+					panic("deleting nonexisting output from wallet")
+				}
+				delete(w.blockstakeOutputs, diff.ID)
+			}
 			continue
 		}
 
-		_, exists = w.blockstakeOutputs[diff.ID]
-		if diff.Direction == modules.DiffApply {
-			if build.DEBUG && exists {
-				panic("adding an existing output to wallet")
-			}
-			w.blockstakeOutputs[diff.ID] = diff.BlockStakeOutput
-		} else {
-			if build.DEBUG && !exists {
-				panic("deleting nonexisting output from wallet")
-			}
-			delete(w.blockstakeOutputs, diff.ID)
+		// Check if this is a multisig condition
+		// If it is, then check if it contains any of our addresses
+		condition := getMultiSigCondition(diff.BlockStakeOutput.Condition.Condition)
+		if condition == nil {
+			continue
 		}
+		for _, uh := range condition.UnlockHashes {
+			if _, exists := w.keys[uh]; exists {
+				_, exists = w.multiSigBlockStakeOutputs[diff.ID]
+				if diff.Direction == modules.DiffApply {
+					if build.DEBUG && exists {
+						panic("adding an existing multisig output to wallet")
+					}
+					w.multiSigBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
+				} else {
+					if build.DEBUG && !exists {
+						panic("deleting nonexisting multisig output from wallet")
+					}
+					delete(w.multiSigBlockStakeOutputs, diff.ID)
+				}
+				break
+			}
+		}
+	}
+}
+
+func getMultiSigCondition(condition types.MarshalableUnlockCondition) *types.MultiSignatureCondition {
+	switch c := condition.(type) {
+	case *types.MultiSignatureCondition:
+		return c
+	case *types.TimeLockCondition:
+		return getMultiSigCondition(c.Condition)
+	default:
+		return nil
 	}
 }
 
@@ -109,7 +167,10 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				RelatedAddress: mp.UnlockHash,
 				Value:          mp.Value,
 			})
-			w.historicOutputs[types.OutputID(block.MinerPayoutID(uint64(i)))] = mp.Value
+			w.historicOutputs[types.OutputID(block.MinerPayoutID(uint64(i)))] = historicOutput{
+				UnlockHash: mp.UnlockHash,
+				Value:      mp.Value,
+			}
 		}
 		if relevant {
 			w.processedTransactions = append(w.processedTransactions, minerPT)
@@ -130,54 +191,86 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 				ConfirmationTimestamp: block.Timestamp,
 			}
 			for _, sci := range txn.CoinInputs {
-				_, exists := w.keys[sci.Fulfillment.UnlockHash()]
+				output := w.historicOutputs[types.OutputID(sci.ParentID)]
+				_, exists := w.keys[output.UnlockHash]
 				if exists {
 					relevant = true
+				} else if _, exists = w.multiSigCoinOutputs[sci.ParentID]; exists {
+					// Since we know about every multisig output that is still open and releated,
+					// any relevant multisig input must have a parent ID present in the multisig
+					// output map.
+					relevant = true
+					// set "exists" to false since the output is not owned by the wallet.
+					exists = false
 				}
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 					FundType:       types.SpecifierCoinInput,
 					WalletAddress:  exists,
-					RelatedAddress: sci.Fulfillment.UnlockHash(),
-					Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
+					RelatedAddress: output.UnlockHash,
+					Value:          output.Value,
 				})
 			}
 			for i, sco := range txn.CoinOutputs {
 				_, exists := w.keys[sco.Condition.UnlockHash()]
 				if exists {
 					relevant = true
+				} else if _, exists = w.multiSigCoinOutputs[txn.CoinOutputID(uint64(i))]; exists {
+					// If the coin ouput is a relevant multisig output, it's ID will already
+					// be present in the multisigCoinOutputs map
+					relevant = true
+					// set "exists" to false since the output is not owned by the wallet.
+					exists = false
 				}
+				uh := sco.Condition.UnlockHash()
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
 					FundType:       types.SpecifierCoinOutput,
 					MaturityHeight: w.consensusSetHeight,
 					WalletAddress:  exists,
-					RelatedAddress: sco.Condition.UnlockHash(),
+					RelatedAddress: uh,
 					Value:          sco.Value,
 				})
-				w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = sco.Value
+				w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = historicOutput{
+					UnlockHash: uh,
+					Value:      sco.Value,
+				}
 			}
 			for _, sfi := range txn.BlockStakeInputs {
-				_, exists := w.keys[sfi.Fulfillment.UnlockHash()]
+				output := w.historicOutputs[types.OutputID(sfi.ParentID)]
+				_, exists := w.keys[output.UnlockHash]
 				if exists {
 					relevant = true
+				} else if _, exists = w.multiSigBlockStakeOutputs[sfi.ParentID]; exists {
+					// Since we know about every multisig output that is still open and releated,
+					// any relevant multisig input must have a parent ID present in the multisig
+					// output map.
+					relevant = true
+					// set "exists" to false since the output is not owned by the wallet.
+					exists = false
 				}
-				sfiValue := w.historicOutputs[types.OutputID(sfi.ParentID)]
 				pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 					FundType:       types.SpecifierBlockStakeInput,
 					WalletAddress:  exists,
-					RelatedAddress: sfi.Fulfillment.UnlockHash(),
-					Value:          sfiValue,
+					RelatedAddress: output.UnlockHash,
+					Value:          output.Value,
 				})
 			}
 			for i, sfo := range txn.BlockStakeOutputs {
 				_, exists := w.keys[sfo.Condition.UnlockHash()]
 				if exists {
 					relevant = true
+				} else if _, exists = w.multiSigBlockStakeOutputs[txn.BlockStakeOutputID(uint64(i))]; exists {
+					// If the block stake output is a relevant multisig output, it's ID will already
+					// be present in the multisigBlockStakeOutputs map
+					relevant = true
+					// set "exists" to false since the output is not owned by the wallet.
+					exists = false
 				}
+				uh := sfo.Condition.UnlockHash()
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
 					FundType:       types.SpecifierBlockStakeOutput,
 					MaturityHeight: w.consensusSetHeight,
 					WalletAddress:  exists,
-					RelatedAddress: sfo.Condition.UnlockHash(),
+					RelatedAddress: uh,
 					Value:          sfo.Value,
 				})
 				bsoid := txn.BlockStakeOutputID(uint64(i))
@@ -194,7 +287,10 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 						Condition: sfo.Condition,
 					}
 				}
-				w.historicOutputs[types.OutputID(bsoid)] = sfo.Value
+				w.historicOutputs[types.OutputID(bsoid)] = historicOutput{
+					UnlockHash: uh,
+					Value:      sfo.Value,
+				}
 			}
 			for _, fee := range txn.MinerFees {
 				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
@@ -251,30 +347,48 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			ConfirmationTimestamp: types.Timestamp(math.MaxUint64),
 		}
 		for _, sci := range txn.CoinInputs {
-			_, exists := w.keys[sci.Fulfillment.UnlockHash()]
+			output := w.historicOutputs[types.OutputID(sci.ParentID)]
+			_, exists := w.keys[output.UnlockHash]
 			if exists {
 				relevant = true
+			} else if _, exists = w.multiSigCoinOutputs[sci.ParentID]; exists {
+				// Since we know about every multisig output that is still open and releated,
+				// any relevant multisig input must have a parent ID present in the multisig
+				// output map.
+				relevant = true
+				// set "exists" to false since the output is not owned by the wallet.
+				exists = false
 			}
 			pt.Inputs = append(pt.Inputs, modules.ProcessedInput{
 				FundType:       types.SpecifierCoinInput,
 				WalletAddress:  exists,
-				RelatedAddress: sci.Fulfillment.UnlockHash(),
-				Value:          w.historicOutputs[types.OutputID(sci.ParentID)],
+				RelatedAddress: output.UnlockHash,
+				Value:          output.Value,
 			})
 		}
 		for i, sco := range txn.CoinOutputs {
-			_, exists := w.keys[sco.Condition.UnlockHash()]
+			uh := sco.Condition.UnlockHash()
+			_, exists := w.keys[uh]
 			if exists {
 				relevant = true
+			} else if _, exists = w.multiSigCoinOutputs[txn.CoinOutputID(uint64(i))]; exists {
+				// If the coin ouput is a relevant multisig output, it's ID will already
+				// be present in the multisigCoinOutputs map
+				relevant = true
+				// set "exists" to false since the output is not owned by the wallet.
+				exists = false
 			}
 			pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
 				FundType:       types.SpecifierCoinOutput,
 				MaturityHeight: types.BlockHeight(math.MaxUint64),
 				WalletAddress:  exists,
-				RelatedAddress: sco.Condition.UnlockHash(),
+				RelatedAddress: uh,
 				Value:          sco.Value,
 			})
-			w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = sco.Value
+			w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = historicOutput{
+				UnlockHash: uh,
+				Value:      sco.Value,
+			}
 		}
 		for _, fee := range txn.MinerFees {
 			pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{

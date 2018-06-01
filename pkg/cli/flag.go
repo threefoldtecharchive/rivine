@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -65,6 +70,156 @@ func (f *LockTimeFlag) LockTime() uint64 {
 	return f.lockTime
 }
 
+type (
+	// StringLoaderFlag defines a utility type,
+	// allowing any StringLoader to be turned into a pflag-interface compatible type.
+	StringLoaderFlag struct {
+		StringLoader
+	}
+	// StringLoader defines the interface of a type (t),
+	// which can be loaded from a string,
+	// as well as being turned back into a string,
+	// such that `t.LoadString(str) == nil && t.String() == str`.
+	StringLoader interface {
+		LoadString(string) error
+		String() string
+	}
+)
+
+// Set implements pflag.Value.Set,
+// which parses the string using the StringLoader's LoadString method.
+func (s StringLoaderFlag) Set(str string) error {
+	return s.LoadString(str)
+}
+
+// Type implements pflag.Value.Type
+func (s StringLoaderFlag) Type() string {
+	return "StringLoader"
+}
+
+type (
+	// EncodingTypeFlag is a utility flag which can be used to
+	// expose an encoding type as an optionally masked flag.
+	EncodingTypeFlag struct {
+		et   *EncodingType
+		mask EncodingType
+	}
+	// EncodingType defines an enum, to represent all encoding options.
+	EncodingType uint8
+)
+
+const (
+	// EncodingTypeHuman encodes the output in a human-optimized format,
+	// a format which can chance at any point and should be used only
+	// for human readers.
+	EncodingTypeHuman EncodingType = 1 << iota
+	// EncodingTypeJSON encodes the output as a minified JSON string,
+	// and has a format which is promised to be backwards-compatible,
+	// to be used for automation purposes.
+	EncodingTypeJSON
+	// EncodingTypeHex encodes the output using the internal binary encoder,
+	// and encoding that binary output using the std hex encoder,
+	// resulting in a hex-encoded string.
+	EncodingTypeHex
+)
+
+// defaultEncodingTypeMask returns a mask which allows all possible encoding types.
+func defaultEncodingTypeMask() EncodingType {
+	return EncodingTypeHuman | EncodingTypeJSON | EncodingTypeHex
+}
+
+// NewEncodingTypeFlag returns a new EncodingTypeFlag,
+// referencing an encoding type value, defaulting it to a default value,
+// and optionally allowing you to mask
+func NewEncodingTypeFlag(def EncodingType, ref *EncodingType, mask EncodingType) EncodingTypeFlag {
+	if ref == nil {
+		panic("no encoding type reference given")
+	}
+	if def == 0 {
+		// default to human encoding
+		def = EncodingTypeHuman
+	}
+	if mask == 0 { // default to all options
+		mask = defaultEncodingTypeMask()
+	}
+	*ref = def
+	if mask&def == 0 {
+		// sanity check
+		panic(fmt.Sprintf("given default encoding type %d is not covered by given encoding type mask %b", def, mask))
+	}
+	return EncodingTypeFlag{
+		et:   ref,
+		mask: mask,
+	}
+}
+
+// String implements pflag.Value.String,
+// returning the selected enum option as a lower-case string.
+func (e EncodingTypeFlag) String() string {
+	switch *e.et {
+	case EncodingTypeJSON:
+		return "json"
+	case EncodingTypeHex:
+		return "hex"
+	default:
+		return "human"
+	}
+}
+
+// Set implements pflag.Value.Set,
+// only the options as defind by the mask are allowed,
+// and the given string is interpreted in a case insensitive manner.
+func (e EncodingTypeFlag) Set(s string) error {
+	switch strings.ToLower(s) {
+	case "json":
+		if e.mask&EncodingTypeJSON == 0 {
+			return errors.New("this command does not suppport JSON encoding")
+		}
+		*e.et = EncodingTypeJSON
+	case "hex":
+		if e.mask&EncodingTypeHex == 0 {
+			return errors.New("this command does not suppport Binary-Hex encoding")
+		}
+		*e.et = EncodingTypeHex
+	default:
+		if e.mask&EncodingTypeHuman == 0 {
+			return errors.New("this command does not suppport Human-Format encoding")
+		}
+		*e.et = EncodingTypeHuman
+	}
+	return nil
+}
+
+// Type implements pflag.Value.Type
+func (e EncodingTypeFlag) Type() string {
+	return "EncodingType"
+}
+
+// EncodingTypeFlagDescription returns a description for an encoding type flag,
+// optionally given an encoding type mask (0 means all encoding types are allowed).
+func EncodingTypeFlagDescription(mask EncodingType) string {
+	if mask == 0 { // default to all options
+		mask = defaultEncodingTypeMask()
+	}
+
+	var options []string
+	if mask&EncodingTypeJSON != 0 {
+		options = append(options, "json")
+	}
+	if mask&EncodingTypeHex != 0 {
+		options = append(options, "hex")
+	}
+	if mask&EncodingTypeHuman != 0 {
+		options = append(options, "human")
+	}
+	return "enum flag to define how to encode the output, options: " + strings.Join(options, "|")
+}
+
 var computeTimeNow = func() time.Time {
 	return time.Now()
 }
+
+var (
+	_ pflag.Value = (*LockTimeFlag)(nil)
+	_ pflag.Value = StringLoaderFlag{}
+)
