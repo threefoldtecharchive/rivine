@@ -256,6 +256,42 @@ func TestEncodingTypeFlagSet(t *testing.T) {
 	}
 }
 
+func TestInvalidEncodingTypeSetAsFlag(t *testing.T) {
+	// create new encoding type and flag
+	var et EncodingType
+	f := NewEncodingTypeFlag(0, &et, 0) // mask=0: means all is allowed
+
+	// test some invalid options, shoud all fail
+	err := f.Set("42")
+	if err == nil {
+		t.Fatal("setting 42 as a flag was supposed to result in an error, but now et is: ", et)
+	}
+	if et != EncodingTypeHuman {
+		t.Fatal("et was supposed to still be EncodingTypeHuman, but was instead:", et)
+	}
+	err = f.Set("he")
+	if err == nil {
+		t.Fatal("setting he as a flag was supposed to result in an error, but now et is: ", et)
+	}
+	if et != EncodingTypeHuman {
+		t.Fatal("et was supposed to still be EncodingTypeHuman, but was instead:", et)
+	}
+	err = f.Set("yaml")
+	if err == nil {
+		t.Fatal("setting yaml as a flag was supposed to result in an error, but now et is: ", et)
+	}
+	if et != EncodingTypeHuman {
+		t.Fatal("et was supposed to still be EncodingTypeHuman, but was instead:", et)
+	}
+	err = f.Set("jon")
+	if err == nil {
+		t.Fatal("setting jon as a flag was supposed to result in an error, but now et is: ", et)
+	}
+	if et != EncodingTypeHuman {
+		t.Fatal("et was supposed to still be EncodingTypeHuman, but was instead:", et)
+	}
+}
+
 func testPanic(t *testing.T, label string, f func()) {
 	defer func() {
 		e := recover()

@@ -181,11 +181,13 @@ func (e EncodingTypeFlag) Set(s string) error {
 			return errors.New("this command does not suppport Binary-Hex encoding")
 		}
 		*e.et = EncodingTypeHex
-	default:
+	case "human":
 		if e.mask&EncodingTypeHuman == 0 {
 			return errors.New("this command does not suppport Human-Format encoding")
 		}
 		*e.et = EncodingTypeHuman
+	default:
+		return fmt.Errorf("%q is not a valid EncodingType", s)
 	}
 	return nil
 }
