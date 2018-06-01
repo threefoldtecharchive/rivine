@@ -213,16 +213,16 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 		HashedSecret: hash,
 		TimeLock:     types.OffsetTimestamp(atomicSwapInitiatecfg.duration),
 	}
+	if !yesToAll {
+		// print contract for review
+		printContractInfo(hastings, condition, secret)
+		fmt.Println("")
 
-	// print contract for review
-	printContractInfo(hastings, condition, secret)
-	fmt.Println("")
-
-	// ensure user wants to continue with creating the contract as it is (aka publishing it)
-	if !askYesNoQuestion("Publish atomic swap transaction?") {
-		Die("cancelled atomic swap contract")
+		// ensure user wants to continue with creating the contract as it is (aka publishing it)
+		if !askYesNoQuestion("Publish atomic swap transaction?") {
+			Die("cancelled atomic swap contract")
+		}
 	}
-
 	// publish contract
 	body, err := json.Marshal(api.WalletTransactionPOST{
 		Condition: types.NewCondition(&condition),
@@ -589,13 +589,14 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 
 	// step 3: confirm contract details with user, before continuing
 	// print contract for review
-	printContractInfo(unspentCoinOutputResp.Output.Value, *condition, secret)
-	fmt.Println("")
-	// ensure user wants to continue with redeeming the contract!
-	if !askYesNoQuestion("Publish atomic swap " + keyWord + " transaction?") {
-		Die("atomic swap " + keyWord + " transaction cancelled")
+	if !yesToAll {
+		printContractInfo(unspentCoinOutputResp.Output.Value, *condition, secret)
+		fmt.Println("")
+		// ensure user wants to continue with redeeming the contract!
+		if !askYesNoQuestion("Publish atomic swap " + keyWord + " transaction?") {
+			Die("atomic swap " + keyWord + " transaction cancelled")
+		}
 	}
-
 	// step 4: create a transaction
 	txn := types.Transaction{
 		Version: _DefaultTransactionVersion,
