@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -88,7 +89,34 @@ by comparing its hashed version to the secret hash given using the --secrethash 
 	}
 )
 
+type (
+	// AtomicSwapOutputCreation represents the formatted output
+	// of the atomic swap creation commands (initiate and participate).
+	AtomicSwapOutputCreation struct {
+		Coins         types.Currency            `json:"coins"`
+		Contract      types.AtomicSwapCondition `json:"contract"`
+		ContractID    types.UnlockHash          `json:"contractid"`
+		Secret        *types.AtomicSwapSecret   `json:"secret,omitempty"`
+		OutputID      types.CoinOutputID        `json:"outputid"`
+		TransactionID types.TransactionID       `json:"transactionid"`
+	}
+	// AtomicSwapOutputExtractSecret represents the formatted output
+	// of the atomic swap extract secret command
+	AtomicSwapOutputExtractSecret struct {
+		Secret types.AtomicSwapSecret `json:"secret"`
+	}
+	// AtomicSwapOutputSpendContract represents the formatted output
+	// of the atomic swap spend commands (redeem and refund)
+	AtomicSwapOutputSpendContract struct {
+		TransactionID types.TransactionID `json:"transactionid"`
+	}
+)
+
 var (
+	atomicSwapcfg struct {
+		EncodingType cli.EncodingType
+		YesToAll     bool
+	}
 	atomicSwapParticipatecfg struct {
 		duration         time.Duration
 		sourceUnlockHash types.UnlockHash
@@ -113,7 +141,7 @@ func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
 	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
-		Die("failed to parse amount:", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse amount:", err)
 	}
 
 	// parse receiver (=participant) and sender (=initiator)
@@ -122,7 +150,7 @@ func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
 	)
 	err = receiver.LoadString(participantAddress)
 	if err != nil {
-		Die("failed to parse participant address (unlock hash):", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse participant address (unlock hash):", err)
 	}
 	if atomicSwapParticipatecfg.sourceUnlockHash.Type != 0 {
 		// use the hash given by the user explicitly
@@ -139,12 +167,12 @@ func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
 
 	// parse secret hash
 	if hsl := len(hashedSecret); hsl != types.AtomicSwapHashedSecretLen*2 {
-		Die("invalid secret hash length")
+		DieWithExitCode(ExitCodeUsage, "invalid secret hash length")
 	}
 	var hash types.AtomicSwapHashedSecret
 	_, err = hex.Decode(hash[:], []byte(hashedSecret))
 	if err != nil {
-		Die("invalid secret hash:", err)
+		DieWithExitCode(ExitCodeUsage, "invalid secret hash:", err)
 	}
 
 	// create the contract
@@ -156,7 +184,7 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
-		Die("failed to parse amount:", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse amount:", err)
 	}
 
 	// parse receiver (=participant) and sender (=initiator)
@@ -165,7 +193,7 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 	)
 	err = receiver.LoadString(participatorAddress)
 	if err != nil {
-		Die("failed to parse participator address (unlock hash):", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse participator address (unlock hash):", err)
 	}
 	if atomicSwapInitiatecfg.sourceUnlockHash.Type != 0 {
 		// use the hash given by the user explicitly
@@ -187,7 +215,7 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 
 func createAtomicSwapContract(hastings types.Currency, sender, receiver types.UnlockHash, hash types.AtomicSwapHashedSecret, duration time.Duration) {
 	if hastings.Cmp(_MinimumTransactionFee) != 1 {
-		Die("an atomic swap contract has to have a coin value higher than the minimum transaction fee of 1")
+		DieWithExitCode(ExitCodeUsage, "an atomic swap contract has to have a coin value higher than the minimum transaction fee of 1")
 	}
 
 	var (
@@ -204,7 +232,7 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 	}
 
 	if duration == 0 {
-		Die("duration is required and has to be greater than 0")
+		DieWithExitCode(ExitCodeUsage, "duration is required and has to be greater than 0")
 	}
 
 	condition := types.AtomicSwapCondition{
@@ -213,16 +241,14 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 		HashedSecret: hash,
 		TimeLock:     types.OffsetTimestamp(atomicSwapInitiatecfg.duration),
 	}
-
-	// print contract for review
-	printContractInfo(hastings, condition, secret)
-	fmt.Println("")
-
-	// ensure user wants to continue with creating the contract as it is (aka publishing it)
-	if !askYesNoQuestion("Publish atomic swap transaction?") {
-		Die("cancelled atomic swap contract")
+	if !atomicSwapcfg.YesToAll {
+		// print contract for review
+		printContractInfo(os.Stderr, hastings, condition, secret)
+		// ensure user wants to continue with creating the contract as it is (aka publishing it)
+		if !askYesNoQuestion("Publish atomic swap transaction?") {
+			DieWithExitCode(ExitCodeCancelled, "cancelled atomic swap contract")
+		}
 	}
-
 	// publish contract
 	body, err := json.Marshal(api.WalletTransactionPOST{
 		Condition: types.NewCondition(&condition),
@@ -248,9 +274,33 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 	if coinOutputIndex == -1 {
 		Die("didn't find atomic swap contract registered in any returned coin output")
 	}
+
+	if atomicSwapcfg.EncodingType == cli.EncodingTypeJSON {
+		// if encoding type is JSON, simply print all information as JSON
+		output := AtomicSwapOutputCreation{
+			Coins:         hastings,
+			Contract:      condition,
+			ContractID:    condition.UnlockHash(),
+			OutputID:      response.Transaction.CoinOutputID(uint64(coinOutputIndex)),
+			TransactionID: response.Transaction.ID(),
+		}
+		if secret != (types.AtomicSwapSecret{}) {
+			output.Secret = &secret
+		}
+		json.NewEncoder(os.Stdout).Encode(output)
+		return
+	}
+
+	// otherwise print it for a human, in a more verbose and friendly way
+	fmt.Println("")
 	fmt.Println("published contract transaction")
+	fmt.Println("")
 	fmt.Println("OutputID:", response.Transaction.CoinOutputID(uint64(coinOutputIndex)))
 	fmt.Println("TransactionID:", response.Transaction.ID())
+	fmt.Println("")
+	fmt.Println("Contract Info:")
+	fmt.Println("")
+	printContractInfo(os.Stdout, hastings, condition, secret)
 }
 
 func atomicswapauditcmd(cmd *cobra.Command, args []string) {
@@ -267,12 +317,12 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 
 	err := outputID.LoadString(args[0])
 	if err != nil {
-		Die("failed to parse required positional (coin) outputID argument:", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse required positional (coin) outputID argument:", err)
 	}
 	if argn == 2 {
 		err = transactionID.LoadString(args[1])
 		if err != nil {
-			Die("failed to parse optional positional transactionID argument:", err)
+			DieWithExitCode(ExitCodeUsage, "failed to parse optional positional transactionID argument:", err)
 		}
 	}
 
@@ -314,7 +364,7 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 	if err != errStatusNotFound {
 		Die("unexpected error occurred while getting (unspent) coin output from consensus:", err)
 	}
-	fmt.Printf(`Failed to find atomic swap contract using outputid %s.
+	fmt.Fprintf(os.Stderr, `Failed to find atomic swap contract using outputid %s.
 It wasn't found as part of a confirmed unspent coin output in the consensus set,
 neither was it found as an unconfirmed coin output in the transaction pool.
 
@@ -336,7 +386,7 @@ func auditAtomicSwapContract(co types.CoinOutput, confirmed bool) {
 	}
 	durationLeft := time.Unix(int64(condition.TimeLock), 0).Sub(computeTimeNow())
 
-	fmt.Printf(`Atomic Swap Contract (condition) found:
+	fmt.Fprintf(os.Stderr, `Atomic Swap Contract (condition) found:
 
 Contract value: %s
 
@@ -354,9 +404,9 @@ TimeLock reached in: %s
 		// optionally validate coin amount
 		if !atomicSwapAuditcfg.CoinAmount.Amount.Equals(co.Value) {
 			invalidContract = true
-			fmt.Println("unspent out's value " +
-				_CurrencyConvertor.ToCoinStringWithUnit(co.Value) +
-				" does not match the expected value " +
+			fmt.Fprintln(os.Stderr, "unspent out's value "+
+				_CurrencyConvertor.ToCoinStringWithUnit(co.Value)+
+				" does not match the expected value "+
 				_CurrencyConvertor.ToCoinStringWithUnit(atomicSwapAuditcfg.CoinAmount.Amount))
 		}
 	}
@@ -364,9 +414,9 @@ TimeLock reached in: %s
 		// optionally validate hashed secret
 		if atomicSwapAuditcfg.HashedSecret != condition.HashedSecret {
 			invalidContract = true
-			fmt.Println("found contract's secret hash " +
-				condition.HashedSecret.String() +
-				" does not match the expected secret hash " +
+			fmt.Fprintln(os.Stderr, "found contract's secret hash "+
+				condition.HashedSecret.String()+
+				" does not match the expected secret hash "+
 				atomicSwapAuditcfg.HashedSecret.String())
 		}
 	}
@@ -374,9 +424,9 @@ TimeLock reached in: %s
 		// optionally validate participator's address (unlockhash)
 		if atomicSwapAuditcfg.ReceiverAddress.Cmp(condition.Receiver) != 0 {
 			invalidContract = true
-			fmt.Println("found contract's receiver's address " +
-				condition.Receiver.String() +
-				" does not match the expected receiver's address " +
+			fmt.Fprintln(os.Stderr, "found contract's receiver's address "+
+				condition.Receiver.String()+
+				" does not match the expected receiver's address "+
 				atomicSwapAuditcfg.ReceiverAddress.String())
 		}
 	}
@@ -384,18 +434,18 @@ TimeLock reached in: %s
 		// optionally validate participator's address (unlockhash)
 		if durationLeft < atomicSwapAuditcfg.MinDurationLeft {
 			invalidContract = true
-			fmt.Println("found contract's duration left " +
-				durationLeft.String() +
-				" is not sufficient, when compared the expected duration left of " +
+			fmt.Fprintln(os.Stderr, "found contract's duration left "+
+				durationLeft.String()+
+				" is not sufficient, when compared the expected duration left of "+
 				atomicSwapAuditcfg.MinDurationLeft.String())
 		}
 	}
 	if invalidContract {
 		Die("found Atomic Swap Contract does not meet the given expectations")
 	}
-	fmt.Println("found Atomic Swap Contract is valid")
+	fmt.Fprintln(os.Stderr, "found Atomic Swap Contract is valid")
 	if !confirmed {
-		fmt.Println("note that this contract is still in the transaction pool and thus unconfirmed")
+		fmt.Fprintln(os.Stderr, "note that this contract is still in the transaction pool and thus unconfirmed")
 	}
 }
 
@@ -493,6 +543,15 @@ secretCheck:
 		}
 	}
 
+	if atomicSwapcfg.EncodingType == cli.EncodingTypeJSON {
+		// if encoding type is JSON, simply print all information as JSON
+		json.NewEncoder(os.Stdout).Encode(AtomicSwapOutputExtractSecret{
+			Secret: secret,
+		})
+		return
+	}
+
+	// otherwise print it for a human, in a more verbose and friendly way
 	fmt.Println("atomic swap contract was redeemed by participator")
 	fmt.Println("extracted secret:", secret.String())
 }
@@ -512,14 +571,14 @@ func atomicswapredeemcmd(outputIDStr, secretStr string) {
 	// parse pos args
 	err = outputID.LoadString(outputIDStr)
 	if err != nil {
-		Die("failed to parse outputid-argument:", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse outputid-argument:", err)
 	}
 	err = secret.LoadString(secretStr)
 	if err != nil {
-		Die("failed to parse secret-argument:", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse secret-argument:", err)
 	}
 	if secret == (types.AtomicSwapSecret{}) {
-		Die("secret cannot be all-nil when redeeming an atomic swap contract")
+		DieWithExitCode(ExitCodeUsage, "secret cannot be all-nil when redeeming an atomic swap contract")
 	}
 
 	spendAtomicSwapContract(outputID, secret)
@@ -535,7 +594,7 @@ func atomicswaprefundcmd(outputIDStr string) {
 	// parse pos arg
 	err = outputID.LoadString(outputIDStr)
 	if err != nil {
-		Die("failed to parse outputid-argument:", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse outputid-argument:", err)
 	}
 
 	spendAtomicSwapContract(outputID, types.AtomicSwapSecret{})
@@ -589,13 +648,13 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 
 	// step 3: confirm contract details with user, before continuing
 	// print contract for review
-	printContractInfo(unspentCoinOutputResp.Output.Value, *condition, secret)
-	fmt.Println("")
-	// ensure user wants to continue with redeeming the contract!
-	if !askYesNoQuestion("Publish atomic swap " + keyWord + " transaction?") {
-		Die("atomic swap " + keyWord + " transaction cancelled")
+	if !atomicSwapcfg.YesToAll {
+		printContractInfo(os.Stderr, unspentCoinOutputResp.Output.Value, *condition, secret)
+		// ensure user wants to continue with redeeming the contract!
+		if !askYesNoQuestion("Publish atomic swap " + keyWord + " transaction?") {
+			DieWithExitCode(ExitCodeCancelled, "atomic swap "+keyWord+" transaction cancelled")
+		}
 	}
-
 	// step 4: create a transaction
 	txn := types.Transaction{
 		Version: _DefaultTransactionVersion,
@@ -633,6 +692,15 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 		Die("failed to "+keyWord+" atomic swaps locked tokens, as transaction couldn't commit:", err)
 	}
 
+	if atomicSwapcfg.EncodingType == cli.EncodingTypeJSON {
+		// if encoding type is JSON, simply print all information as JSON
+		json.NewEncoder(os.Stdout).Encode(AtomicSwapOutputSpendContract{
+			TransactionID: txnid,
+		})
+		return
+	}
+
+	// otherwise print it for a human, in a more verbose and friendly way
 	fmt.Println("")
 	fmt.Println("published atomic swap " + keyWord + " transaction")
 	fmt.Println("transaction ID:", txnid)
@@ -684,7 +752,7 @@ func commitTxn(txn types.Transaction) (types.TransactionID, error) {
 	return resp.TransactionID, err
 }
 
-func printContractInfo(hastings types.Currency, condition types.AtomicSwapCondition, secret types.AtomicSwapSecret) {
+func printContractInfo(w io.Writer, hastings types.Currency, condition types.AtomicSwapCondition, secret types.AtomicSwapSecret) {
 	var amountStr string
 	if !hastings.Equals(types.Currency{}) {
 		amountStr = fmt.Sprintf(`
@@ -699,7 +767,7 @@ Secret: %s`, secret)
 
 	cuh := condition.UnlockHash()
 
-	fmt.Printf(`Contract address: %s%s
+	fmt.Fprintf(w, `Contract address: %s%s
 Receiver's address: %s
 Sender's (contract creator) address: %s
 
@@ -713,7 +781,7 @@ TimeLock reached in: %s
 }
 
 func askYesNoQuestion(str string) bool {
-	fmt.Printf("%s [Y/N] ", str)
+	fmt.Fprintf(os.Stderr, "%s [Y/N] ", str)
 	var response string
 	_, err := fmt.Scanln(&response)
 	if err != nil {
@@ -727,7 +795,7 @@ func askYesNoQuestion(str string) bool {
 		return false
 	}
 
-	fmt.Println("please answer using 'yes' or 'no'")
+	fmt.Fprintln(os.Stderr, "please answer using 'yes' or 'no'")
 	return askYesNoQuestion(str)
 }
 
@@ -757,6 +825,13 @@ var computeTimeNow = func() time.Time {
 }
 
 func init() {
+
+	atomicSwapCmd.PersistentFlags().BoolVarP(&atomicSwapcfg.YesToAll, "yes", "y", false,
+		"answer 'yes' to all yes/no questions without asking explicitly")
+	atomicSwapCmd.PersistentFlags().Var(
+		cli.NewEncodingTypeFlag(0, &atomicSwapcfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON),
+		"encoding", cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON))
+
 	atomicSwapParticipateCmd.Flags().DurationVarP(
 		&atomicSwapParticipatecfg.duration, "duration", "d",
 		time.Hour*24, "the duration of the atomic swap contract, the amount of time the participator has to collect")
