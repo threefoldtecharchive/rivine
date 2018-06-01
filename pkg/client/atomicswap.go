@@ -952,9 +952,14 @@ func containsString(slice []string, element string) bool {
 var (
 	okayResponses  = []string{"y", "ye", "yes"}
 	nokayResponses = []string{"n", "no", "noo", "nope"}
+	yesToAll       = false
 )
 
 func init() {
+
+	atomicSwapCmd.PersistentFlags().BoolVarP(&yesToAll, "yes", "y",
+		yesToAll, "Default answer 'yes' to all questions.")
+
 	atomicSwapParticipateCmd.Flags().DurationVarP(
 		&atomicSwapParticipatecfg.duration, "duration", "d",
 		time.Hour*24, "the duration of the atomic swap contract, the amount of time the receiver has to collect")
