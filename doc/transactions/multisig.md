@@ -100,6 +100,10 @@ the 5-step flow from above could be represented in bash as follows:
 TXN="$(rivinec wallet sign "$(rivinec wallet create cointransaction \
     97495f5c40d392046bd45c27acc860c6a93581930a735e0990a1e42a05cbe55e \
     01907fef3ba1c3905021ae2d1486adf9bc8721821229a8a858f567b7303a26dfba454db47fa71d 1000)")"
+# NOTE that when creating a transaction, you need to make sure that the total sum of coin inputs,
+# equals the combination of the total sum of coin outputs and the minimum transaction fee.
+# Meaning that the above command will only succeed, if the output with ID
+# '97495f5c40d392046bd45c27acc860c6a93581930a735e0990a1e42a05cbe55e' has a coin value of 1001.
 
 # send signed raw transaction to our partner
 # so that they can sign the same way:
@@ -172,6 +176,10 @@ this parallel flow from above could be represented in bash as follows:
 TXN="$(rivinec wallet sign "$(rivinec wallet create cointransaction \
     97495f5c40d392046bd45c27acc860c6a93581930a735e0990a1e42a05cbe55e \
     01907fef3ba1c3905021ae2d1486adf9bc8721821229a8a858f567b7303a26dfba454db47fa71d 1000)")"
+# NOTE that when creating a transaction, you need to make sure that the total sum of coin inputs,
+# equals the combination of the total sum of coin outputs and the minimum transaction fee.
+# Meaning that the above command will only succeed, if the output with ID
+# '97495f5c40d392046bd45c27acc860c6a93581930a735e0990a1e42a05cbe55e' has a coin value of 1001.
 
 # send unsigned raw transaction to Alice and Carlos,
 # so they can sign it each and send the signed transaction back to Bob:
