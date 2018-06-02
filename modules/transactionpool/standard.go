@@ -55,28 +55,33 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 		return modules.ErrLargeTransaction
 	}
 
+	// prepare the standard check context
+	checkCtx := types.StandardCheckContext{
+		BlockHeight: tp.consensusSet.Height(),
+	}
+
 	// check if all condtions are standard
 	for _, sco := range t.CoinOutputs {
-		err = sco.Condition.IsStandardCondition()
+		err = sco.Condition.IsStandardCondition(checkCtx)
 		if err != nil {
 			return err
 		}
 	}
 	for _, sfo := range t.BlockStakeOutputs {
-		err = sfo.Condition.IsStandardCondition()
+		err = sfo.Condition.IsStandardCondition(checkCtx)
 		if err != nil {
 			return err
 		}
 	}
 	// check if all fulfillments are standard
 	for _, sci := range t.CoinInputs {
-		err = sci.Fulfillment.IsStandardFulfillment()
+		err = sci.Fulfillment.IsStandardFulfillment(checkCtx)
 		if err != nil {
 			return err
 		}
 	}
 	for _, sfi := range t.BlockStakeInputs {
-		err = sfi.Fulfillment.IsStandardFulfillment()
+		err = sfi.Fulfillment.IsStandardFulfillment(checkCtx)
 		if err != nil {
 			return err
 		}

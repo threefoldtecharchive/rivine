@@ -384,7 +384,7 @@ func TestNilUnlockConditionProxy(t *testing.T) {
 	if ct := c.ConditionType(); ct != ConditionTypeNil {
 		t.Error("ConditionType", ct, "!=", ConditionTypeNil)
 	}
-	if err := c.IsStandardCondition(); err != nil {
+	if err := c.IsStandardCondition(StandardCheckContext{}); err != nil {
 		t.Error("IsStandardCondition", err)
 	}
 	if b, err := c.MarshalJSON(); err != nil || string(b) != "{}" {
@@ -409,7 +409,7 @@ func TestNilUnlockFulfillmentProxy(t *testing.T) {
 	if ft := f.FulfillmentType(); ft != FulfillmentTypeNil {
 		t.Error("FulfillmentType", ft, "!=", FulfillmentTypeNil)
 	}
-	if err := f.IsStandardFulfillment(); err == nil {
+	if err := f.IsStandardFulfillment(StandardCheckContext{}); err == nil {
 		t.Error("IsStandardFulfillment should not be standard")
 	}
 	if b, err := f.MarshalJSON(); err != nil || string(b) != "{}" {
@@ -1579,7 +1579,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 					testCase.ExpectedCoinInputSigHashes[idx], "!=", sigHash)
 			}
 
-			err := ci.Fulfillment.IsStandardFulfillment()
+			err := ci.Fulfillment.IsStandardFulfillment(StandardCheckContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1599,7 +1599,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 					testCase.ExpectedBlockStakeInputSigHashes[idx], "!=", sigHash)
 			}
 
-			err := bsi.Fulfillment.IsStandardFulfillment()
+			err := bsi.Fulfillment.IsStandardFulfillment(StandardCheckContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1618,7 +1618,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 				t.Error(tidx, idx, testCase.ExpectedCoinIdentifiers[idx], "!=", outputID)
 			}
 
-			err := co.Condition.IsStandardCondition()
+			err := co.Condition.IsStandardCondition(StandardCheckContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1629,7 +1629,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 				t.Error(tidx, idx, testCase.ExpectedBlockStakeIdentifiers[idx], "!=", outputID)
 			}
 
-			err := bso.Condition.IsStandardCondition()
+			err := bso.Condition.IsStandardCondition(StandardCheckContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -2147,7 +2147,7 @@ func TestIsStandardCondition(t *testing.T) {
 		},
 	}
 	for idx, testCase := range testCases {
-		err := testCase.Condition.IsStandardCondition()
+		err := testCase.Condition.IsStandardCondition(StandardCheckContext{})
 		if testCase.NotStandardMessage != "" {
 			if err == nil {
 				t.Error(idx, "expected error, but none received:", testCase.NotStandardMessage, testCase.Condition)
@@ -2681,7 +2681,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 	}
 	for idx, testCase := range testCases {
-		err := testCase.Fulfillment.IsStandardFulfillment()
+		err := testCase.Fulfillment.IsStandardFulfillment(StandardCheckContext{})
 		if testCase.NotStandardMessage != "" {
 			if err == nil {
 				t.Error(idx, "expected error, but none received:", testCase.NotStandardMessage, testCase.Fulfillment)

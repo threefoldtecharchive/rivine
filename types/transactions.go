@@ -441,32 +441,6 @@ func (t Transaction) IsStandardTransaction() error {
 			return checker.IsStandardTransaction(t)
 		}
 	}
-
-	var err error
-	for _, ci := range t.CoinInputs {
-		err = ci.Fulfillment.IsStandardFulfillment()
-		if err != nil {
-			return err
-		}
-	}
-	for _, co := range t.CoinOutputs {
-		err = co.Condition.IsStandardCondition()
-		if err != nil {
-			return err
-		}
-	}
-	for _, bsi := range t.BlockStakeInputs {
-		err = bsi.Fulfillment.IsStandardFulfillment()
-		if err != nil {
-			return err
-		}
-	}
-	for _, bso := range t.BlockStakeOutputs {
-		err = bso.Condition.IsStandardCondition()
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
