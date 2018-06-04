@@ -738,6 +738,56 @@ func TestUnlockConditionEqual(t *testing.T) {
 			},
 			"",
 		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				},
+			},
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				},
+			},
+			"edge case, where second condition has two times the unlockhashes the first condition has",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				},
+			},
+			"edge case, where second condition has two times the unlockhashes the first condition has, but length is equal",
+		},
+		{
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				},
+			},
+			&MultiSignatureCondition{
+				MinimumSignatureCount: 2,
+				UnlockHashes: UnlockHashSlice{
+					unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+					unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				},
+			},
+			"edge case, where first condition has two times the unlockhashes the second condition has, but length is equal",
+		},
 	}
 	for idx, testCase := range testCases {
 		equal := testCase.A.Equal(testCase.B)
@@ -1446,6 +1496,116 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				},
 			},
 			"",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+				},
+			},
+			"edge case, where second fulfillment has two times the pair the first fulfillment has",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+				},
+			},
+			"edge case, where second fulfillment has two times the pair the first fulfillment has, but lenght is equal",
+		},
+		{
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+				},
+			},
+			&MultiSignatureFulfillment{
+				Pairs: []PublicKeySignaturePair{
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{1, 2, 3},
+						},
+						Signature: ByteSlice{4, 5, 6},
+					},
+					{
+						PublicKey: SiaPublicKey{
+							Algorithm: SignatureEd25519,
+							Key:       ByteSlice{7, 1, 8},
+						},
+						Signature: ByteSlice{0, 45, 9},
+					},
+				},
+			},
+			"edge case, where first fulfillment has two times the pair the second fulfillment has, but lenght is equal",
 		},
 	}
 	for idx, testCase := range testCases {
