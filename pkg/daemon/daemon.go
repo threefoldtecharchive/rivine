@@ -72,8 +72,10 @@ type Config struct {
 	// optional network config constructor,
 	// if you're implementing your own rivine-based blockchain,
 	// you'll probably want to define this one,
-	// as otherwise a pure rivine blockchain config will be created
-	CreateNetworConfig func(name string) (NetworkConfig, error)
+	// as otherwise a pure rivine blockchain config will be created,
+	// within this function you should also Register any specific
+	// transaction, conditions and fulfillments
+	CreateNetworkConfig func(name string) (NetworkConfig, error)
 }
 
 // DefaultConfig returns the default daemon configuration
@@ -105,9 +107,9 @@ func (cfg *Config) createConfiguredNetworkConfig() (NetworkConfig, error) {
 		// default to build.Release as network name
 		cfg.NetworkName = build.Release
 	}
-	if cfg.CreateNetworConfig != nil {
+	if cfg.CreateNetworkConfig != nil {
 		// use custom network config creator
-		return cfg.CreateNetworConfig(cfg.NetworkName)
+		return cfg.CreateNetworkConfig(cfg.NetworkName)
 	}
 
 	// use default network config creator
