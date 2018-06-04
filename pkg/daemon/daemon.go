@@ -73,7 +73,12 @@ type Config struct {
 	// if you're implementing your own rivine-based blockchain,
 	// you'll probably want to define this one,
 	// as otherwise a pure rivine blockchain config will be created
-	CreateNetworConfig func(name string) (NetworkConfig, error)
+	CreateNetworkConfig func(name string) (NetworkConfig, error)
+
+	// RegisterUnlockConditions is an optional function that can be used
+	// to register/unregister unlock conditions/fulfillments,
+	// within the context of a given network.
+	RegisterUnlockConditions func(networkName string) error
 }
 
 // DefaultConfig returns the default daemon configuration
@@ -105,9 +110,9 @@ func (cfg *Config) createConfiguredNetworkConfig() (NetworkConfig, error) {
 		// default to build.Release as network name
 		cfg.NetworkName = build.Release
 	}
-	if cfg.CreateNetworConfig != nil {
+	if cfg.CreateNetworkConfig != nil {
 		// use custom network config creator
-		return cfg.CreateNetworConfig(cfg.NetworkName)
+		return cfg.CreateNetworkConfig(cfg.NetworkName)
 	}
 
 	// use default network config creator
@@ -224,6 +229,11 @@ func StartDaemon(cfg Config) (err error) {
 	err = processConfig(&cfg)
 	if err != nil {
 		return err
+	}
+
+	// optionally register the chain/network specific unlock conditions/fulfillments
+	if cfg.RegisterUnlockConditions != nil {
+		cfg.RegisterUnlockConditions(cfg.NetworkName)
 	}
 
 	// Print a startup message.
