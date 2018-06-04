@@ -35,10 +35,15 @@ fmt:
 vet: release-std
 	go vet $(pkgs)
 
-# install builds and installs developer binaries.
+# installs developer binaries.
 install:
 	go build -race -tags='dev debug profile' -ldflags '$(ldflagsversion)' -o $(daemonbin) $(daemonpkgs)
 	go build -race -tags='dev debug profile' -ldflags '$(ldflagsversion)' -o $(clientbin) $(clientpkgs)
+
+# installs std (release) binaries
+install-std:
+	go build -ldflags '$(ldflagsversion)' -o $(daemonbin) $(daemonpkgs)
+	go build -ldflags '$(ldflagsversion)' -o $(clientbin) $(clientpkgs)
 
 # release builds and installs release binaries.
 release:
