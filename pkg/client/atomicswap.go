@@ -722,7 +722,7 @@ func getSpendableKey(unlockHash types.UnlockHash) (types.SiaPublicKey, types.Byt
 		Die("failed to get a wallet public key pair for the given unlock hash")
 	}
 	if isNilByteSlice(resp.SecretKey) {
-		Die("received matching public key, but no secret key was returned, is your wallet unlocked?")
+		Die("received matching public key, but no secret key was returned")
 	}
 	return types.SiaPublicKey{
 		Algorithm: resp.AlgorithmSpecifier,

@@ -29,6 +29,7 @@ var (
 	errNilConsensusSet = errors.New("wallet cannot initialize with a nil consensus set")
 	errNilTpool        = errors.New("wallet cannot initialize with a nil transaction pool")
 	errUnknownAddress  = errors.New("given wallet address is not known")
+	errWalletLocked    = errors.New("wallet is locked")
 )
 
 // spendableKey is a set of secret keys plus the corresponding unlock
@@ -214,12 +215,28 @@ func (w *Wallet) AllAddresses() []types.UnlockHash {
 
 // GetKey gets the pub/priv key pair,
 // which is linked to the given unlock hash (address).
-func (w *Wallet) GetKey(address types.UnlockHash) (types.SiaPublicKey, types.ByteSlice, error) {
+func (w *Wallet) GetKey(address types.UnlockHash) (pk types.SiaPublicKey, sk types.ByteSlice, err error) {
+	w.mu.RLock()
+	pk, sk, err = w.getKey(address)
+	w.mu.RUnlock()
+	return
+}
+func (w *Wallet) getKey(address types.UnlockHash) (types.SiaPublicKey, types.ByteSlice, error) {
+	if !w.unlocked {
+		return types.SiaPublicKey{}, types.ByteSlice{}, errWalletLocked
+	}
 	sp, found := w.keys[address]
 	if !found {
 		return types.SiaPublicKey{}, types.ByteSlice{}, errUnknownAddress
 	}
 	return types.Ed25519PublicKey(sp.PublicKey), types.ByteSlice(sp.SecretKey[:]), nil
+}
+func (w *Wallet) keyExists(address types.UnlockHash) (bool, error) {
+	if !w.unlocked {
+		return false, errWalletLocked
+	}
+	_, exists := w.keys[address]
+	return exists, nil
 }
 
 // GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an

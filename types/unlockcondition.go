@@ -2141,7 +2141,10 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 			}
 			copy(edSK[:], k)
 		default:
-			return nil, fmt.Errorf("%T is an unknown secret key size", key)
+			return nil, fmt.Errorf("%T is an unknown secret key type", key)
+		}
+		if edSK.IsNil() {
+			return nil, crypto.ErrSecretNilKey
 		}
 		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
 		sig := crypto.SignHash(sigHash, edSK)
@@ -2171,6 +2174,9 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 		)
 		copy(edPK[:], pk.Key)
 		copy(edSig[:], sig)
+		if edPK.IsNil() {
+			return crypto.ErrPublicNilKey
+		}
 		cryptoSig := crypto.Signature(edSig)
 		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
 		err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
