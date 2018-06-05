@@ -53,7 +53,6 @@ func (bc *BlockCreator) SolveBlocks() {
 }
 
 func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) (b *types.Block) {
-
 	bc.mu.RLock()
 	defer bc.mu.RUnlock()
 
@@ -86,14 +85,18 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 			pobshashvalue.Div(pobshashvalue, ubso.Value.Big()) //TODO rivine : this div can be mul on the other side of the compare
 
 			if pobshashvalue.Cmp(target.Int()) == -1 {
+				err := bc.RespentBlockStake(ubso)
+				if err != nil {
+					bc.log.Printf("failed to respond block stake %q: %v", ubso.BlockStakeOutputID.String(), err)
+					return nil
+				}
+
 				bc.log.Debugln("\nSolved block with target", target)
 				blockToSubmit := types.Block{
 					ParentID:   bc.unsolvedBlock.ParentID,
 					Timestamp:  types.Timestamp(blocktime),
 					POBSOutput: ubso.Indexes,
 				}
-
-				bc.RespentBlockStake(ubso)
 
 				// Block is going to be passed to external memory, but the memory pointed
 				// to by the transactions slice is still being modified - needs to be
@@ -126,42 +129,36 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 // RespentBlockStake will spent the unspent block stake output which is needed
 // for the POBS algorithm. The transaction created will be the first transaction
 // in the block to avoid the BlockStakeAging for later use of this block stake.
-func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) {
-
+func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) error {
 	// There is a special case: When the unspent block stake output is already
 	// used in another transaction in this unsolved block, this extra transaction
 	// is obsolete
 	for _, ubstr := range bc.unsolvedBlock.Transactions {
 		for _, ubstrinput := range ubstr.BlockStakeInputs {
 			if ubstrinput.ParentID == ubso.BlockStakeOutputID {
-				return
+				return nil
 			}
 		}
 	}
 
 	//otherwise the blockstake is not yet spent in this block, spent it now
 	t := bc.wallet.StartTransaction()
-	t.SpendBlockStake(ubso.BlockStakeOutputID) // link the input of this transaction
+	err := t.SpendBlockStake(ubso.BlockStakeOutputID) // link the input of this transaction
 	// to the used BlockStake output
+	if err != nil {
+		return err
+	}
 
 	bso := types.BlockStakeOutput{
 		Value:     ubso.Value,     //use the same amount of BlockStake
 		Condition: ubso.Condition, //use the same condition.
 	}
-	ind := t.AddBlockStakeOutput(bso)
-	if ind != 0 {
-		// should not happen //TODO: not right error
-	}
+	t.AddBlockStakeOutput(bso)
 	txnSet, err := t.Sign()
 	if err != nil {
-		// should not happen //TODO: not right error
-	}
-	//Only one transaction is generated for this.
-	if len(txnSet) > 1 {
-		// should not happen //TODO: not right error
+		return err
 	}
 	//add this transaction in front of the list of unsolved block transactions
 	bc.unsolvedBlock.Transactions = append(txnSet, bc.unsolvedBlock.Transactions...)
-
-	return
+	return nil
 }
