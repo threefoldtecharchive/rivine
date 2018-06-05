@@ -30,6 +30,12 @@ var (
 	// ErrInvalidSignature is returned if a signature is provided that does not
 	// match the data and public key.
 	ErrInvalidSignature = errors.New("invalid signature")
+
+	// ErrSecretNilKey is returned if a secret key, which is used, is nil
+	ErrSecretNilKey = errors.New("secret key is nil")
+
+	// ErrPublicNilKey is returned if a public key, which is used, is nil
+	ErrPublicNilKey = errors.New("public key is nil")
 )
 
 type (
@@ -44,10 +50,27 @@ type (
 	Signature [SignatureSize]byte
 )
 
+var (
+	// nilSecretKey defines a pure nil secret key
+	nilSecretKey = SecretKey{}
+	// nilPublicKey defines a pure nil public key
+	nilPublicKey = PublicKey{}
+)
+
 // PublicKey returns the public key that corresponds to a secret key.
 func (sk SecretKey) PublicKey() (pk PublicKey) {
 	copy(pk[:], sk[SecretKeySize-PublicKeySize:])
 	return
+}
+
+// IsNil returns true if this secret key equals to a pure zero array.
+func (sk SecretKey) IsNil() bool {
+	return sk == nilSecretKey
+}
+
+// IsNil returns true if this public key equals to a pure zero array.
+func (pk PublicKey) IsNil() bool {
+	return pk == nilPublicKey
 }
 
 // GenerateKeyPair creates a public-secret keypair that can be used to sign and verify
