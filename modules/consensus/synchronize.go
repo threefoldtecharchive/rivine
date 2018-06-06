@@ -203,6 +203,13 @@ func (cs *ConsensusSet) managedReceiveBlocks(conn modules.PeerConn) (returnErr e
 	// there are no more blocks available.
 	moreAvailable := true
 	for moreAvailable {
+		// We need a check to see if we are stopping the loop, otherwise
+		// we end up syncing the entire blockchain before exiting
+		select {
+		case <-cs.tg.StopChan():
+			return nil
+		default:
+		}
 		// Read a slice of blocks from the wire.
 		var newBlocks []types.Block
 		if err := encoding.ReadObject(conn, &newBlocks, uint64(MaxCatchUpBlocks)*cs.chainCts.BlockSizeLimit); err != nil {
