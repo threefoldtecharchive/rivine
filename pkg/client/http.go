@@ -126,6 +126,11 @@ func (c *HTTPClient) apiGet(call string) (*http.Response, error) {
 		resp.Body.Close()
 		return nil, errors.New("API call not recognized: " + call)
 	}
+	if resp.StatusCode == http.StatusForbidden {
+		err := DecodeError(resp)
+		resp.Body.Close()
+		return nil, ErrorWithStatusCode{Err: err, Status: ExitCodeForbidden}
+	}
 	if Non2xx(resp.StatusCode) {
 		err := DecodeError(resp)
 		resp.Body.Close()
@@ -158,6 +163,11 @@ func (c *HTTPClient) apiPost(call, data string) (*http.Response, error) {
 	if resp.StatusCode == http.StatusNotFound {
 		resp.Body.Close()
 		return nil, errors.New("API call not recognized: " + call)
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		err := DecodeError(resp)
+		resp.Body.Close()
+		return nil, ErrorWithStatusCode{Err: err, Status: ExitCodeForbidden}
 	}
 	if Non2xx(resp.StatusCode) {
 		err := DecodeError(resp)

@@ -1,11 +1,18 @@
 package wallet
 
-import "github.com/rivine/rivine/types"
+import (
+	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
+)
 
 // UnlockedUnspendOutputs returns all unlocked coinoutput and blockstakeoutputs
-func (w *Wallet) UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput) {
+func (w *Wallet) UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		return nil, nil, modules.ErrLockedWallet
+	}
 
 	ucom := make(map[types.CoinOutputID]types.CoinOutput)
 	ubsom := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
@@ -37,13 +44,17 @@ func (w *Wallet) UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutp
 			ubsom[id] = bso
 		}
 	}
-	return ucom, ubsom
+	return ucom, ubsom, nil
 }
 
 // LockedUnspendOutputs returnas all locked coinoutput and blockstakeoutputs
-func (w *Wallet) LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput) {
+func (w *Wallet) LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		return nil, nil, modules.ErrLockedWallet
+	}
 
 	ucom := make(map[types.CoinOutputID]types.CoinOutput)
 	ubsom := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
@@ -75,5 +86,5 @@ func (w *Wallet) LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput
 			ubsom[id] = bso
 		}
 	}
-	return ucom, ubsom
+	return ucom, ubsom, nil
 }

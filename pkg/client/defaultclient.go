@@ -17,6 +17,7 @@ const (
 	ExitCodeGeneral   = 1 // Not in sysexits.h, but is standard practice.
 	ExitCodeNotFound  = 2
 	ExitCodeCancelled = 3
+	ExitCodeForbidden = 4
 	ExitCodeUsage     = 64 // EX_USAGE in sysexits.h
 )
 
@@ -78,6 +79,27 @@ func Wrap(fn interface{}) func(*cobra.Command, []string) {
 // error code.
 func Die(args ...interface{}) {
 	DieWithExitCode(ExitCodeGeneral, args...)
+}
+
+// ErrorWithStatusCode couples an exit status code to an error (message)
+type ErrorWithStatusCode struct {
+	Err    error
+	Status int
+}
+
+func (ewsc ErrorWithStatusCode) Error() string {
+	return ewsc.Err.Error()
+}
+
+// DieWithError exits with an error.
+// if the error is of the type ErrorWithStatusCode, its status will be used,
+// otherwise the General exit code will be used
+func DieWithError(description string, err error) {
+	if ewsc, ok := err.(ErrorWithStatusCode); ok {
+		DieWithExitCode(ewsc.Status, description, ewsc.Err)
+		return
+	}
+	DieWithExitCode(ExitCodeGeneral, description, err)
 }
 
 // DieWithExitCode prints its arguments to stderr,

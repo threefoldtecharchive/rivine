@@ -262,7 +262,7 @@ type (
 		// AllAddresses returns all addresses that the wallet is able to spend
 		// from, including unseeded addresses. Addresses are returned sorted in
 		// byte-order.
-		AllAddresses() []types.UnlockHash
+		AllAddresses() ([]types.UnlockHash, error)
 
 		// AllSeeds returns all of the seeds that are being tracked by the
 		// wallet, including the primary seed. Only the primary seed is used to
@@ -312,36 +312,36 @@ type (
 		// ConfirmedBalance returns the confirmed balance of the wallet, minus
 		// any outgoing transactions. ConfirmedBalance will include unconfirmed
 		// refund transactions.
-		ConfirmedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
+		ConfirmedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency, err error)
 
 		// ConfirmedLockedBalance returns the confirmed balance of the wallet, which is locked,
 		// minus any outgoing transactions. ConfirmedLockedBalance will include unconfirmed
 		// refund transactions which are locked as well.
-		ConfirmedLockedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency)
+		ConfirmedLockedBalance() (siacoinBalance types.Currency, blockstakeBalance types.Currency, err error)
 
 		// GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 		// address this wallet has an unlockhash for.
-		GetUnspentBlockStakeOutputs() []types.UnspentBlockStakeOutput
+		GetUnspentBlockStakeOutputs() ([]types.UnspentBlockStakeOutput, error)
 
 		// UnconfirmedBalance returns the unconfirmed balance of the wallet.
 		// Outgoing funds and incoming funds are reported separately. Refund
 		// outputs are included, meaning that sending a single coin to
 		// someone could result in 'outgoing: 12, incoming: 11'. Siafunds are
 		// not considered in the unconfirmed balance.
-		UnconfirmedBalance() (outgoingSiacoins types.Currency, incomingSiacoins types.Currency)
+		UnconfirmedBalance() (outgoingSiacoins types.Currency, incomingSiacoins types.Currency, err error)
 
 		// AddressTransactions returns all of the transactions that are related
 		// to a given address.
-		AddressTransactions(types.UnlockHash) []ProcessedTransaction
+		AddressTransactions(types.UnlockHash) ([]ProcessedTransaction, error)
 
 		// AddressUnconfirmedHistory returns all of the unconfirmed
 		// transactions related to a given address.
-		AddressUnconfirmedTransactions(types.UnlockHash) []ProcessedTransaction
+		AddressUnconfirmedTransactions(types.UnlockHash) ([]ProcessedTransaction, error)
 
 		// Transaction returns the transaction with the given id. The bool
 		// indicates whether the transaction is in the wallet database. The
 		// wallet only stores transactions that are related to the wallet.
-		Transaction(types.TransactionID) (ProcessedTransaction, bool)
+		Transaction(types.TransactionID) (ProcessedTransaction, bool, error)
 
 		// Transactions returns all of the transactions that were confirmed at
 		// heights [startHeight, endHeight]. Unconfirmed transactions are not
@@ -350,13 +350,13 @@ type (
 
 		// UnconfirmedTransactions returns all unconfirmed transactions
 		// relative to the wallet.
-		UnconfirmedTransactions() []ProcessedTransaction
+		UnconfirmedTransactions() ([]ProcessedTransaction, error)
 
 		// MultiSigWallets returns all multisig wallets which contain at least one unlock hash owned by this wallet.
 		// A multisig wallet is in this context defined as a (group of) coin and or blockstake outputs, where the unlockhash
 		// of these outputs are exactly the same. In practice, this means that the collection of unlock hashes in the condition,
 		// as well as the minimum amount of signatures required, must match
-		MultiSigWallets() []MultiSigWallet
+		MultiSigWallets() ([]MultiSigWallet, error)
 
 		// RegisterTransaction takes a transaction and its parents and returns
 		// a TransactionBuilder which can be used to expand the transaction.
@@ -384,15 +384,15 @@ type (
 		// BlockStakeStats returns the blockstake statistical information of
 		// this wallet of the last 1000 blocks. If the blockcount is less than
 		// 1000 blocks, BlockCount will be the number available.
-		BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency, BlockCount uint64)
+		BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency, BlockCount uint64, err error)
 
 		// UnlockedUnspendOutputs returns all unlocked and unspend coin and blockstake outputs
 		// owned by this wallet
-		UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput)
+		UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput, error)
 
 		// LockedUnspendOutputs returns all locked and unspend coin and blockstake outputs owned
 		// by this wallet
-		LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput)
+		LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput, error)
 
 		// CreateRawTransaction creates a new transaction with the given inputs and outputs.
 		// All inputs must exist in the consensus set at the time this method is called. The total

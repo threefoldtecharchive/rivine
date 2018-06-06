@@ -14,9 +14,14 @@ var (
 
 // AddressTransactions returns all of the wallet transactions associated with a
 // single unlock hash.
-func (w *Wallet) AddressTransactions(uh types.UnlockHash) (pts []modules.ProcessedTransaction) {
+func (w *Wallet) AddressTransactions(uh types.UnlockHash) (pts []modules.ProcessedTransaction, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	for _, pt := range w.processedTransactions {
 		relevant := false
@@ -36,14 +41,19 @@ func (w *Wallet) AddressTransactions(uh types.UnlockHash) (pts []modules.Process
 			pts = append(pts, pt)
 		}
 	}
-	return pts
+	return
 }
 
-// AddressUnconfirmedHistory returns all of the unconfirmed wallet transactions
+// AddressUnconfirmedTransactions returns all of the unconfirmed wallet transactions
 // related to a specific address.
-func (w *Wallet) AddressUnconfirmedTransactions(uh types.UnlockHash) (pts []modules.ProcessedTransaction) {
+func (w *Wallet) AddressUnconfirmedTransactions(uh types.UnlockHash) (pts []modules.ProcessedTransaction, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	// Scan the full list of unconfirmed transactions to see if there are any
 	// related transactions.
@@ -65,19 +75,22 @@ func (w *Wallet) AddressUnconfirmedTransactions(uh types.UnlockHash) (pts []modu
 			pts = append(pts, pt)
 		}
 	}
-	return pts
+	return
 }
 
 // Transaction returns the transaction with the given id. 'False' is returned
 // if the transaction does not exist.
-func (w *Wallet) Transaction(txid types.TransactionID) (modules.ProcessedTransaction, bool) {
+func (w *Wallet) Transaction(txid types.TransactionID) (modules.ProcessedTransaction, bool, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if !w.unlocked {
+		return modules.ProcessedTransaction{}, false, modules.ErrLockedWallet
+	}
 	pt, exists := w.processedTransactionMap[txid]
 	if !exists {
-		return modules.ProcessedTransaction{}, exists
+		return modules.ProcessedTransaction{}, exists, nil
 	}
-	return *pt, exists
+	return *pt, exists, nil
 }
 
 // Transactions returns all transactions relevant to the wallet that were
@@ -85,6 +98,11 @@ func (w *Wallet) Transaction(txid types.TransactionID) (modules.ProcessedTransac
 func (w *Wallet) Transactions(startHeight, endHeight types.BlockHeight) (pts []modules.ProcessedTransaction, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	if startHeight > w.consensusSetHeight || startHeight > endHeight {
 		return nil, errOutOfBounds
@@ -105,9 +123,14 @@ func (w *Wallet) Transactions(startHeight, endHeight types.BlockHeight) (pts []m
 }
 
 // BlockStakeStats returns the blockstake statistical information of this wallet
-func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency, BlockCount uint64) {
+func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.Currency, BlockCount uint64, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	BlockHeightCounter := w.cs.Height()
 
@@ -144,15 +167,18 @@ func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.
 		BlockHeightCounter--
 	}
 
-	return BCcountLast1000, BCfeeLast1000, BlockCount
+	return
 }
 
 // UnconfirmedTransactions returns the set of unconfirmed transactions that are
 // relevant to the wallet.
-func (w *Wallet) UnconfirmedTransactions() []modules.ProcessedTransaction {
+func (w *Wallet) UnconfirmedTransactions() ([]modules.ProcessedTransaction, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	return w.unconfirmedProcessedTransactions
+	if !w.unlocked {
+		return nil, modules.ErrLockedWallet
+	}
+	return w.unconfirmedProcessedTransactions, nil
 }
 
 // CreateRawTransaction with the given inputs and outputs

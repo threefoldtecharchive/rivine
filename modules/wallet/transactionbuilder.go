@@ -47,6 +47,10 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
+	if !tb.wallet.unlocked {
+		return modules.ErrLockedWallet
+	}
+
 	// prepare fulfillable context
 	ctx := tb.wallet.getFulfillableContextForLatestBlock()
 
@@ -172,6 +176,10 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
+
+	if !tb.wallet.unlocked {
+		return modules.ErrLockedWallet
+	}
 
 	// prepare fulfillable context
 	ctx := tb.wallet.getFulfillableContextForLatestBlock()
@@ -305,6 +313,10 @@ func (tb *transactionBuilder) SpendBlockStake(ubsoid types.BlockStakeOutputID) e
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
+	if !tb.wallet.unlocked {
+		return modules.ErrLockedWallet
+	}
+
 	ubso, ok := tb.wallet.unspentblockstakeoutputs[ubsoid]
 	if !ok {
 		return modules.ErrIncompleteTransactions //TODO: not right error
@@ -392,8 +404,9 @@ func (tb *transactionBuilder) Sign() ([]types.Transaction, error) {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
-	// ensure wallet is not locked!
-	// as otherwise nil secret keys are used
+	if !tb.wallet.unlocked {
+		return nil, modules.ErrLockedWallet
+	}
 
 	for _, ctx := range tb.coinInputs {
 		input := tb.transaction.CoinInputs[ctx.InputIndex]
@@ -441,6 +454,10 @@ func (tb *transactionBuilder) SignAllPossibleInputs() error {
 
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
+
+	if !tb.wallet.unlocked {
+		return modules.ErrLockedWallet
+	}
 
 	for i := range tb.transaction.CoinInputs {
 		ci := &tb.transaction.CoinInputs[i]

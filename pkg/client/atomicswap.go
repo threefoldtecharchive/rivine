@@ -160,7 +160,7 @@ func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
 		resp := new(api.WalletAddressGET)
 		err := _DefaultClient.httpClient.GetAPI("/wallet/address", resp)
 		if err != nil {
-			Die("failed to generate new address:", err)
+			DieWithError("failed to generate new address:", err)
 		}
 		sender = resp.Address
 	}
@@ -203,7 +203,7 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 		resp := new(api.WalletAddressGET)
 		err := _DefaultClient.httpClient.GetAPI("/wallet/address", resp)
 		if err != nil {
-			Die("failed to generate new address:", err)
+			DieWithError("failed to generate new address:", err)
 		}
 		sender = resp.Address
 	}
@@ -260,7 +260,7 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 	var response api.WalletTransactionPOSTResponse
 	err = _DefaultClient.httpClient.PostResp("/wallet/transaction", string(body), &response)
 	if err != nil {
-		Die("failed to create transaction:", err)
+		DieWithError("failed to create transaction:", err)
 	}
 
 	// find coinOutput and return its ID if possible
@@ -716,7 +716,7 @@ func getSpendableKey(unlockHash types.UnlockHash) (types.SiaPublicKey, types.Byt
 	resp := new(api.WalletKeyGet)
 	err := _DefaultClient.httpClient.GetAPI("/wallet/key/"+unlockHash.String(), resp)
 	if err != nil {
-		Die("failed to get a matching wallet public/secret key pair for the given unlock hash:", err)
+		DieWithError("failed to get a matching wallet public/secret key pair for the given unlock hash:", err)
 	}
 	if isNilByteSlice(resp.PublicKey) {
 		Die("failed to get a wallet public key pair for the given unlock hash")

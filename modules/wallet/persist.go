@@ -141,6 +141,9 @@ func (w *Wallet) CreateBackup(backupFilepath string) error {
 	defer w.tg.Done()
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if !w.unlocked {
+		return modules.ErrLockedWallet
+	}
 	return w.createBackup(backupFilepath)
 }
 

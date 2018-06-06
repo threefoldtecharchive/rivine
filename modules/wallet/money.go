@@ -9,6 +9,7 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
+// various errors returned by the wallet
 var (
 	ErrNilOutputs = errors.New("nil outputs cannot be send")
 )
@@ -22,9 +23,14 @@ type sortedOutputs struct {
 
 // ConfirmedBalance returns the balance of the wallet according to all of the
 // confirmed transactions.
-func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency) {
+func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
@@ -45,9 +51,14 @@ func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalan
 
 // ConfirmedLockedBalance returns the locked balance of the wallet according to all of the
 // confirmed transactions, which have locked outputs.
-func (w *Wallet) ConfirmedLockedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency) {
+func (w *Wallet) ConfirmedLockedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
@@ -68,9 +79,13 @@ func (w *Wallet) ConfirmedLockedBalance() (coinBalance types.Currency, blockstak
 
 // UnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 // address this wallet has an unlockhash for.
-func (w *Wallet) UnspentBlockStakeOutputs() map[types.BlockStakeOutputID]types.BlockStakeOutput {
+func (w *Wallet) UnspentBlockStakeOutputs() (map[types.BlockStakeOutputID]types.BlockStakeOutput, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		return nil, modules.ErrLockedWallet
+	}
 
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
@@ -83,15 +98,20 @@ func (w *Wallet) UnspentBlockStakeOutputs() map[types.BlockStakeOutputID]types.B
 			outputs[id] = output
 		}
 	}
-	return outputs
+	return outputs, nil
 }
 
 // UnconfirmedBalance returns the number of outgoing and incoming coins in
 // the unconfirmed transaction set. Refund outputs are included in this
 // reporting.
-func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoins types.Currency) {
+func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoins types.Currency, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	for _, upt := range w.unconfirmedProcessedTransactions {
 		for _, input := range upt.Inputs {
@@ -109,9 +129,13 @@ func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoi
 }
 
 // MultiSigWallets returns all multisig wallets which contain at least one unlock hash owned by this wallet.
-func (w *Wallet) MultiSigWallets() []modules.MultiSigWallet {
+func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+
+	if !w.unlocked {
+		return nil, modules.ErrLockedWallet
+	}
 
 	wallets := make(map[types.UnlockHash]*modules.MultiSigWallet)
 
@@ -198,7 +222,7 @@ func (w *Wallet) MultiSigWallets() []modules.MultiSigWallet {
 		msws = append(msws, *wallet)
 	}
 
-	return msws
+	return msws, nil
 }
 
 // SendCoins creates a transaction sending 'amount' to whoever can fulfill the condition. If data is provided,

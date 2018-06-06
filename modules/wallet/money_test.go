@@ -24,8 +24,14 @@ func TestSendCoins(t *testing.T) {
 
 	// Get the initial balance - should be 1 block. The unconfirmed balances
 	// should be 0.
-	confirmedBal, _ := wt.wallet.ConfirmedBalance()
-	unconfirmedOut, unconfirmedIn := wt.wallet.UnconfirmedBalance()
+	confirmedBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	unconfirmedOut, unconfirmedIn, err := wt.wallet.UnconfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !confirmedBal.Equals64(0) {
 		t.Error("unexpected confirmed balance")
 	}
@@ -58,7 +64,10 @@ func TestSendCoins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confirmedBal2, _ := wt.wallet.ConfirmedBalance()
+	confirmedBal2, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if confirmedBal2.Cmp(types.NewCurrency64(5000).Add(tpoolFee)) != 0 {
 		t.Error("sending cioins appears to have been send")

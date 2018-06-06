@@ -182,9 +182,27 @@ type (
 
 // walletHander handles API calls to /wallet.
 func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	coinBal, blockstakeBal := api.wallet.ConfirmedBalance()
-	coinLockBal, blockstakeLockBal := api.wallet.ConfirmedLockedBalance()
-	coinsOut, coinsIn := api.wallet.UnconfirmedBalance()
+	coinBal, blockstakeBal, err := api.wallet.ConfirmedBalance()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	coinLockBal, blockstakeLockBal, err := api.wallet.ConfirmedLockedBalance()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	coinsOut, coinsIn, err := api.wallet.UnconfirmedBalance()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	multiSigWallets, err := api.wallet.MultiSigWallets()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+
 	WriteJSON(w, WalletGET{
 		Encrypted: api.wallet.Encrypted(),
 		Unlocked:  api.wallet.Unlocked(),
@@ -197,18 +215,18 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 		BlockStakeBalance:       blockstakeBal,
 		LockedBlockStakeBalance: blockstakeLockBal,
 
-		MultiSigWallets: api.wallet.MultiSigWallets(),
+		MultiSigWallets: multiSigWallets,
 	})
 }
 
-// walletHander handles API calls to /wallet.
+// walletBlockStakeStats handles API calls to /wallet/blockstakestat.
 func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-
-	if !api.wallet.Unlocked() {
-		WriteError(w, Error{"error after call to /wallet/blockstakestat: wallet must be unlocked before it can be used"}, http.StatusBadRequest)
+	unspentBSOs, err := api.wallet.GetUnspentBlockStakeOutputs()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/blockstakestat: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
-	count := len(api.wallet.GetUnspentBlockStakeOutputs())
+	count := len(unspentBSOs)
 	bss := make([]uint64, count)
 	bsn := make([]types.Currency, count)
 	bsutxoa := make([]types.BlockStakeOutputID, count)
@@ -216,9 +234,13 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 	tbs := types.NewCurrency64(0)
 
 	num := 0
-	tbclt, bsf, bc := api.wallet.BlockStakeStats()
+	tbclt, bsf, bc, err := api.wallet.BlockStakeStats()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/blockstakestat: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
 
-	for _, ubso := range api.wallet.GetUnspentBlockStakeOutputs() {
+	for _, ubso := range unspentBSOs {
 		bss[num] = 1
 		bsn[num] = ubso.Value
 		tbs = tbs.Add(bsn[num])
@@ -248,7 +270,7 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 func (api *API) walletAddressHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	unlockHash, err := api.wallet.NextAddress()
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/addresses: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/addresses: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, WalletAddressGET{
@@ -258,9 +280,12 @@ func (api *API) walletAddressHandler(w http.ResponseWriter, req *http.Request, _
 
 // walletAddressHandler handles API calls to /wallet/addresses.
 func (api *API) walletAddressesHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	WriteJSON(w, WalletAddressesGET{
-		Addresses: api.wallet.AllAddresses(),
-	})
+	addresses, err := api.wallet.AllAddresses()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/addresses: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	WriteJSON(w, WalletAddressesGET{Addresses: addresses})
 }
 
 // walletBackupHandler handles API calls to /wallet/backup.
@@ -273,7 +298,7 @@ func (api *API) walletBackupHandler(w http.ResponseWriter, req *http.Request, _ 
 	}
 	err := api.wallet.CreateBackup(destination)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/backup: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/backup: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteSuccess(w)
@@ -361,19 +386,19 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 	// Get the primary seed information.
 	primarySeed, progress, err := api.wallet.PrimarySeed()
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	primarySeedStr, err := modules.NewMnemonic(primarySeed)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 
 	// Get the list of seeds known to the wallet.
 	allSeeds, err := api.wallet.AllSeeds()
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	var allSeedsStrs []string
@@ -406,7 +431,7 @@ func (api *API) walletKeyHandler(w http.ResponseWriter, req *http.Request, ps ht
 	pk, sk, err := api.wallet.GetKey(uh)
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/key/" + strUH + " : " + err.Error()},
-			http.StatusBadRequest)
+			walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, WalletKeyGet{
@@ -426,7 +451,7 @@ func (api *API) walletTransactionCreateHandler(w http.ResponseWriter, req *http.
 
 	tx, err := api.wallet.SendCoins(body.Amount, body.Condition, []byte(body.Data))
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/transaction: " + err.Error()}, http.StatusInternalServerError)
+		WriteError(w, Error{"error after call to /wallet/transaction: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, WalletTransactionPOSTResponse{
@@ -443,7 +468,7 @@ func (api *API) walletCoinsHandler(w http.ResponseWriter, req *http.Request, _ h
 	}
 	tx, err := api.wallet.SendOutputs(body.CoinOutputs, nil, nil)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
+		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, WalletCoinsPOSTResp{
@@ -460,7 +485,7 @@ func (api *API) walletBlockStakesHandler(w http.ResponseWriter, req *http.Reques
 	}
 	tx, err := api.wallet.SendOutputs(nil, body.BlockStakeOutputs, nil)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, http.StatusInternalServerError)
+		WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, WalletBlockStakesPOSTResp{
@@ -486,7 +511,7 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 	tx, err := api.wallet.SendCoins(types.NewCurrency64(1),
 		types.NewCondition(types.NewUnlockHashCondition(dest)), data)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusInternalServerError)
+		WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, WalletCoinsPOSTResp{
@@ -500,13 +525,17 @@ func (api *API) walletTransactionHandler(w http.ResponseWriter, req *http.Reques
 	var id types.TransactionID
 	err := id.LoadString(ps.ByName("id"))
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/history: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/transaction/$(id): " + err.Error()}, http.StatusBadRequest)
 		return
 	}
 
-	txn, ok := api.wallet.Transaction(id)
+	txn, ok, err := api.wallet.Transaction(id)
+	if err != nil {
+		WriteError(w, Error{"error when calling /wallet/transaction/$(id): " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
 	if !ok {
-		WriteError(w, Error{"error when calling /wallet/transaction/$(id): transaction not found"}, http.StatusBadRequest)
+		WriteError(w, Error{"error when calling /wallet/transaction/$(id): transaction not found"}, http.StatusNotFound)
 		return
 	}
 	WriteJSON(w, WalletTransactionGETid{
@@ -534,10 +563,14 @@ func (api *API) walletTransactionsHandler(w http.ResponseWriter, req *http.Reque
 	}
 	confirmedTxns, err := api.wallet.Transactions(types.BlockHeight(start), types.BlockHeight(end))
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
-	unconfirmedTxns := api.wallet.UnconfirmedTransactions()
+	unconfirmedTxns, err := api.wallet.UnconfirmedTransactions()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
 
 	WriteJSON(w, WalletTransactionsGET{
 		ConfirmedTransactions:   confirmedTxns,
@@ -557,8 +590,16 @@ func (api *API) walletTransactionsAddrHandler(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	confirmedATs := api.wallet.AddressTransactions(addr)
-	unconfirmedATs := api.wallet.AddressUnconfirmedTransactions(addr)
+	confirmedATs, err := api.wallet.AddressTransactions(addr)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	unconfirmedATs, err := api.wallet.AddressUnconfirmedTransactions(addr)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
 	WriteJSON(w, WalletTransactionsGETaddr{
 		ConfirmedTransactions:   confirmedATs,
 		UnconfirmedTransactions: unconfirmedATs,
@@ -589,7 +630,11 @@ func (api *API) walletUnlockHandler(w http.ResponseWriter, req *http.Request, _ 
 
 // walletListUnlcokedHandler handles API calls to /wallet/unlocked
 func (api *API) walletListUnlockedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	ucos, ubsos := api.wallet.UnlockedUnspendOutputs()
+	ucos, ubsos, err := api.wallet.UnlockedUnspendOutputs()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/unlocked: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
 	ucor := []UnspentCoinOutput{}
 	ubsor := []UnspentBlockstakeOutput{}
 
@@ -609,7 +654,11 @@ func (api *API) walletListUnlockedHandler(w http.ResponseWriter, req *http.Reque
 
 // walletListUnlcokedHandler handles API calls to /wallet/locked
 func (api *API) walletListLockedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	ucos, ubsos := api.wallet.LockedUnspendOutputs()
+	ucos, ubsos, err := api.wallet.LockedUnspendOutputs()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/locked: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
 	ucor := []UnspentCoinOutput{}
 	ubsor := []UnspentBlockstakeOutput{}
 
@@ -636,7 +685,7 @@ func (api *API) walletCreateTransactionHandler(w http.ResponseWriter, req *http.
 	}
 	tx, err := api.wallet.CreateRawTransaction(body.CoinInputs, body.BlockStakeInputs, body.CoinOutputs, body.BlockStakeOutputs, nil)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/create/transaction: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/create/transaction: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, WalletCreateTransactionRESP{
@@ -653,8 +702,15 @@ func (api *API) walletSignHandler(w http.ResponseWriter, req *http.Request, _ ht
 	}
 	txn, err := api.wallet.GreedySign(body)
 	if err != nil {
-		WriteError(w, Error{"error after call to /wallet/sign: " + err.Error()}, http.StatusBadRequest)
+		WriteError(w, Error{"error after call to /wallet/sign: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
 	WriteJSON(w, txn)
+}
+
+func walletErrorToHTTPStatus(err error) int {
+	if err == modules.ErrLockedWallet {
+		return http.StatusForbidden
+	}
+	return http.StatusInternalServerError
 }

@@ -62,7 +62,11 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 	target, _ := bc.cs.ChildTarget(cbid)
 
 	// Try all unspent blockstake outputs
-	unspentBlockStakeOutputs := bc.wallet.GetUnspentBlockStakeOutputs()
+	unspentBlockStakeOutputs, err := bc.wallet.GetUnspentBlockStakeOutputs()
+	if err != nil {
+		bc.log.Printf("failed to start solving block stakes: %v", err)
+		return nil
+	}
 	for _, ubso := range unspentBlockStakeOutputs {
 		BlockStakeAge := types.Timestamp(0)
 		// Filter all unspent block stakes for aging. If the index of the unspent

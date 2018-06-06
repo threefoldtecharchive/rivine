@@ -29,7 +29,6 @@ var (
 	errNilConsensusSet = errors.New("wallet cannot initialize with a nil consensus set")
 	errNilTpool        = errors.New("wallet cannot initialize with a nil transaction pool")
 	errUnknownAddress  = errors.New("given wallet address is not known")
-	errWalletLocked    = errors.New("wallet is locked")
 )
 
 // spendableKey is a set of secret keys plus the corresponding unlock
@@ -201,16 +200,20 @@ func (w *Wallet) Close() error {
 
 // AllAddresses returns all addresses that the wallet is able to spend from.
 // Addresses are returned sorted in byte-order.
-func (w *Wallet) AllAddresses() []types.UnlockHash {
+func (w *Wallet) AllAddresses() ([]types.UnlockHash, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
+
+	if !w.unlocked {
+		return nil, modules.ErrLockedWallet
+	}
 
 	addrs := make(types.UnlockHashSlice, 0, len(w.keys))
 	for addr := range w.keys {
 		addrs = append(addrs, addr)
 	}
 	sort.Sort(addrs)
-	return addrs
+	return addrs, nil
 }
 
 // GetKey gets the pub/priv key pair,
@@ -223,7 +226,7 @@ func (w *Wallet) GetKey(address types.UnlockHash) (pk types.SiaPublicKey, sk typ
 }
 func (w *Wallet) getKey(address types.UnlockHash) (types.SiaPublicKey, types.ByteSlice, error) {
 	if !w.unlocked {
-		return types.SiaPublicKey{}, types.ByteSlice{}, errWalletLocked
+		return types.SiaPublicKey{}, types.ByteSlice{}, modules.ErrLockedWallet
 	}
 	sp, found := w.keys[address]
 	if !found {
@@ -233,7 +236,7 @@ func (w *Wallet) getKey(address types.UnlockHash) (types.SiaPublicKey, types.Byt
 }
 func (w *Wallet) keyExists(address types.UnlockHash) (bool, error) {
 	if !w.unlocked {
-		return false, errWalletLocked
+		return false, modules.ErrLockedWallet
 	}
 	_, exists := w.keys[address]
 	return exists, nil
@@ -241,9 +244,14 @@ func (w *Wallet) keyExists(address types.UnlockHash) (bool, error) {
 
 // GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 // address this wallet has an unlockhash for.
-func (w *Wallet) GetUnspentBlockStakeOutputs() (unspent []types.UnspentBlockStakeOutput) {
+func (w *Wallet) GetUnspentBlockStakeOutputs() (unspent []types.UnspentBlockStakeOutput, err error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
+
+	if !w.unlocked {
+		err = modules.ErrLockedWallet
+		return
+	}
 
 	unspent = make([]types.UnspentBlockStakeOutput, 0)
 

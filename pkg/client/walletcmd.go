@@ -274,7 +274,7 @@ func walletaddresscmd() {
 	addr := new(api.WalletAddressGET)
 	err := _DefaultClient.httpClient.GetAPI("/wallet/address", addr)
 	if err != nil {
-		Die("Could not generate new address:", err)
+		DieWithError("Could not generate new address:", err)
 	}
 	fmt.Printf("Created new address: %s\n", addr.Address)
 }
@@ -284,7 +284,7 @@ func walletaddressescmd() {
 	addrs := new(api.WalletAddressesGET)
 	err := _DefaultClient.httpClient.GetAPI("/wallet/addresses", addrs)
 	if err != nil {
-		Die("Failed to fetch addresses:", err)
+		DieWithError("Failed to fetch addresses:", err)
 	}
 	for _, addr := range addrs.Addresses {
 		fmt.Println(addr)
@@ -319,7 +319,7 @@ func walletinitcmd() {
 
 	err = _DefaultClient.httpClient.PostResp("/wallet/init", qs, &er)
 	if err != nil {
-		Die("Error when encrypting wallet:", err)
+		DieWithError("Error when encrypting wallet:", err)
 	}
 
 	fmt.Printf("Mnemonic of primary seed:\n%s\n\n", er.PrimarySeed)
@@ -365,7 +365,7 @@ func walletrecovercmd() {
 
 	err = _DefaultClient.httpClient.PostResp("/wallet/init", qs, &er)
 	if err != nil {
-		Die("Error when encrypting wallet:", err)
+		DieWithError("Error when encrypting wallet:", err)
 	}
 
 	if er.PrimarySeed != mnemonic {
@@ -389,7 +389,7 @@ func walletloadseedcmd() {
 	qs := fmt.Sprintf("passphrase=%s&mnemonic=%s", passphrase, mnemonic)
 	err = _DefaultClient.httpClient.Post("/wallet/seed", qs)
 	if err != nil {
-		Die("Could not add seed:", err)
+		DieWithError("Could not add seed:", err)
 	}
 	fmt.Println("Added Key")
 }
@@ -398,7 +398,7 @@ func walletloadseedcmd() {
 func walletlockcmd() {
 	err := _DefaultClient.httpClient.Post("/wallet/lock", "")
 	if err != nil {
-		Die("Could not lock wallet:", err)
+		DieWithError("Could not lock wallet:", err)
 	}
 }
 
@@ -407,7 +407,7 @@ func walletseedscmd() {
 	var seedInfo api.WalletSeedsGET
 	err := _DefaultClient.httpClient.GetAPI("/wallet/seeds", &seedInfo)
 	if err != nil {
-		Die("Error retrieving the current seed:", err)
+		DieWithError("Error retrieving the current seed:", err)
 	}
 	fmt.Printf("Primary Seed: %s\n"+
 		"Addresses Remaining %d\n"+
@@ -441,7 +441,7 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 	}
 	err = _DefaultClient.httpClient.Post("/wallet/coins", string(bytes))
 	if err != nil {
-		Die("Could not send coins:", err)
+		DieWithError("Could not send coins:", err)
 	}
 	for _, co := range body.CoinOutputs {
 		fmt.Printf("Sent %s to %s (using ConditionType %d)\n",
@@ -474,7 +474,7 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 	}
 	err = _DefaultClient.httpClient.Post("/wallet/blockstakes", string(bytes))
 	if err != nil {
-		Die("Could not send block stakes:", err)
+		DieWithError("Could not send block stakes:", err)
 	}
 	for _, bo := range body.BlockStakeOutputs {
 		fmt.Printf("Sent %s BS to %s (using ConditionType %d)\n",
@@ -543,7 +543,7 @@ func walletregisterdatacmd(namespace, dest, data string) {
 	err := _DefaultClient.httpClient.Post("/wallet/data",
 		fmt.Sprintf("destination=%s&data=%s", dest, encodedData))
 	if err != nil {
-		Die("Could not register data:", err)
+		DieWithError("Could not register data:", err)
 	}
 	fmt.Printf("Registered data to %s\n", dest)
 }
@@ -553,7 +553,7 @@ func walletblockstakestatcmd() {
 	bsstat := new(api.WalletBlockStakeStatsGET)
 	err := _DefaultClient.httpClient.GetAPI("/wallet/blockstakestats", bsstat)
 	if err != nil {
-		Die("Could not gen blockstake info:", err)
+		DieWithError("Could not gen blockstake info:", err)
 	}
 	fmt.Printf("BlockStake stats:\n")
 	fmt.Printf("Total active Blockstake is %v\n", bsstat.TotalActiveBlockStake)
@@ -581,18 +581,17 @@ func walletbalancecmd() {
 	status := new(api.WalletGET)
 	err := _DefaultClient.httpClient.GetAPI("/wallet", status)
 	if err != nil {
-		Die("Could not get wallet status:", err)
+		DieWithError("Could not get wallet status:", err)
 	}
 	encStatus := "Unencrypted"
 	if status.Encrypted {
 		encStatus = "Encrypted"
 	}
 	if !status.Unlocked {
-		fmt.Printf(`Wallet status:
+		DieWithExitCode(ExitCodeUsage, fmt.Sprintf(`Wallet status:
 %v, Locked
 Unlock the wallet to view balance
-`, encStatus)
-		return
+`, encStatus))
 	}
 
 	unconfirmedBalance := status.ConfirmedCoinBalance.Add(status.UnconfirmedIncomingCoins).Sub(status.UnconfirmedOutgoingCoins)
@@ -677,12 +676,18 @@ func wallettransactionscmd() {
 	wtg := new(api.WalletTransactionsGET)
 	err := _DefaultClient.httpClient.GetAPI("/wallet/transactions?startheight=0&endheight=10000000", wtg)
 	if err != nil {
-		Die("Could not fetch transaction history:", err)
+		DieWithError("Could not fetch transaction history:", err)
 	}
 
 	multiSigWalletTxns := make(map[types.UnlockHash][]modules.ProcessedTransaction)
-	fmt.Println("    [height]                                             [transaction/block id]       [net coins]   [net blockstakes]")
 	txns := append(wtg.ConfirmedTransactions, wtg.UnconfirmedTransactions...)
+
+	if len(txns) == 0 {
+		fmt.Println("This wallet has no transaction related to it.")
+		return
+	}
+
+	fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
 	for _, txn := range txns {
 		var relatedMultiSigUnlockHashes []types.UnlockHash
 		// Determine the number of outgoing siacoins and siafunds.
@@ -818,7 +823,7 @@ func walletunlockcmd() {
 	qs := fmt.Sprintf("passphrase=%s", password)
 	err = _DefaultClient.httpClient.Post("/wallet/unlock", qs)
 	if err != nil {
-		Die("Could not unlock wallet:", err)
+		DieWithError("Could not unlock wallet:", err)
 	}
 	fmt.Println("Wallet unlocked")
 }
@@ -829,7 +834,7 @@ func walletsendtxncmd(txnjson string) {
 	var resp api.TransactionPoolPOST
 	err := _DefaultClient.httpClient.PostResp("/transactionpool/transactions", txnjson, &resp)
 	if err != nil {
-		Die("Could not publish transaction:", err)
+		DieWithError("Could not publish transaction:", err)
 	}
 	fmt.Println("Transaction published, transaction id:", resp.TransactionID)
 }
@@ -850,7 +855,7 @@ func walletlistunlocked(_ *cobra.Command, args []string) {
 	var resp api.WalletListUnlockedGET
 	err = _DefaultClient.httpClient.GetAPI("/wallet/unlocked", &resp)
 	if err != nil {
-		Die("failed to get unlocked outputs: ", err)
+		DieWithError("failed to get unlocked outputs: ", err)
 	}
 
 	if addressGiven {
@@ -925,7 +930,7 @@ func walletlistlocked(_ *cobra.Command, args []string) {
 	var resp api.WalletListLockedGET
 	err = _DefaultClient.httpClient.GetAPI("/wallet/locked", &resp)
 	if err != nil {
-		Die("Could not get unlocked outputs: ", err)
+		DieWithError("Could not get unlocked outputs: ", err)
 	}
 
 	if addressGiven {
@@ -1046,7 +1051,7 @@ func walletcreatecointxn(cmd *cobra.Command, args []string) {
 	var resp api.WalletCreateTransactionRESP
 	err = _DefaultClient.httpClient.PostResp("/wallet/create/transaction", buffer.String(), &resp)
 	if err != nil {
-		Die("Failed to create transaction:", err)
+		DieWithError("Failed to create transaction:", err)
 	}
 
 	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
@@ -1090,7 +1095,7 @@ func walletcreateblockstaketxn(cmd *cobra.Command, args []string) {
 	var resp api.WalletCreateTransactionRESP
 	err = _DefaultClient.httpClient.PostResp("/wallet/create/transaction", buffer.String(), &resp)
 	if err != nil {
-		Die("Failed to create transaction:", err)
+		DieWithError("Failed to create transaction:", err)
 	}
 
 	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
@@ -1100,7 +1105,7 @@ func walletsigntxn(txnjson string) {
 	var txn types.Transaction
 	err := _DefaultClient.httpClient.PostResp("/wallet/sign", txnjson, &txn)
 	if err != nil {
-		Die("Failed to sign transaction:", err)
+		DieWithError("Failed to sign transaction:", err)
 	}
 
 	json.NewEncoder(os.Stdout).Encode(txn)

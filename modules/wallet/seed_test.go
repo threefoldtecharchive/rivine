@@ -131,8 +131,14 @@ func TestPrimarySeed(t *testing.T) {
 	}
 
 	// ensure we have all addresses of original wallet in the new wallet
-	uhs1 := wt.wallet.AllAddresses()
-	uhs2 := wt2.wallet.AllAddresses()
+	uhs1, err := wt.wallet.AllAddresses()
+	if err != nil {
+		t.Fatal(err)
+	}
+	uhs2, err := wt2.wallet.AllAddresses()
+	if err != nil {
+		t.Fatal(err)
+	}
 	il := len(uhs2)
 	for _, uh1 := range uhs1 {
 		l := len(uhs2)
@@ -186,7 +192,10 @@ func TestLoadSeed(t *testing.T) {
 		t.Errorf("next address couldn't be created: %v", err)
 	}
 
-	c, _ := wt.wallet.ConfirmedBalance()
+	c, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !c.Equals64(0) {
 		t.Error("fresh wallet should not have a balance")
 	}
@@ -196,7 +205,10 @@ func TestLoadSeed(t *testing.T) {
 		t.Errorf("failed to add transaction as block: %v", err)
 	}
 
-	c, _ = wt.wallet.ConfirmedBalance()
+	c, _, err = wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !c.Equals64(1000) {
 		t.Error("wallet requires 1000 coins at this point")
 	}
@@ -216,7 +228,10 @@ func TestLoadSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Balance of wallet should be 0.
-	siacoinBal, _ := w.ConfirmedBalance()
+	siacoinBal, _, err := w.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !siacoinBal.Equals64(0) {
 		t.Error("fresh wallet should not have a balance")
 	}
@@ -246,7 +261,10 @@ func TestLoadSeed(t *testing.T) {
 	}
 
 	// Balance of wallet should be 0.
-	siacoinBal, _ = w.ConfirmedBalance()
+	siacoinBal, _, err = w.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !siacoinBal.Equals64(1000) {
 		t.Errorf("wallet with loaded key should have old balance but has: %v", siacoinBal)
 	}
@@ -262,7 +280,10 @@ func TestLoadSeed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	siacoinBal, _ = w2.ConfirmedBalance()
+	siacoinBal, _, err = w2.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !siacoinBal.Equals64(1000) {
 		t.Errorf("wallet with loaded key should have old balance but has: %v", siacoinBal)
 	}
