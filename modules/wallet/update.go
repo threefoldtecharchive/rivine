@@ -292,12 +292,6 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 					Value:      sfo.Value,
 				}
 			}
-			for _, fee := range txn.MinerFees {
-				pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
-					FundType: types.SpecifierMinerFee,
-					Value:    fee,
-				})
-			}
 			if relevant {
 				w.processedTransactions = append(w.processedTransactions, pt)
 				w.processedTransactionMap[pt.TransactionID] = &w.processedTransactions[len(w.processedTransactions)-1]
@@ -389,12 +383,6 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 				UnlockHash: uh,
 				Value:      sco.Value,
 			}
-		}
-		for _, fee := range txn.MinerFees {
-			pt.Outputs = append(pt.Outputs, modules.ProcessedOutput{
-				FundType: types.SpecifierMinerFee,
-				Value:    fee,
-			})
 		}
 		if relevant {
 			w.unconfirmedProcessedTransactions = append(w.unconfirmedProcessedTransactions, pt)

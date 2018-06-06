@@ -681,7 +681,7 @@ func wallettransactionscmd() {
 	}
 
 	multiSigWalletTxns := make(map[types.UnlockHash][]modules.ProcessedTransaction)
-	fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
+	fmt.Println("    [height]                                             [transaction/block id]       [net coins]   [net blockstakes]")
 	txns := append(wtg.ConfirmedTransactions, wtg.UnconfirmedTransactions...)
 	for _, txn := range txns {
 		var relatedMultiSigUnlockHashes []types.UnlockHash
@@ -739,11 +739,11 @@ func wallettransactionscmd() {
 
 		// Print the results.
 		if txn.ConfirmationHeight < 1e9 {
-			fmt.Printf("%12v", txn.ConfirmationHeight)
+			fmt.Printf("%12v", txn.ConfirmationHeight-1)
 		} else {
 			fmt.Printf(" unconfirmed")
 		}
-		fmt.Printf("%67v%15.2f", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
+		fmt.Printf("%67v%15.2f %s", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat, _CurrencyCoinUnit)
 		incomingBlockStakeBigInt := incomingBlockStakes.Big()
 		outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
 		fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
@@ -760,7 +760,7 @@ func wallettransactionscmd() {
 
 				fmt.Println("Wallet Address:", uh)
 				fmt.Println()
-				fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
+				fmt.Println("    [height]                                             [transaction/block id]       [net coins]   [net blockstakes]")
 
 				// Determine the number of outgoing siacoins and siafunds.
 				var outgoingSiacoins types.Currency
@@ -795,11 +795,11 @@ func wallettransactionscmd() {
 
 				// Print the results.
 				if txn.ConfirmationHeight < 1e9 {
-					fmt.Printf("%12v", txn.ConfirmationHeight)
+					fmt.Printf("%12v", txn.ConfirmationHeight-1)
 				} else {
 					fmt.Printf(" unconfirmed")
 				}
-				fmt.Printf("%67v%15.2f", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat)
+				fmt.Printf("%67v%15.2f %s", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat, _CurrencyCoinUnit)
 				incomingBlockStakeBigInt := incomingBlockStakes.Big()
 				outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
 				fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
