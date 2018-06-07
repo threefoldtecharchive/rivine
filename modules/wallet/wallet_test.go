@@ -270,6 +270,7 @@ func TestAllAddresses(t *testing.T) {
 	}
 	defer wt.closeWt()
 
+	wt.wallet.keys = map[types.UnlockHash]spendableKey{}
 	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{0})] = spendableKey{}
 	wt.wallet.keys[types.NewUnlockHash(0, crypto.Hash{1})] = spendableKey{}
 	wt.wallet.keys[types.NewUnlockHash(1, crypto.Hash{5})] = spendableKey{}
