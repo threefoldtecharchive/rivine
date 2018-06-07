@@ -186,10 +186,6 @@ func TestParsePairedOutputs(t *testing.T) {
 
 func init() {
 	if _CurrencyConvertor == (CurrencyConvertor{}) {
-		var err error
-		_CurrencyConvertor, err = NewCurrencyConvertor(types.DefaultCurrencyUnits())
-		if err != nil {
-			panic(err)
-		}
+		_CurrencyConvertor = NewCurrencyConvertor(types.DefaultCurrencyUnits())
 	}
 }

@@ -67,8 +67,6 @@ type Config struct {
 	// directories will be created
 	RootPersistentDir string
 
-	// Network defines the network config to use
-	NetworkName string
 	// optional network config constructor,
 	// if you're implementing your own rivine-based blockchain,
 	// you'll probably want to define this one,
@@ -97,26 +95,24 @@ func DefaultConfig() Config {
 		Profile:           false,
 		ProfileDir:        "profiles",
 		RootPersistentDir: "",
-
-		NetworkName: build.Release,
 	}
 }
 
 func (cfg *Config) createConfiguredNetworkConfig() (NetworkConfig, error) {
-	if cfg.NetworkName == "" {
+	if cfg.BlockchainInfo.NetworkName == "" {
 		// default to build.Release as network name
-		cfg.NetworkName = build.Release
+		cfg.BlockchainInfo.NetworkName = build.Release
 	}
 	if cfg.CreateNetworkConfig != nil {
 		// use custom network config creator
-		return cfg.CreateNetworkConfig(cfg.NetworkName)
+		return cfg.CreateNetworkConfig(cfg.BlockchainInfo.NetworkName)
 	}
 
 	// use default network config creator
 	networkCfg := NetworkConfig{
 		Constants: types.DefaultChainConstants(),
 	}
-	if cfg.NetworkName == "standard" {
+	if cfg.BlockchainInfo.NetworkName == "standard" {
 		networkCfg.BootstrapPeers = []modules.NetAddress{
 			"136.243.144.132:23112",
 			"[2a01:4f8:171:1303::2]:23112",
@@ -201,7 +197,7 @@ func StartDaemon(cfg Config) (err error) {
 		return err
 	}
 	// Silently append a subdirectory for storage with the name of the network so we don't create conflicts
-	cfg.RootPersistentDir = filepath.Join(cfg.RootPersistentDir, cfg.NetworkName)
+	cfg.RootPersistentDir = filepath.Join(cfg.RootPersistentDir, cfg.BlockchainInfo.NetworkName)
 	// Check if we require an api password
 	if cfg.AuthenticateAPI {
 		// if its not set, ask one now

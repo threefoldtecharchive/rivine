@@ -152,7 +152,7 @@ func SetupDefaultDaemon(cfg Config) {
 		fmt.Sprintf("enabled modules, see '%s modules' for more info", os.Args[0]))
 	root.Flags().BoolVarP(&cfg.AuthenticateAPI, "authenticate-api", "", cfg.AuthenticateAPI, "enable API password protection")
 	root.Flags().BoolVarP(&cfg.AllowAPIBind, "disable-api-security", "", cfg.AllowAPIBind, fmt.Sprintf("allow the daemon of %s to listen on a non-localhost address (DANGEROUS)", cfg.BlockchainInfo.Name))
-	root.Flags().StringVarP(&cfg.NetworkName, "network", "n", cfg.NetworkName, "the name of the network to which the daemon connects")
+	root.Flags().StringVarP(&cfg.BlockchainInfo.NetworkName, "network", "n", cfg.BlockchainInfo.NetworkName, "the name of the network to which the daemon connects")
 
 	// Parse cmdline flags, overwriting both the default values and the config
 	// file values.

@@ -2,11 +2,13 @@ package client
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strings"
 
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/pkg/daemon"
 	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
 )
@@ -23,29 +25,18 @@ const (
 
 // Config defines the configuration for the default (CLI) client.
 type Config struct {
-	Address               string
-	Name                  string
-	Version               build.ProtocolVersion // blockchain version (is NOT Rivine Protocol Version)
-	CurrencyCoinUnit      string
-	CurrencyUnits         types.CurrencyUnits
-	MinimumTransactionFee types.Currency
+	ChainName    string
+	NetworkName  string
+	ChainVersion build.ProtocolVersion
 
-	// version used to create new transactions
+	CurrencyUnits             types.CurrencyUnits
+	MinimumTransactionFee     types.Currency
 	DefaultTransactionVersion types.TransactionVersion
-}
 
-// DefaultConfig creates the default configuration for the default (CLI) client.
-func DefaultConfig() Config {
-	chainConstants := types.DefaultChainConstants()
-	return Config{
-		Address:                   "http://localhost:23110",
-		Name:                      "Rivine",
-		Version:                   build.Version,
-		CurrencyCoinUnit:          "ROC",
-		CurrencyUnits:             types.DefaultCurrencyUnits(),
-		MinimumTransactionFee:     chainConstants.MinimumTransactionFee,
-		DefaultTransactionVersion: chainConstants.DefaultTransactionVersion,
-	}
+	// These values aren't used for validation,
+	// but only in order to estimate progress with the syncing of your consensus.
+	BlockFrequencyInSeconds int64
+	GenesisBlockTimestamp   types.Timestamp
 }
 
 // Wrap wraps a generic command with a check that the command has been
@@ -127,24 +118,44 @@ var (
 	_CurrencyConvertor         CurrencyConvertor
 	_MinimumTransactionFee     types.Currency
 	_DefaultTransactionVersion types.TransactionVersion
+
+	_BlockFrequencyInSeconds int64
+	_GenesisBlockTimestamp   types.Timestamp
 )
 
-// DefaultCLIClient creates a new client using the given params as the default config,
-// and an optional flag-based system to overrride some.
-func DefaultCLIClient(cfg Config) {
-	_DefaultClient.name = cfg.Name
-	_DefaultClient.httpClient.RootURL = cfg.Address
-	_DefaultClient.version = cfg.Version
-	_CurrencyCoinUnit = cfg.CurrencyCoinUnit
-	_CurrencyUnits = cfg.CurrencyUnits
-	_MinimumTransactionFee = cfg.MinimumTransactionFee
-	_DefaultTransactionVersion = cfg.DefaultTransactionVersion
-
-	var err error
-	_CurrencyConvertor, err = NewCurrencyConvertor(_CurrencyUnits)
+func fetchConfigFromDaemon() *Config {
+	var constants daemon.SiaConstants
+	err := _DefaultClient.httpClient.GetAPI("/daemon/constants", &constants)
 	if err != nil {
-		Die("couldn't create currency convertor:", err)
+		log.Println("[ERROR] Failed to load constants from daemon: ", err)
+		return nil
 	}
+	return &Config{
+		ChainName:    constants.ChainInfo.Name,
+		NetworkName:  constants.ChainInfo.NetworkName,
+		ChainVersion: constants.ChainInfo.ChainVersion,
+		CurrencyUnits: types.CurrencyUnits{
+			OneCoin: constants.OneCoin,
+		},
+		MinimumTransactionFee:     constants.MinimumTransactionFee,
+		DefaultTransactionVersion: constants.DefaultTransactionVersion,
+		BlockFrequencyInSeconds:   int64(constants.BlockFrequency),
+		GenesisBlockTimestamp:     constants.GenesisTimestamp,
+	}
+}
+
+// DefaultCLIClient creates a new client for the given address.
+// The given address is used to connect to the client daemon, using its REST API.
+// configFunc has to be given and has two functions:
+// most importantly it serves to provide a default config, should the daemon/constants endpoint not be available,
+// and secondly it allows the CLi client to overwrite one or multiple properties.
+// Address input parameter defaults to "http://localhost:23110" if none is given.
+func DefaultCLIClient(address string, configFunc func(*Config) Config) {
+	if address == "" {
+		address = "http://localhost:23110"
+	}
+	_DefaultClient.httpClient.RootURL = address
+	_DefaultClient.name, _DefaultClient.version = "R?v?ne", build.Version // defaults for now, until we loaded real values
 
 	root := &cobra.Command{
 		Use:   os.Args[0],
@@ -152,11 +163,23 @@ func DefaultCLIClient(cfg Config) {
 		Long:  fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
 		Run:   Wrap(consensuscmd),
 		PersistentPreRun: func(*cobra.Command, []string) {
+			// sanituze root URL
 			url, err := sanitizeURL(_DefaultClient.httpClient.RootURL)
 			if err != nil {
 				Die("invalid", strings.Title(_DefaultClient.name), "daemon RPC address", _DefaultClient.httpClient.RootURL, ":", err)
 			}
 			_DefaultClient.httpClient.RootURL = url
+
+			// configure client
+			cfg := configFunc(fetchConfigFromDaemon())
+			_DefaultClient.name = cfg.ChainName
+			_DefaultClient.version = cfg.ChainVersion
+			_CurrencyUnits = cfg.CurrencyUnits
+			_CurrencyConvertor = NewCurrencyConvertor(_CurrencyUnits)
+			_MinimumTransactionFee = cfg.MinimumTransactionFee
+			_DefaultTransactionVersion = cfg.DefaultTransactionVersion
+			_BlockFrequencyInSeconds = cfg.BlockFrequencyInSeconds
+			_GenesisBlockTimestamp = cfg.GenesisBlockTimestamp
 		},
 	}
 

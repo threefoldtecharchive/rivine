@@ -47,13 +47,13 @@ type CurrencyConvertor struct {
 // using the given currency units.
 //
 // See CurrencyConvertor for more information.
-func NewCurrencyConvertor(units types.CurrencyUnits) (CurrencyConvertor, error) {
+func NewCurrencyConvertor(units types.CurrencyUnits) CurrencyConvertor {
 	oneCoinStr := units.OneCoin.String()
 	precision := uint(len(oneCoinStr) - 1)
 	return CurrencyConvertor{
 		scalar:    units.OneCoin.Big(),
 		precision: precision,
-	}, nil
+	}
 }
 
 // ParseCoinString parses the given string assumed to be in the default unit,

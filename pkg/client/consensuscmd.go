@@ -58,7 +58,7 @@ Target: %v
 		}
 		fmt.Printf(`Synced: %v
 Height: %v
-Progress (estimated): %.f%%
+Progress (estimated): %.2f%%
 `, YesNo(cg.Synced), cg.Height, estimatedProgress)
 	}
 }
@@ -67,9 +67,18 @@ Progress (estimated): %.f%%
 // Block height is estimated by calculating the minutes since a known block in
 // the past and dividing by 10 minutes (the block time).
 func EstimatedHeightAt(t time.Time) types.BlockHeight {
-	block5e4Timestamp := time.Date(2016, time.May, 11, 19, 33, 0, 0, time.UTC)
-	diff := t.Sub(block5e4Timestamp)
-	estimatedHeight := 5e4 + (diff.Minutes() / 10)
+	if _GenesisBlockTimestamp == 0 {
+		panic("GenesisBlockTimestamp is undefined")
+	}
+	return estimatedHeightBetween(int64(_GenesisBlockTimestamp), t.Unix(), _BlockFrequencyInSeconds)
+}
+
+func estimatedHeightBetween(from, to, blockFrequency int64) types.BlockHeight {
+	lifetimeInSeconds := to - from
+	if lifetimeInSeconds < blockFrequency {
+		return 0
+	}
+	estimatedHeight := float64(lifetimeInSeconds) / float64(blockFrequency)
 	return types.BlockHeight(estimatedHeight + 0.5) // round to the nearest block
 }
 

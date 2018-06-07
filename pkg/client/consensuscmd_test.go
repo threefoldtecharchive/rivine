@@ -9,41 +9,53 @@ import (
 
 // TestEstimatedHeightAt tests that the expectedHeightAt function correctly
 // estimates the blockheight (and rounds to the nearest block).
-func TestEstimatedHeightAt(t *testing.T) {
+func TestEstimatedHeightBetween(t *testing.T) {
 	tests := []struct {
-		t              time.Time
-		expectedHeight types.BlockHeight
+		From, To       int64 // timestamps in seconds
+		BlockFrequency int64 // duration in seconds
+		ExpectedHeight types.BlockHeight
 	}{
-		// Test on the same block that is used to estimate the height
+		// 0 or negative
 		{
-			time.Date(2016, time.May, 11, 19, 33, 0, 0, time.UTC),
-			5e4,
+			0, 0,
+			1, 0,
 		},
-		// 4 minutes later
 		{
-			time.Date(2016, time.May, 11, 19, 37, 0, 0, time.UTC),
-			5e4,
+			10, 10,
+			1, 0,
 		},
-		// 5 minutes later
 		{
-			time.Date(2016, time.May, 11, 19, 38, 0, 0, time.UTC),
-			5e4 + 1,
+			10, 5,
+			1, 0,
 		},
-		// 10 minutes later
+		// 1 (productive) hour
 		{
-			time.Date(2016, time.May, 11, 19, 43, 0, 0, time.UTC),
-			5e4 + 1,
+			0, 3600,
+			1, 3600,
 		},
-		// 1 day later
 		{
-			time.Date(2016, time.May, 12, 19, 33, 0, 0, time.UTC),
-			5e4 + 144,
+			0, 3600,
+			60, 60,
+		},
+		{
+			0, 3600,
+			120, 30,
+		},
+		// an example with more realistic numbers
+		{
+			// 7 days and 3 hours
+			time.Date(2018, 03, 2, 12, 0, 0, 0, time.Local).Unix(),
+			time.Date(2018, 03, 9, 15, 0, 0, 0, time.Local).Unix(),
+			// frequency of 10 minutes
+			600,
+			// expected height: roundUp((171h * 60 * 60) / 600)
+			1026,
 		},
 	}
-	for _, tt := range tests {
-		h := EstimatedHeightAt(tt.t)
-		if h != tt.expectedHeight {
-			t.Errorf("expected an estimated height of %v, but got %v", tt.expectedHeight, h)
+	for index, tt := range tests {
+		h := estimatedHeightBetween(tt.From, tt.To, tt.BlockFrequency)
+		if h != tt.ExpectedHeight {
+			t.Error(index, h, "!=", tt.ExpectedHeight, tt)
 		}
 	}
 }

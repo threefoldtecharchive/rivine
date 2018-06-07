@@ -29,6 +29,8 @@ type (
 
 	// SiaConstants is a struct listing all of the constants in use.
 	SiaConstants struct {
+		ChainInfo types.BlockchainInfo `json:"chaininfo"`
+
 		GenesisTimestamp       types.Timestamp   `json:"genesistimestamp"`
 		BlockSizeLimit         uint64            `json:"blocksizelimit"`
 		BlockFrequency         types.BlockHeight `json:"blockfrequency"`
@@ -52,6 +54,8 @@ type (
 		MaxAdjustmentDown *big.Rat          `json:"maxadjustmentdown"`
 
 		OneCoin types.Currency `json:"onecoin"`
+
+		DefaultTransactionVersion types.TransactionVersion `json:"deftransactionversion"`
 	}
 	DaemonVersion struct {
 		Version string `json:"version"`
@@ -76,6 +80,8 @@ type (
 // debugConstantsHandler prints a json file containing all of the constants.
 func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
 	sc := SiaConstants{
+		ChainInfo: srv.bcInfo,
+
 		GenesisTimestamp:       srv.chainCts.GenesisTimestamp,
 		BlockSizeLimit:         srv.chainCts.BlockSizeLimit,
 		BlockFrequency:         srv.chainCts.BlockFrequency,
@@ -99,6 +105,8 @@ func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request
 		MaxAdjustmentDown: srv.chainCts.MaxAdjustmentDown,
 
 		OneCoin: srv.chainCts.CurrencyUnits.OneCoin,
+
+		DefaultTransactionVersion: srv.chainCts.DefaultTransactionVersion,
 	}
 
 	api.WriteJSON(w, sc)

@@ -8,68 +8,8 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-func TestNewCurrencyConvertor(t *testing.T) {
-	testCases := []struct {
-		Input  types.CurrencyUnits
-		Output *CurrencyConvertor
-	}{
-		{
-			types.CurrencyUnits{
-				OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
-			},
-			&CurrencyConvertor{
-				scalar:    big.NewInt(1000000000),
-				precision: 9,
-			},
-		},
-		{
-			types.CurrencyUnits{
-				OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
-			},
-			&CurrencyConvertor{
-				scalar:    big.NewInt(1),
-				precision: 0,
-			},
-		},
-		{
-			types.CurrencyUnits{
-				OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
-			},
-			&CurrencyConvertor{
-				scalar:    new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil),
-				precision: 24,
-			},
-		},
-		{
-			types.CurrencyUnits{
-				OneCoin: types.NewCurrency(big.NewInt(1)),
-			},
-			&CurrencyConvertor{
-				scalar:    big.NewInt(1),
-				precision: 0,
-			},
-		},
-	}
-	for idx, testCase := range testCases {
-		cc, err := NewCurrencyConvertor(testCase.Input)
-		if testCase.Output == nil {
-			if err == nil {
-				t.Errorf("expected error for testCase #%d, but nothing received", idx)
-			}
-			continue
-		}
-
-		if testCase.Output.Cmp(cc) != 0 {
-			t.Errorf("#%d: %v != %v", idx, testCase.Output, cc)
-		}
-	}
-}
-
 func TestParseCoinStringInvalidStrings(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.DefaultCurrencyUnits())
-	if err != nil {
-		t.Fatal(err)
-	}
+	cc := NewCurrencyConvertor(types.DefaultCurrencyUnits())
 
 	testCases := []string{
 		"-1",
@@ -86,10 +26,7 @@ func TestParseCoinStringInvalidStrings(t *testing.T) {
 }
 
 func TestParseCoinStringValidStrings(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.DefaultCurrencyUnits())
-	if err != nil {
-		t.Fatal(err)
-	}
+	cc := NewCurrencyConvertor(types.DefaultCurrencyUnits())
 
 	testCases := []string{
 		"1",
@@ -117,32 +54,23 @@ func TestParseCoinStringValidStrings(t *testing.T) {
 }
 
 func TestParseCoinStringToCoinSmallValueString_E0(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinSmallValueString_E9(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinSmallValueString_E24(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
@@ -182,32 +110,23 @@ func testParseCoinStringToCoinSmallValueString(t *testing.T, cc CurrencyConverto
 }
 
 func TestParseCoinStringToCoinBigValueString_E0(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	testParseCoinStringToCoinBigValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinBigValueString_E9(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	testParseCoinStringToCoinBigValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinBigValueString_E24(t *testing.T) {
-	cc, err := NewCurrencyConvertor(types.CurrencyUnits{
+	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
 	testParseCoinStringToCoinBigValueString(t, cc)
 }
 
