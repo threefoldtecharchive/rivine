@@ -134,9 +134,26 @@ func (tp *TransactionPool) FeeEstimation() (min, max types.Currency) {
 // The transactions are provided in an order that can acceptably be put into a
 // block.
 func (tp *TransactionPool) TransactionList() []types.Transaction {
+	tp.mu.RLock()
+	defer tp.mu.RUnlock()
+
 	var txns []types.Transaction
 	for _, tSet := range tp.transactionSets {
 		txns = append(txns, tSet...)
 	}
 	return txns
+}
+
+// Transaction implements TransactionPool.Transaction
+func (tp *TransactionPool) Transaction(id types.TransactionID) (types.Transaction, error) {
+	tp.mu.RLock()
+	defer tp.mu.RUnlock()
+	for _, tSet := range tp.transactionSets {
+		for _, txn := range tSet {
+			if id == txn.ID() {
+				return txn, nil
+			}
+		}
+	}
+	return types.Transaction{}, modules.ErrTransactionNotFound
 }

@@ -69,6 +69,7 @@ type (
 		Blocks       []ExplorerBlock       `json:"blocks"`
 		Transaction  ExplorerTransaction   `json:"transaction"`
 		Transactions []ExplorerTransaction `json:"transactions"`
+		Unconfirmed  bool                  `json:"unconfirmed"`
 	}
 )
 
@@ -278,6 +279,22 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 			Transactions: txns,
 		})
 		return
+	}
+
+	// Try the hash as a transactionID in the transaction pool
+	txn, err := api.tpool.Transaction(types.TransactionID(hash))
+	if err == nil {
+		WriteJSON(w, ExplorerHashGET{
+			HashType:    HashTypeTransactionIDStr,
+			Transaction: api.buildExplorerTransaction(0, types.BlockID{}, txn),
+			Unconfirmed: true,
+		})
+		return
+	}
+	if err != modules.ErrTransactionNotFound {
+		WriteError(w, Error{
+			"error during call to /explorer/hash: failed to get txn from transaction pool: " + err.Error()},
+			http.StatusInternalServerError)
 	}
 
 	// Hash not found, return an error.

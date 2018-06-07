@@ -39,6 +39,10 @@ var (
 	// potentially illegal transactions in the event of a soft-fork.
 	ErrInvalidArbPrefix = errors.New("transaction contains non-standard arbitrary data")
 
+	// ErrTransactionNotFound is returned in case no transaction could be found
+	// in the transaction pool for a specific ID.
+	ErrTransactionNotFound = errors.New("transaction not found")
+
 	// TransactionPoolDir is the name of the directory that is used to store
 	// the transaction pool's persistent data.
 	TransactionPoolDir = "transactionpool"
@@ -86,6 +90,10 @@ type TransactionPool interface {
 	// pool. The transactions are provided in an order that can acceptably be
 	// put into a block.
 	TransactionList() []types.Transaction
+
+	// Transaction returns the transaction with the given ID from the transaction pool.
+	// If no transaction for that ID is found ErrNotFound is returned.
+	Transaction(id types.TransactionID) (types.Transaction, error)
 
 	// TransactionPoolSubscribe adds a subscriber to the transaction pool.
 	// Subscribers will receive all consensus set changes as well as
