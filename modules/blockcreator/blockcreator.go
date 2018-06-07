@@ -128,7 +128,12 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 	})
 
 	// Save after synchronizing with consensus
+	// In case we exit while the consensus set is syncing, it is possible that one
+	// of the callbacks is still modifying the block creator persistent data, which
+	// would result in a data race. So grab a readlock here to avoid issues
+	b.mu.RLock()
 	err = b.save()
+	b.mu.RUnlock()
 	if err != nil {
 		return nil, errors.New("block creator could not save during startup: " + err.Error())
 	}
