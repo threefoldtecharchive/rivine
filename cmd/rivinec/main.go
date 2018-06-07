@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	client.DefaultCLIClient("", func(icfg *client.Config) client.Config {
+	bchainInfo := types.DefaultBlockchainInfo()
+	client.DefaultCLIClient("", bchainInfo.Name, func(icfg *client.Config) client.Config {
 		var networkName string
 		switch build.Release {
 		case "dev":
@@ -18,7 +19,6 @@ func main() {
 			networkName = "standard"
 		}
 		if icfg == nil {
-			bchainInfo := types.DefaultBlockchainInfo()
 			constants := types.DefaultChainConstants()
 			return client.Config{
 				ChainName:    bchainInfo.Name,

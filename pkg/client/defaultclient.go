@@ -150,17 +150,20 @@ func fetchConfigFromDaemon() *Config {
 // most importantly it serves to provide a default config, should the daemon/constants endpoint not be available,
 // and secondly it allows the CLi client to overwrite one or multiple properties.
 // Address input parameter defaults to "http://localhost:23110" if none is given.
-func DefaultCLIClient(address string, configFunc func(*Config) Config) {
+func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
 	if address == "" {
 		address = "http://localhost:23110"
 	}
+	if name == "" {
+		name = "R?v?ne"
+	}
 	_DefaultClient.httpClient.RootURL = address
-	_DefaultClient.name, _DefaultClient.version = "R?v?ne", build.Version // defaults for now, until we loaded real values
+	_DefaultClient.name, _DefaultClient.version = name, build.Version // defaults for now, until we loaded real values from the daemon/client-callback
 
 	root := &cobra.Command{
 		Use:   os.Args[0],
-		Short: fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
-		Long:  fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String(),
+		Short: fmt.Sprintf("%s Client", strings.Title(_DefaultClient.name)),
+		Long:  fmt.Sprintf("%s Client", strings.Title(_DefaultClient.name)),
 		Run:   Wrap(consensuscmd),
 		PersistentPreRun: func(*cobra.Command, []string) {
 			// sanituze root URL
