@@ -1,19 +1,28 @@
 package main
 
 import (
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/pkg/client"
 	"github.com/rivine/rivine/types"
-	"github.com/threefoldfoundation/tfchain/pkg/config"
 )
 
 func main() {
 	client.DefaultCLIClient("", func(icfg *client.Config) client.Config {
+		var networkName string
+		switch build.Release {
+		case "dev":
+			networkName = "devnet"
+		case "testing":
+			networkName = "testnet"
+		default:
+			networkName = "standard"
+		}
 		if icfg == nil {
 			bchainInfo := types.DefaultBlockchainInfo()
 			constants := types.DefaultChainConstants()
 			return client.Config{
 				ChainName:    bchainInfo.Name,
-				NetworkName:  config.NetworkNameStandard,
+				NetworkName:  networkName,
 				ChainVersion: bchainInfo.ChainVersion,
 
 				CurrencyUnits:             constants.CurrencyUnits,
