@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -123,14 +122,14 @@ var (
 	_GenesisBlockTimestamp   types.Timestamp
 )
 
-func fetchConfigFromDaemon() *Config {
+func fetchConfigFromDaemon() Config {
 	var constants daemon.SiaConstants
 	err := _DefaultClient.httpClient.GetAPI("/daemon/constants", &constants)
 	if err != nil {
-		log.Println("[ERROR] Failed to load constants from daemon: ", err)
-		return nil
+		DieWithError("failed to load constants from daemon", err)
+		return Config{}
 	}
-	return &Config{
+	return Config{
 		ChainName:    constants.ChainInfo.Name,
 		NetworkName:  constants.ChainInfo.NetworkName,
 		ChainVersion: constants.ChainInfo.ChainVersion,
@@ -146,11 +145,9 @@ func fetchConfigFromDaemon() *Config {
 
 // DefaultCLIClient creates a new client for the given address.
 // The given address is used to connect to the client daemon, using its REST API.
-// configFunc has to be given and has two functions:
-// most importantly it serves to provide a default config, should the daemon/constants endpoint not be available,
-// and secondly it allows the CLi client to overwrite one or multiple properties.
-// Address input parameter defaults to "http://localhost:23110" if none is given.
-func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
+// configFunc allows you to overwrite any config, should some value returned by the daemon not be desired,
+// it is however optional and does not have to be given
+func DefaultCLIClient(address, name string, configFunc func(Config) Config) {
 	if address == "" {
 		address = "http://localhost:23110"
 	}
@@ -158,7 +155,8 @@ func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
 		name = "R?v?ne"
 	}
 	_DefaultClient.httpClient.RootURL = address
-	_DefaultClient.name, _DefaultClient.version = name, build.Version // defaults for now, until we loaded real values from the daemon/client-callback
+	// defaults for now, until we loaded real values from the daemon/client-callback
+	_DefaultClient.name, _DefaultClient.version = name, build.ProtocolVersion{}
 
 	root := &cobra.Command{
 		Use:   os.Args[0],
@@ -173,8 +171,13 @@ func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
 			}
 			_DefaultClient.httpClient.RootURL = url
 
-			// configure client
-			cfg := configFunc(fetchConfigFromDaemon())
+			// fetch CLI from config
+			cfg := fetchConfigFromDaemon()
+			// overwrite some configuration if desired
+			if configFunc != nil {
+				cfg = configFunc(cfg)
+			}
+			// use fetched, and optionally modified config, in order to configure the CLI client
 			_DefaultClient.name = cfg.ChainName
 			_DefaultClient.version = cfg.ChainVersion
 			_CurrencyUnits = cfg.CurrencyUnits
@@ -202,7 +205,6 @@ func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
 
 	root.AddCommand(stopCmd)
 
-	createWalletCommands()
 	root.AddCommand(walletCmd)
 	walletCmd.AddCommand(
 		walletAddressCmd,
@@ -284,8 +286,4 @@ func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
 		// Command.SilenceUsage is false) and we should exit with exitCodeUsage.
 		os.Exit(ExitCodeUsage)
 	}
-}
-
-func init() {
-	_CurrencyUnits = types.DefaultCurrencyUnits()
 }

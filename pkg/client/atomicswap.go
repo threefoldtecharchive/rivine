@@ -138,17 +138,13 @@ var (
 
 func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
 	// parse hastings
-	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
-		DieWithExitCode(ExitCodeUsage, "failed to parse amount:", err)
-	}
+	hastings := parseCoinArg(amount)
 
 	// parse receiver (=participant) and sender (=initiator)
 	var (
 		receiver, sender types.UnlockHash
 	)
-	err = receiver.LoadString(participantAddress)
+	err := receiver.LoadString(participantAddress)
 	if err != nil {
 		DieWithExitCode(ExitCodeUsage, "failed to parse participant address (unlock hash):", err)
 	}
@@ -181,17 +177,13 @@ func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
 
 func atomicswapinitiatecmd(participatorAddress, amount string) {
 	// parse hastings
-	hastings, err := _CurrencyConvertor.ParseCoinString(amount)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, _CurrencyConvertor.CoinArgDescription("amount"))
-		DieWithExitCode(ExitCodeUsage, "failed to parse amount:", err)
-	}
+	hastings := parseCoinArg(amount)
 
 	// parse receiver (=participant) and sender (=initiator)
 	var (
 		receiver, sender types.UnlockHash
 	)
-	err = receiver.LoadString(participatorAddress)
+	err := receiver.LoadString(participatorAddress)
 	if err != nil {
 		DieWithExitCode(ExitCodeUsage, "failed to parse participator address (unlock hash):", err)
 	}
@@ -400,14 +392,15 @@ TimeLock reached in: %s
 		condition.Sender, condition.HashedSecret, condition.TimeLock, durationLeft)
 
 	var invalidContract bool
-	if !atomicSwapAuditcfg.CoinAmount.Amount.IsZero() {
+	amount := atomicSwapAuditcfg.CoinAmount.Amount()
+	if !amount.IsZero() {
 		// optionally validate coin amount
-		if !atomicSwapAuditcfg.CoinAmount.Amount.Equals(co.Value) {
+		if !amount.Equals(co.Value) {
 			invalidContract = true
 			fmt.Fprintln(os.Stderr, "unspent out's value "+
 				_CurrencyConvertor.ToCoinStringWithUnit(co.Value)+
 				" does not match the expected value "+
-				_CurrencyConvertor.ToCoinStringWithUnit(atomicSwapAuditcfg.CoinAmount.Amount))
+				_CurrencyConvertor.ToCoinStringWithUnit(amount))
 		}
 	}
 	if atomicSwapAuditcfg.HashedSecret != (types.AtomicSwapHashedSecret{}) {

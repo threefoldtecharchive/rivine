@@ -150,16 +150,3 @@ func (cc CurrencyConvertor) CoinArgDescription(argName string) string {
 		"argument %s (expressed in default unit %s) can (only) have up to %d digits after comma and has to be positive",
 		argName, _CurrencyCoinUnit, cc.precision)
 }
-
-// CoinHelp is used to print a help message,
-// for this convertor.
-func (cc CurrencyConvertor) CoinHelp() string {
-	if cc.precision < 1 {
-		return fmt.Sprintf(`coins are expressed in their default unit (%s),
-which value has to be expressed as a positive natural number
-(no digits after comma are allowed)`, _CurrencyCoinUnit)
-	}
-	return fmt.Sprintf(`coins are expressed in their default unit (%s), which value can be expressed as a floating point value,
-but it can (only) have up to %d digits after comma and it has to be positive`,
-		_CurrencyCoinUnit, cc.precision)
-}

@@ -19,15 +19,12 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-// have to be called prior to being able to use wallet cmds
-func createWalletCommands() {
+var (
 	walletCmd = &cobra.Command{
 		Use:   "wallet",
 		Short: "Perform wallet actions",
-		Long: `Generate a new address, send coins to another wallet, or view info about the wallet.
-
-` + _CurrencyConvertor.CoinHelp(),
-		Run: Wrap(walletbalancecmd),
+		Long:  "Generate a new address, send coins to another wallet, or view info about the wallet.",
+		Run:   Wrap(walletbalancecmd),
 	}
 
 	walletBlockStakeStatCmd = &cobra.Command{
@@ -109,10 +106,13 @@ Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash),
 instead of an unlockHash, you can also give a JSON-encoded UnlockCondition directly,
 giving you more control and options over how exactly the block stake is to be unlocked.
 
-` + _CurrencyConvertor.CoinArgDescription("amount") + `
+Amounts have to be given expressed in the OneCoin unit, and without the unit of currency.
+Decimals are possible and are to be expressed using English conventions.
 
-Miner fees will be added on top of the given amount automatically.
+Amounts have to be given expressed in the OneCoin unit, and without the unit of currency.
+Decimals are possible and have to be defined using the decimal point.
 
+The Minimum Miner Fee will be added on top of the total given amount automatically.
 `,
 		Run: walletsendcoinscmd,
 	}
@@ -125,8 +125,10 @@ Each 'dest' must be a 78-byte hexadecimal address (Unlock Hash),
 instead of an unlockHash, you can also give a JSON-encoded UnlockCondition directly,
 giving you more control and options over how exactly the block stake is to be unlocked.
 
-Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automatically.
+Amounts have to be given expressed in the OneCoin unit, and without the unit of currency.
+Decimals are possible and have to be defined using the decimal point.
 
+The Minimum Miner Fee will be added on top of the total given amount automatically.
 `,
 		Run: walletsendblockstakescmd,
 	}
@@ -148,8 +150,9 @@ Miner fees (expressed in ` + _CurrencyCoinUnit + `) will be added on top automat
 	walletTransactionsCmd = &cobra.Command{
 		Use:   "transactions",
 		Short: "View transactions",
-		Long:  "View transactions related to addresses spendable by the wallet, providing a net flow of coins and blockstakes for each transaction",
-		Run:   Wrap(wallettransactionscmd),
+		Long: `View transactions related to addresses spendable by the wallet,
+providing a net flow of coins and blockstakes for each transaction.`,
+		Run: Wrap(wallettransactionscmd),
 	}
 
 	walletUnlockCmd = &cobra.Command{
@@ -216,7 +219,13 @@ signatures to unlock`,
 		Short: "Create a new coin transaction",
 		Long: `Create a new coin transaction using the given parentID's and outputs.
 The outputs can be given as a pair of value and a raw output condition (or
-address, which resolved to a singlesignature condition).`,
+address, which resolved to a singlesignature condition).
+
+Amounts have to be given expressed in the OneCoin unit, and without the unit of currency.
+Decimals are possible and have to be defined using the decimal point.
+
+The Minimum Miner Fee will be added on top of the total given amount automatically.
+`,
 		Run: walletcreatecointxn,
 	}
 
@@ -225,7 +234,13 @@ address, which resolved to a singlesignature condition).`,
 		Short: "Create a new blockstake transaction",
 		Long: `Create a new blockstake transaction using the given parentID's and outputs.
 The outputs can be given as a pair of value and a raw output condition (or
-address, which resolved to a singlesignature condition).`,
+address, which resolved to a singlesignature condition).
+
+Amounts have to be given expressed in the OneCoin unit, and without the unit of currency.
+Decimals are possible and have to be defined using the decimal point.
+
+The Minimum Miner Fee will be added on top of the total given amount automatically.
+`,
 		Run: walletcreateblockstaketxn,
 	}
 
@@ -236,36 +251,6 @@ address, which resolved to a singlesignature condition).`,
 by any of the keys in the wallet.`,
 		Run: Wrap(walletsigntxn),
 	}
-}
-
-// still need to be initialized using createWalletCommands
-var (
-	walletCmd                    *cobra.Command
-	walletBlockStakeStatCmd      *cobra.Command
-	walletAddressCmd             *cobra.Command
-	walletAddressesCmd           *cobra.Command
-	walletInitCmd                *cobra.Command
-	walletRecoverCmd             *cobra.Command
-	walletLoadCmd                *cobra.Command
-	walletLoadSeedCmd            *cobra.Command
-	walletLockCmd                *cobra.Command
-	walletSendCmd                *cobra.Command
-	walletSeedsCmd               *cobra.Command
-	walletSendCoinsCmd           *cobra.Command
-	walletSendBlockStakesCmd     *cobra.Command
-	walletRegisterDataCmd        *cobra.Command
-	walletBalanceCmd             *cobra.Command
-	walletTransactionsCmd        *cobra.Command
-	walletUnlockCmd              *cobra.Command
-	walletSendTxnCmd             *cobra.Command
-	walletListCmd                *cobra.Command
-	walletListUnlockedCmd        *cobra.Command
-	walletListLockedCmd          *cobra.Command
-	walletCreateCmd              *cobra.Command
-	walletCreateMultisisgAddress *cobra.Command
-	walletCreateCoinTxnCmd       *cobra.Command
-	walletCreateBlockStakeTxnCmd *cobra.Command
-	walletSignCmd                *cobra.Command
 )
 
 // walletaddresscmd fetches a new address from the wallet that will be able to
