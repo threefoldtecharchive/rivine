@@ -90,5 +90,6 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 
 // Close closes the explorer.
 func (e *Explorer) Close() error {
+	e.cs.Unsubscribe(e)
 	return e.db.Close()
 }
