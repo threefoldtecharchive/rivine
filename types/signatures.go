@@ -190,29 +190,6 @@ func sortedUnique(elems []uint64, max int) bool {
 	return true
 }
 
-// validateNoDoubleSpends validates that no output has been spend twice.
-func (t *Transaction) validateNoDoubleSpends() (err error) {
-	spendCoins := make(map[CoinOutputID]struct{})
-	for _, ci := range t.CoinInputs {
-		if _, found := spendCoins[ci.ParentID]; found {
-			err = ErrDoubleSpend
-			return
-		}
-		spendCoins[ci.ParentID] = struct{}{}
-	}
-
-	spendBlockStakes := make(map[BlockStakeOutputID]struct{})
-	for _, bsi := range t.BlockStakeInputs {
-		if _, found := spendBlockStakes[bsi.ParentID]; found {
-			err = ErrDoubleSpend
-			return
-		}
-		spendBlockStakes[bsi.ParentID] = struct{}{}
-	}
-
-	return
-}
-
 // LoadString is the inverse of SiaPublicKey.String().
 func (spk *SiaPublicKey) LoadString(s string) error {
 	parts := strings.SplitN(s, ":", 2)

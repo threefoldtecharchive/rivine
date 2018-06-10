@@ -6,6 +6,7 @@ import (
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/types"
 
 	"github.com/rivine/bbolt"
 )
@@ -156,7 +157,11 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	// validated all at once because some transactions may not be valid until
 	// previous transactions have been applied.
 	for _, txn := range pb.Block.Transactions {
-		err := validTransaction(tx, txn, cs.chainCts.BlockSizeLimit, cs.chainCts.ArbitraryDataSizeLimit, pb.Height, pb.Block.Timestamp)
+		err := validTransaction(tx, txn, types.TransactionValidationConstants{
+			BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
+			ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
+			MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
+		}, pb.Height, pb.Block.Timestamp)
 		if err != nil {
 			return err
 		}

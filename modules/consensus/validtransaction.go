@@ -98,10 +98,13 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockH
 
 // validTransaction checks that all fields are valid within the current
 // consensus state. If not an error is returned.
-func validTransaction(tx *bolt.Tx, t types.Transaction, blockSizeLimit, arbitraryDataSizeLimit uint64, blockHeight types.BlockHeight, blockTimestamp types.Timestamp) error {
+func validTransaction(tx *bolt.Tx, t types.Transaction, constants types.TransactionValidationConstants, blockHeight types.BlockHeight, blockTimestamp types.Timestamp) error {
 	// StandaloneValid will check things like signatures and properties that
 	// should be inherent to the transaction. (storage proof rules, etc.)
-	err := t.ValidateTransaction(blockSizeLimit, arbitraryDataSizeLimit)
+	err := t.ValidateTransaction(types.ValidationContext{
+		Confirmed:   true,
+		BlockHeight: blockHeight,
+	}, constants)
 	if err != nil {
 		return err
 	}
@@ -152,7 +155,11 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 			return err
 		}
 		for _, txn := range txns {
-			err := validTransaction(tx, txn, cs.chainCts.BlockSizeLimit, cs.chainCts.ArbitraryDataSizeLimit, diffHolder.Height, blockTime)
+			err := validTransaction(tx, txn, types.TransactionValidationConstants{
+				BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
+				ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
+				MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
+			}, diffHolder.Height, blockTime)
 			if err != nil {
 				return err
 			}

@@ -3,10 +3,8 @@ package types
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/encoding"
 )
 
@@ -14,10 +12,6 @@ import (
 // as to support the JSON/binary (un)marshalling of transaction
 // (related) structs
 type (
-	legacyTransaction struct {
-		Version TransactionVersion    `json:"version"`
-		Data    legacyTransactionData `json:"data"`
-	}
 	legacyTransactionData struct {
 		CoinInputs        []legacyTransactionCoinInput        `json:"coininputs"`
 		CoinOutputs       []legacyTransactionCoinOutput       `json:"coinoutputs,omitempty"`
@@ -47,42 +41,51 @@ type (
 	}
 )
 
-// newLegacyTransaction creates a legacy transaction (v0 transaction),
-// using the Transaction in the newer (in-memory) format, passed as input.
-func newLegacyTransaction(t Transaction) (lt legacyTransaction, err error) {
-	if build.DEBUG && t.Version != TransactionVersionZero {
-		panic(fmt.Sprintf("unexpected transaction version %v", t.Version))
-	}
-	lt.Version = t.Version
+// newLegacyTransactionDataFromTransaction creates a legacy transaction from an
+// in-memory Transaction. It does so by exposing the data to the newLegacyTransactionData
+// constructor, and thus piggy-backing for the actual logic on that one.
+func newLegacyTransactionDataFromTransaction(t Transaction) (legacyTransactionData, error) {
+	return newLegacyTransactionData(TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+	})
+}
 
-	lt.Data.CoinInputs = make([]legacyTransactionCoinInput, len(t.CoinInputs))
-	for i, ci := range t.CoinInputs {
-		lt.Data.CoinInputs[i] = legacyTransactionCoinInput{
+// newLegacyTransactionData creates legacy transaction data (as part of v0 transactions),
+// using the given transaction data in the newer (in-memory) format, passed as input.
+func newLegacyTransactionData(data TransactionData) (ltd legacyTransactionData, err error) {
+	ltd.CoinInputs = make([]legacyTransactionCoinInput, len(data.CoinInputs))
+	for i, ci := range data.CoinInputs {
+		ltd.CoinInputs[i] = legacyTransactionCoinInput{
 			ParentID: ci.ParentID,
 			Unlocker: legacyTransactionInputLockProxy{
 				Fulfillment: ci.Fulfillment.Fulfillment,
 			},
 		}
 	}
-	if l := len(t.CoinOutputs); l > 0 {
-		lt.Data.CoinOutputs = make([]legacyTransactionCoinOutput, l)
-		for i, co := range t.CoinOutputs {
+	if l := len(data.CoinOutputs); l > 0 {
+		ltd.CoinOutputs = make([]legacyTransactionCoinOutput, l)
+		for i, co := range data.CoinOutputs {
 			uhc, ok := co.Condition.Condition.(*UnlockHashCondition)
 			if !ok {
 				err = errors.New("only unlock hash conditions are supported for legacy transactions")
 				return
 			}
-			lt.Data.CoinOutputs[i] = legacyTransactionCoinOutput{
+			ltd.CoinOutputs[i] = legacyTransactionCoinOutput{
 				Value:      co.Value,
 				UnlockHash: uhc.TargetUnlockHash,
 			}
 		}
 	}
 
-	if l := len(t.BlockStakeInputs); l > 0 {
-		lt.Data.BlockStakeInputs = make([]legacyTransactionBlockStakeInput, len(t.BlockStakeInputs))
-		for i, bsi := range t.BlockStakeInputs {
-			lt.Data.BlockStakeInputs[i] = legacyTransactionBlockStakeInput{
+	if l := len(data.BlockStakeInputs); l > 0 {
+		ltd.BlockStakeInputs = make([]legacyTransactionBlockStakeInput, len(data.BlockStakeInputs))
+		for i, bsi := range data.BlockStakeInputs {
+			ltd.BlockStakeInputs[i] = legacyTransactionBlockStakeInput{
 				ParentID: bsi.ParentID,
 				Unlocker: legacyTransactionInputLockProxy{
 					Fulfillment: bsi.Fulfillment.Fulfillment,
@@ -90,70 +93,65 @@ func newLegacyTransaction(t Transaction) (lt legacyTransaction, err error) {
 			}
 		}
 	}
-	if l := len(t.BlockStakeOutputs); l > 0 {
-		lt.Data.BlockStakeOutputs = make([]legacyTransactionBlockStakeOutput, l)
-		for i, bso := range t.BlockStakeOutputs {
+	if l := len(data.BlockStakeOutputs); l > 0 {
+		ltd.BlockStakeOutputs = make([]legacyTransactionBlockStakeOutput, l)
+		for i, bso := range data.BlockStakeOutputs {
 			uhc, ok := bso.Condition.Condition.(*UnlockHashCondition)
 			if !ok {
 				err = errors.New("only unlock hash conditions are supported for legacy transactions")
 				return
 			}
-			lt.Data.BlockStakeOutputs[i] = legacyTransactionBlockStakeOutput{
+			ltd.BlockStakeOutputs[i] = legacyTransactionBlockStakeOutput{
 				Value:      bso.Value,
 				UnlockHash: uhc.TargetUnlockHash,
 			}
 		}
 	}
 
-	lt.Data.MinerFees, lt.Data.ArbitraryData = t.MinerFees, t.ArbitraryData
+	ltd.MinerFees, ltd.ArbitraryData = data.MinerFees, data.ArbitraryData
 	return
 }
 
-// Transaction returns this legacy Transaction,
-// in the new Transaction format.
-func (lt legacyTransaction) Transaction() (t Transaction) {
-	if build.DEBUG && lt.Version != TransactionVersionZero {
-		panic(fmt.Sprintf("unexpected transaction version %v", lt.Version))
-	}
-	t.Version = lt.Version
-
-	t.CoinInputs = make([]CoinInput, len(lt.Data.CoinInputs))
-	for i, lci := range lt.Data.CoinInputs {
-		t.CoinInputs[i] = CoinInput{
+// TransactionData returns this legacy TransactionData,
+// in the new TransactionData format.
+func (ltd legacyTransactionData) TransactionData() (data TransactionData) {
+	data.CoinInputs = make([]CoinInput, len(ltd.CoinInputs))
+	for i, lci := range ltd.CoinInputs {
+		data.CoinInputs[i] = CoinInput{
 			ParentID:    lci.ParentID,
 			Fulfillment: NewFulfillment(lci.Unlocker.Fulfillment),
 		}
 	}
-	if l := len(lt.Data.CoinOutputs); l > 0 {
-		t.CoinOutputs = make([]CoinOutput, l)
-		for i, lco := range lt.Data.CoinOutputs {
-			t.CoinOutputs[i] = CoinOutput{
+	if l := len(ltd.CoinOutputs); l > 0 {
+		data.CoinOutputs = make([]CoinOutput, l)
+		for i, lco := range ltd.CoinOutputs {
+			data.CoinOutputs[i] = CoinOutput{
 				Value:     lco.Value,
 				Condition: NewCondition(NewUnlockHashCondition(lco.UnlockHash)),
 			}
 		}
 	}
 
-	if l := len(lt.Data.BlockStakeInputs); l > 0 {
-		t.BlockStakeInputs = make([]BlockStakeInput, l)
-		for i, lci := range lt.Data.BlockStakeInputs {
-			t.BlockStakeInputs[i] = BlockStakeInput{
+	if l := len(ltd.BlockStakeInputs); l > 0 {
+		data.BlockStakeInputs = make([]BlockStakeInput, l)
+		for i, lci := range ltd.BlockStakeInputs {
+			data.BlockStakeInputs[i] = BlockStakeInput{
 				ParentID:    lci.ParentID,
 				Fulfillment: NewFulfillment(lci.Unlocker.Fulfillment),
 			}
 		}
 	}
-	if l := len(lt.Data.BlockStakeOutputs); l > 0 {
-		t.BlockStakeOutputs = make([]BlockStakeOutput, l)
-		for i, lco := range lt.Data.BlockStakeOutputs {
-			t.BlockStakeOutputs[i] = BlockStakeOutput{
+	if l := len(ltd.BlockStakeOutputs); l > 0 {
+		data.BlockStakeOutputs = make([]BlockStakeOutput, l)
+		for i, lco := range ltd.BlockStakeOutputs {
+			data.BlockStakeOutputs[i] = BlockStakeOutput{
 				Value:     lco.Value,
 				Condition: NewCondition(NewUnlockHashCondition(lco.UnlockHash)),
 			}
 		}
 	}
 
-	t.MinerFees, t.ArbitraryData = lt.Data.MinerFees, lt.Data.ArbitraryData
+	data.MinerFees, data.ArbitraryData = ltd.MinerFees, ltd.ArbitraryData
 	return
 }
 

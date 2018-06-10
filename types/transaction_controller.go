@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 )
@@ -20,10 +19,10 @@ type (
 	TransactionController interface {
 		// EncodeTransactionData binary-encodes the transaction data,
 		// which is all transaction properties except for the version.
-		EncodeTransactionData(TransactionData) ([]byte, error)
+		EncodeTransactionData(io.Writer, TransactionData) error
 		// DecodeTransactionData binary-decodes the transaction data,
 		// which is all transaction properties except for the version.
-		DecodeTransactionData([]byte) (TransactionData, error)
+		DecodeTransactionData(io.Reader) (TransactionData, error)
 
 		// JSONEncodeTransactionData JSON-encodes the transaction data,
 		// which is all transaction properties except for the version.
@@ -53,11 +52,12 @@ type (
 		Extension interface{} `json:"-"` // omitted from JSON
 	}
 
-	// TransactionValidationContext defines the contants that a TransactionValidator
+	// TransactionValidationConstants defines the contants that a TransactionValidator
 	// can use in order to validate the transaction, within its local scope.
 	TransactionValidationConstants struct {
 		BlockSizeLimit         uint64
 		ArbitraryDataSizeLimit uint64
+		MinimumMinerFee        Currency
 	}
 )
 
@@ -68,7 +68,7 @@ type (
 	// can optonally implement, in order to define custom validation logic
 	// for a transaction, overwriting the default validation logic.
 	TransactionValidator interface {
-		ValidateTransaction(t Transaction, constants TransactionValidationConstants) error
+		ValidateTransaction(t Transaction, ctx ValidationContext, constants TransactionValidationConstants) error
 	}
 
 	// InputSigHasher defines the interface a transaction controller
@@ -77,29 +77,15 @@ type (
 	InputSigHasher interface {
 		InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) crypto.Hash
 	}
-
-	// TransactionIsStandardChecker defines the interface a transaction controller
-	// can optionally implement, in order to define logic,
-	// which defines if a transaction is to be considered standard.
-	TransactionIsStandardChecker interface {
-		IsStandardTransaction(t Transaction) error
-	}
 )
 
 // RegisterTransactionVersion registers or unregisters a given transaction version,
 // by attaching a controller to it that helps define the behavior surrounding its state.
 //
 // NOTE: this function should only be called in the `init` func,
-// doing it anywhere else can result in undefined behavior.
+// or at the very least prior to starting to create the daemon server,
+// doing it anywhere else can result in undefined behavior,
 func RegisterTransactionVersion(v TransactionVersion, c TransactionController) {
-	// version 0x00 is off limits,
-	// as it's decoding logic is now considered non-standard,
-	// which doesn't work with the current expected format,
-	// in which the data slice is encoded as a raw slice,
-	// as to support unknown versions properly.
-	if v == TransactionVersionZero {
-		panic("transaction version 0x00 (legacy) cannot be overridden")
-	}
 	if c == nil {
 		delete(_RegisteredTransactionVersions, v)
 		return
@@ -115,7 +101,8 @@ var (
 
 var (
 	_RegisteredTransactionVersions = map[TransactionVersion]TransactionController{
-		TransactionVersionOne: DefaultTransactionController{},
+		TransactionVersionZero: LegacyTransactionController{},
+		TransactionVersionOne:  DefaultTransactionController{},
 	}
 )
 
@@ -140,29 +127,37 @@ type (
 	// DefaultTransactionController is the default transaction controller used,
 	// and is also by default the controller for the default transaction version 0x01.
 	DefaultTransactionController struct{}
+
+	// LegacyTransactionController is a legacy transaction controller,
+	// which used to be the default when Rivine launched.
+	// It should however not be used any longer, and only exists,
+	// as to support chains which launched together with Rivine.
+	LegacyTransactionController struct{}
 )
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
-func (dtc DefaultTransactionController) EncodeTransactionData(td TransactionData) ([]byte, error) {
-	if build.DEBUG && td.Extension != nil {
-		// for default transactions the extension is always expected to be nil
-		return nil, ErrUnexpectedExtensionType
-	}
-	return encoding.Marshal(td), nil
+func (dtc DefaultTransactionController) EncodeTransactionData(w io.Writer, td TransactionData) error {
+	// encode to a byte slice first
+	b := encoding.Marshal(td)
+	// copy those bytes together with its prefixed length, as the final encoding
+	return encoding.NewEncoder(w).Encode(b)
 }
 
 // DecodeTransactionData implements TransactionController.DecodeTransactionData
-func (dtc DefaultTransactionController) DecodeTransactionData(b []byte) (td TransactionData, err error) {
+func (dtc DefaultTransactionController) DecodeTransactionData(r io.Reader) (td TransactionData, err error) {
+	// decode it as a byte slice first
+	var b []byte
+	err = encoding.NewDecoder(r).Decode(&b)
+	if err != nil {
+		return
+	}
+	// decode
 	err = encoding.Unmarshal(b, &td)
 	return
 }
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (dtc DefaultTransactionController) JSONEncodeTransactionData(td TransactionData) ([]byte, error) {
-	if build.DEBUG && td.Extension != nil {
-		// for default transactions the extension is always expected to be nil
-		return nil, ErrUnexpectedExtensionType
-	}
 	return json.Marshal(td)
 }
 
@@ -170,4 +165,49 @@ func (dtc DefaultTransactionController) JSONEncodeTransactionData(td Transaction
 func (dtc DefaultTransactionController) JSONDecodeTransactionData(b []byte) (td TransactionData, err error) {
 	err = json.Unmarshal(b, &td)
 	return
+}
+
+// EncodeTransactionData implements TransactionController.EncodeTransactionData
+func (ltc LegacyTransactionController) EncodeTransactionData(w io.Writer, td TransactionData) error {
+	// turn the transaction data into the legacy format first
+	ltd, err := newLegacyTransactionData(td)
+	if err != nil {
+		return err
+	}
+	// and encode its result
+	return encoding.NewEncoder(w).Encode(ltd)
+}
+
+// DecodeTransactionData implements TransactionController.DecodeTransactionData
+func (ltc LegacyTransactionController) DecodeTransactionData(r io.Reader) (TransactionData, error) {
+	// first decode it as the legacy format
+	var ltd legacyTransactionData
+	err := encoding.NewDecoder(r).Decode(&ltd)
+	if err != nil {
+		return TransactionData{}, err
+	}
+	// output the decoded legacy data as the new output
+	return ltd.TransactionData(), nil
+}
+
+// JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
+func (ltc LegacyTransactionController) JSONEncodeTransactionData(td TransactionData) ([]byte, error) {
+	// turn the transaction data into the legacy format first
+	ltd, err := newLegacyTransactionData(td)
+	if err != nil {
+		return nil, err
+	}
+	// and only than JSON-encode the legacy data
+	return json.Marshal(ltd)
+}
+
+// JSONDecodeTransactionData implements TransactionController.JSONDecodeTransactionData
+func (ltc LegacyTransactionController) JSONDecodeTransactionData(b []byte) (TransactionData, error) {
+	// unmarshal the JSON data as the legacy format first
+	var ltd legacyTransactionData
+	err := json.Unmarshal(b, &ltd)
+	if err != nil {
+		return TransactionData{}, err
+	}
+	return ltd.TransactionData(), nil
 }

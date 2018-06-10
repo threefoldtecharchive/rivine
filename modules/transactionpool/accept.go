@@ -65,25 +65,15 @@ func relatedObjectIDs(ts []types.Transaction) []ObjectID {
 // checkMinerFees checks that the total amount of transaction fees in the
 // transaction set is sufficient to earn a spot in the transaction pool.
 func (tp *TransactionPool) checkMinerFees(ts []types.Transaction) error {
-	// Transactions cannot be added after the TransactionPoolSizeLimit has been
-	// hit.
-	if tp.transactionListSize > TransactionPoolSizeLimit {
-		return errFullTransactionPool
-	}
-
-	// The first TransactionPoolSizeForFee transactions do not need fees.
-	if tp.transactionListSize > TransactionPoolSizeForFee {
-		// Currently required fees are set on a per-transaction basis. 2 coins
-		// are required per transaction if the free-fee limit has been reached,
-		// adding a larger fee is not useful.
+	// Currently required fees are set on a per-transaction basis.
+	// At least the minimum Fee per transaction is required,
+	// more is allowed, but not less.
+	for _, t := range ts {
 		var feeSum types.Currency
-		for i := range ts {
-			for _, fee := range ts[i].MinerFees {
-				feeSum = feeSum.Add(fee)
-			}
+		for _, fee := range t.MinerFees {
+			feeSum = feeSum.Add(fee)
 		}
-		feeRequired := tp.transactionMinFee().Mul64(uint64(len(ts)))
-		if feeSum.Cmp(feeRequired) < 0 {
+		if feeSum.Cmp(tp.chainCts.MinimumTransactionFee) == -1 {
 			return errLowMinerFees
 		}
 	}
@@ -100,6 +90,10 @@ func (tp *TransactionPool) checkTransactionSetComposition(ts []types.Transaction
 	_, exists := tp.transactionSets[setID]
 	if exists {
 		return modules.ErrDuplicateTransactionSet
+	}
+
+	if tp.transactionListSize > TransactionPoolSizeLimit {
+		return errFullTransactionPool
 	}
 
 	// Check that the transaction set has enough fees to justify adding it to

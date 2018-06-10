@@ -94,8 +94,8 @@ func TestLegacyTransactionInputLockProxyJSONEncoding(t *testing.T) {
 
 func TestLegacyTransactionBinaryEncoding(t *testing.T) {
 	testCases := []string{
-		`0001000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000001000000000000000100000000000000010000000000000000`,
-		`0002000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3300000000000000000000000000000000000000000000000000000000000033026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba020000000000000001000000000000000201cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000302dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01000000000000004400000000000000000000000000000000000000000000000000000000000044013800000000000000656432353531390000000000000000002000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee010000000000000001000000000000002a01abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd010000000000000001000000000000000102000000000000003432`,
+		`01000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000001000000000000000100000000000000010000000000000000`,
+		`02000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3300000000000000000000000000000000000000000000000000000000000033026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba020000000000000001000000000000000201cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000302dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01000000000000004400000000000000000000000000000000000000000000000000000000000044013800000000000000656432353531390000000000000000002000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee010000000000000001000000000000002a01abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd010000000000000001000000000000000102000000000000003432`,
 	}
 	for testIndex, testCase := range testCases {
 		binaryInput, err := hex.DecodeString(testCase)
@@ -104,13 +104,13 @@ func TestLegacyTransactionBinaryEncoding(t *testing.T) {
 			continue
 		}
 
-		var txn legacyTransaction
-		err = encoding.Unmarshal(binaryInput, &txn)
+		var ltd legacyTransactionData
+		err = encoding.Unmarshal(binaryInput, &ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
 		}
-		b := encoding.Marshal(txn)
+		b := encoding.Marshal(ltd)
 
 		output := hex.EncodeToString(b)
 		if output != testCase {
@@ -122,111 +122,105 @@ func TestLegacyTransactionBinaryEncoding(t *testing.T) {
 func TestLegacyTransactionJSONEncoding(t *testing.T) {
 	testCases := []string{
 		`{
-	"version": 0,
-	"data": {
-		"coininputs": [
-			{
-				"parentid": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				"unlocker": {
-					"type": 1,
-					"condition": {
-						"publickey": "ed25519:def123def123def123def123def123def123def123def123def123def123def1"
-					},
-					"fulfillment": {
-						"signature": "ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"
-					}
+	"coininputs": [
+		{
+			"parentid": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			"unlocker": {
+				"type": 1,
+				"condition": {
+					"publickey": "ed25519:def123def123def123def123def123def123def123def123def123def123def1"
+				},
+				"fulfillment": {
+					"signature": "ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"
 				}
 			}
-		],
-		"minerfees": [
-			"1"
-		],
-		"arbitrarydata": "SGVsbG8sIFdvcmxkIQ=="
-	}
+		}
+	],
+	"minerfees": [
+		"1"
+	],
+	"arbitrarydata": "SGVsbG8sIFdvcmxkIQ=="
 }`, `{
-	"version": 0,
-	"data": {
-		"coininputs": [
-			{
-				"parentid": "abcdef012345abcdef012345abcdef012345abcdef012345abcdef012345abcd",
-				"unlocker": {
-					"type": 1,
-					"condition": {
-						"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
-					},
-					"fulfillment": {
-						"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
-					}
-				}
-			},
-			{
-				"parentid": "012345defabc012345defabc012345defabc012345defabc012345defabc0123",
-				"unlocker": {
-					"type": 2,
-					"condition": {
-						"sender": "01654f96b317efe5fd6cd8ba1a394dce7b6ebe8c9621d6c44cbe3c8f1b58ce632a3216de71b23b",
-						"receiver": "01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105",
-						"hashedsecret": "abc543defabc543defabc543defabc543defabc543defabc543defabc543defa",
-						"timelock": 1522068743
-					},
-					"fulfillment": {
-						"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-						"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab",
-						"secret": "def789def789def789def789def789dedef789def789def789def789def789de"
-					}
+	"coininputs": [
+		{
+			"parentid": "abcdef012345abcdef012345abcdef012345abcdef012345abcdef012345abcd",
+			"unlocker": {
+				"type": 1,
+				"condition": {
+					"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+				},
+				"fulfillment": {
+					"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"
 				}
 			}
-		],
-		"coinoutputs": [
-			{
-				"value": "3",
-				"unlockhash": "0142e9458e348598111b0bc19bda18e45835605db9f4620616d752220ae8605ce0df815fd7570e"
-			},
-			{
-				"value": "5",
-				"unlockhash": "01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"
-			},
-			{
-				"value": "8",
-				"unlockhash": "02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"
-			}
-		],
-		"blockstakeinputs": [
-			{
-				"parentid": "dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfde",
-				"unlocker": {
-					"type": 1,
-					"condition": {
-						"publickey": "ed25519:ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef12"
-					},
-					"fulfillment": {
-						"signature": "01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def"
-					}
+		},
+		{
+			"parentid": "012345defabc012345defabc012345defabc012345defabc012345defabc0123",
+			"unlocker": {
+				"type": 2,
+				"condition": {
+					"sender": "01654f96b317efe5fd6cd8ba1a394dce7b6ebe8c9621d6c44cbe3c8f1b58ce632a3216de71b23b",
+					"receiver": "01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105",
+					"hashedsecret": "abc543defabc543defabc543defabc543defabc543defabc543defabc543defa",
+					"timelock": 1522068743
+				},
+				"fulfillment": {
+					"publickey": "ed25519:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+					"signature": "abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab",
+					"secret": "def789def789def789def789def789dedef789def789def789def789def789de"
 				}
 			}
-		],
-		"blockstakeoutputs": [
-			{
-				"value": "4",
-				"unlockhash": "6453402d094ed0f336950c4be0feec37167aaaaf8b974d265900e49ab22773584cfe96393b1360"
-			},
-			{
-				"value": "2",
-				"unlockhash": "2ab39baa9a58319fa47f78ed542a733a7198d106caeabf0a231b91ea3e4e222ffd8b27c861beff"
+		}
+	],
+	"coinoutputs": [
+		{
+			"value": "3",
+			"unlockhash": "0142e9458e348598111b0bc19bda18e45835605db9f4620616d752220ae8605ce0df815fd7570e"
+		},
+		{
+			"value": "5",
+			"unlockhash": "01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"
+		},
+		{
+			"value": "8",
+			"unlockhash": "02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"
+		}
+	],
+	"blockstakeinputs": [
+		{
+			"parentid": "dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfde",
+			"unlocker": {
+				"type": 1,
+				"condition": {
+					"publickey": "ed25519:ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef12"
+				},
+				"fulfillment": {
+					"signature": "01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def"
+				}
 			}
-		],
-		"minerfees": [
-			"1",
-			"2",
-			"3"
-		],
-		"arbitrarydata": "ZGF0YQ=="
-	}
+		}
+	],
+	"blockstakeoutputs": [
+		{
+			"value": "4",
+			"unlockhash": "6453402d094ed0f336950c4be0feec37167aaaaf8b974d265900e49ab22773584cfe96393b1360"
+		},
+		{
+			"value": "2",
+			"unlockhash": "2ab39baa9a58319fa47f78ed542a733a7198d106caeabf0a231b91ea3e4e222ffd8b27c861beff"
+		}
+	],
+	"minerfees": [
+		"1",
+		"2",
+		"3"
+	],
+	"arbitrarydata": "ZGF0YQ=="
 }`,
 	}
 	for testIndex, testCase := range testCases {
-		var txn legacyTransaction
-		err := json.Unmarshal([]byte(testCase), &txn)
+		var ltd legacyTransactionData
+		err := json.Unmarshal([]byte(testCase), &ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
@@ -234,7 +228,7 @@ func TestLegacyTransactionJSONEncoding(t *testing.T) {
 		buf := bytes.NewBuffer(nil)
 		encoder := json.NewEncoder(buf)
 		encoder.SetIndent("", "\t")
-		err = encoder.Encode(txn)
+		err = encoder.Encode(ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
@@ -259,13 +253,12 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 	}
 
 	testCases := []struct {
-		EncodedTransaction  string
-		ExpectedTransaction Transaction
+		EncodedTransactionData  string
+		ExpectedTransactionData TransactionData
 	}{
 		{
-			`0001000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000001000000000000000100000000000000010000000000000000`,
-			Transaction{
-				Version: TransactionVersionZero,
+			`01000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000001000000000000000100000000000000010000000000000000`,
+			TransactionData{
 				CoinInputs: []CoinInput{
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
@@ -282,9 +275,8 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 			},
 		},
 		{
-			`0002000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3300000000000000000000000000000000000000000000000000000000000033026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba020000000000000001000000000000000201cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000302dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01000000000000004400000000000000000000000000000000000000000000000000000000000044013800000000000000656432353531390000000000000000002000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee010000000000000001000000000000002a01abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd010000000000000001000000000000000102000000000000003432`,
-			Transaction{
-				Version: TransactionVersionZero,
+			`02000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3300000000000000000000000000000000000000000000000000000000000033026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba020000000000000001000000000000000201cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000302dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01000000000000004400000000000000000000000000000000000000000000000000000000000044013800000000000000656432353531390000000000000000002000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee010000000000000001000000000000002a01abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd010000000000000001000000000000000102000000000000003432`,
+			TransactionData{
 				CoinInputs: []CoinInput{
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
@@ -361,22 +353,22 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 		},
 	}
 	for testIndex, testCase := range testCases {
-		binaryInput, err := hex.DecodeString(testCase.EncodedTransaction)
+		binaryInput, err := hex.DecodeString(testCase.EncodedTransactionData)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
 		}
 
-		var lt legacyTransaction
-		err = encoding.Unmarshal(binaryInput, &lt)
+		var ltd legacyTransactionData
+		err = encoding.Unmarshal(binaryInput, &ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
 		}
+		data := ltd.TransactionData()
 
-		txn := lt.Transaction()
-		if !reflect.DeepEqual(testCase.ExpectedTransaction, txn) {
-			t.Error(testIndex, testCase.ExpectedTransaction, "!=", txn)
+		if !reflect.DeepEqual(testCase.ExpectedTransactionData, data) {
+			t.Error(testIndex, testCase.ExpectedTransactionData, "!=", data)
 		}
 	}
 }
@@ -705,10 +697,10 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 	}
 }
 
-func TestLegacyTransactionBiDirectional(t *testing.T) {
+func TestLegacyTransactionDataBiDirectional(t *testing.T) {
 	testCases := []string{
-		`0001000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000001000000000000000100000000000000010000000000000000`,
-		`0002000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3300000000000000000000000000000000000000000000000000000000000033026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba020000000000000001000000000000000201cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000302dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01000000000000004400000000000000000000000000000000000000000000000000000000000044013800000000000000656432353531390000000000000000002000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee010000000000000001000000000000002a01abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd010000000000000001000000000000000102000000000000003432`,
+		`01000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00000000000000000000000000000000000000000000000001000000000000000100000000000000010000000000000000`,
+		`02000000000000002200000000000000000000000000000000000000000000000000000000000022013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3300000000000000000000000000000000000000000000000000000000000033026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba020000000000000001000000000000000201cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc01000000000000000302dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd01000000000000004400000000000000000000000000000000000000000000000000000000000044013800000000000000656432353531390000000000000000002000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee4000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee010000000000000001000000000000002a01abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd010000000000000001000000000000000102000000000000003432`,
 	}
 	for testIndex, testCase := range testCases {
 		binaryInput, err := hex.DecodeString(testCase)
@@ -717,21 +709,21 @@ func TestLegacyTransactionBiDirectional(t *testing.T) {
 			continue
 		}
 
-		var txn legacyTransaction
-		err = encoding.Unmarshal(binaryInput, &txn)
+		var ltd legacyTransactionData
+		err = encoding.Unmarshal(binaryInput, &ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
 		}
 
-		otxn, err := newLegacyTransaction(txn.Transaction())
+		oltd, err := newLegacyTransactionData(ltd.TransactionData())
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
 		}
 
-		if !reflect.DeepEqual(txn, otxn) {
-			t.Error(testIndex, txn, "!=", otxn)
+		if !reflect.DeepEqual(ltd, oltd) {
+			t.Error(testIndex, ltd, "!=", oltd)
 		}
 	}
 }

@@ -38,8 +38,15 @@ import (
 // IsStandardTransaction enforces extra rules such as a transaction size limit.
 // These rules can be altered without disrupting consensus.
 func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
-	// check if the transaction is standard (e.g. based on its version)
-	err := t.IsStandardTransaction()
+	// check if the transaction is valid/standard (e.g. based on its version)
+	err := t.ValidateTransaction(types.ValidationContext{
+		Confirmed:   false,
+		BlockHeight: tp.consensusSet.Height(),
+	}, types.TransactionValidationConstants{
+		BlockSizeLimit:         tp.chainCts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: tp.chainCts.ArbitraryDataSizeLimit,
+		MinimumMinerFee:        tp.chainCts.MinimumTransactionFee,
+	})
 	if err != nil {
 		return err
 	}
@@ -53,38 +60,6 @@ func (tp *TransactionPool) IsStandardTransaction(t types.Transaction) error {
 	// with sufficient power could still create unfriendly blocks.
 	if len(encoding.Marshal(t)) > modules.TransactionSizeLimit {
 		return modules.ErrLargeTransaction
-	}
-
-	// prepare the standard check context
-	checkCtx := types.StandardCheckContext{
-		BlockHeight: tp.consensusSet.Height(),
-	}
-
-	// check if all condtions are standard
-	for _, sco := range t.CoinOutputs {
-		err = sco.Condition.IsStandardCondition(checkCtx)
-		if err != nil {
-			return err
-		}
-	}
-	for _, sfo := range t.BlockStakeOutputs {
-		err = sfo.Condition.IsStandardCondition(checkCtx)
-		if err != nil {
-			return err
-		}
-	}
-	// check if all fulfillments are standard
-	for _, sci := range t.CoinInputs {
-		err = sci.Fulfillment.IsStandardFulfillment(checkCtx)
-		if err != nil {
-			return err
-		}
-	}
-	for _, sfi := range t.BlockStakeInputs {
-		err = sfi.Fulfillment.IsStandardFulfillment(checkCtx)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil

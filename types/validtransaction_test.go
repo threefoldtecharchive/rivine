@@ -12,13 +12,13 @@ func TestTransactionFitsInABlock_V0(t *testing.T) {
 	txn := Transaction{
 		Version:       TransactionVersionZero,
 		ArbitraryData: data}
-	err := txn.fitsInABlock(blockSizeLimit)
+	err := TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != nil {
 		t.Error(err)
 	}
 	data = make([]byte, blockSizeLimit)
 	txn.ArbitraryData = data
-	err = txn.fitsInABlock(blockSizeLimit)
+	err = TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != ErrTransactionTooLarge {
 		t.Error(err)
 	}
@@ -32,13 +32,13 @@ func TestTransactionFitsInABlock_Vd(t *testing.T) {
 	txn := Transaction{
 		Version:       DefaultChainConstants().DefaultTransactionVersion,
 		ArbitraryData: data}
-	err := txn.fitsInABlock(blockSizeLimit)
+	err := TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != nil {
 		t.Error(err)
 	}
 	data = make([]byte, blockSizeLimit)
 	txn.ArbitraryData = data
-	err = txn.fitsInABlock(blockSizeLimit)
+	err = TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != ErrTransactionTooLarge {
 		t.Error(err)
 	}
@@ -54,27 +54,27 @@ func TestTransactionFollowsMinimumValues_V0(t *testing.T) {
 		BlockStakeOutputs: []BlockStakeOutput{{Value: NewCurrency64(1)}},
 		MinerFees:         []Currency{NewCurrency64(1)},
 	}
-	err := txn.followsMinimumValues()
+	err := TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Try a zero value for each type.
 	txn.CoinOutputs[0].Value = ZeroCurrency
-	err = txn.followsMinimumValues()
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.CoinOutputs[0].Value = NewCurrency64(1)
 	txn.BlockStakeOutputs[0].Value = ZeroCurrency
-	err = txn.followsMinimumValues()
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.BlockStakeOutputs[0].Value = NewCurrency64(1)
 	txn.MinerFees[0] = ZeroCurrency
-	err = txn.followsMinimumValues()
-	if err != ErrZeroMinerFee {
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
+	if err != ErrTooSmallMinerFee {
 		t.Error(err)
 	}
 	txn.MinerFees[0] = NewCurrency64(1)
@@ -90,27 +90,27 @@ func TestTransactionFollowsMinimumValues_Vd(t *testing.T) {
 		BlockStakeOutputs: []BlockStakeOutput{{Value: NewCurrency64(1)}},
 		MinerFees:         []Currency{NewCurrency64(1)},
 	}
-	err := txn.followsMinimumValues()
+	err := TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Try a zero value for each type.
 	txn.CoinOutputs[0].Value = ZeroCurrency
-	err = txn.followsMinimumValues()
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.CoinOutputs[0].Value = NewCurrency64(1)
 	txn.BlockStakeOutputs[0].Value = ZeroCurrency
-	err = txn.followsMinimumValues()
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.BlockStakeOutputs[0].Value = NewCurrency64(1)
 	txn.MinerFees[0] = ZeroCurrency
-	err = txn.followsMinimumValues()
-	if err != ErrZeroMinerFee {
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
+	if err != ErrTooSmallMinerFee {
 		t.Error(err)
 	}
 	txn.MinerFees[0] = NewCurrency64(1)
@@ -128,7 +128,7 @@ func TestTransactionNoRepeats_V0(t *testing.T) {
 
 	// Try a transaction double spending a siacoin output.
 	txn.CoinInputs = append(txn.CoinInputs, CoinInput{})
-	err := txn.noRepeats()
+	err := NoRepeatsInTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
@@ -136,7 +136,7 @@ func TestTransactionNoRepeats_V0(t *testing.T) {
 
 	// Try a transaction double spending a siafund output.
 	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{})
-	err = txn.noRepeats()
+	err = NoRepeatsInTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
@@ -155,7 +155,7 @@ func TestTransactionNoRepeats_Vd(t *testing.T) {
 
 	// Try a transaction double spending a siacoin output.
 	txn.CoinInputs = append(txn.CoinInputs, CoinInput{})
-	err := txn.noRepeats()
+	err := NoRepeatsInTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
@@ -163,7 +163,7 @@ func TestTransactionNoRepeats_Vd(t *testing.T) {
 
 	// Try a transaction double spending a siafund output.
 	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{})
-	err = txn.noRepeats()
+	err = NoRepeatsInTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
@@ -174,7 +174,7 @@ func TestTransactionArbitraryDataFits_Vd(t *testing.T) {
 	txn := Transaction{
 		ArbitraryData: []byte{4, 2},
 	}
-	err := txn.arbitraryDataFits(1)
+	err := ArbitraryDataFits(txn.ArbitraryData, 1)
 	if err != ErrArbitraryDataTooLarge {
 		t.Fatal("expected ErrArbitraryDataTooLarge, but received: ", err)
 	}
@@ -188,11 +188,14 @@ func TestUnknownTransactionValidation(t *testing.T) {
 
 	// validation of unknown transactions should always succeed,
 	// as no validation is applied here
-	err := txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	err := txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+		BlockSizeLimit:         cts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+	})
 	if err != nil {
 		t.Errorf("expected no error, but received: %v", err)
 	}
-	err = txn.ValidateTransaction(0, 0)
+	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{})
 	if err != nil {
 		t.Errorf("expected no error, but received: %v", err)
 	}
@@ -205,7 +208,10 @@ func TestLegacyTransactionValidation(t *testing.T) {
 
 	// Build a working transaction.
 	var txn Transaction
-	err := txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	err := txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+		BlockSizeLimit:         cts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+	})
 	if err != nil {
 		t.Error(err)
 	}
@@ -213,28 +219,40 @@ func TestLegacyTransactionValidation(t *testing.T) {
 	// Violate fitsInABlock.
 	data := make([]byte, cts.BlockSizeLimit)
 	txn.ArbitraryData = data
-	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+		BlockSizeLimit:         cts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+	})
 	if err == nil {
 		t.Error("failed to trigger fitsInABlock error")
 	}
 	// Violate arbitraryDataFits
 	data = make([]byte, cts.ArbitraryDataSizeLimit+1)
 	txn.ArbitraryData = data
-	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+		BlockSizeLimit:         cts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+	})
 	if err == nil {
 		t.Error("failed to trigger arbitraryDataFits error")
 	}
 	txn.ArbitraryData = nil
 
 	// ensure we still validate just fine
-	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+		BlockSizeLimit:         cts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+	})
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Violate noRepeats
 	txn.CoinInputs = []CoinInput{{}, {}}
-	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+		BlockSizeLimit:         cts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+	})
 	if err == nil {
 		t.Error("failed to trigger noRepeats error")
 	}
@@ -242,7 +260,10 @@ func TestLegacyTransactionValidation(t *testing.T) {
 
 	// Violate followsMinimumValues
 	txn.CoinOutputs = []CoinOutput{{}}
-	err = txn.ValidateTransaction(cts.BlockSizeLimit, cts.ArbitraryDataSizeLimit)
+	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+		BlockSizeLimit:         cts.BlockSizeLimit,
+		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+	})
 	if err == nil {
 		t.Error("failed to trigger followsMinimumValues error")
 	}
