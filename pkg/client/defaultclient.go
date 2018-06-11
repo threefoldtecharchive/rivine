@@ -29,6 +29,7 @@ type Config struct {
 	ChainVersion build.ProtocolVersion
 
 	CurrencyUnits             types.CurrencyUnits
+	CurrencyCoinUnit          string
 	MinimumTransactionFee     types.Currency
 	DefaultTransactionVersion types.TransactionVersion
 
@@ -136,6 +137,7 @@ func fetchConfigFromDaemon() Config {
 		CurrencyUnits: types.CurrencyUnits{
 			OneCoin: constants.OneCoin,
 		},
+		CurrencyCoinUnit:          constants.ChainInfo.CoinUnit,
 		MinimumTransactionFee:     constants.MinimumTransactionFee,
 		DefaultTransactionVersion: constants.DefaultTransactionVersion,
 		BlockFrequencyInSeconds:   int64(constants.BlockFrequency),
@@ -181,6 +183,7 @@ func DefaultCLIClient(address, name string, configFunc func(Config) Config) {
 			_DefaultClient.name = cfg.ChainName
 			_DefaultClient.version = cfg.ChainVersion
 			_CurrencyUnits = cfg.CurrencyUnits
+			_CurrencyCoinUnit = cfg.CurrencyCoinUnit
 			_CurrencyConvertor = NewCurrencyConvertor(_CurrencyUnits)
 			_MinimumTransactionFee = cfg.MinimumTransactionFee
 			_DefaultTransactionVersion = cfg.DefaultTransactionVersion
