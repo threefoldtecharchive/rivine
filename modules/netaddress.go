@@ -178,11 +178,12 @@ func (na *NetAddress) TryNameResolution() error {
 		// Report errors, don't modify the NetAddress
 		return err
 	}
-	if len(IPs) < 1 {
-		// If there are no IP's, don't do anything
-		return nil
+	for _, ip := range IPs {
+		if ip.String() == "::1" {
+			continue
+		}
+		*na = NetAddress(ip.String() + ":" + na.Port())
+		break
 	}
-	// If nothing went wrong and we found an IP, change the value of the NetAddress
-	*na = NetAddress(IPs[0].String() + ":" + na.Port())
 	return nil
 }

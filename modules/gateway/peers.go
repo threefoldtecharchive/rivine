@@ -627,7 +627,7 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 		return errors.New("can't connect to our own address")
 	}
 	if err := addr.IsStdValid(); err != nil {
-		return errors.New("can't connect to invalid address")
+		return errors.New("can't connect to invalid address: " + err.Error())
 	}
 	if net.ParseIP(addr.Host()) == nil {
 		return errors.New("address must be an IP address")
