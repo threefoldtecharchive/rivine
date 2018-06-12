@@ -10,7 +10,6 @@ import (
 	"errors"
 	"io"
 
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 )
@@ -155,23 +154,15 @@ type (
 )
 
 var (
+	// ErrUnknownTransactionType is returned when an unknown transaction version/type was encountered.
 	ErrUnknownTransactionType = errors.New("unknown transaction type")
 )
 
 // ID returns the id of a transaction, which is taken by marshalling all of the
 // fields except for the signatures and taking the hash of the result.
 func (t Transaction) ID() (id TransactionID) {
-	if t.Version == TransactionVersionZero {
-		lt, err := newLegacyTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
-		}
-		// the legacy version does not include the transaction version
-		// as part of the crypto hash
-		return TransactionID(crypto.HashObject(lt.Data))
-	}
 	h := crypto.NewHash()
-	t.MarshalSia(h)
+	t.encodeTransactionDataAsIDInput(h)
 	h.Sum(id[:0])
 	return
 }
@@ -180,50 +171,52 @@ func (t Transaction) ID() (id TransactionID) {
 // which is calculated by hashing the concatenation of the CoinOutput
 // Specifier, all of the fields in the transaction (except the signatures),
 // and output index.
-func (t Transaction) CoinOutputID(i uint64) CoinOutputID {
-	if t.Version == TransactionVersionZero {
-		lt, err := newLegacyTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
-		}
-		// the legacy version does not include the transaction version
-		// as part of the crypto hash
-		return CoinOutputID(crypto.HashAll(
-			SpecifierCoinOutput,
-			lt.Data,
-			i,
-		))
-	}
-	return CoinOutputID(crypto.HashAll(
-		SpecifierCoinOutput,
-		t,
-		i,
-	))
+func (t Transaction) CoinOutputID(i uint64) (id CoinOutputID) {
+	h := crypto.NewHash()
+	e := encoding.NewEncoder(h)
+	e.Encode(SpecifierCoinOutput)
+	t.encodeTransactionDataAsIDInput(h)
+	e.Encode(i)
+	h.Sum(id[:0])
+	return
 }
 
 // BlockStakeOutputID returns the ID of a BlockStakeOutput at the given index, which
 // is calculated by hashing the concatenation of the BlockStakeOutput Specifier,
 // all of the fields in the transaction (except the signatures), and output
 // index.
-func (t Transaction) BlockStakeOutputID(i uint64) BlockStakeOutputID {
-	if t.Version == TransactionVersionZero {
-		lt, err := newLegacyTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
-		}
-		// the legacy version does not include the transaction version
-		// as part of the crypto hash
-		return BlockStakeOutputID(crypto.HashAll(
-			SpecifierBlockStakeOutput,
-			lt.Data,
-			i,
-		))
+func (t Transaction) BlockStakeOutputID(i uint64) (id BlockStakeOutputID) {
+	h := crypto.NewHash()
+	e := encoding.NewEncoder(h)
+	e.Encode(SpecifierBlockStakeOutput)
+	t.encodeTransactionDataAsIDInput(h)
+	e.Encode(i)
+	h.Sum(id[:0])
+	return
+}
+
+func (t Transaction) encodeTransactionDataAsIDInput(w io.Writer) error {
+	// get a controller registered or unknown controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return ErrUnknownTransactionType
 	}
-	return BlockStakeOutputID(crypto.HashAll(
-		SpecifierBlockStakeOutput,
-		t,
-		i,
-	))
+	td := TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+		Extension:         t.Extension,
+	}
+	if transactionIDEncoder, ok := controller.(TransactionIDEncoder); ok {
+		// use binary encoded specialized for ID Input
+		return transactionIDEncoder.EncodeTransactionIDInput(w, td)
+	}
+	// use the default binary encoding, if the controller does not require specialized
+	// encoding logic for ID purposes
+	return controller.EncodeTransactionData(w, td)
 }
 
 // CoinOutputSum returns the sum of all the coin outputs in the
@@ -244,25 +237,19 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 
 // MarshalSia implements the encoding.SiaMarshaler interface.
 func (t Transaction) MarshalSia(w io.Writer) error {
-	// if version is legacy, marshal it as it was expected
-	if t.Version == TransactionVersionZero {
-		lt, err := newLegacyTransaction(t)
-		if err != nil {
-			return err
-		}
-		return encoding.NewEncoder(w).Encode(lt)
-	}
-
 	// get a controller registered or unknown controller
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
 		return ErrUnknownTransactionType
 	}
 
-	// encode the data using the controller,
-	// to than encode the transaction in its totality,
-	// using the version and previously encoded data
-	rawData, err := controller.EncodeTransactionData(TransactionData{
+	// encode the version already
+	err := encoding.NewEncoder(w).Encode(t.Version)
+	if err != nil {
+		return err
+	}
+	// encode the data itself using the controller
+	return controller.EncodeTransactionData(w, TransactionData{
 		CoinInputs:        t.CoinInputs,
 		CoinOutputs:       t.CoinOutputs,
 		BlockStakeInputs:  t.BlockStakeInputs,
@@ -271,13 +258,6 @@ func (t Transaction) MarshalSia(w io.Writer) error {
 		ArbitraryData:     t.ArbitraryData,
 		Extension:         t.Extension,
 	})
-	if err != nil {
-		return err
-	}
-	return encoding.NewEncoder(w).EncodeAll(
-		t.Version,
-		rawData,
-	)
 }
 
 // UnmarshalSia implements the encoding.SiaUnmarshaler interface.
@@ -287,24 +267,13 @@ func (t *Transaction) UnmarshalSia(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	// if version is legacy, we'll unmarshal it in the old/legacy way
-	if t.Version == TransactionVersionZero {
-		lt := legacyTransaction{Version: TransactionVersionZero}
-		err = encoding.NewDecoder(r).Decode(&lt.Data)
-		*t = lt.Transaction()
-		return err
-	}
-	// otherwise decode the data as a raw data slice
-	var rawData []byte
-	err = decoder.Decode(&rawData)
-	if err != nil {
-		return err
-	}
+	// decode the data using the version's controller
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
+		// a controller is required for each version
 		return ErrUnknownTransactionType
 	}
-	td, err := controller.DecodeTransactionData(rawData)
+	td, err := controller.DecodeTransactionData(r)
 	if err != nil {
 		return err
 	}
@@ -329,22 +298,6 @@ type (
 
 // MarshalJSON implements the json.Marshaler interface.
 func (t Transaction) MarshalJSON() ([]byte, error) {
-	// if version is legacy, marshal it as it was expected
-	if t.Version == TransactionVersionZero {
-		lt, err := newLegacyTransaction(t)
-		if err != nil {
-			return nil, err
-		}
-		data, err := json.Marshal(lt.Data)
-		if err != nil {
-			return nil, err
-		}
-		return json.Marshal(jsonTransaction{
-			Version: t.Version,
-			Data:    data,
-		})
-	}
-
 	// get a controller registered or unknown controller
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
@@ -379,12 +332,6 @@ func (t *Transaction) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	if txn.Version == TransactionVersionZero {
-		lt := legacyTransaction{Version: TransactionVersionZero}
-		err = json.Unmarshal(txn.Data, &lt.Data)
-		*t = lt.Transaction()
-		return err
-	}
 	controller, exists := _RegisteredTransactionVersions[txn.Version]
 	if !exists {
 		return ErrUnknownTransactionType
@@ -410,38 +357,27 @@ var (
 )
 
 // ValidateTransaction validates this transaction in the given context.
-func (t Transaction) ValidateTransaction(blockSizeLimit, arbitraryDataSizeLimit uint64) error {
+//
+// By default it checks for a transaction whether the transaction fits within a block,
+// that the arbitrary data is within a limited size, there are no outputs
+// spent multiple times, all defined values adhere to a network-constant defined
+// minimum value (e.g. miner fees having to be at least the MinimumMinerFee),
+// and also validates that all used Conditions and Fulfillments are standard.
+//
+// Each transaction Version however can also choose to overwrite this logic,
+// and implement none, some or all of these default rules, optionally
+// adding some version-specific rules to it.
+func (t Transaction) ValidateTransaction(ctx ValidationContext, constants TransactionValidationConstants) error {
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
 		// this will also trigger for v0 transactions
-		return defaultTransactionValidation(t, blockSizeLimit, arbitraryDataSizeLimit)
+		return DefaultTransactionValidation(t, ctx, constants)
 	}
 	validator, ok := controller.(TransactionValidator)
 	if !ok {
-		return defaultTransactionValidation(t, blockSizeLimit, arbitraryDataSizeLimit)
+		return DefaultTransactionValidation(t, ctx, constants)
 	}
-	return validator.ValidateTransaction(t, TransactionValidationConstants{
-		BlockSizeLimit:         blockSizeLimit,
-		ArbitraryDataSizeLimit: arbitraryDataSizeLimit,
-	})
-}
-
-// IsStandardTransaction returns an error if this transaction is not
-// to be considered standard.
-func (t Transaction) IsStandardTransaction() error {
-	if t.Version != TransactionVersionZero {
-		controller, exists := _RegisteredTransactionVersions[t.Version]
-		if !exists {
-			// version is non-0 and non-registered
-			return ErrInvalidTransactionVersion
-		}
-		// version can optionally define its own transaction standard check
-		checker, ok := controller.(TransactionIsStandardChecker)
-		if ok {
-			return checker.IsStandardTransaction(t)
-		}
-	}
-	return nil
+	return validator.ValidateTransaction(t, ctx, constants)
 }
 
 // MarshalSia implements SiaMarshaler.MarshalSia
@@ -466,9 +402,6 @@ var (
 // IsValidTransactionVersion returns an error in case the
 // transaction version is not 0, and isn't registered either.
 func (v TransactionVersion) IsValidTransactionVersion() error {
-	if v == TransactionVersionZero {
-		return nil
-	}
 	if _, ok := _RegisteredTransactionVersions[v]; ok {
 		return nil
 	}

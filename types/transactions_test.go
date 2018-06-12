@@ -1793,18 +1793,17 @@ func TestIDComputationCompatibleWithLegacyIDs(t *testing.T) {
 // ID returns the id of a transaction, which is taken by marshalling all of the
 // fields except for the signatures and taking the hash of the result.
 func (t Transaction) LegacyID() TransactionID {
-	t.Version = TransactionVersionZero // as to avoid a panic
-	lt, err := newLegacyTransaction(t)
+	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
 		panic(err)
 	}
 	return TransactionID(crypto.HashAll(
-		lt.Data.CoinInputs,
-		lt.Data.CoinOutputs,
-		lt.Data.BlockStakeInputs,
-		lt.Data.BlockStakeOutputs,
-		lt.Data.MinerFees,
-		lt.Data.ArbitraryData,
+		ltd.CoinInputs,
+		ltd.CoinOutputs,
+		ltd.BlockStakeInputs,
+		ltd.BlockStakeOutputs,
+		ltd.MinerFees,
+		ltd.ArbitraryData,
 	))
 }
 
@@ -1813,19 +1812,18 @@ func (t Transaction) LegacyID() TransactionID {
 // Specifier, all of the fields in the transaction (except the signatures),
 // and output index.
 func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
-	t.Version = TransactionVersionZero // as to avoid a panic
-	lt, err := newLegacyTransaction(t)
+	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
 		panic(err)
 	}
 	return CoinOutputID(crypto.HashAll(
 		SpecifierCoinOutput,
-		lt.Data.CoinInputs,
-		lt.Data.CoinOutputs,
-		lt.Data.BlockStakeInputs,
-		lt.Data.BlockStakeOutputs,
-		lt.Data.MinerFees,
-		lt.Data.ArbitraryData,
+		ltd.CoinInputs,
+		ltd.CoinOutputs,
+		ltd.BlockStakeInputs,
+		ltd.BlockStakeOutputs,
+		ltd.MinerFees,
+		ltd.ArbitraryData,
 		i,
 	))
 }
@@ -1835,19 +1833,19 @@ func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
 // all of the fields in the transaction (except the signatures), and output
 // index.
 func (t Transaction) LegacyBlockStakeOutputID(i uint64) BlockStakeOutputID {
-	t.Version = TransactionVersionZero // as to avoid a panic
-	lt, err := newLegacyTransaction(t)
+
+	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
 		panic(err)
 	}
 	return BlockStakeOutputID(crypto.HashAll(
 		SpecifierBlockStakeOutput,
-		lt.Data.CoinInputs,
-		lt.Data.CoinOutputs,
-		lt.Data.BlockStakeInputs,
-		lt.Data.BlockStakeOutputs,
-		lt.Data.MinerFees,
-		lt.Data.ArbitraryData,
+		ltd.CoinInputs,
+		ltd.CoinOutputs,
+		ltd.BlockStakeInputs,
+		ltd.BlockStakeOutputs,
+		ltd.MinerFees,
+		ltd.ArbitraryData,
 		i,
 	))
 }

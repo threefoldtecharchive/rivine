@@ -90,6 +90,8 @@ type ChainConstants struct {
 	DefaultTransactionVersion TransactionVersion
 
 	CurrencyUnits CurrencyUnits
+
+	TransactionPool TransactionPoolConstants
 }
 
 // CurrencyUnits defines the units used for the different kind of currencies.
@@ -98,10 +100,37 @@ type CurrencyUnits struct {
 	OneCoin Currency
 }
 
+// TransactionPoolConstants defines the constants used by the TransactionPool.
+type TransactionPoolConstants struct {
+	// TransactionSizeLimit defines the size of the largest transaction that
+	// will be accepted by the transaction pool according to the IsStandard
+	// rules.
+	TransactionSizeLimit int
+
+	// TransactionSetSizeLimit defines the largest set of dependent unconfirmed
+	// transactions that will be accepted by the transaction pool.
+	TransactionSetSizeLimit int
+
+	// The TransactionPoolSizeLimit is first checked, and then a transaction
+	// set is added. The current transaction pool does not do any priority
+	// ordering, so the size limit is such that the transaction pool will never
+	// exceed the size of a block.
+	PoolSizeLimit int
+}
+
 // DefaultCurrencyUnits provides sane defaults for currency units
 func DefaultCurrencyUnits() CurrencyUnits {
 	return CurrencyUnits{
 		OneCoin: NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
+	}
+}
+
+// DefaultTransactionPoolConstants provides sane defaults for TransactionPool constants.
+func DefaultTransactionPoolConstants() TransactionPoolConstants {
+	return TransactionPoolConstants{
+		TransactionSizeLimit:    16e3,
+		TransactionSetSizeLimit: 250e3,
+		PoolSizeLimit:           2e6 - 5e3 - 250e3,
 	}
 }
 
@@ -149,10 +178,11 @@ func DefaultChainConstants() ChainConstants {
 			StakeModifierDelay: 2000,
 			// Block stake aging if unspent block stake is not at index 0
 			BlockStakeAging:           uint64(1 << 10),
-			CurrencyUnits:             currencyUnits,
 			GenesisTransactionVersion: genesisTxnVersion,
 			DefaultTransactionVersion: defaultTxnVersion,
 			GenesisTimestamp:          Timestamp(1424139000),
+			CurrencyUnits:             currencyUnits,
+			TransactionPool:           DefaultTransactionPoolConstants(),
 		}
 		// Seed for the address given below twice:
 		// carbon boss inject cover mountain fetch fiber fit tornado cloth wing dinosaur proof joy intact fabric thumb rebel borrow poet chair network expire else
@@ -188,7 +218,6 @@ func DefaultChainConstants() ChainConstants {
 			ExtremeFutureThreshold:    6, // seconds
 			StakeModifierDelay:        20,
 			BlockStakeAging:           uint64(1 << 10),
-			CurrencyUnits:             currencyUnits,
 			GenesisTransactionVersion: genesisTxnVersion,
 			DefaultTransactionVersion: defaultTxnVersion,
 			GenesisBlockStakeAllocation: []BlockStakeOutput{
@@ -220,6 +249,8 @@ func DefaultChainConstants() ChainConstants {
 					})),
 				},
 			},
+			CurrencyUnits:   currencyUnits,
+			TransactionPool: DefaultTransactionPoolConstants(),
 		}
 	}
 
@@ -240,10 +271,11 @@ func DefaultChainConstants() ChainConstants {
 		ExtremeFutureThreshold:    5 * 60 * 60, // 5 hours.
 		StakeModifierDelay:        2000,
 		BlockStakeAging:           1 << 17, // 2^16s < 1 day < 2^17s
-		CurrencyUnits:             currencyUnits,
 		GenesisTimestamp:          Timestamp(1496322000),
 		GenesisTransactionVersion: genesisTxnVersion,
 		DefaultTransactionVersion: defaultTxnVersion,
+		CurrencyUnits:             currencyUnits,
+		TransactionPool:           DefaultTransactionPoolConstants(),
 	}
 
 	cts.GenesisBlockStakeAllocation = append(cts.GenesisBlockStakeAllocation, BlockStakeOutput{

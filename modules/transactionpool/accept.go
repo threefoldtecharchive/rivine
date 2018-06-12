@@ -14,21 +14,9 @@ import (
 	"github.com/rivine/bbolt"
 )
 
-const (
-	// The TransactionPoolSizeLimit is first checked, and then a transaction
-	// set is added. The current transaction pool does not do any priority
-	// ordering, so the size limit is such that the transaction pool will never
-	// exceed the size of a block.
-	//
-	// TODO: Add a priority structure that will allow the transaction pool to
-	// fill up beyond the size of a single block, without being subject to
-	// manipulation.
-	//
-	// The first ~1/4 of the transaction pool can be filled for free. This is
-	// mostly to preserve compatibility with clients that do not add fees.
-	TransactionPoolSizeLimit  = 2e6 - 5e3 - modules.TransactionSetSizeLimit
-	TransactionPoolSizeForFee = 500e3
-)
+// TODO: Add a priority structure that will allow the transaction pool to
+// fill up beyond the size of a single block, without being subject to
+// manipulation.
 
 var (
 	errObjectConflict      = errors.New("transaction set conflicts with an existing transaction set")
@@ -62,39 +50,9 @@ func relatedObjectIDs(ts []types.Transaction) []ObjectID {
 	return oids
 }
 
-// checkMinerFees checks that the total amount of transaction fees in the
-// transaction set is sufficient to earn a spot in the transaction pool.
-func (tp *TransactionPool) checkMinerFees(ts []types.Transaction) error {
-	// Transactions cannot be added after the TransactionPoolSizeLimit has been
-	// hit.
-	if tp.transactionListSize > TransactionPoolSizeLimit {
-		return errFullTransactionPool
-	}
-
-	// The first TransactionPoolSizeForFee transactions do not need fees.
-	if tp.transactionListSize > TransactionPoolSizeForFee {
-		// Currently required fees are set on a per-transaction basis. 2 coins
-		// are required per transaction if the free-fee limit has been reached,
-		// adding a larger fee is not useful.
-		var feeSum types.Currency
-		for i := range ts {
-			for _, fee := range ts[i].MinerFees {
-				feeSum = feeSum.Add(fee)
-			}
-		}
-		feeRequired := tp.transactionMinFee().Mul64(uint64(len(ts)))
-		if feeSum.Cmp(feeRequired) < 0 {
-			return errLowMinerFees
-		}
-	}
-	return nil
-}
-
-// checkTransactionSetComposition checks if the transaction set is valid given
-// the state of the pool. It does not check that each individual transaction
-// would be legal in the next block, but does check things like miner fees and
-// IsStandard.
-func (tp *TransactionPool) checkTransactionSetComposition(ts []types.Transaction) error {
+// validateTransactionSetComposition checks if the transaction set
+// is valid given the state of the pool.
+func (tp *TransactionPool) validateTransactionSetComposition(ts []types.Transaction) error {
 	// Check that the transaction set is not already known.
 	setID := TransactionSetID(crypto.HashObject(ts))
 	_, exists := tp.transactionSets[setID]
@@ -102,21 +60,22 @@ func (tp *TransactionPool) checkTransactionSetComposition(ts []types.Transaction
 		return modules.ErrDuplicateTransactionSet
 	}
 
-	// Check that the transaction set has enough fees to justify adding it to
-	// the transaction list.
-	err := tp.checkMinerFees(ts)
-	if err != nil {
-		return err
+	if tp.transactionListSize > tp.chainCts.TransactionPool.PoolSizeLimit {
+		return errFullTransactionPool
 	}
 
-	// All checks after this are expensive.
-	//
 	// TODO: There is no DoS prevention mechanism in place to prevent repeated
 	// expensive verifications of invalid transactions that are created on the
 	// fly.
 
-	// Check that all transactions follow 'Standard.md' guidelines.
-	err = tp.IsStandardTransactionSet(ts)
+	// Validates that the transaction set fits within the
+	// chain (network) defined byte size limit, when binary encoded.
+	// It also validates that the the transaction itself does not exceed a transaction pool defined
+	// network (chain) constant, again on a byte level. On top of these transaction pool specific rules,
+	// it also validates that the transaction is valid according to the consensus,
+	// meaning all properties are standard, known and valid. It does however check this within the context
+	// that the validation code knows the transaction is still unconfirmed, and thus not yet part of a created block.
+	err := tp.ValidateTransactionSet(ts)
 	if err != nil {
 		return err
 	}
@@ -184,9 +143,9 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 	}
 	superset = append(superset, dedupSet...)
 
-	// Check the composition of the transaction set, including fees and
+	// Validates the composition of the transaction set, including fees and
 	// IsStandard rules (this is a new set, the rules must be rechecked).
-	err := tp.checkTransactionSetComposition(superset)
+	err := tp.validateTransactionSetComposition(superset)
 	if err != nil {
 		return err
 	}
@@ -246,9 +205,8 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 		return modules.ErrDuplicateTransactionSet
 	}
 
-	// Check the composition of the transaction set, including fees and
-	// IsStandard rules.
-	err = tp.checkTransactionSetComposition(ts)
+	// Validate the composition of the transaction set
+	err = tp.validateTransactionSetComposition(ts)
 	if err != nil {
 		return err
 	}

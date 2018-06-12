@@ -384,7 +384,7 @@ func TestNilUnlockConditionProxy(t *testing.T) {
 	if ct := c.ConditionType(); ct != ConditionTypeNil {
 		t.Error("ConditionType", ct, "!=", ConditionTypeNil)
 	}
-	if err := c.IsStandardCondition(StandardCheckContext{}); err != nil {
+	if err := c.IsStandardCondition(ValidationContext{}); err != nil {
 		t.Error("IsStandardCondition", err)
 	}
 	if b, err := c.MarshalJSON(); err != nil || string(b) != "{}" {
@@ -409,7 +409,7 @@ func TestNilUnlockFulfillmentProxy(t *testing.T) {
 	if ft := f.FulfillmentType(); ft != FulfillmentTypeNil {
 		t.Error("FulfillmentType", ft, "!=", FulfillmentTypeNil)
 	}
-	if err := f.IsStandardFulfillment(StandardCheckContext{}); err == nil {
+	if err := f.IsStandardFulfillment(ValidationContext{}); err == nil {
 		t.Error("IsStandardFulfillment should not be standard")
 	}
 	if b, err := f.MarshalJSON(); err != nil || string(b) != "{}" {
@@ -1733,13 +1733,16 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 	}
 	for tidx, testCase := range testCases {
 		for idx, ci := range testCase.Transaction.CoinInputs {
-			sigHash := testCase.Transaction.InputSigHash(uint64(idx))
+			sigHash, err := testCase.Transaction.InputSigHash(uint64(idx))
+			if err != nil {
+				t.Error(tidx, idx, "unexpected error", err)
+			}
 			if bytes.Compare(testCase.ExpectedCoinInputSigHashes[idx][:], sigHash[:]) != 0 {
 				t.Error(tidx, idx, "invalid coin input sigh hash",
 					testCase.ExpectedCoinInputSigHashes[idx], "!=", sigHash)
 			}
 
-			err := ci.Fulfillment.IsStandardFulfillment(StandardCheckContext{})
+			err = ci.Fulfillment.IsStandardFulfillment(ValidationContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1753,13 +1756,16 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			}
 		}
 		for idx, bsi := range testCase.Transaction.BlockStakeInputs {
-			sigHash := testCase.Transaction.InputSigHash(uint64(idx))
+			sigHash, err := testCase.Transaction.InputSigHash(uint64(idx))
+			if err != nil {
+				t.Error(tidx, idx, "unexpected error", err)
+			}
 			if bytes.Compare(testCase.ExpectedBlockStakeInputSigHashes[idx][:], sigHash[:]) != 0 {
 				t.Error(tidx, idx, "invalid bs input sigh hash",
 					testCase.ExpectedBlockStakeInputSigHashes[idx], "!=", sigHash)
 			}
 
-			err := bsi.Fulfillment.IsStandardFulfillment(StandardCheckContext{})
+			err = bsi.Fulfillment.IsStandardFulfillment(ValidationContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1778,7 +1784,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 				t.Error(tidx, idx, testCase.ExpectedCoinIdentifiers[idx], "!=", outputID)
 			}
 
-			err := co.Condition.IsStandardCondition(StandardCheckContext{})
+			err := co.Condition.IsStandardCondition(ValidationContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1789,7 +1795,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 				t.Error(tidx, idx, testCase.ExpectedBlockStakeIdentifiers[idx], "!=", outputID)
 			}
 
-			err := bso.Condition.IsStandardCondition(StandardCheckContext{})
+			err := bso.Condition.IsStandardCondition(ValidationContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -2307,7 +2313,7 @@ func TestIsStandardCondition(t *testing.T) {
 		},
 	}
 	for idx, testCase := range testCases {
-		err := testCase.Condition.IsStandardCondition(StandardCheckContext{})
+		err := testCase.Condition.IsStandardCondition(ValidationContext{})
 		if testCase.NotStandardMessage != "" {
 			if err == nil {
 				t.Error(idx, "expected error, but none received:", testCase.NotStandardMessage, testCase.Condition)
@@ -2841,7 +2847,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 	}
 	for idx, testCase := range testCases {
-		err := testCase.Fulfillment.IsStandardFulfillment(StandardCheckContext{})
+		err := testCase.Fulfillment.IsStandardFulfillment(ValidationContext{})
 		if testCase.NotStandardMessage != "" {
 			if err == nil {
 				t.Error(idx, "expected error, but none received:", testCase.NotStandardMessage, testCase.Fulfillment)

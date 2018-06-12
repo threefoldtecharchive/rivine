@@ -39,7 +39,7 @@ type (
 		// An error result means it is not standard,
 		// and it will consequently prevent the transaction, which includes the
 		// the output that has this condition, from being minted into a block.
-		IsStandardCondition(StandardCheckContext) error
+		IsStandardCondition(ValidationContext) error
 
 		// UnlockHash returns the deterministic unlock hash of this UnlockCondition.
 		// It identifies the owner(s) or contract which own the output,
@@ -102,7 +102,7 @@ type (
 		// An error result means it is not standard,
 		// and it will consequently prevent the transaction, which includes the
 		// the input that has this fulfillment, from being minted into a block.
-		IsStandardFulfillment(StandardCheckContext) error
+		IsStandardFulfillment(ValidationContext) error
 	}
 	// MarshalableUnlockFulfillment adds binary marshaling as a required interface
 	// to the regular unlock fulfillment interface. This allows the fulfillment
@@ -140,11 +140,17 @@ type (
 		Fulfillment MarshalableUnlockFulfillment
 	}
 
-	// StandardCheckContext is given as part of any IsStandard check,
+	// ValidationContext is given as part of any IsStandard check,
 	// as to give some context in order to present a more informed
-	// conclusion of whether or not a condition/fulfillment is standard.
-	StandardCheckContext struct {
-		// BlockHeight of the currently last registered block.
+	// conclusion of whether or not a condition/fulfillment is standard,
+	// as well as if a transaction is valid on a local level.
+	ValidationContext struct {
+		// Confirmed defines whether or not the (parent) transaction
+		// is already confirmed, or in other words is part of a created block already.
+		Confirmed bool
+		// BlockHeight defines either the height of the block the (parent) transaction is part of,
+		// or it defines the height of the last confirmed/created block.
+		// It's the latter in case Confirmed is false, the first otherwise.
 		BlockHeight BlockHeight
 	}
 
@@ -562,7 +568,7 @@ func (n *NilCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext
 func (n *NilCondition) ConditionType() ConditionType { return ConditionTypeNil }
 
 // IsStandardCondition implements UnlockCondition.IsStandardCondition
-func (n *NilCondition) IsStandardCondition(StandardCheckContext) error { return nil } // always valid
+func (n *NilCondition) IsStandardCondition(ValidationContext) error { return nil } // always valid
 
 // UnlockHash implements UnlockCondition.UnlockHash
 func (n *NilCondition) UnlockHash() UnlockHash { return NilUnlockHash }
@@ -600,7 +606,7 @@ func (n *NilFulfillment) Equal(f UnlockFulfillment) bool {
 func (n *NilFulfillment) FulfillmentType() FulfillmentType { return FulfillmentTypeNil }
 
 // IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (n *NilFulfillment) IsStandardFulfillment(StandardCheckContext) error {
+func (n *NilFulfillment) IsStandardFulfillment(ValidationContext) error {
 	return ErrNilFulfillmentType
 } // never valid
 
@@ -702,7 +708,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 func (uh *UnlockHashCondition) ConditionType() ConditionType { return ConditionTypeUnlockHash }
 
 // IsStandardCondition implements UnlockCondition.IsStandardCondition
-func (uh *UnlockHashCondition) IsStandardCondition(StandardCheckContext) error {
+func (uh *UnlockHashCondition) IsStandardCondition(ValidationContext) error {
 	if uh.TargetUnlockHash.Type != UnlockTypePubKey && uh.TargetUnlockHash.Type != UnlockTypeAtomicSwap {
 		return fmt.Errorf("unsupported unlock type '%d' by unlock hash condition", uh.TargetUnlockHash.Type)
 	}
@@ -763,7 +769,7 @@ func (ss *SingleSignatureFulfillment) FulfillmentType() FulfillmentType {
 }
 
 // IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (ss *SingleSignatureFulfillment) IsStandardFulfillment(StandardCheckContext) error {
+func (ss *SingleSignatureFulfillment) IsStandardFulfillment(ValidationContext) error {
 	return strictSignatureCheck(ss.PublicKey, ss.Signature)
 }
 
@@ -877,7 +883,7 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 func (as *AtomicSwapCondition) ConditionType() ConditionType { return ConditionTypeAtomicSwap }
 
 // IsStandardCondition implements UnlockCondition.IsStandardCondition
-func (as *AtomicSwapCondition) IsStandardCondition(StandardCheckContext) error {
+func (as *AtomicSwapCondition) IsStandardCondition(ValidationContext) error {
 	if as.Sender.Type != UnlockTypePubKey {
 		return fmt.Errorf("unsupported unlock hash sender type: %d", as.Sender.Type)
 	}
@@ -983,7 +989,7 @@ func (as *AtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 func (as *AtomicSwapFulfillment) FulfillmentType() FulfillmentType { return FulfillmentTypeAtomicSwap }
 
 // IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (as *AtomicSwapFulfillment) IsStandardFulfillment(StandardCheckContext) error {
+func (as *AtomicSwapFulfillment) IsStandardFulfillment(ValidationContext) error {
 	return strictSignatureCheck(as.PublicKey, as.Signature)
 }
 
@@ -1048,7 +1054,7 @@ func (as *LegacyAtomicSwapFulfillment) FulfillmentType() FulfillmentType {
 }
 
 // IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (as *LegacyAtomicSwapFulfillment) IsStandardFulfillment(StandardCheckContext) error {
+func (as *LegacyAtomicSwapFulfillment) IsStandardFulfillment(ValidationContext) error {
 	if as.Sender.Type != UnlockTypePubKey || as.Receiver.Type != UnlockTypePubKey {
 		return errors.New("unsupported unlock hash type")
 	}
@@ -1325,7 +1331,7 @@ func (tl *TimeLockCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillC
 func (tl *TimeLockCondition) ConditionType() ConditionType { return ConditionTypeTimeLock }
 
 // IsStandardCondition implements UnlockCondition.IsStandardCondition
-func (tl *TimeLockCondition) IsStandardCondition(ctx StandardCheckContext) error {
+func (tl *TimeLockCondition) IsStandardCondition(ctx ValidationContext) error {
 	if tl.LockTime == 0 {
 		return errors.New("lock time has to be defined")
 	}
@@ -1508,7 +1514,7 @@ func (ms *MultiSignatureCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fu
 func (ms *MultiSignatureCondition) ConditionType() ConditionType { return ConditionTypeMultiSignature }
 
 // IsStandardCondition implements UnlockCondition.IsStandardCondition
-func (ms *MultiSignatureCondition) IsStandardCondition(StandardCheckContext) error {
+func (ms *MultiSignatureCondition) IsStandardCondition(ValidationContext) error {
 	if ms.MinimumSignatureCount == 0 {
 		return errors.New("A minimum amount of required signatures must be specified")
 	}
@@ -1623,7 +1629,7 @@ func (ms *MultiSignatureFulfillment) FulfillmentType() FulfillmentType {
 }
 
 // IsStandardFulfillment implements UnlockFulfillment.IsStandardFulfillment
-func (ms *MultiSignatureFulfillment) IsStandardFulfillment(StandardCheckContext) error {
+func (ms *MultiSignatureFulfillment) IsStandardFulfillment(ValidationContext) error {
 	if len(ms.Pairs) == 0 {
 		return errors.New("At least one pair must be provided")
 	}
@@ -1766,7 +1772,7 @@ func (up UnlockConditionProxy) ConditionType() ConditionType {
 //
 // If no child is defined, nil will be returned,
 // otherwise the question will be delegated to the child condition.
-func (up UnlockConditionProxy) IsStandardCondition(ctx StandardCheckContext) error {
+func (up UnlockConditionProxy) IsStandardCondition(ctx ValidationContext) error {
 	condition := up.Condition
 	if condition == nil {
 		condition = &NilCondition{}
@@ -1838,7 +1844,7 @@ func (fp UnlockFulfillmentProxy) FulfillmentType() FulfillmentType {
 //
 // If no child is defined, an error will be returned,
 // otherwise the question will be delegated to the child fulfillmment.
-func (fp UnlockFulfillmentProxy) IsStandardFulfillment(ctx StandardCheckContext) error {
+func (fp UnlockFulfillmentProxy) IsStandardFulfillment(ctx ValidationContext) error {
 	fulfillment := fp.Fulfillment
 	if fulfillment == nil {
 		fulfillment = &NilFulfillment{}
@@ -2146,7 +2152,10 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 		if edSK.IsNil() {
 			return nil, crypto.ErrSecretNilKey
 		}
-		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
+		sigHash, err := tx.InputSigHash(inputIndex, extraObjects...)
+		if err != nil {
+			return nil, err
+		}
 		sig := crypto.SignHash(sigHash, edSK)
 		return sig[:], nil
 
@@ -2178,8 +2187,11 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 			return crypto.ErrPublicNilKey
 		}
 		cryptoSig := crypto.Signature(edSig)
-		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
-		err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
+		var sigHash crypto.Hash
+		sigHash, err = tx.InputSigHash(inputIndex, extraObjects...)
+		if err == nil {
+			err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
+		}
 
 	default:
 		err = ErrUnknownSignAlgorithmType

@@ -7,17 +7,6 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-const (
-	// TransactionSizeLimit defines the size of the largest transaction that
-	// will be accepted by the transaction pool according to the IsStandard
-	// rules.
-	TransactionSizeLimit = 16e3
-
-	// TransactionSetSizeLimit defines the largest set of dependent unconfirmed
-	// transactions that will be accepted by the transaction pool.
-	TransactionSetSizeLimit = 250e3
-)
-
 var (
 	// ErrDuplicateTransactionSet is the error that gets returned if a
 	// duplicate transaction set is given to the transaction pool.
@@ -74,10 +63,6 @@ type TransactionPool interface {
 	// within one block. The minimum has a strong chance of getting accepted
 	// within 10 blocks.
 	FeeEstimation() (minimumRecommended, maximumRecommended types.Currency)
-
-	// IsStandardTransaction returns `err = nil` if the transaction is
-	// standard, otherwise it returns an error explaining what is not standard.
-	IsStandardTransaction(types.Transaction) error
 
 	// PurgeTransactionPool is a temporary function available to the miner. In
 	// the event that a miner mines an unacceptable block, the transaction pool
