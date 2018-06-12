@@ -357,6 +357,16 @@ var (
 )
 
 // ValidateTransaction validates this transaction in the given context.
+//
+// By default it checks for a transaction whether the transaction fits within a block,
+// that the arbitrary data is within a limited size, there are no outputs
+// spent multiple times, all defined values adhere to a network-constant defined
+// minimum value (e.g. miner fees having to be at least the MinimumMinerFee),
+// and also validates that all used Conditions and Fulfillments are standard.
+//
+// Each transaction Version however can also choose to overwrite this logic,
+// and implement none, some or all of these default rules, optionally
+// adding some version-specific rules to it.
 func (t Transaction) ValidateTransaction(ctx ValidationContext, constants TransactionValidationConstants) error {
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {

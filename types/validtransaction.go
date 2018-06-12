@@ -11,6 +11,7 @@ import (
 	"github.com/rivine/rivine/encoding"
 )
 
+// various errors that can be returned as result of a specific transaction validation
 var (
 	ErrDoubleSpend           = errors.New("transaction uses a parent object twice")
 	ErrNonZeroRevision       = errors.New("new file contract has a nonzero revision number")
@@ -49,34 +50,6 @@ func TransactionFollowsMinimumValues(t Transaction, minimumMinerFee Currency) er
 		if fee.Cmp(minimumMinerFee) == -1 {
 			return ErrTooSmallMinerFee
 		}
-	}
-	return nil
-}
-
-// NoRepeatsInTransaction checks that a transaction does not spend multiple outputs twice,
-// submit two valid storage proofs for the same file contract, etc. We
-// frivolously check that a file contract termination and storage proof don't
-// act on the same file contract. There is very little overhead for doing so,
-// and the check is only frivolous because of the current rule that file
-// contract terminations are not valid after the proof window opens.
-func NoRepeatsInTransaction(t Transaction) error {
-	// Check that there are no repeat instances of coin outputs, storage
-	// proofs, contract terminations, or siafund outputs.
-	coinInputs := make(map[CoinOutputID]struct{})
-	for _, sci := range t.CoinInputs {
-		_, exists := coinInputs[sci.ParentID]
-		if exists {
-			return ErrDoubleSpend
-		}
-		coinInputs[sci.ParentID] = struct{}{}
-	}
-	blockstakeInputs := make(map[BlockStakeOutputID]struct{})
-	for _, bsi := range t.BlockStakeInputs {
-		_, exists := blockstakeInputs[bsi.ParentID]
-		if exists {
-			return ErrDoubleSpend
-		}
-		blockstakeInputs[bsi.ParentID] = struct{}{}
 	}
 	return nil
 }
@@ -122,10 +95,6 @@ func DefaultTransactionValidation(t Transaction, ctx ValidationContext, constant
 		return
 	}
 	err = ArbitraryDataFits(t.ArbitraryData, constants.ArbitraryDataSizeLimit)
-	if err != nil {
-		return
-	}
-	err = NoRepeatsInTransaction(t)
 	if err != nil {
 		return
 	}

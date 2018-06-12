@@ -80,8 +80,8 @@ func TestTransactionFollowsMinimumValues_V0(t *testing.T) {
 	txn.MinerFees[0] = NewCurrency64(1)
 }
 
-// TestTransactionFollowsMinimumValues_Vd probes the followsMinimumValues method
-// of the Transaction type.
+// TestTransactionFollowsMinimumValues_Vd probes the
+// TransactionFollowsMinimumValues function
 func TestTransactionFollowsMinimumValues_Vd(t *testing.T) {
 	// Start with a transaction that follows all of minimum-values rules.
 	txn := Transaction{
@@ -116,9 +116,9 @@ func TestTransactionFollowsMinimumValues_Vd(t *testing.T) {
 	txn.MinerFees[0] = NewCurrency64(1)
 }
 
-// TestTransactionNoRepeats_V0 probes the noRepeats method of the Transaction
-// type.
-func TestTransactionNoRepeats_V0(t *testing.T) {
+// TestValidateNoDoubleSpendsWithinTransaction_V0 probes
+// TransactionFollowsMinimumValues function
+func TestValidateNoDoubleSpendsWithinTransaction_V0(t *testing.T) {
 	// Try a transaction all the repeatable types but no conflicts.
 	txn := Transaction{
 		Version:          TransactionVersionZero,
@@ -128,7 +128,7 @@ func TestTransactionNoRepeats_V0(t *testing.T) {
 
 	// Try a transaction double spending a siacoin output.
 	txn.CoinInputs = append(txn.CoinInputs, CoinInput{})
-	err := NoRepeatsInTransaction(txn)
+	err := ValidateNoDoubleSpendsWithinTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
@@ -136,16 +136,16 @@ func TestTransactionNoRepeats_V0(t *testing.T) {
 
 	// Try a transaction double spending a siafund output.
 	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{})
-	err = NoRepeatsInTransaction(txn)
+	err = ValidateNoDoubleSpendsWithinTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
 	txn.BlockStakeInputs = txn.BlockStakeInputs[:1]
 }
 
-// TestTransactionNoRepeats_Vd probes the noRepeats method of the Transaction
-// type.
-func TestTransactionNoRepeats_Vd(t *testing.T) {
+// TestValidateNoDoubleSpendsWithinTransaction_Vd probes the
+// ValidateNoDoubleSpendsWithinTransaction function
+func TestValidateNoDoubleSpendsWithinTransaction_Vd(t *testing.T) {
 	// Try a transaction all the repeatable types but no conflicts.
 	txn := Transaction{
 		Version:          DefaultChainConstants().DefaultTransactionVersion,
@@ -155,7 +155,7 @@ func TestTransactionNoRepeats_Vd(t *testing.T) {
 
 	// Try a transaction double spending a siacoin output.
 	txn.CoinInputs = append(txn.CoinInputs, CoinInput{})
-	err := NoRepeatsInTransaction(txn)
+	err := ValidateNoDoubleSpendsWithinTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
@@ -163,7 +163,7 @@ func TestTransactionNoRepeats_Vd(t *testing.T) {
 
 	// Try a transaction double spending a siafund output.
 	txn.BlockStakeInputs = append(txn.BlockStakeInputs, BlockStakeInput{})
-	err = NoRepeatsInTransaction(txn)
+	err = ValidateNoDoubleSpendsWithinTransaction(txn)
 	if err != ErrDoubleSpend {
 		t.Error(err)
 	}
