@@ -1733,13 +1733,16 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 	}
 	for tidx, testCase := range testCases {
 		for idx, ci := range testCase.Transaction.CoinInputs {
-			sigHash := testCase.Transaction.InputSigHash(uint64(idx))
+			sigHash, err := testCase.Transaction.InputSigHash(uint64(idx))
+			if err != nil {
+				t.Error(tidx, idx, "unexpected error", err)
+			}
 			if bytes.Compare(testCase.ExpectedCoinInputSigHashes[idx][:], sigHash[:]) != 0 {
 				t.Error(tidx, idx, "invalid coin input sigh hash",
 					testCase.ExpectedCoinInputSigHashes[idx], "!=", sigHash)
 			}
 
-			err := ci.Fulfillment.IsStandardFulfillment(ValidationContext{})
+			err = ci.Fulfillment.IsStandardFulfillment(ValidationContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1753,13 +1756,16 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			}
 		}
 		for idx, bsi := range testCase.Transaction.BlockStakeInputs {
-			sigHash := testCase.Transaction.InputSigHash(uint64(idx))
+			sigHash, err := testCase.Transaction.InputSigHash(uint64(idx))
+			if err != nil {
+				t.Error(tidx, idx, "unexpected error", err)
+			}
 			if bytes.Compare(testCase.ExpectedBlockStakeInputSigHashes[idx][:], sigHash[:]) != 0 {
 				t.Error(tidx, idx, "invalid bs input sigh hash",
 					testCase.ExpectedBlockStakeInputSigHashes[idx], "!=", sigHash)
 			}
 
-			err := bsi.Fulfillment.IsStandardFulfillment(ValidationContext{})
+			err = bsi.Fulfillment.IsStandardFulfillment(ValidationContext{})
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}

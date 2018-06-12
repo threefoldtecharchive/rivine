@@ -10,7 +10,6 @@ import (
 	"errors"
 	"io"
 
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 )
@@ -162,17 +161,8 @@ var (
 // ID returns the id of a transaction, which is taken by marshalling all of the
 // fields except for the signatures and taking the hash of the result.
 func (t Transaction) ID() (id TransactionID) {
-	if t.Version == TransactionVersionZero {
-		ltd, err := newLegacyTransactionDataFromTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
-		}
-		// the legacy version does not include the transaction version
-		// as part of the crypto hash
-		return TransactionID(crypto.HashObject(ltd))
-	}
 	h := crypto.NewHash()
-	t.MarshalSia(h)
+	t.encodeTransactionDataAsIDInput(h)
 	h.Sum(id[:0])
 	return
 }
@@ -181,50 +171,52 @@ func (t Transaction) ID() (id TransactionID) {
 // which is calculated by hashing the concatenation of the CoinOutput
 // Specifier, all of the fields in the transaction (except the signatures),
 // and output index.
-func (t Transaction) CoinOutputID(i uint64) CoinOutputID {
-	if t.Version == TransactionVersionZero {
-		ltd, err := newLegacyTransactionDataFromTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
-		}
-		// the legacy version does not include the transaction version
-		// as part of the crypto hash
-		return CoinOutputID(crypto.HashAll(
-			SpecifierCoinOutput,
-			ltd,
-			i,
-		))
-	}
-	return CoinOutputID(crypto.HashAll(
-		SpecifierCoinOutput,
-		t,
-		i,
-	))
+func (t Transaction) CoinOutputID(i uint64) (id CoinOutputID) {
+	h := crypto.NewHash()
+	e := encoding.NewEncoder(h)
+	e.Encode(SpecifierCoinOutput)
+	t.encodeTransactionDataAsIDInput(h)
+	e.Encode(i)
+	h.Sum(id[:0])
+	return
 }
 
 // BlockStakeOutputID returns the ID of a BlockStakeOutput at the given index, which
 // is calculated by hashing the concatenation of the BlockStakeOutput Specifier,
 // all of the fields in the transaction (except the signatures), and output
 // index.
-func (t Transaction) BlockStakeOutputID(i uint64) BlockStakeOutputID {
-	if t.Version == TransactionVersionZero {
-		ltd, err := newLegacyTransactionDataFromTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
-		}
-		// the legacy version does not include the transaction version
-		// as part of the crypto hash
-		return BlockStakeOutputID(crypto.HashAll(
-			SpecifierBlockStakeOutput,
-			ltd,
-			i,
-		))
+func (t Transaction) BlockStakeOutputID(i uint64) (id BlockStakeOutputID) {
+	h := crypto.NewHash()
+	e := encoding.NewEncoder(h)
+	e.Encode(SpecifierBlockStakeOutput)
+	t.encodeTransactionDataAsIDInput(h)
+	e.Encode(i)
+	h.Sum(id[:0])
+	return
+}
+
+func (t Transaction) encodeTransactionDataAsIDInput(w io.Writer) error {
+	// get a controller registered or unknown controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return ErrUnknownTransactionType
 	}
-	return BlockStakeOutputID(crypto.HashAll(
-		SpecifierBlockStakeOutput,
-		t,
-		i,
-	))
+	td := TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+		Extension:         t.Extension,
+	}
+	if transactionIDEncoder, ok := controller.(TransactionIDEncoder); ok {
+		// use binary encoded specialized for ID Input
+		return transactionIDEncoder.EncodeTransactionIDInput(w, td)
+	}
+	// use the default binary encoding, if the controller does not require specialized
+	// encoding logic for ID purposes
+	return controller.EncodeTransactionData(w, td)
 }
 
 // CoinOutputSum returns the sum of all the coin outputs in the
@@ -400,9 +392,6 @@ var (
 // IsValidTransactionVersion returns an error in case the
 // transaction version is not 0, and isn't registered either.
 func (v TransactionVersion) IsValidTransactionVersion() error {
-	if v == TransactionVersionZero {
-		return nil
-	}
 	if _, ok := _RegisteredTransactionVersions[v]; ok {
 		return nil
 	}

@@ -2152,7 +2152,10 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 		if edSK.IsNil() {
 			return nil, crypto.ErrSecretNilKey
 		}
-		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
+		sigHash, err := tx.InputSigHash(inputIndex, extraObjects...)
+		if err != nil {
+			return nil, err
+		}
 		sig := crypto.SignHash(sigHash, edSK)
 		return sig[:], nil
 
@@ -2184,8 +2187,11 @@ func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transact
 			return crypto.ErrPublicNilKey
 		}
 		cryptoSig := crypto.Signature(edSig)
-		sigHash := tx.InputSigHash(inputIndex, extraObjects...)
-		err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
+		var sigHash crypto.Hash
+		sigHash, err = tx.InputSigHash(inputIndex, extraObjects...)
+		if err == nil {
+			err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
+		}
 
 	default:
 		err = ErrUnknownSignAlgorithmType

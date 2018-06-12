@@ -60,12 +60,12 @@ func Ed25519PublicKey(pk crypto.PublicKey) SiaPublicKey {
 
 // InputSigHash returns the hash of all fields in a transaction,
 // relevant to an input sig.
-func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) crypto.Hash {
-	if t.Version == TransactionVersionZero {
-		return t.legacyInputSigHash(inputIndex, extraObjects...)
+func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) (crypto.Hash, error) {
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return crypto.Hash{}, ErrUnknownTransactionType
 	}
-
-	if hasher, ok := t.Extension.(InputSigHasher); ok {
+	if hasher, ok := controller.(InputSigHasher); ok {
 		// if extension implements InputSigHasher,
 		// use it here to sign the input with it
 		return hasher.InputSigHash(t, inputIndex, extraObjects...)
@@ -99,7 +99,7 @@ func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}
 
 	var hash crypto.Hash
 	h.Sum(hash[:0])
-	return hash
+	return hash, nil
 }
 
 func (t Transaction) legacyInputSigHash(inputIndex uint64, extraObjects ...interface{}) crypto.Hash {

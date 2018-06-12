@@ -49,6 +49,8 @@ type (
 
 		// Extension is an optional field that can be used,
 		// in order to attach non-standard state to a transaction.
+		// It is used for data only, controller logic is all to be implemented
+		// as extended interfaces of the (transaction) controller.
 		Extension interface{} `json:"-"` // omitted from JSON
 	}
 
@@ -75,7 +77,14 @@ type (
 	// can optionally implement, in order to define custom Input signatures,
 	// overwriting the default input sig hash logic.
 	InputSigHasher interface {
-		InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) crypto.Hash
+		InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) (crypto.Hash, error)
+	}
+
+	// TransactionIDEncoder is an optional interface a transaction controller
+	// can implement, in order to use a different binary encoding for ID-generation purposes,
+	// instead of using the default binary encoding logic for that transaction (version).
+	TransactionIDEncoder interface {
+		EncodeTransactionIDInput(io.Writer, TransactionData) error
 	}
 )
 
@@ -210,4 +219,50 @@ func (ltc LegacyTransactionController) JSONDecodeTransactionData(b []byte) (Tran
 		return TransactionData{}, err
 	}
 	return ltd.TransactionData(), nil
+}
+
+// InputSigHash implements InputSigHasher.InputSigHash
+func (ltc LegacyTransactionController) InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) (crypto.Hash, error) {
+	h := crypto.NewHash()
+	enc := encoding.NewEncoder(h)
+
+	enc.Encode(inputIndex)
+	if len(extraObjects) > 0 {
+		enc.EncodeAll(extraObjects...)
+	}
+	for _, ci := range t.CoinInputs {
+		enc.EncodeAll(ci.ParentID, legacyUnlockHashFromFulfillment(ci.Fulfillment.Fulfillment))
+	}
+	// legacy transactions encoded unlock hashes in pure form
+	enc.Encode(len(t.CoinOutputs))
+	for _, co := range t.CoinOutputs {
+		enc.EncodeAll(
+			co.Value,
+			legacyUnlockHashCondition(co.Condition.Condition),
+		)
+	}
+	for _, bsi := range t.BlockStakeInputs {
+		enc.EncodeAll(bsi.ParentID, legacyUnlockHashFromFulfillment(bsi.Fulfillment.Fulfillment))
+	}
+	// legacy transactions encoded unlock hashes in pure form
+	enc.Encode(len(t.BlockStakeOutputs))
+	for _, bso := range t.BlockStakeOutputs {
+		enc.EncodeAll(
+			bso.Value,
+			legacyUnlockHashCondition(bso.Condition.Condition),
+		)
+	}
+	enc.EncodeAll(
+		t.MinerFees,
+		t.ArbitraryData,
+	)
+
+	var hash crypto.Hash
+	h.Sum(hash[:0])
+	return hash, nil
+}
+
+// EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
+func (ltc LegacyTransactionController) EncodeTransactionIDInput(w io.Writer, td TransactionData) error {
+	return ltc.EncodeTransactionData(w, td)
 }
