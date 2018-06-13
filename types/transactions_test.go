@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 )
 
@@ -1790,6 +1791,178 @@ func TestIDComputationCompatibleWithLegacyIDs(t *testing.T) {
 	}
 }
 
+// unit test for https://github.com/threefoldfoundation/tfchain/issues/134
+func TestIDComputationCompatibleWithLegacyIDs_TFChain_Issue134(t *testing.T) {
+	type IDIndexPair struct {
+		Index    uint64
+		ParentID string
+	}
+	testCases := []struct {
+		JSONEncodedTransaction string
+		HexTransactionID       string
+		CoinParents            []IDIndexPair
+		BlockStakeParents      []IDIndexPair
+	}{
+		{
+			`{
+	"version": 1,
+	"data": {
+		"coininputs": null,
+		"blockstakeinputs": [{
+			"parentid": "782e4819d6e199856ba1bff3def5d7cc37ae2a0dabecb05359d6072156190d68",
+			"fulfillment": {
+				"type": 1,
+				"data": {
+					"publickey": "ed25519:95990ca3774de81309932302f74dfe9e540d6c29ca5cb9ee06e999ad46586737",
+					"signature": "70be2115b82a54170c94bf4788e2a6dd154a081f61e97999c2d9fcc64c41e7df2e8a8d4f82a57a04a1247b9badcb6bffbd238e9a6761dd59e5fef7ff6df0fc01"
+				}
+			}
+		}],
+		"blockstakeoutputs": [{
+			"value": "99",
+			"condition": {
+				"type": 1,
+				"data": {
+					"unlockhash": "01fdf10836c119186f1d21666ae2f7dc62d6ecc46b5f41449c3ee68aea62337dad917808e46799"
+				}
+			}
+		}],
+		"minerfees": null
+	}
+}`,
+			"af2e02682fb8423e4c9060d93b847b7e26b2a2b90f999b12a116605fa5358195",
+			nil,
+			[]IDIndexPair{
+				{0, "107a0a18a511cf1a6d4a2ac1f1a3626a7aa6004ef7aa21ac684b63b95594c6c1"},
+			},
+		},
+		{
+			`{
+	"version": 1,
+	"data": {
+		"coininputs": [{
+			"parentid": "5b907d6e4d34cdd825484d2f9f14445377fb8b4f8cab356a390a7fe4833a3085",
+			"fulfillment": {
+				"type": 1,
+				"data": {
+					"publickey": "ed25519:bd5e0e345d5939f5f9eb330084c7f0ffb8fc7fc5bdb07a94c304620eb4e2d99a",
+					"signature": "55dace7ccbc9cdd23220a8ef3ec09e84ce5c5acc202c5f270ea0948743ebf52135f3936ef7477170b4f9e0fe141a61d8312ab31afbf926a162982247e5d2720a"
+				}
+			}
+		}],
+		"coinoutputs": [{
+			"value": "1000000000",
+			"condition": {
+				"type": 1,
+				"data": {
+					"unlockhash": "010009a2b6a482da73204ccc586f6fab5504a1a69c0d316cdf828a476ae7c91c9137fd6f1b62bb"
+				}
+			}
+		}, {
+			"value": "8900000000",
+			"condition": {
+				"type": 1,
+				"data": {
+					"unlockhash": "01b81f9e02d6be3a7de8440365a7c799e07dedf2ccba26fd5476c304e036b87c1ab716558ce816"
+				}
+			}
+		}],
+		"minerfees": ["100000000"]
+	}
+}`,
+			"943778f4e2ecb5b2186e05c989b7c08e9d0199d419509725e166ac7f221600c7",
+			[]IDIndexPair{
+				{1, "733b266749141bad0900d7f9fe69dd511a98f7a6f4c78e66aa41af7f55650a15"},
+			},
+			nil,
+		},
+	}
+	for idx, testCase := range testCases {
+		var txn Transaction
+		err := txn.UnmarshalJSON([]byte(testCase.JSONEncodedTransaction))
+		if err != nil {
+			t.Error(idx, "failed to decode JSON txn", err)
+			continue
+		}
+		var txnID TransactionID
+		err = txnID.LoadString(testCase.HexTransactionID)
+		if err != nil {
+			t.Error(idx, "failed to decode hex encoded txnID", err)
+			continue
+		}
+		// test transaction ID
+		if txn.Version == TransactionVersionZero {
+			// ensure our legacy ID is correct for v0 transactions
+			legacyID := txn.LegacyID()
+			if legacyID != txnID {
+				t.Error(idx, "LegacyID", legacyID, "!=", txnID)
+			}
+		}
+		// sanity check, to ensure our expected ID is actually correct
+		v106ID := txn.V106ID()
+		if v106ID != txnID {
+			t.Error(idx, "V106ID", v106ID, "!=", txnID)
+		}
+		// ensure our computed ID is correct
+		transactionID := txn.ID()
+		if transactionID != txnID {
+			t.Error(idx, "TransactionID", transactionID, "!=", txnID)
+		}
+		// test coin parent IDs
+		for udx, parent := range testCase.CoinParents {
+			var parentID CoinOutputID
+			err = parentID.LoadString(parent.ParentID)
+			if err != nil {
+				t.Error(idx, udx, "failed to decode coin parentID", err)
+				continue
+			}
+			if txn.Version == TransactionVersionZero {
+				// ensure our legacy ID is correct for v0 transactions
+				legacyOutputID := txn.LegacyCoinOutputID(parent.Index)
+				if legacyOutputID != parentID {
+					t.Error(idx, udx, "LegacyCoinOutputID", legacyOutputID, "!=", parentID)
+				}
+			}
+			// sanity check, to ensure our expected ID is actually correct
+			v106OutputID := txn.V106CoinOutputID(parent.Index)
+			if v106OutputID != parentID {
+				t.Error(idx, udx, "V106CoinOutputID", v106OutputID, "!=", parentID)
+			}
+			// ensure our computed ID is correct
+			outputID := txn.CoinOutputID(parent.Index)
+			if outputID != parentID {
+				t.Error(idx, udx, "CoinOutputID", outputID, "!=", parentID)
+			}
+		}
+		// test block stake parent IDs
+		for udx, parent := range testCase.BlockStakeParents {
+			var parentID BlockStakeOutputID
+			err = parentID.LoadString(parent.ParentID)
+			if err != nil {
+				t.Error(idx, udx, "failed to decode block stake parentID", err)
+				continue
+			}
+			if txn.Version == TransactionVersionZero {
+				// ensure our legacy ID is correct for v0 transactions
+				legacyOutputID := txn.LegacyBlockStakeOutputID(parent.Index)
+				if legacyOutputID != parentID {
+					t.Error(idx, udx, "LegacyBlockStakeOutputID", legacyOutputID, "!=", parentID)
+				}
+			}
+			// sanity check, to ensure our expected ID is actually correct
+			v106OutputID := txn.V106BlockstakeOutputID(parent.Index)
+			if v106OutputID != parentID {
+				t.Error(idx, udx, "V106BlockstakeOutputID", v106OutputID, "!=", parentID)
+			}
+			// ensure our computed ID is correct
+			outputID := txn.BlockStakeOutputID(parent.Index)
+			if outputID != parentID {
+				t.Error(idx, udx, "BlockStakeOutputID", outputID, "!=", parentID)
+			}
+		}
+	}
+}
+
 // ID returns the id of a transaction, which is taken by marshalling all of the
 // fields except for the signatures and taking the hash of the result.
 func (t Transaction) LegacyID() TransactionID {
@@ -1824,6 +1997,63 @@ func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
 		ltd.BlockStakeOutputs,
 		ltd.MinerFees,
 		ltd.ArbitraryData,
+		i,
+	))
+}
+
+// sanity checks for TestIDComputationCompatibleWithLegacyIDs_TFChain_Issue134
+func (t Transaction) V106ID() (id TransactionID) {
+	if t.Version == TransactionVersionZero {
+		ltd, err := newLegacyTransactionDataFromTransaction(t)
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
+		// the legacy version does not include the transaction version
+		// as part of the crypto hash
+		return TransactionID(crypto.HashObject(ltd))
+	}
+	h := crypto.NewHash()
+	t.MarshalSia(h)
+	h.Sum(id[:0])
+	return
+}
+func (t Transaction) V106CoinOutputID(i uint64) CoinOutputID {
+	if t.Version == TransactionVersionZero {
+		ltd, err := newLegacyTransactionDataFromTransaction(t)
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
+		// the legacy version does not include the transaction version
+		// as part of the crypto hash
+		return CoinOutputID(crypto.HashAll(
+			SpecifierCoinOutput,
+			ltd,
+			i,
+		))
+	}
+	return CoinOutputID(crypto.HashAll(
+		SpecifierCoinOutput,
+		t,
+		i,
+	))
+}
+func (t Transaction) V106BlockstakeOutputID(i uint64) BlockStakeOutputID {
+	if t.Version == TransactionVersionZero {
+		ltd, err := newLegacyTransactionDataFromTransaction(t)
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
+		// the legacy version does not include the transaction version
+		// as part of the crypto hash
+		return BlockStakeOutputID(crypto.HashAll(
+			SpecifierBlockStakeOutput,
+			ltd,
+			i,
+		))
+	}
+	return BlockStakeOutputID(crypto.HashAll(
+		SpecifierBlockStakeOutput,
+		t,
 		i,
 	))
 }

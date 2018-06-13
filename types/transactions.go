@@ -201,22 +201,22 @@ func (t Transaction) encodeTransactionDataAsIDInput(w io.Writer) error {
 	if !exists {
 		return ErrUnknownTransactionType
 	}
-	td := TransactionData{
-		CoinInputs:        t.CoinInputs,
-		CoinOutputs:       t.CoinOutputs,
-		BlockStakeInputs:  t.BlockStakeInputs,
-		BlockStakeOutputs: t.BlockStakeOutputs,
-		MinerFees:         t.MinerFees,
-		ArbitraryData:     t.ArbitraryData,
-		Extension:         t.Extension,
-	}
 	if transactionIDEncoder, ok := controller.(TransactionIDEncoder); ok {
+		td := TransactionData{
+			CoinInputs:        t.CoinInputs,
+			CoinOutputs:       t.CoinOutputs,
+			BlockStakeInputs:  t.BlockStakeInputs,
+			BlockStakeOutputs: t.BlockStakeOutputs,
+			MinerFees:         t.MinerFees,
+			ArbitraryData:     t.ArbitraryData,
+			Extension:         t.Extension,
+		}
 		// use binary encoded specialized for ID Input
 		return transactionIDEncoder.EncodeTransactionIDInput(w, td)
 	}
 	// use the default binary encoding, if the controller does not require specialized
 	// encoding logic for ID purposes
-	return controller.EncodeTransactionData(w, td)
+	return t.MarshalSia(w)
 }
 
 // CoinOutputSum returns the sum of all the coin outputs in the
