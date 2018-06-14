@@ -242,30 +242,6 @@ func (e *Explorer) getStats(start types.BlockHeight, end types.BlockHeight) (*mo
 }
 
 // Constants returns all of the constants in use by the chain
-func (e *Explorer) Constants() modules.ExplorerConstants {
-	return modules.ExplorerConstants{
-		GenesisTimestamp:       e.chainCts.GenesisTimestamp,
-		BlockSizeLimit:         e.chainCts.BlockSizeLimit,
-		BlockFrequency:         e.chainCts.BlockFrequency,
-		FutureThreshold:        e.chainCts.FutureThreshold,
-		ExtremeFutureThreshold: e.chainCts.ExtremeFutureThreshold,
-		BlockStakeCount:        e.chainCts.GenesisBlockStakeCount(),
-
-		BlockStakeAging:           e.chainCts.BlockStakeAging,
-		BlockCreatorFee:           e.chainCts.BlockCreatorFee,
-		MinimumTransactionFee:     e.chainCts.MinimumTransactionFee,
-		TransactionFeeBeneficiary: e.chainCts.TransactionFeeCondition.UnlockHash(),
-
-		MaturityDelay:         e.chainCts.MaturityDelay,
-		MedianTimestampWindow: e.chainCts.MedianTimestampWindow,
-
-		RootTarget: e.chainCts.RootTarget(),
-		RootDepth:  e.chainCts.RootDepth,
-
-		TargetWindow:      e.chainCts.TargetWindow,
-		MaxAdjustmentUp:   e.chainCts.MaxAdjustmentUp,
-		MaxAdjustmentDown: e.chainCts.MaxAdjustmentDown,
-
-		OneCoin: e.chainCts.CurrencyUnits.OneCoin,
-	}
+func (e *Explorer) Constants() modules.DaemonConstants {
+	return modules.NewDaemonConstants(e.bcInfo, e.chainCts)
 }

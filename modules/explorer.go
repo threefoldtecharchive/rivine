@@ -61,8 +61,10 @@ type (
 		BlockStakeOutputCounts []uint64 `json:"blockstakeoutputcounts"`
 	}
 
-	// ExplorerConstants represent the constants in use by the chain
-	ExplorerConstants struct {
+	// DaemonConstants represent the constants in use by the daemon
+	DaemonConstants struct {
+		ChainInfo types.BlockchainInfo `json:"chaininfo"`
+
 		GenesisTimestamp       types.Timestamp   `json:"genesistimestamp"`
 		BlockSizeLimit         uint64            `json:"blocksizelimit"`
 		BlockFrequency         types.BlockHeight `json:"blockfrequency"`
@@ -70,10 +72,10 @@ type (
 		ExtremeFutureThreshold types.Timestamp   `json:"extremefuturethreshold"`
 		BlockStakeCount        types.Currency    `json:"blockstakecount"`
 
-		BlockStakeAging           uint64           `json:"blockstakeaging"`
-		BlockCreatorFee           types.Currency   `json:"blockcreatorfee"`
-		MinimumTransactionFee     types.Currency   `json:"minimumtransactionfee"`
-		TransactionFeeBeneficiary types.UnlockHash `json:"transactionfeebeneficiary"`
+		BlockStakeAging        uint64                     `json:"blockstakeaging"`
+		BlockCreatorFee        types.Currency             `json:"blockcreatorfee"`
+		MinimumTransactionFee  types.Currency             `json:"minimumtransactionfee"`
+		TransactionFeeConition types.UnlockConditionProxy `json:"transactionfeebeneficiary"`
 
 		MaturityDelay         types.BlockHeight `json:"maturitydelay"`
 		MedianTimestampWindow uint64            `json:"mediantimestampwindow"`
@@ -86,6 +88,8 @@ type (
 		MaxAdjustmentDown *big.Rat          `json:"maxadjustmentdown"`
 
 		OneCoin types.Currency `json:"onecoin"`
+
+		DefaultTransactionVersion types.TransactionVersion `json:"deftransactionversion"`
 	}
 
 	// Explorer tracks the blockchain and provides tools for gathering
@@ -137,7 +141,7 @@ type (
 		RangeStats(types.BlockHeight, types.BlockHeight) (*ChainStats, error)
 
 		// Constants returns the constants in use by the chain
-		Constants() ExplorerConstants
+		Constants() DaemonConstants
 
 		Close() error
 	}
@@ -164,5 +168,39 @@ func NewChainStats(size int) *ChainStats {
 		CoinOutputCounts:       make([]uint64, size),
 		BlockStakeInputCounts:  make([]uint64, size),
 		BlockStakeOutputCounts: make([]uint64, size),
+	}
+}
+
+// NewDaemonConstants returns the Deamon's public constants,
+// using the blockchain (network) info and constants used internally as input.
+func NewDaemonConstants(info types.BlockchainInfo, constants types.ChainConstants) DaemonConstants {
+	return DaemonConstants{
+		ChainInfo: info,
+
+		GenesisTimestamp:       constants.GenesisTimestamp,
+		BlockSizeLimit:         constants.BlockSizeLimit,
+		BlockFrequency:         constants.BlockFrequency,
+		FutureThreshold:        constants.FutureThreshold,
+		ExtremeFutureThreshold: constants.ExtremeFutureThreshold,
+		BlockStakeCount:        constants.GenesisBlockStakeCount(),
+
+		BlockStakeAging:        constants.BlockStakeAging,
+		BlockCreatorFee:        constants.BlockCreatorFee,
+		MinimumTransactionFee:  constants.MinimumTransactionFee,
+		TransactionFeeConition: constants.TransactionFeeCondition,
+
+		MaturityDelay:         constants.MaturityDelay,
+		MedianTimestampWindow: constants.MedianTimestampWindow,
+
+		RootTarget: constants.RootTarget(),
+		RootDepth:  constants.RootDepth,
+
+		TargetWindow:      constants.TargetWindow,
+		MaxAdjustmentUp:   constants.MaxAdjustmentUp,
+		MaxAdjustmentDown: constants.MaxAdjustmentDown,
+
+		OneCoin: constants.CurrencyUnits.OneCoin,
+
+		DefaultTransactionVersion: constants.DefaultTransactionVersion,
 	}
 }

@@ -1,13 +1,14 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
 
 	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/pkg/daemon"
+	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
 )
@@ -21,6 +22,24 @@ const (
 	ExitCodeForbidden = 4
 	ExitCodeUsage     = 64 // EX_USAGE in sysexits.h
 )
+
+// ConfigFromDaemonConstants returns CLI constants using
+// a daemon's constants as input.
+func ConfigFromDaemonConstants(constants modules.DaemonConstants) Config {
+	return Config{
+		ChainName:    constants.ChainInfo.Name,
+		NetworkName:  constants.ChainInfo.NetworkName,
+		ChainVersion: constants.ChainInfo.ChainVersion,
+		CurrencyUnits: types.CurrencyUnits{
+			OneCoin: constants.OneCoin,
+		},
+		CurrencyCoinUnit:          constants.ChainInfo.CoinUnit,
+		MinimumTransactionFee:     constants.MinimumTransactionFee,
+		DefaultTransactionVersion: constants.DefaultTransactionVersion,
+		BlockFrequencyInSeconds:   int64(constants.BlockFrequency),
+		GenesisBlockTimestamp:     constants.GenesisTimestamp,
+	}
+}
 
 // Config defines the configuration for the default (CLI) client.
 type Config struct {
@@ -124,25 +143,30 @@ var (
 )
 
 func fetchConfigFromDaemon() Config {
-	var constants daemon.SiaConstants
+	var constants modules.DaemonConstants
 	err := _DefaultClient.httpClient.GetAPI("/daemon/constants", &constants)
+	if err == nil {
+		// returned config from received constants from the daemon's server module
+		return ConfigFromDaemonConstants(constants)
+	}
+	fmt.Fprintln(os.Stderr,
+		"[WARNING] failed to fetch constants from the daemon's server module: ", err)
+	err = _DefaultClient.httpClient.GetAPI("/explorer/constants", &constants)
 	if err != nil {
-		DieWithError("failed to load constants from daemon", err)
+		DieWithError("failed to load constants from daemon's server and explorer modules", err)
 		return Config{}
 	}
-	return Config{
-		ChainName:    constants.ChainInfo.Name,
-		NetworkName:  constants.ChainInfo.NetworkName,
-		ChainVersion: constants.ChainInfo.ChainVersion,
-		CurrencyUnits: types.CurrencyUnits{
-			OneCoin: constants.OneCoin,
-		},
-		CurrencyCoinUnit:          constants.ChainInfo.CoinUnit,
-		MinimumTransactionFee:     constants.MinimumTransactionFee,
-		DefaultTransactionVersion: constants.DefaultTransactionVersion,
-		BlockFrequencyInSeconds:   int64(constants.BlockFrequency),
-		GenesisBlockTimestamp:     constants.GenesisTimestamp,
+	if constants.ChainInfo == (types.BlockchainInfo{}) {
+		// only since 1.0.7 do we support the full set of public daemon constants for both
+		// the explorer endpoint as well as the daemon endpoint,
+		// so we need to validate this
+		DieWithError(
+			"failed to load constants from daemon's server and explorer modules",
+			errors.New("explorer modules does not support the full exposure of public daemon constants"))
+		return Config{}
 	}
+	// returned config from received constants from the daemon's explorer module
+	return ConfigFromDaemonConstants(constants)
 }
 
 // DefaultCLIClient creates a new client for the given address.

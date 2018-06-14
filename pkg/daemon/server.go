@@ -2,13 +2,13 @@ package daemon
 
 import (
 	"errors"
-	"math/big"
 	"net"
 	"net/http"
 	"strings"
 
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
 	"github.com/julienschmidt/httprouter"
@@ -27,36 +27,6 @@ type (
 		bcInfo     types.BlockchainInfo
 	}
 
-	// SiaConstants is a struct listing all of the constants in use.
-	SiaConstants struct {
-		ChainInfo types.BlockchainInfo `json:"chaininfo"`
-
-		GenesisTimestamp       types.Timestamp   `json:"genesistimestamp"`
-		BlockSizeLimit         uint64            `json:"blocksizelimit"`
-		BlockFrequency         types.BlockHeight `json:"blockfrequency"`
-		FutureThreshold        types.Timestamp   `json:"futurethreshold"`
-		ExtremeFutureThreshold types.Timestamp   `json:"extremefuturethreshold"`
-		BlockStakeCount        types.Currency    `json:"blockstakecount"`
-
-		BlockStakeAging        uint64                     `json:"blockstakeaging"`
-		BlockCreatorFee        types.Currency             `json:"blockcreatorfee"`
-		MinimumTransactionFee  types.Currency             `json:"minimumtransactionfee"`
-		TransactionFeeConition types.UnlockConditionProxy `json:"transactionfeebeneficiary"`
-
-		MaturityDelay         types.BlockHeight `json:"maturitydelay"`
-		MedianTimestampWindow uint64            `json:"mediantimestampwindow"`
-
-		RootTarget types.Target `json:"roottarget"`
-		RootDepth  types.Target `json:"rootdepth"`
-
-		TargetWindow      types.BlockHeight `json:"targetwindow"`
-		MaxAdjustmentUp   *big.Rat          `json:"maxadjustmentup"`
-		MaxAdjustmentDown *big.Rat          `json:"maxadjustmentdown"`
-
-		OneCoin types.Currency `json:"onecoin"`
-
-		DefaultTransactionVersion types.TransactionVersion `json:"deftransactionversion"`
-	}
 	DaemonVersion struct {
 		Version string `json:"version"`
 	}
@@ -79,37 +49,8 @@ type (
 
 // debugConstantsHandler prints a json file containing all of the constants.
 func (srv *Server) daemonConstantsHandler(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-	sc := SiaConstants{
-		ChainInfo: srv.bcInfo,
-
-		GenesisTimestamp:       srv.chainCts.GenesisTimestamp,
-		BlockSizeLimit:         srv.chainCts.BlockSizeLimit,
-		BlockFrequency:         srv.chainCts.BlockFrequency,
-		FutureThreshold:        srv.chainCts.FutureThreshold,
-		ExtremeFutureThreshold: srv.chainCts.ExtremeFutureThreshold,
-		BlockStakeCount:        srv.chainCts.GenesisBlockStakeCount(),
-
-		BlockStakeAging:        srv.chainCts.BlockStakeAging,
-		BlockCreatorFee:        srv.chainCts.BlockCreatorFee,
-		MinimumTransactionFee:  srv.chainCts.MinimumTransactionFee,
-		TransactionFeeConition: srv.chainCts.TransactionFeeCondition,
-
-		MaturityDelay:         srv.chainCts.MaturityDelay,
-		MedianTimestampWindow: srv.chainCts.MedianTimestampWindow,
-
-		RootTarget: srv.chainCts.RootTarget(),
-		RootDepth:  srv.chainCts.RootDepth,
-
-		TargetWindow:      srv.chainCts.TargetWindow,
-		MaxAdjustmentUp:   srv.chainCts.MaxAdjustmentUp,
-		MaxAdjustmentDown: srv.chainCts.MaxAdjustmentDown,
-
-		OneCoin: srv.chainCts.CurrencyUnits.OneCoin,
-
-		DefaultTransactionVersion: srv.chainCts.DefaultTransactionVersion,
-	}
-
-	api.WriteJSON(w, sc)
+	constants := modules.NewDaemonConstants(srv.bcInfo, srv.chainCts)
+	api.WriteJSON(w, constants)
 }
 
 // daemonVersionHandler handles the API call that requests the daemon's version.
