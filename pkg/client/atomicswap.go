@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -38,18 +39,23 @@ using the secret hash given by the initiator.`,
 	}
 
 	atomicSwapAuditCmd = &cobra.Command{
-		Use:   "auditcontract outputid",
-		Short: "Audit a created atomic swap contract.",
-		Long: `Audit a created atomic swap contract.
+		Use:   "auditcontract outputid [transactionid|jsonTransaction]",
+		Short: "Audit an atomic swap contract.",
+		Long: `Audit an atomic swap contract.
 
-Look up the given outputid in the consensus as an unspent coin output,
-and fall back to a search in the transaction pool if the output has not been confirmed yet.
+Run a full audit by giving the outputid,
+in which case the outputid is looked up as an unspent atomic swap contract,
+either confirmed using the consensus or unconfirmed using the transaction pool.
+Optionally the transactionid can be given in order to speed up the process in the latter case.
 
-Optionally the participant's address, currency amount and secret hash is validated,
-by giving one, some or all of them as flag arguments.
+Run a quick audit by giving the outoutid and a raw JSON-encoded transaction.
+A quick audit only validates that the atomic swap contract exists within the
+transaction as the condition of the output identified by the given outputid.
+It does not audt whether the contract is actually created on the blockchan,
+confirmed or not.
 
-When an unspent atomic swap contract is found, it will be printed to the STDOUT,
-formatted in a human-optimized format.
+Optionally the participant's address, currency amount and secret hash are validated,
+by giving one, some or all of them as flag arguments, for both quick and full audits.
 `,
 		Run: atomicswapauditcmd,
 	}
@@ -304,8 +310,11 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 	}
 
 	var (
-		outputID      types.CoinOutputID
-		transactionID types.TransactionID
+		outputID              types.CoinOutputID
+		transactionID         types.TransactionID
+		transactionIDGiven    bool
+		unspentCoinOutputResp api.ConsensusGetUnspentCoinOutput
+		txnPoolGetResp        api.TransactionPoolGET
 	)
 
 	err := outputID.LoadString(args[0])
@@ -315,15 +324,30 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 	if argn == 2 {
 		err = transactionID.LoadString(args[1])
 		if err != nil {
-			DieWithExitCode(ExitCodeUsage, "failed to parse optional positional transactionID argument:", err)
+			// try to parse it as a transaction instead
+			var txn types.Transaction
+			err = txn.UnmarshalJSON([]byte(args[1]))
+			if err != nil {
+				DieWithExitCode(ExitCodeUsage,
+					errors.New("second position argument is optional and has to be either a transactionID "+
+						"or a raw json-encoded transaction: "+err.Error()))
+			}
+			for idx, co := range txn.CoinOutputs {
+				coid := txn.CoinOutputID(uint64(idx))
+				if coid == outputID {
+					auditAtomicSwapContract(co, auditSourceUser)
+					return
+				}
+			}
+			goto failure
 		}
+		transactionIDGiven = true
 	}
 
 	// get unspent output from consensus
-	var unspentCoinOutputResp api.ConsensusGetUnspentCoinOutput
 	err = _DefaultClient.httpClient.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err == nil {
-		auditAtomicSwapContract(unspentCoinOutputResp.Output, true)
+		auditAtomicSwapContract(unspentCoinOutputResp.Output, auditSourceConsensus)
 		return
 	}
 	if err != errStatusNotFound {
@@ -331,18 +355,29 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 	}
 	// output couldn't be found as an unspent coin output
 	// therefore the last positive hope is if it wasn't yet part of the transaction pool
-	var txnPoolGetResp api.TransactionPoolGET
 	err = _DefaultClient.httpClient.GetAPI("/transactionpool/transactions", &txnPoolGetResp)
 	if err != nil {
 		Die("contract no found as part of an unspent coin output, and getting unconfirmed transactions from the transactionpool failed:", err)
 	}
 	for _, txn := range txnPoolGetResp.Transactions {
+		var lastTransaction bool
+		if transactionIDGiven {
+			if txn.ID() != transactionID {
+				continue
+			}
+			lastTransaction = true
+		}
 		for idx, co := range txn.CoinOutputs {
 			coid := txn.CoinOutputID(uint64(idx))
 			if coid == outputID {
-				auditAtomicSwapContract(co, false)
+				auditAtomicSwapContract(co, auditSourceTransactionPool)
 				return
 			}
+		}
+		if lastTransaction {
+			// if a transactionID and this was the txn we were looking for
+			// we know that the outputID will not be found for the given transactionID
+			goto failure
 		}
 	}
 	// given that we could have just hit the unlucky window,
@@ -351,12 +386,13 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 	// contract couldn't be found as either
 	err = _DefaultClient.httpClient.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err == nil {
-		auditAtomicSwapContract(unspentCoinOutputResp.Output, true)
+		auditAtomicSwapContract(unspentCoinOutputResp.Output, auditSourceConsensus)
 		return
 	}
 	if err != errStatusNotFound {
 		Die("unexpected error occurred while getting (unspent) coin output from consensus:", err)
 	}
+failure:
 	fmt.Fprintf(os.Stderr, `Failed to find atomic swap contract using outputid %s.
 It wasn't found as part of a confirmed unspent coin output in the consensus set,
 neither was it found as an unconfirmed coin output in the transaction pool.
@@ -370,7 +406,15 @@ This might mean one of two things:
 	DieWithExitCode(ExitCodeNotFound, "no unspent coin output could be found for ID "+outputID.String())
 }
 
-func auditAtomicSwapContract(co types.CoinOutput, confirmed bool) {
+type auditSource uint8
+
+const (
+	auditSourceConsensus auditSource = iota
+	auditSourceTransactionPool
+	auditSourceUser
+)
+
+func auditAtomicSwapContract(co types.CoinOutput, source auditSource) {
 	condition, ok := co.Condition.Condition.(*types.AtomicSwapCondition)
 	if !ok {
 		Die(fmt.Sprintf(
@@ -438,8 +482,13 @@ TimeLock reached in: %s
 		Die("found Atomic Swap Contract does not meet the given expectations")
 	}
 	fmt.Fprintln(os.Stderr, "found Atomic Swap Contract is valid")
-	if !confirmed {
-		fmt.Fprintln(os.Stderr, "note that this contract is still in the transaction pool and thus unconfirmed")
+	switch source {
+	case auditSourceTransactionPool:
+		fmt.Fprintln(os.Stderr, "NOTE: this contract is still in the transaction pool and thus unconfirmed")
+	case auditSourceUser:
+		fmt.Fprintln(os.Stderr, `NOTE: this contract was given as part of a raw JSON-encoded transaction,
+and it is therefore possible that this contract is not yet created,
+confirmed or not`)
 	}
 }
 

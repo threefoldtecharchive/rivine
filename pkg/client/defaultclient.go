@@ -305,7 +305,9 @@ func fetchConfigFromDaemon() *Config {
 		"[WARNING] failed to fetch constants from the daemon's server module: ", err)
 	err = _DefaultClient.httpClient.GetAPI("/explorer/constants", &constants)
 	if err != nil {
-		DieWithError("failed to load constants from daemon's server and explorer modules", err)
+		fmt.Fprintln(os.Stderr,
+			"[WARNING] "+
+				"failed to load constants from daemon's server and explorer modules: ", err)
 		return nil
 	}
 	if constants.ChainInfo == (types.BlockchainInfo{}) {
