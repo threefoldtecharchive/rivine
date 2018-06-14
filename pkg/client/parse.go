@@ -41,18 +41,20 @@ func YesNo(b bool) string {
 type CurrencyConvertor struct {
 	scalar    *big.Int
 	precision uint // amount of zeros after the comma
+	coinUnit  string
 }
 
 // NewCurrencyConvertor creates a new currency convertor
 // using the given currency units.
 //
 // See CurrencyConvertor for more information.
-func NewCurrencyConvertor(units types.CurrencyUnits) CurrencyConvertor {
+func NewCurrencyConvertor(units types.CurrencyUnits, coinUnit string) CurrencyConvertor {
 	oneCoinStr := units.OneCoin.String()
 	precision := uint(len(oneCoinStr) - 1)
 	return CurrencyConvertor{
 		scalar:    units.OneCoin.Big(),
 		precision: precision,
+		coinUnit:  coinUnit,
 	}
 }
 
@@ -135,7 +137,7 @@ func (cc CurrencyConvertor) ToCoinString(c types.Currency) string {
 // This can never fail, as the only thing it can do is make a number smaller.
 // It also adds the unit of the coin behind the coin.
 func (cc CurrencyConvertor) ToCoinStringWithUnit(c types.Currency) string {
-	return cc.ToCoinString(c) + " " + _CurrencyCoinUnit
+	return cc.ToCoinString(c) + " " + cc.coinUnit
 }
 
 // CoinArgDescription is used to print a helpful arg description message,
@@ -144,9 +146,9 @@ func (cc CurrencyConvertor) CoinArgDescription(argName string) string {
 	if cc.precision < 1 {
 		return fmt.Sprintf(
 			"argument %s (expressed in default unit %s) has to be a positive natural number (no digits after comma are allowed)",
-			argName, _CurrencyCoinUnit)
+			argName, cc.coinUnit)
 	}
 	return fmt.Sprintf(
 		"argument %s (expressed in default unit %s) can (only) have up to %d digits after comma and has to be positive",
-		argName, _CurrencyCoinUnit, cc.precision)
+		argName, cc.coinUnit, cc.precision)
 }

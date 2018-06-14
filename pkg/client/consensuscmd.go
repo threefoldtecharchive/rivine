@@ -67,10 +67,11 @@ Progress (estimated): %.2f%%
 // Block height is estimated by calculating the minutes since a known block in
 // the past and dividing by 10 minutes (the block time).
 func EstimatedHeightAt(t time.Time) types.BlockHeight {
-	if _GenesisBlockTimestamp == 0 {
+	cfg := _ConfigStorage.Config()
+	if cfg.GenesisBlockTimestamp == 0 {
 		panic("GenesisBlockTimestamp is undefined")
 	}
-	return estimatedHeightBetween(int64(_GenesisBlockTimestamp), t.Unix(), _BlockFrequencyInSeconds)
+	return estimatedHeightBetween(int64(cfg.GenesisBlockTimestamp), t.Unix(), cfg.BlockFrequencyInSeconds)
 }
 
 func estimatedHeightBetween(from, to, blockFrequency int64) types.BlockHeight {

@@ -672,6 +672,9 @@ func wallettransactionscmd() {
 		return
 	}
 
+	// get config from the in-memory storage
+	cfg := _ConfigStorage.Config()
+
 	fmt.Println("    [height]                                                   [transaction id]       [net coins]   [net blockstakes]")
 	for _, txn := range txns {
 		var relatedMultiSigUnlockHashes []types.UnlockHash
@@ -724,8 +727,8 @@ func wallettransactionscmd() {
 		}
 
 		// Convert the siacoins to a float.
-		incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
-		outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
+		incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), cfg.CurrencyUnits.OneCoin.Big()).Float64()
+		outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), cfg.CurrencyUnits.OneCoin.Big()).Float64()
 
 		// Print the results.
 		if txn.ConfirmationHeight < 1e9 {
@@ -733,7 +736,7 @@ func wallettransactionscmd() {
 		} else {
 			fmt.Printf(" unconfirmed")
 		}
-		fmt.Printf("%67v%15.2f %s", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat, _CurrencyCoinUnit)
+		fmt.Printf("%67v%15.2f %s", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat, cfg.CurrencyCoinUnit)
 		incomingBlockStakeBigInt := incomingBlockStakes.Big()
 		outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
 		fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())
@@ -780,8 +783,8 @@ func wallettransactionscmd() {
 				}
 
 				// Convert the siacoins to a float.
-				incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
-				outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), _CurrencyUnits.OneCoin.Big()).Float64()
+				incomingSiacoinsFloat, _ := new(big.Rat).SetFrac(incomingSiacoins.Big(), cfg.CurrencyUnits.OneCoin.Big()).Float64()
+				outgoingSiacoinsFloat, _ := new(big.Rat).SetFrac(outgoingSiacoins.Big(), cfg.CurrencyUnits.OneCoin.Big()).Float64()
 
 				// Print the results.
 				if txn.ConfirmationHeight < 1e9 {
@@ -789,7 +792,7 @@ func wallettransactionscmd() {
 				} else {
 					fmt.Printf(" unconfirmed")
 				}
-				fmt.Printf("%67v%15.2f %s", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat, _CurrencyCoinUnit)
+				fmt.Printf("%67v%15.2f %s", txn.TransactionID, incomingSiacoinsFloat-outgoingSiacoinsFloat, cfg.CurrencyCoinUnit)
 				incomingBlockStakeBigInt := incomingBlockStakes.Big()
 				outgoingBlockStakeBigInt := outgoingBlockStakes.Big()
 				fmt.Printf("%14s BS\n", new(big.Int).Sub(incomingBlockStakeBigInt, outgoingBlockStakeBigInt).String())

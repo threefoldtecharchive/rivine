@@ -206,7 +206,8 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 }
 
 func createAtomicSwapContract(hastings types.Currency, sender, receiver types.UnlockHash, hash types.AtomicSwapHashedSecret, duration time.Duration) {
-	if hastings.Cmp(_MinimumTransactionFee) != 1 {
+	cfg := _ConfigStorage.Config()
+	if hastings.Cmp(cfg.MinimumTransactionFee) != 1 {
 		DieWithExitCode(ExitCodeUsage, "an atomic swap contract has to have a coin value higher than the minimum transaction fee of 1")
 	}
 
@@ -635,7 +636,9 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 		Die("unexpected wallet public key returned:", sk)
 	}
 
-	if unspentCoinOutputResp.Output.Value.Cmp(_MinimumTransactionFee) != 1 {
+	cfg := _ConfigStorage.Config()
+
+	if unspentCoinOutputResp.Output.Value.Cmp(cfg.MinimumTransactionFee) != 1 {
 		Die("failed to " + keyWord + " atomic swap contract, as it locks a value less than or equal to the minimum transaction fee of 1")
 	}
 
@@ -650,7 +653,7 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 	}
 	// step 4: create a transaction
 	txn := types.Transaction{
-		Version: _DefaultTransactionVersion,
+		Version: cfg.DefaultTransactionVersion,
 		CoinInputs: []types.CoinInput{
 			{
 				ParentID: outputID,
@@ -663,10 +666,10 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 		CoinOutputs: []types.CoinOutput{
 			{
 				Condition: types.NewCondition(types.NewUnlockHashCondition(uh)),
-				Value:     unspentCoinOutputResp.Output.Value.Sub(_MinimumTransactionFee),
+				Value:     unspentCoinOutputResp.Output.Value.Sub(cfg.MinimumTransactionFee),
 			},
 		},
-		MinerFees: []types.Currency{_MinimumTransactionFee},
+		MinerFees: []types.Currency{cfg.MinimumTransactionFee},
 	}
 
 	// step 5: sign transaction's only input

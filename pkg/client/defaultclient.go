@@ -6,6 +6,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/modules"
@@ -121,59 +122,25 @@ func DieWithExitCode(code int, args ...interface{}) {
 
 // clientVersion prints the client version and exits
 func clientVersion() {
-	println(fmt.Sprintf("%s Client v", strings.Title(_DefaultClient.name)) + _DefaultClient.version.String())
+	cfg := _ConfigStorage.Config()
+	println(fmt.Sprintf("%s Client v", strings.Title(cfg.ChainName)) + cfg.ChainVersion.String())
 }
 
 // hidden globals :()
 var (
 	_DefaultClient struct {
-		name       string
-		version    build.ProtocolVersion
 		httpClient HTTPClient
 	}
 
-	_CurrencyUnits             types.CurrencyUnits
-	_CurrencyCoinUnit          string
-	_CurrencyConvertor         CurrencyConvertor
-	_MinimumTransactionFee     types.Currency
-	_DefaultTransactionVersion types.TransactionVersion
-
-	_BlockFrequencyInSeconds int64
-	_GenesisBlockTimestamp   types.Timestamp
+	_ConfigStorage     *lazyConfigFetcher
+	_CurrencyConvertor lazyCurrencyConvertor
 )
-
-func fetchConfigFromDaemon() Config {
-	var constants modules.DaemonConstants
-	err := _DefaultClient.httpClient.GetAPI("/daemon/constants", &constants)
-	if err == nil {
-		// returned config from received constants from the daemon's server module
-		return ConfigFromDaemonConstants(constants)
-	}
-	fmt.Fprintln(os.Stderr,
-		"[WARNING] failed to fetch constants from the daemon's server module: ", err)
-	err = _DefaultClient.httpClient.GetAPI("/explorer/constants", &constants)
-	if err != nil {
-		DieWithError("failed to load constants from daemon's server and explorer modules", err)
-		return Config{}
-	}
-	if constants.ChainInfo == (types.BlockchainInfo{}) {
-		// only since 1.0.7 do we support the full set of public daemon constants for both
-		// the explorer endpoint as well as the daemon endpoint,
-		// so we need to validate this
-		DieWithError(
-			"failed to load constants from daemon's server and explorer modules",
-			errors.New("explorer modules does not support the full exposure of public daemon constants"))
-		return Config{}
-	}
-	// returned config from received constants from the daemon's explorer module
-	return ConfigFromDaemonConstants(constants)
-}
 
 // DefaultCLIClient creates a new client for the given address.
 // The given address is used to connect to the client daemon, using its REST API.
 // configFunc allows you to overwrite any config, should some value returned by the daemon not be desired,
 // it is however optional and does not have to be given
-func DefaultCLIClient(address, name string, configFunc func(Config) Config) {
+func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
 	if address == "" {
 		address = "http://localhost:23110"
 	}
@@ -181,38 +148,20 @@ func DefaultCLIClient(address, name string, configFunc func(Config) Config) {
 		name = "R?v?ne"
 	}
 	_DefaultClient.httpClient.RootURL = address
-	// defaults for now, until we loaded real values from the daemon/client-callback
-	_DefaultClient.name, _DefaultClient.version = name, build.ProtocolVersion{}
 
 	root := &cobra.Command{
 		Use:   os.Args[0],
-		Short: fmt.Sprintf("%s Client", strings.Title(_DefaultClient.name)),
-		Long:  fmt.Sprintf("%s Client", strings.Title(_DefaultClient.name)),
+		Short: fmt.Sprintf("%s Client", strings.Title(name)),
+		Long:  fmt.Sprintf("%s Client", strings.Title(name)),
 		Run:   Wrap(consensuscmd),
 		PersistentPreRun: func(*cobra.Command, []string) {
 			// sanituze root URL
 			url, err := sanitizeURL(_DefaultClient.httpClient.RootURL)
 			if err != nil {
-				Die("invalid", strings.Title(_DefaultClient.name), "daemon RPC address", _DefaultClient.httpClient.RootURL, ":", err)
+				Die("invalid", strings.Title(name), "daemon RPC address", _DefaultClient.httpClient.RootURL, ":", err)
 			}
 			_DefaultClient.httpClient.RootURL = url
-
-			// fetch CLI from config
-			cfg := fetchConfigFromDaemon()
-			// overwrite some configuration if desired
-			if configFunc != nil {
-				cfg = configFunc(cfg)
-			}
-			// use fetched, and optionally modified config, in order to configure the CLI client
-			_DefaultClient.name = cfg.ChainName
-			_DefaultClient.version = cfg.ChainVersion
-			_CurrencyUnits = cfg.CurrencyUnits
-			_CurrencyCoinUnit = cfg.CurrencyCoinUnit
-			_CurrencyConvertor = NewCurrencyConvertor(_CurrencyUnits)
-			_MinimumTransactionFee = cfg.MinimumTransactionFee
-			_DefaultTransactionVersion = cfg.DefaultTransactionVersion
-			_BlockFrequencyInSeconds = cfg.BlockFrequencyInSeconds
-			_GenesisBlockTimestamp = cfg.GenesisBlockTimestamp
+			_ConfigStorage = newLazyConfigFetcher(configFunc)
 		},
 	}
 
@@ -225,8 +174,8 @@ func DefaultCLIClient(address, name string, configFunc func(Config) Config) {
 	})
 	stopCmd := &cobra.Command{
 		Use:   "stop",
-		Short: fmt.Sprintf("Stop the %s daemon", _DefaultClient.name),
-		Long:  fmt.Sprintf("Stop the %s daemon.", _DefaultClient.name),
+		Short: fmt.Sprintf("Stop the %s daemon", name),
+		Long:  fmt.Sprintf("Stop the %s daemon.", name),
 		Run:   Wrap(stopcmd),
 	}
 
@@ -304,7 +253,7 @@ func DefaultCLIClient(address, name string, configFunc func(Config) Config) {
 	root.PersistentFlags().StringVarP(&_DefaultClient.httpClient.RootURL, "addr", "a",
 		_DefaultClient.httpClient.RootURL, fmt.Sprintf(
 			"which host/port to communicate with (i.e. the host/port %sd is listening on)",
-			_DefaultClient.name))
+			name))
 
 	if err := root.Execute(); err != nil {
 		// Since no commands return errors (all commands set Command.Run instead of
@@ -313,4 +262,109 @@ func DefaultCLIClient(address, name string, configFunc func(Config) Config) {
 		// Command.SilenceUsage is false) and we should exit with exitCodeUsage.
 		os.Exit(ExitCodeUsage)
 	}
+}
+
+// lazyConfigFetcher can be used in order to load the config only when needing,
+// delaying the fetching of daemon constants until it is needed for the first time
+type lazyConfigFetcher struct {
+	config                     Config
+	configSanitizer            func(*Config) Config
+	fetchAndSanitizeConfigOnce sync.Once
+}
+
+func newLazyConfigFetcher(f func(*Config) Config) *lazyConfigFetcher {
+	if f == nil {
+		DieWithError(
+			"failed to create lazy config fetcher",
+			errors.New("daemon is created without a config sanitization function given to it"))
+	}
+	return &lazyConfigFetcher{configSanitizer: f}
+}
+
+// Config returns the config in a lazy manner
+func (lcf *lazyConfigFetcher) Config() Config {
+	lcf.fetchAndSanitizeConfigOnce.Do(lcf.fetchAndSanitizeConfig)
+	return lcf.config
+}
+
+func (lcf *lazyConfigFetcher) fetchAndSanitizeConfig() {
+	lcf.config = lcf.configSanitizer(fetchConfigFromDaemon())
+}
+
+// fetchConfigFromDaemon fetches constants and creates a config, by fetching the constants from the daemon.
+// Can return nil in case the fetching wasn't possible
+func fetchConfigFromDaemon() *Config {
+	var constants modules.DaemonConstants
+	err := _DefaultClient.httpClient.GetAPI("/daemon/constants", &constants)
+	if err == nil {
+		// returned config from received constants from the daemon's server module
+		cfg := ConfigFromDaemonConstants(constants)
+		return &cfg
+	}
+	fmt.Fprintln(os.Stderr,
+		"[WARNING] failed to fetch constants from the daemon's server module: ", err)
+	err = _DefaultClient.httpClient.GetAPI("/explorer/constants", &constants)
+	if err != nil {
+		DieWithError("failed to load constants from daemon's server and explorer modules", err)
+		return nil
+	}
+	if constants.ChainInfo == (types.BlockchainInfo{}) {
+		// only since 1.0.7 do we support the full set of public daemon constants for both
+		// the explorer endpoint as well as the daemon endpoint,
+		// so we need to validate this
+		fmt.Fprintln(os.Stderr,
+			"[WARNING] "+
+				"failed to load constants from daemon's server and explorer modules: "+
+				"explorer modules does not support the full exposure of public daemon constants")
+		return nil
+	}
+	// returned config from received constants from the daemon's explorer module
+	cfg := ConfigFromDaemonConstants(constants)
+	return &cfg
+}
+
+type lazyCurrencyConvertor struct {
+	convertor           CurrencyConvertor
+	createConvertorOnce sync.Once
+}
+
+// ParseCoinString parses the given string assumed to be in the default unit,
+// and parses it into an in-memory currency unit of the smallest unit.
+// It will fail if the given string is invalid or too precise.
+func (cc *lazyCurrencyConvertor) ParseCoinString(str string) (types.Currency, error) {
+	return cc.getConvertor().ParseCoinString(str)
+}
+
+// ToCoinString turns the in-memory currency unit,
+// into a string version of the default currency unit.
+// This can never fail, as the only thing it can do is make a number smaller.
+func (cc *lazyCurrencyConvertor) ToCoinString(c types.Currency) string {
+	return cc.getConvertor().ToCoinString(c)
+}
+
+// ToCoinStringWithUnit turns the in-memory currency unit,
+// into a string version of the default currency unit.
+// This can never fail, as the only thing it can do is make a number smaller.
+// It also adds the unit of the coin behind the coin.
+func (cc *lazyCurrencyConvertor) ToCoinStringWithUnit(c types.Currency) string {
+	return cc.getConvertor().ToCoinStringWithUnit(c)
+}
+
+// CoinArgDescription is used to print a helpful arg description message,
+// for this convertor.
+func (cc *lazyCurrencyConvertor) CoinArgDescription(argName string) string {
+	return cc.getConvertor().CoinArgDescription(argName)
+}
+
+func (cc *lazyCurrencyConvertor) getConvertor() CurrencyConvertor {
+	cc.createConvertorOnce.Do(cc.createConvertor)
+	return cc.convertor
+}
+
+// createConvertor creates the currency convertor, by gettng the constants
+// and creating the convertor with it. This function should only be executed once,
+// and so in a thread-safe manner.
+func (cc *lazyCurrencyConvertor) createConvertor() {
+	cfg := _ConfigStorage.Config()
+	cc.convertor = NewCurrencyConvertor(cfg.CurrencyUnits, cfg.CurrencyCoinUnit)
 }
