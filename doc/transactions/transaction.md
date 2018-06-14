@@ -1237,11 +1237,11 @@ The ConditionTypeTimeLock (`0x03`) identifies a TimeLockCondition
 and has following format:
 
 ```plain
-+----------+------------------+------------------+------------------+
-| LockTime | unlock condition | unlock condition | unlock condition |
-| (uint64) | type             | data length N    | data             |
-+----------+------------------+------------------+------------------+
-| 33 bytes | 1 byte           | 8 bytes          | N bytes          |
++----------+------------------+------------------+
+| LockTime | unlock condition | unlock condition |
+| (uint64) | type             | data             |
++----------+------------------+------------------+
+| 33 bytes | 1 byte           | N bytes          |
 ```
 
 Such condition is to be fulfilled in 2 parts:
@@ -1667,7 +1667,7 @@ The binary encoding of an output condition depends upon the unlock condition typ
 + ConditionTypeNil: 0x000000000000000000 (type 0 as 1 byte + length 0 as 8 bytes)
 + ConditionTypeUnlockHash:
   + 0x01: 1, 1 byte (type)
-  + 0x2100000000000000: 21, 8 bytes (length of unlockHash)
+  + 0x2100000000000000: 33, 8 bytes (length of unlockHash)
   + unlockHash: 33 bytes fixed-size array
 + ConditionTypeAtomicSwap:
   + 0x02: 2, 1 byte (type)
@@ -1678,13 +1678,16 @@ The binary encoding of an output condition depends upon the unlock condition typ
   + timeLock: uint64 (8 bytes, little endian)
 + ConditionTypeTimeLock:
   + 0x03: 3, 1 byte (type)
-  + length(conditionProperties): int64 (8 bytes, little endian)
+  + length(binaryEncoding(condition.type, condition.data)): int64 (8 bytes, little endian)
   + lockTime: uint64 (8 bytes, little endian)
-  + binaryEncoding(condition)
+  + binaryEncoding(condition.type, condition.data)
++ ConditionTypeMultiSignature:
+  + 0x04: 4, 1 byte (type)
+  + binaryEncoding(unlockHashSlice)
 
 A TimeLock wraps around another condition.
-For now the only valid condition type that can be used as the internal
-condition of a TimeLock is a `ConditionTypeUnlockHash`.
+For now the only valid condition types that can be used as the internal
+condition of a TimeLock are a `ConditionTypeUnlockHash` and `ConditionTypeMultiSignature`.
 A future version however might also allow other internal condition,
 if so, this document will be updated as well to clarify that.
 

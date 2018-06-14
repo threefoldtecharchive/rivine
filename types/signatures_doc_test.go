@@ -55,7 +55,7 @@ import (
 //   ConditionTypeNil: 0x000000000000000000 (type 0 as 1 byte + length 0 as 8 bytes)
 //   ConditionTypeUnlockHash:
 //     - 0x01: 1, 1 byte (type)
-//     - 0x2100000000000000: 21, 8 bytes (length of unlockHash)
+//     - 0x2100000000000000: 33, 8 bytes (length of unlockHash)
 //     - unlockHash: 33 bytes fixed-size array
 //   ConditionTypeAtomicSwap:
 //     - 0x02: 2, 1 byte (type)
@@ -66,14 +66,18 @@ import (
 //     - timeLock: uint64 (8 bytes, little endian)
 //   ConditionTypeTimeLock:
 //     - 0x03: 3, 1 byte (type)
-//     - length(conditionProperties): int64 (8 bytes, little endian)
+//     - length(binaryEncoding(condition.type, condition.data)): int64 (8 bytes, little endian)
 //     - lockTime: uint64 (8 bytes, little endian)
-//     - binaryEncoding(condition)
+//     - binaryEncoding(condition.type, condition.data)
+//   ConditionTypeMultiSignature:
+//     - 0x04: 4, 1 byte (type)
+//     - binaryEncoding(unlockHashSlice)
 //
 // A TimeLock wraps around another condition.
-// For now the only valid condition type that can be used as the internal
-// condition of a TimeLock is a ConditionTypeUnlockHash.
-// A future version however might also allow other internal condition.
+// For now the only valid condition types that can be used as the internal
+// condition of a TimeLock are a `ConditionTypeUnlockHash` and `ConditionTypeMultiSignature`.
+// A future version however might also allow other internal condition,
+// if so, this document will be updated as well to clarify that.
 //
 // See /doc/Encoding.md for more information
 // about the Binary Encoding Algorithm and how each (primitive) type is encoded.
