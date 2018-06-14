@@ -9,7 +9,8 @@ import (
 )
 
 func TestParseCoinStringInvalidStrings(t *testing.T) {
-	cc := NewCurrencyConvertor(types.DefaultCurrencyUnits())
+	bchainInfo := types.DefaultBlockchainInfo()
+	cc := NewCurrencyConvertor(types.DefaultCurrencyUnits(), bchainInfo.CoinUnit)
 
 	testCases := []string{
 		"-1",
@@ -26,7 +27,8 @@ func TestParseCoinStringInvalidStrings(t *testing.T) {
 }
 
 func TestParseCoinStringValidStrings(t *testing.T) {
-	cc := NewCurrencyConvertor(types.DefaultCurrencyUnits())
+	bchainInfo := types.DefaultBlockchainInfo()
+	cc := NewCurrencyConvertor(types.DefaultCurrencyUnits(), bchainInfo.CoinUnit)
 
 	testCases := []string{
 		"1",
@@ -54,23 +56,26 @@ func TestParseCoinStringValidStrings(t *testing.T) {
 }
 
 func TestParseCoinStringToCoinSmallValueString_E0(t *testing.T) {
+	bchainInfo := types.DefaultBlockchainInfo()
 	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
-	})
+	}, bchainInfo.CoinUnit)
 	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinSmallValueString_E9(t *testing.T) {
+	bchainInfo := types.DefaultBlockchainInfo()
 	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
-	})
+	}, bchainInfo.CoinUnit)
 	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinSmallValueString_E24(t *testing.T) {
+	bchainInfo := types.DefaultBlockchainInfo()
 	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
-	})
+	}, bchainInfo.CoinUnit)
 	testParseCoinStringToCoinSmallValueString(t, cc)
 }
 
@@ -110,23 +115,26 @@ func testParseCoinStringToCoinSmallValueString(t *testing.T, cc CurrencyConverto
 }
 
 func TestParseCoinStringToCoinBigValueString_E0(t *testing.T) {
+	bchainInfo := types.DefaultBlockchainInfo()
 	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(0), nil)),
-	})
+	}, bchainInfo.CoinUnit)
 	testParseCoinStringToCoinBigValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinBigValueString_E9(t *testing.T) {
+	bchainInfo := types.DefaultBlockchainInfo()
 	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(9), nil)),
-	})
+	}, bchainInfo.CoinUnit)
 	testParseCoinStringToCoinBigValueString(t, cc)
 }
 
 func TestParseCoinStringToCoinBigValueString_E24(t *testing.T) {
+	bchainInfo := types.DefaultBlockchainInfo()
 	cc := NewCurrencyConvertor(types.CurrencyUnits{
 		OneCoin: types.NewCurrency(new(big.Int).Exp(big.NewInt(10), big.NewInt(24), nil)),
-	})
+	}, bchainInfo.CoinUnit)
 	testParseCoinStringToCoinBigValueString(t, cc)
 }
 

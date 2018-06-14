@@ -185,7 +185,8 @@ func TestParsePairedOutputs(t *testing.T) {
 }
 
 func init() {
-	if _CurrencyConvertor == (CurrencyConvertor{}) {
-		_CurrencyConvertor = NewCurrencyConvertor(types.DefaultCurrencyUnits())
-	}
+	_CurrencyConvertor.createConvertorOnce.Do(func() {
+		bchainInfo := types.DefaultBlockchainInfo()
+		_CurrencyConvertor.convertor = NewCurrencyConvertor(types.DefaultCurrencyUnits(), bchainInfo.CoinUnit)
+	})
 }
