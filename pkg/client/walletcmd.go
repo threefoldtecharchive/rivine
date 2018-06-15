@@ -424,10 +424,12 @@ func walletsendcoinscmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		Die("Failed to JSON Marshal the input body:", err)
 	}
-	err = _DefaultClient.httpClient.Post("/wallet/coins", string(bytes))
+	var resp api.WalletCoinsPOSTResp
+	err = _DefaultClient.httpClient.PostResp("/wallet/coins", string(bytes), &resp)
 	if err != nil {
 		DieWithError("Could not send coins:", err)
 	}
+	fmt.Println("Succesfully sent coins as transaction " + resp.TransactionID.String())
 	for _, co := range body.CoinOutputs {
 		fmt.Printf("Sent %s to %s (using ConditionType %d)\n",
 			_CurrencyConvertor.ToCoinStringWithUnit(co.Value), co.Condition.UnlockHash(),
@@ -457,10 +459,12 @@ func walletsendblockstakescmd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		Die("Failed to JSON Marshal the input body:", err)
 	}
-	err = _DefaultClient.httpClient.Post("/wallet/blockstakes", string(bytes))
+	var resp api.WalletBlockStakesPOSTResp
+	err = _DefaultClient.httpClient.PostResp("/wallet/blockstakes", string(bytes), &resp)
 	if err != nil {
 		DieWithError("Could not send block stakes:", err)
 	}
+	fmt.Println("Succesfully sent blockstakes as transaction " + resp.TransactionID.String())
 	for _, bo := range body.BlockStakeOutputs {
 		fmt.Printf("Sent %s BS to %s (using ConditionType %d)\n",
 			bo.Value, bo.Condition.UnlockHash(), bo.Condition.ConditionType())
