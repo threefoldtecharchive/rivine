@@ -501,13 +501,16 @@ func (tb *transactionBuilder) signFulfillment(idx int, fulfillment *types.Unlock
 	switch uh := cond.UnlockHash(); uh.Type {
 	case types.UnlockTypeNil:
 		// Try to get a new (random) key to sign
-		uh, err = tb.wallet.NextAddress()
+		// we use nextPrimarySeedAddress, instead of NextAddres,
+		// as the parent function of signFulfillment, SignAllPossibleInputs,
+		// has already locked the wallet's mutex
+		uh, err = tb.wallet.nextPrimarySeedAddress()
 		if err != nil {
 			return err
 		}
 		fallthrough
 	case types.UnlockTypePubKey:
-		if key, exists := tb.wallet.keys[cond.UnlockHash()]; exists {
+		if key, exists := tb.wallet.keys[uh]; exists {
 			fulfillment.Fulfillment = types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(key.PublicKey))
 			err := fulfillment.Fulfillment.Sign(types.FulfillmentSignContext{
 				InputIndex:  uint64(idx),

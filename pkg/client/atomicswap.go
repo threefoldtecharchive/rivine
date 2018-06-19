@@ -238,7 +238,7 @@ func createAtomicSwapContract(hastings types.Currency, sender, receiver types.Un
 		Sender:       sender,
 		Receiver:     receiver,
 		HashedSecret: hash,
-		TimeLock:     types.OffsetTimestamp(atomicSwapInitiatecfg.duration),
+		TimeLock:     types.OffsetTimestamp(duration),
 	}
 	if !atomicSwapcfg.YesToAll {
 		// print contract for review

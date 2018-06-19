@@ -922,7 +922,7 @@ func walletlistlocked(_ *cobra.Command, args []string) {
 	var resp api.WalletListLockedGET
 	err = _DefaultClient.httpClient.GetAPI("/wallet/locked", &resp)
 	if err != nil {
-		DieWithError("Could not get unlocked outputs: ", err)
+		DieWithError("Could not get locked outputs: ", err)
 	}
 
 	if addressGiven {
@@ -949,9 +949,9 @@ func walletlistlocked(_ *cobra.Command, args []string) {
 
 	if len(resp.LockedBlockstakeOutputs) == 0 && len(resp.LockedCoinOutputs) == 0 {
 		if addressGiven {
-			fmt.Println("No unlocked outputs matched to address: " + address.String())
+			fmt.Println("No locked outputs matched to address: " + address.String())
 		} else {
-			fmt.Println("No unlocked outputs")
+			fmt.Println("No locked outputs")
 		}
 		return
 	}

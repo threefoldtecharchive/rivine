@@ -670,9 +670,9 @@ func (api *API) walletListLockedHandler(w http.ResponseWriter, req *http.Request
 		ubsor = append(ubsor, UnspentBlockstakeOutput{ID: id, Output: bso})
 	}
 
-	WriteJSON(w, WalletListUnlockedGET{
-		UnlockedCoinOutputs:       ucor,
-		UnlockedBlockstakeOutputs: ubsor,
+	WriteJSON(w, WalletListLockedGET{
+		LockedCoinOutputs:       ucor,
+		LockedBlockstakeOutputs: ubsor,
 	})
 }
 
