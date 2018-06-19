@@ -1346,15 +1346,19 @@ func (tl *TimeLockCondition) IsStandardCondition(ctx ValidationContext) error {
 	if tl.LockTime == 0 {
 		return errors.New("lock time has to be defined")
 	}
-	switch uh := tl.UnlockHash(); uh.Type {
-	case UnlockTypePubKey:
+	switch ct := tl.Condition.ConditionType(); ct {
+	case ConditionTypeUnlockHash:
+		uh := tl.Condition.UnlockHash()
 		if uh.Hash == (crypto.Hash{}) {
 			return errors.New("nil crypto hash cannot be used as unlock hash")
 		}
+		if uh.Type != UnlockTypePubKey {
+			return errors.New("non-standard unlock hash type")
+		}
 		return nil
-	case UnlockTypeMultiSig:
+	case ConditionTypeMultiSignature:
 		return tl.Condition.IsStandardCondition(ctx)
-	case UnlockTypeNil:
+	case ConditionTypeNil:
 		return nil
 	default:
 		return errors.New("unexpected internal unlock condition used as part of time lock condition")
