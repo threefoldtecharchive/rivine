@@ -125,6 +125,17 @@ type (
 		Unmarshal([]byte) error
 	}
 
+	// UnlockHashSliceGetter is an optional interface an UnlockCondition can implement,
+	// in case it can be unlocked by multiple wallets. The unlock hash type should be used
+	// to know how exactly those different unlock hashes come into play.
+	UnlockHashSliceGetter interface {
+		UnlockHashSlice() []UnlockHash
+	}
+
+	// UnlockHash returns the deterministic unlock hash of this UnlockCondition.
+	// It identifies the owner(s) or contract which own the output,
+	// and can spend it, once the conditions becomes `Fulfillable`.
+
 	// UnlockConditionProxy wraps around a (binary/json) marshalable
 	// UnlockCondition, as to allow implicit nil conditions,
 	// as well as implicit and universal json/binary unmarshaling
@@ -1335,18 +1346,15 @@ func (tl *TimeLockCondition) IsStandardCondition(ctx ValidationContext) error {
 	if tl.LockTime == 0 {
 		return errors.New("lock time has to be defined")
 	}
-	switch tc := tl.Condition.(type) {
-	case *UnlockHashCondition:
-		if tc.TargetUnlockHash.Type != UnlockTypePubKey {
-			return fmt.Errorf("unsupported unlock type '%d' by unlock hash condition", tc.TargetUnlockHash.Type)
-		}
-		if tc.TargetUnlockHash.Hash == (crypto.Hash{}) {
+	switch uh := tl.UnlockHash(); uh.Type {
+	case UnlockTypePubKey:
+		if uh.Hash == (crypto.Hash{}) {
 			return errors.New("nil crypto hash cannot be used as unlock hash")
 		}
 		return nil
-	case *MultiSignatureCondition:
-		return tc.IsStandardCondition(ctx)
-	case *NilCondition:
+	case UnlockTypeMultiSig:
+		return tl.Condition.IsStandardCondition(ctx)
+	case UnlockTypeNil:
 		return nil
 	default:
 		return errors.New("unexpected internal unlock condition used as part of time lock condition")
@@ -1356,6 +1364,16 @@ func (tl *TimeLockCondition) IsStandardCondition(ctx ValidationContext) error {
 // UnlockHash implements UnlockCondition.UnlockHash
 func (tl *TimeLockCondition) UnlockHash() UnlockHash {
 	return tl.Condition.UnlockHash()
+}
+
+// UnlockHashSlice implements UnlockHashSliceGetter.UnlockHashSlice
+func (tl *TimeLockCondition) UnlockHashSlice() []UnlockHash {
+	switch tc := tl.Condition.(type) {
+	case UnlockHashSliceGetter:
+		return tc.UnlockHashSlice()
+	default:
+		return []UnlockHash{tl.Condition.UnlockHash()}
+	}
 }
 
 // Equal implements UnlockCondition.Equal
@@ -1563,6 +1581,17 @@ func (ms *MultiSignatureCondition) UnlockHash() UnlockHash {
 	e.WriteUint64(ms.MinimumSignatureCount)
 	tree.Push(buf.Bytes())
 	return NewUnlockHash(UnlockTypeMultiSig, tree.Root())
+}
+
+// UnlockHashSlice implements UnlockHashSliceGetter.UnlockHashSlice
+func (ms *MultiSignatureCondition) UnlockHashSlice() []UnlockHash {
+	return ms.UnlockHashes
+}
+
+// GetMinimumSignatureCount returns the minimum amount of signatures required
+// in order to fulfill this MultiSignatureCondition using a MultiSignatureFulfillment.
+func (ms *MultiSignatureCondition) GetMinimumSignatureCount() uint64 {
+	return ms.MinimumSignatureCount
 }
 
 // Equal implements UnlockCondition.Equal

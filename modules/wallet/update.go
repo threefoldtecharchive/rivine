@@ -14,7 +14,6 @@ func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 	for _, diff := range cc.CoinOutputDiffs {
 		// Verify that the diff is relevant to the wallet.
 		if _, exists := w.keys[diff.CoinOutput.Condition.UnlockHash()]; exists {
-
 			_, exists = w.coinOutputs[diff.ID]
 			if diff.Direction == modules.DiffApply {
 				if build.DEBUG && exists {
@@ -30,13 +29,12 @@ func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 			continue
 		}
 
-		// Check if this is a multisig condition
-		// If it is, then check if it contains any of our addresses
-		condition := getMultiSigCondition(diff.CoinOutput.Condition.Condition)
-		if condition == nil {
+		// try to get the unlock hash slice of a multisig
+		unlockhashes, _ := getMultisigConditionProperties(diff.CoinOutput.Condition.Condition)
+		if len(unlockhashes) == 0 {
 			continue
 		}
-		for _, uh := range condition.UnlockHashes {
+		for _, uh := range unlockhashes {
 			if _, exists := w.keys[uh]; exists {
 				_, exists = w.multiSigCoinOutputs[diff.ID]
 				if diff.Direction == modules.DiffApply {
@@ -74,13 +72,12 @@ func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 			continue
 		}
 
-		// Check if this is a multisig condition
-		// If it is, then check if it contains any of our addresses
-		condition := getMultiSigCondition(diff.BlockStakeOutput.Condition.Condition)
-		if condition == nil {
+		// try to get the unlock hash slice of a multisig
+		unlockhashes, _ := getMultisigConditionProperties(diff.BlockStakeOutput.Condition.Condition)
+		if len(unlockhashes) == 0 {
 			continue
 		}
-		for _, uh := range condition.UnlockHashes {
+		for _, uh := range unlockhashes {
 			if _, exists := w.keys[uh]; exists {
 				_, exists = w.multiSigBlockStakeOutputs[diff.ID]
 				if diff.Direction == modules.DiffApply {
@@ -100,14 +97,19 @@ func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 	}
 }
 
-func getMultiSigCondition(condition types.MarshalableUnlockCondition) *types.MultiSignatureCondition {
+func getMultisigConditionProperties(condition types.MarshalableUnlockCondition) ([]types.UnlockHash, uint64) {
+	if condition.ConditionType() != types.ConditionTypeMultiSignature {
+		return nil, 0
+	}
+	type multisigCondition interface {
+		types.UnlockHashSliceGetter
+		GetMinimumSignatureCount() uint64
+	}
 	switch c := condition.(type) {
-	case *types.MultiSignatureCondition:
-		return c
-	case *types.TimeLockCondition:
-		return getMultiSigCondition(c.Condition)
+	case multisigCondition:
+		return c.UnlockHashSlice(), c.GetMinimumSignatureCount()
 	default:
-		return nil
+		return nil, 0
 	}
 }
 

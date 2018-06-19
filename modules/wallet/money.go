@@ -148,15 +148,20 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 		// Check if the wallet exists
 		if wallet, exists = wallets[address]; !exists {
 			// get the internal multisig unlock condition
-			msuc := getMultiSigCondition(co.Condition.Condition)
-			if msuc == nil {
-				panic("Failed to convert output to multisig condition")
+			unlockhashes, minSignatureCount := getMultisigConditionProperties(co.Condition.Condition)
+			if len(unlockhashes) == 0 {
+				w.log.Printf("[ERROR] failed to convert output to multisig condition: type=%T conditionType=%d",
+					co.Condition.Condition, co.Condition.ConditionType())
+				if build.DEBUG {
+					panic("Failed to convert output to multisig condition")
+				}
+				continue
 			}
 			// Create a new wallet for this address
 			wallet = &modules.MultiSigWallet{
 				Address: address,
-				Owners:  msuc.UnlockHashes,
-				MinSigs: msuc.MinimumSignatureCount,
+				Owners:  unlockhashes,
+				MinSigs: minSignatureCount,
 			}
 			wallets[address] = wallet
 		}
@@ -176,15 +181,20 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 		// Check if the wallet exists
 		if wallet, exists = wallets[address]; !exists {
 			// get the internal multisig unlock condition
-			msuc := getMultiSigCondition(bso.Condition.Condition)
-			if msuc == nil {
-				panic("Failed to convert output to multisig condition")
+			unlockhashes, minSignatureCount := getMultisigConditionProperties(bso.Condition.Condition)
+			if len(unlockhashes) == 0 {
+				w.log.Printf("[ERROR] failed to convert output to multisig condition: type=%T conditionType=%d",
+					bso.Condition.Condition, bso.Condition.ConditionType())
+				if build.DEBUG {
+					panic("Failed to convert output to multisig condition")
+				}
+				continue
 			}
 			// Create a new wallet for this address
 			wallet = &modules.MultiSigWallet{
 				Address: address,
-				Owners:  msuc.UnlockHashes,
-				MinSigs: msuc.MinimumSignatureCount,
+				Owners:  unlockhashes,
+				MinSigs: minSignatureCount,
 			}
 			wallets[address] = wallet
 		}

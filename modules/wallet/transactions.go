@@ -143,12 +143,19 @@ func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.
 		bso := blockOld.Transactions[ind.TransactionIndex].BlockStakeOutputs[ind.OutputIndex]
 
 		relevant := false
-
-		// TODO: support other kind of conditions, not just unlock hash conditions
-		if uc, ok := bso.Condition.Condition.(*types.UnlockHashCondition); ok {
-			_, exists := w.keys[uc.TargetUnlockHash]
-			if exists {
-				relevant = true
+		switch uh := bso.Condition.UnlockHash(); uh.Type {
+		case types.UnlockTypePubKey:
+			_, relevant = w.keys[uh]
+		case types.UnlockTypeNil:
+			relevant = true
+		case types.UnlockTypeMultiSig:
+			if uhsg, ok := bso.Condition.Condition.(types.UnlockHashSliceGetter); ok {
+				for _, uh := range uhsg.UnlockHashSlice() {
+					_, relevant = w.keys[uh]
+					if relevant {
+						break
+					}
+				}
 			}
 		}
 

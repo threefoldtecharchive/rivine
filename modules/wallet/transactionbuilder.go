@@ -488,149 +488,67 @@ func (tb *transactionBuilder) SignAllPossibleInputs() error {
 
 // signCoinInput attempts to sign a coin input with a key from the wallet
 func (tb *transactionBuilder) signCoinInput(idx int, ci *types.CoinInput, cond types.MarshalableUnlockCondition) error {
-	switch condition := cond.(type) {
-	case *types.MultiSignatureCondition:
-		for _, uh := range condition.UnlockHashes {
-			pk, sk, err := tb.wallet.getKey(uh)
-			if err != nil {
-				if err == errUnknownAddress {
-					continue
-				}
-				return err
-			}
-			if ci.Fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
-				ci.Fulfillment = types.NewFulfillment(&types.MultiSignatureFulfillment{})
-			}
-			err = ci.Fulfillment.Sign(types.FulfillmentSignContext{
-				InputIndex:  uint64(idx),
-				Transaction: tb.transaction,
-				Key:         types.KeyPair{PublicKey: pk, PrivateKey: sk},
-			})
-			if err != nil {
-				return err
-			}
-			tb.signed = true
-		}
-	case *types.UnlockHashCondition:
-		pk, sk, err := tb.wallet.getKey(condition.UnlockHash())
-		if err != nil && err != errUnknownAddress {
-			return err
-		}
-		if err == nil {
-			if ci.Fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
-				ci.Fulfillment = types.NewFulfillment(types.NewSingleSignatureFulfillment(pk))
-			}
-			err = ci.Fulfillment.Sign(types.FulfillmentSignContext{
-				InputIndex:  uint64(idx),
-				Transaction: tb.transaction,
-				Key:         sk,
-			})
-			if err != nil {
-				return err
-			}
-			tb.signed = true
-		}
-	case *types.TimeLockCondition:
-		return tb.signCoinInput(idx, ci, condition.Condition)
-	case *types.NilCondition:
-		// Try to get a new (random) key to sign
-		uh, err := tb.wallet.NextAddress()
-		if err != nil {
-			return err
-		}
-		pk, sk, err := tb.wallet.GetKey(uh)
-		if err != nil {
-			return err
-		}
-		if ci.Fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
-			ci.Fulfillment = types.NewFulfillment(types.NewSingleSignatureFulfillment(pk))
-			err := ci.Fulfillment.Sign(types.FulfillmentSignContext{
-				InputIndex:  uint64(idx),
-				Transaction: tb.transaction,
-				Key:         sk,
-			})
-			if err != nil {
-				return err
-			}
-			tb.signed = true
-		}
-	default:
-		return errors.New("Unable to sign unknown coin input type")
-	}
-	return nil
+	return tb.signFulfillment(idx, &ci.Fulfillment, cond)
 }
 
 // signBlockStakeInput attempts to sign a blockstake input with a key from the wallet
 func (tb *transactionBuilder) signBlockStakeInput(idx int, bsi *types.BlockStakeInput, cond types.MarshalableUnlockCondition) error {
-	switch condition := cond.(type) {
-	case *types.MultiSignatureCondition:
-		for _, uh := range condition.UnlockHashes {
-			pk, sk, err := tb.wallet.getKey(uh)
-			if err != nil {
-				if err == errUnknownAddress {
-					continue
-				}
-				return err
-			}
-			if bsi.Fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
-				bsi.Fulfillment.Fulfillment = &types.MultiSignatureFulfillment{}
-			}
-			err = bsi.Fulfillment.Sign(types.FulfillmentSignContext{
-				InputIndex:  uint64(idx),
-				Transaction: tb.transaction,
-				Key:         types.KeyPair{PublicKey: pk, PrivateKey: sk},
-			})
-			if err != nil {
-				return err
-			}
-			tb.signed = true
-		}
-	case *types.UnlockHashCondition:
-		pk, sk, err := tb.wallet.getKey(condition.UnlockHash())
-		if err != nil && err != errUnknownAddress {
-			return err
-		}
-		if err == nil {
-			if bsi.Fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
-				bsi.Fulfillment.Fulfillment = types.NewSingleSignatureFulfillment(pk)
-			}
-			err := bsi.Fulfillment.Sign(types.FulfillmentSignContext{
-				InputIndex:  uint64(idx),
-				Transaction: tb.transaction,
-				Key:         sk,
-			})
-			if err != nil {
-				return err
-			}
-			tb.signed = true
-		}
-	case *types.TimeLockCondition:
-		return tb.signBlockStakeInput(idx, bsi, condition.Condition)
-	case *types.NilCondition:
+	return tb.signFulfillment(idx, &bsi.Fulfillment, cond)
+}
+
+func (tb *transactionBuilder) signFulfillment(idx int, fulfillment *types.UnlockFulfillmentProxy, cond types.MarshalableUnlockCondition) error {
+	var err error
+	switch uh := cond.UnlockHash(); uh.Type {
+	case types.UnlockTypeNil:
 		// Try to get a new (random) key to sign
-		uh, err := tb.wallet.NextAddress()
+		uh, err = tb.wallet.NextAddress()
 		if err != nil {
 			return err
 		}
-		pk, sk, err := tb.wallet.GetKey(uh)
-		if err != nil {
-			return err
-		}
-		if bsi.Fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
-			bsi.Fulfillment = types.NewFulfillment(types.NewSingleSignatureFulfillment(pk))
-			err := bsi.Fulfillment.Sign(types.FulfillmentSignContext{
+		fallthrough
+	case types.UnlockTypePubKey:
+		if key, exists := tb.wallet.keys[cond.UnlockHash()]; exists {
+			fulfillment.Fulfillment = types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(key.PublicKey))
+			err := fulfillment.Fulfillment.Sign(types.FulfillmentSignContext{
 				InputIndex:  uint64(idx),
 				Transaction: tb.transaction,
-				Key:         sk,
+				Key:         key.SecretKey,
 			})
 			if err != nil {
 				return err
 			}
 			tb.signed = true
 		}
+
+	case types.UnlockTypeMultiSig:
+		mcond, ok := cond.(types.UnlockHashSliceGetter)
+		if !ok {
+			return fmt.Errorf("unexpected condition type %T for multi sig condition", cond)
+		}
+		if fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
+			fulfillment.Fulfillment = &types.MultiSignatureFulfillment{}
+		}
+		for _, uh := range mcond.UnlockHashSlice() {
+			if key, exists := tb.wallet.keys[uh]; exists {
+				err := fulfillment.Sign(types.FulfillmentSignContext{
+					InputIndex:  uint64(idx),
+					Transaction: tb.transaction,
+					Key: types.KeyPair{
+						PublicKey:  types.Ed25519PublicKey(key.PublicKey),
+						PrivateKey: types.ByteSlice(key.SecretKey[:]),
+					},
+				})
+				if err != nil {
+					return err
+				}
+				tb.signed = true
+			}
+		}
+
 	default:
-		return errors.New("Unable to sign unknown blockstake input type")
+		return fmt.Errorf("failed to sign fulfillment: unexpected condition type %T", cond)
 	}
+
 	return nil
 }
 
