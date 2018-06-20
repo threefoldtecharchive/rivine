@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/rivine/rivine/build"
@@ -98,7 +99,18 @@ func (w *Wallet) updateConfirmedSet(cc modules.ConsensusChange) {
 }
 
 func getMultisigConditionProperties(condition types.MarshalableUnlockCondition) ([]types.UnlockHash, uint64) {
-	if condition.ConditionType() != types.ConditionTypeMultiSignature {
+	ct := condition.ConditionType()
+	if ct == types.ConditionTypeTimeLock {
+		cg, ok := condition.(types.MarshalableUnlockConditionGetter)
+		if !ok {
+			if build.DEBUG {
+				panic(fmt.Sprintf("unexpected Go-type for TimeLockCondition: %T", condition))
+			}
+			return nil, 0
+		}
+		return getMultisigConditionProperties(cg.GetMarshalableUnlockCondition())
+	}
+	if ct != types.ConditionTypeMultiSignature {
 		return nil, 0
 	}
 	type multisigCondition interface {

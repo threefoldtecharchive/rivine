@@ -132,6 +132,12 @@ type (
 		UnlockHashSlice() []UnlockHash
 	}
 
+	// MarshalableUnlockConditionGetter is an optional interface an MarshalableUnlockCondition can implement,
+	// in case it wraps around another MarshalableUnlockCondition.
+	MarshalableUnlockConditionGetter interface {
+		GetMarshalableUnlockCondition() MarshalableUnlockCondition
+	}
+
 	// UnlockHash returns the deterministic unlock hash of this UnlockCondition.
 	// It identifies the owner(s) or contract which own the output,
 	// and can spend it, once the conditions becomes `Fulfillable`.
@@ -1370,14 +1376,9 @@ func (tl *TimeLockCondition) UnlockHash() UnlockHash {
 	return tl.Condition.UnlockHash()
 }
 
-// UnlockHashSlice implements UnlockHashSliceGetter.UnlockHashSlice
-func (tl *TimeLockCondition) UnlockHashSlice() []UnlockHash {
-	switch tc := tl.Condition.(type) {
-	case UnlockHashSliceGetter:
-		return tc.UnlockHashSlice()
-	default:
-		return []UnlockHash{tl.Condition.UnlockHash()}
-	}
+// GetMarshalableUnlockCondition implements MarshalableUnlockConditionGetter.GetMarshalableUnlockCondition
+func (tl *TimeLockCondition) GetMarshalableUnlockCondition() MarshalableUnlockCondition {
+	return tl.Condition
 }
 
 // Equal implements UnlockCondition.Equal

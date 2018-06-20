@@ -524,14 +524,14 @@ func (tb *transactionBuilder) signFulfillment(idx int, fulfillment *types.Unlock
 		}
 
 	case types.UnlockTypeMultiSig:
-		mcond, ok := cond.(types.UnlockHashSliceGetter)
-		if !ok {
+		uhs, _ := getMultisigConditionProperties(cond)
+		if len(uhs) == 0 {
 			return fmt.Errorf("unexpected condition type %T for multi sig condition", cond)
 		}
 		if fulfillment.FulfillmentType() == types.FulfillmentTypeNil {
 			fulfillment.Fulfillment = &types.MultiSignatureFulfillment{}
 		}
-		for _, uh := range mcond.UnlockHashSlice() {
+		for _, uh := range uhs {
 			if key, exists := tb.wallet.keys[uh]; exists {
 				err := fulfillment.Sign(types.FulfillmentSignContext{
 					InputIndex:  uint64(idx),

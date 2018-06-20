@@ -149,8 +149,9 @@ func (w *Wallet) BlockStakeStats() (BCcountLast1000 uint64, BCfeeLast1000 types.
 		case types.UnlockTypeNil:
 			relevant = true
 		case types.UnlockTypeMultiSig:
-			if uhsg, ok := bso.Condition.Condition.(types.UnlockHashSliceGetter); ok {
-				for _, uh := range uhsg.UnlockHashSlice() {
+			uhs, _ := getMultisigConditionProperties(bso.Condition.Condition)
+			if len(uhs) > 0 {
+				for _, uh := range uhs {
 					_, relevant = w.keys[uh]
 					if relevant {
 						break
