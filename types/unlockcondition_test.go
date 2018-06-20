@@ -2268,6 +2268,37 @@ func TestIsStandardCondition(t *testing.T) {
 			}, "no lock time provided",
 		},
 		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &TimeLockCondition{
+					LockTime:  4,
+					Condition: &NilCondition{},
+				},
+			}, "no time lock condition can be used as the internal condition of antoher time lock condition",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &TimeLockCondition{
+					LockTime: 4,
+					Condition: &UnlockHashCondition{
+						TargetUnlockHash: unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+					},
+				},
+			}, "no time lock condition can be used as the internal condition of antoher time lock condition",
+		},
+		{
+			&TimeLockCondition{
+				LockTime: 1,
+				Condition: &AtomicSwapCondition{
+					Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+					Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+					HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
+					TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				},
+			}, "no atomic swap condition can be used as the internal condition of a time lock condition",
+		},
+		{
 			&MultiSignatureCondition{},
 			"amount of required signatures must be greater than one",
 		},
