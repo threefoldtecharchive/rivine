@@ -37,7 +37,7 @@
   branch = "master"
   name = "github.com/NebulousLabs/merkletree"
   packages = ["."]
-  revision = "8482d024aa8ffc16d2d4246e84e943aca109a8dc"
+  revision = "1db44fa75fb1036c6d7be59a5793be4b1fb8a5ab"
 
 [[projects]]
   name = "github.com/bgentry/speakeasy"
@@ -57,8 +57,8 @@
     "internal/singleflight",
     "internal/util"
   ]
-  revision = "877867d2845fbaf86798befe410b6ceb6f5c29a3"
-  version = "v6.10.2"
+  revision = "83fb42932f6145ce52df09860384a4653d2d332a"
+  version = "v6.12.0"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -99,14 +99,14 @@
 [[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
-  revision = "a1f051bc3eba734da4772d60e2d677f47cf93ef4"
-  version = "v0.0.2"
+  revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
+  version = "v0.0.3"
 
 [[projects]]
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -118,7 +118,7 @@
     "pbkdf2",
     "twofish"
   ]
-  revision = "d6449816ce06963d9d136eee5a56fca5b0616e7e"
+  revision = "7f39a6fea4fe9364fb61e1def6a268a51b4f3a06"
 
 [[projects]]
   branch = "master"
@@ -128,13 +128,16 @@
     "html/atom",
     "html/charset"
   ]
-  revision = "b68f30494add4df6bd8ef5e82803f308e7f7c59c"
+  revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
-  revision = "378d26f46672a356c46195c28f61bdb4c0a781dd"
+  packages = [
+    "cpu",
+    "unix"
+  ]
+  revision = "ad87a3a340fa7f3bed189293fbfa7a9b7e021ae1"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -163,6 +166,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ca91c39581bc401dcfe05e19babd1dd915e65071f96f1f936353bcac0f181ef1"
+  inputs-digest = "d4cd494db490f1dc14fe88306546ae7261a6e13161e0a85399036d8beb978284"
   solver-name = "gps-cdcl"
   solver-version = 1
