@@ -659,7 +659,11 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 	var unspentCoinOutputResp api.ConsensusGetUnspentCoinOutput
 	err := _DefaultClient.httpClient.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err != nil {
-		Die("failed to get unspent coinoutput from consensus:", err)
+		if err == errStatusNotFound {
+			Die("failed to get unspent coinoutput from consensus: no output with ID " + outputID.String() + " exists")
+		} else {
+			Die("failed to get unspent coinoutput from consensus:", err)
+		}
 	}
 
 	// step 2: get correct spendable key from wallet
