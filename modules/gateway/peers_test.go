@@ -314,7 +314,7 @@ func TestConnect(t *testing.T) {
 		t.Fatal(err)
 	}
 	// g should have the node
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(time.Second)
 	g.mu.RLock()
 	if _, ok := g.nodes[dummyNode]; !ok {
 		g.mu.RUnlock() // Needed to prevent a deadlock if this error condition is reached.
