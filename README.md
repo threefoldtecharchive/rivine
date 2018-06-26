@@ -9,7 +9,7 @@ Blockchain technology for creating custom chains.
 
 [Whitepaper](doc/whitepaper.md)
 
-You can reach out to us for any development-related questions on [our public Telegram group]( https://t.me/joinchat/Ewnq40uPqktft85XgiT9PA).
+You can reach out to us for any development-related questions on [our public Telegram group](https://t.me/rivine).
 
 Usage
 -----
