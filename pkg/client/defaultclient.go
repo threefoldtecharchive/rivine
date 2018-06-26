@@ -17,11 +17,12 @@ import (
 // exit codes
 // inspired by sysexits.h
 const (
-	ExitCodeGeneral   = 1 // Not in sysexits.h, but is standard practice.
-	ExitCodeNotFound  = 2
-	ExitCodeCancelled = 3
-	ExitCodeForbidden = 4
-	ExitCodeUsage     = 64 // EX_USAGE in sysexits.h
+	ExitCodeGeneral        = 1 // Not in sysexits.h, but is standard practice.
+	ExitCodeNotFound       = 2
+	ExitCodeCancelled      = 3
+	ExitCodeForbidden      = 4
+	ExitCodeTemporaryError = 5
+	ExitCodeUsage          = 64 // EX_USAGE in sysexits.h
 )
 
 // ConfigFromDaemonConstants returns CLI constants using

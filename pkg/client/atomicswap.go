@@ -28,20 +28,93 @@ var (
 		Use:   "participate <initiator address> <amount> <secret hash>",
 		Short: "Create an atomic swap contract as participant.",
 		Long: `Create an atomic swap contract as a participant,
-using the secret hash given by the initiator.`,
+using the secret hash given by the initiator.
+
+Returned status codes:
+
+  0: contract created successfully as participant
+  1: generic error, automatically recovering is not possible or recommended
+  3: command cancelled by user
+  64: misusage of the command, see --help on how to use the command
+
+Example STDOUT output when using the '--encoding json' flag:
+
+  {
+    "coins": "100000000000", // integer, expressed in the lowest coin unit
+    "contract": { // defines the conditions of the contract
+      // address of the creator (initiator) from the initiator contract, used to refund
+      "sender": "01b49da2ff193f46ee0fc684d7a6121a8b8e324144dffc7327471a4da79f1730960edcb2ce737f",
+      // address of the recipient (participant) from the initiator contract, used to redeem
+      "receiver": "019e9b6f2d43a44046b62836ce8d75c935ff66cbba1e624b3e9755b98ac176a08dac5267b2c8ee",
+      // hashedsecret, the sha256 hash of the secret that has to be given when redeemed
+      "hashedsecret": "c22267f0f118282b15098e0b5e3a8027af64f0cce7afa19b274abb21b5555626",
+      // defines when the contract can be refunded
+      // (redeeming it will still be possible, as long as it hasn't been refunded yet)
+      "timelock": 1530169858
+    },
+    // unlock hash of the contract condition
+    "contractid": "020ce1011596c7bf7aa63e15a6b3d1eb44087358b0670efa50d34d0509625b13d2b82887cd5bbb",
+    // crypto-random generated 32-byte secret
+    "secret": "6f0e3b2cdd82da7c4ddc20f03be25765fb885fb59af316cb3bbf8649c82d046d",
+    // ID of the unspend output which was created to pair the atomic swap contract with a coin value
+    "outputid": "4abc9c18e03b0e9f35e636d8294c8de1fd823dcaa17bce115d1452df6198cdd7",
+    // ID of the transaction that contained the created coin output which contains the atomic swap contract
+    "transactionid": "3faf9e80cb33b572830824b2b3341c4f0f86ca34fcad1e6604ad112c008f5fbc"
+  }
+
+Note that this output is only returned in case the command
+was successful, and thus exited with status code 0.
+`,
 		Run: Wrap(atomicswapparticipatecmd),
 	}
 
 	atomicSwapInitiateCmd = &cobra.Command{
 		Use:   "initiate <participant address> <amount>",
 		Short: "Create an atomic swap contract as initiator.",
-		Run:   Wrap(atomicswapinitiatecmd),
+		Long: `Create an atomic swap contract as an initiator,
+randonly generating a secret for you, and deriving the secret hash from it.
+The used secret is returned through the STDOUT with the rest of the contract details.
+
+Returned status codes:
+
+  0: contract created successfully as initiator
+  1: generic error, automatically recovering is not possible or recommended
+  3: command cancelled by user
+  64: misusage of the command, see --help on how to use the command
+
+Example output when using the '--encoding json' flag:
+
+  {
+    "coins": "100000000000", // integer, expressed in the lowest coin unit
+    "contract": { // defines the conditions of the contract
+      // address of the creator (participant) from the participation contract, used to refund
+      "sender": "01b49da2ff193f46ee0fc684d7a6121a8b8e324144dffc7327471a4da79f1730960edcb2ce737f",
+      // address of the recipient (initiator) from the participation contract, used to redeem
+      "receiver": "019e9b6f2d43a44046b62836ce8d75c935ff66cbba1e624b3e9755b98ac176a08dac5267b2c8ee",
+      // hashedsecret, the sha256 hash of the secret that has to be given when redeemed
+      "hashedsecret": "c22267f0f118282b15098e0b5e3a8027af64f0cce7afa19b274abb21b5555626",
+      // defines when the contract can be refunded
+      // (redeeming it will still be possible, as long as it hasn't been refunded yet)
+      "timelock": 1530169858
+    },
+    // unlock hash of the contract condition
+    "contractid": "020ce1011596c7bf7aa63e15a6b3d1eb44087358b0670efa50d34d0509625b13d2b82887cd5bbb",
+    // ID of the unspend output which was created to pair the atomic swap contract with a coin value
+    "outputid": "4abc9c18e03b0e9f35e636d8294c8de1fd823dcaa17bce115d1452df6198cdd7",
+    // ID of the transaction that contained the created coin output which contains the atomic swap contract
+    "transactionid": "3faf9e80cb33b572830824b2b3341c4f0f86ca34fcad1e6604ad112c008f5fbc"
+  }
+
+Note that this output is only returned in case the command
+was successful, and thus exited with status code 0.
+`,
+		Run: Wrap(atomicswapinitiatecmd),
 	}
 
 	atomicSwapAuditCmd = &cobra.Command{
 		Use:   "auditcontract outputid [transactionid|jsonTransaction]",
-		Short: "Audit an atomic swap contract.",
-		Long: `Audit an atomic swap contract.
+		Short: "Audit a created atomic swap contract.",
+		Long: `Audit a created atomic swap contract.
 
 Run a full audit by giving the outputid,
 in which case the outputid is looked up as an unspent atomic swap contract,
@@ -56,6 +129,36 @@ confirmed or not.
 
 Optionally the participant's address, currency amount and secret hash are validated,
 by giving one, some or all of them as flag arguments, for both quick and full audits.
+
+Returned status codes:
+
+  0: contract found and validated successfully
+  1: generic error, automatically recovering is not possible or recommended
+  2: contract not found
+  3: command cancelled by user
+  4: temporary error: contract was found and valid but not yet confirmed
+  64: misusage of the command, see --help on how to use the command
+  128: contract invalid compared to the given criteria
+
+Example output when using the '--encoding json' flag:
+
+  {
+    "coins": "100000000000", // integer, expressed in the lowest coin unit
+    "contract": { // defines the conditions of the contract
+      // address of the creator (sender) from the atomic swap contract, used to refund
+      "sender": "01b49da2ff193f46ee0fc684d7a6121a8b8e324144dffc7327471a4da79f1730960edcb2ce737f",
+      // address of the recipient (receiver) from the atomic swap contract, used to redeem
+      "receiver": "019e9b6f2d43a44046b62836ce8d75c935ff66cbba1e624b3e9755b98ac176a08dac5267b2c8ee",
+      // hashedsecret, the sha256 hash of the secret that has to be given when redeemed
+      "hashedsecret": "c22267f0f118282b15098e0b5e3a8027af64f0cce7afa19b274abb21b5555626",
+      // defines when the contract can be refunded
+      // (redeeming it will still be possible, as long as it hasn't been refunded yet)
+      "timelock": 1530169858
+    }
+  }
+
+This output is always returned when the contract was found,
+even if it doesn't pass the audit.
 `,
 		Run: atomicswapauditcmd,
 	}
@@ -76,6 +179,26 @@ and no secret will be extracted.
 
 Optionally, the extracted secret is validated,
 by comparing its hashed version to the secret hash given using the --secrethash flag.
+
+Returned status codes:
+
+  0: contract found and secret extracted successfully
+  1: generic error, automatically recovering is not possible or recommended
+  2: contract not found
+  3: command cancelled by user
+  64: misusage of the command, see --help on how to use the command
+  128: contract invalid compared to the given criteria
+
+Example output when using the '--encoding json' flag:
+
+  {
+    // the secret that was used to redeem the funds,
+    // that were locked in the atomic swap contract
+    "secret": "6f0e3b2cdd82da7c4ddc20f03be25765fb885fb59af316cb3bbf8649c82d046d"
+  }
+
+Note that this output is only returned in case the command
+was successful, and thus exited with status code 0.
 `,
 		Run: atomicswapextractsecretcmd,
 	}
@@ -83,15 +206,53 @@ by comparing its hashed version to the secret hash given using the --secrethash 
 	atomicSwapRedeemCmd = &cobra.Command{
 		Use:   "redeem outputid secret",
 		Short: "Redeem the coins locked in an atomic swap contract.",
-		Long:  "Redeem the coins locked in an atomic swap contract intended for you.",
-		Run:   Wrap(atomicswapredeemcmd),
+		Long: `Redeem the coins locked in an atomic swap contract intended for you.
+
+Returned status codes:
+
+  0: contract found and redeemed successfully
+  1: generic error, automatically recovering is not possible or recommended
+  2: contract not found
+  3: command cancelled by user
+  64: misusage of the command, see --help on how to use the command
+
+Example output when using the '--encoding json' flag:
+
+  {
+    // id of the transaction that was created when redeeming the locked funds
+    "transactionid": "9869bdb633c18fe28553c594cf5d0931d4eab0929e4aa8e6fc9f1a1250c61103"
+  }
+
+Note that this output is only returned in case the command
+was successful, and thus exited with status code 0.
+`,
+		Run: Wrap(atomicswapredeemcmd),
 	}
 
 	atomicSwapRefundCmd = &cobra.Command{
 		Use:   "refund outputid",
 		Short: "Refund the coins locked in an atomic swap contract.",
-		Long:  "Refund the coins locked in an atomic swap contract created by you.",
-		Run:   Wrap(atomicswaprefundcmd),
+		Long: `Refund the coins locked in an atomic swap contract created by you.
+
+Returned status codes:
+
+  0: contract found and refunded successfully
+  1: generic error, automatically recovering is not possible or recommended
+  2: contract not found
+  3: command cancelled by user
+  64: misusage of the command, see --help on how to use the command
+
+Example output when using the '--encoding json' flag:
+
+  {
+    // id of the transaction that was created when refunding the locked funds
+    "transactionid": "9869bdb633c18fe28553c594cf5d0931d4eab0929e4aa8e6fc9f1a1250c61103"
+  }
+
+Note that this output is only returned in case the command
+was successful, and thus exited with status code 0.
+`,
+		Run: Wrap(atomicswaprefundcmd),
 	}
 )
 
@@ -105,6 +266,12 @@ type (
 		Secret        *types.AtomicSwapSecret   `json:"secret,omitempty"`
 		OutputID      types.CoinOutputID        `json:"outputid"`
 		TransactionID types.TransactionID       `json:"transactionid"`
+	}
+	// AtomicSwapOutputAudit represents the formatted output
+	// of the atomic swap audit command
+	AtomicSwapOutputAudit struct {
+		Coins    types.Currency            `json:"coins"`
+		Contract types.AtomicSwapCondition `json:"contract"`
 	}
 	// AtomicSwapOutputExtractSecret represents the formatted output
 	// of the atomic swap extract secret command
@@ -357,7 +524,8 @@ func atomicswapauditcmd(cmd *cobra.Command, args []string) {
 	// therefore the last positive hope is if it wasn't yet part of the transaction pool
 	err = _DefaultClient.httpClient.GetAPI("/transactionpool/transactions", &txnPoolGetResp)
 	if err != nil {
-		Die("contract no found as part of an unspent coin output, and getting unconfirmed transactions from the transactionpool failed:", err)
+		DieWithExitCode(ExitCodeNotFound,
+			"contract no found as part of an unspent coin output, and getting unconfirmed transactions from the transactionpool failed:", err)
 	}
 	for _, txn := range txnPoolGetResp.Transactions {
 		var lastTransaction bool
@@ -423,7 +591,13 @@ func auditAtomicSwapContract(co types.CoinOutput, source auditSource) {
 	}
 	durationLeft := time.Unix(int64(condition.TimeLock), 0).Sub(computeTimeNow())
 
-	fmt.Fprintf(os.Stderr, `Atomic Swap Contract (condition) found:
+	if atomicSwapcfg.EncodingType == cli.EncodingTypeJSON {
+		json.NewEncoder(os.Stdout).Encode(AtomicSwapOutputAudit{
+			Coins:    co.Value,
+			Contract: *condition,
+		})
+	} else {
+		fmt.Printf(`Atomic Swap Contract (condition) found:
 
 Contract value: %s
 
@@ -434,7 +608,8 @@ TimeLock: %[5]d (%[5]s)
 TimeLock reached in: %s
 
 `, _CurrencyConvertor.ToCoinStringWithUnit(co.Value), condition.Receiver,
-		condition.Sender, condition.HashedSecret, condition.TimeLock, durationLeft)
+			condition.Sender, condition.HashedSecret, condition.TimeLock, durationLeft)
+	}
 
 	var invalidContract bool
 	amount := atomicSwapAuditcfg.CoinAmount.Amount()
@@ -479,18 +654,26 @@ TimeLock reached in: %s
 		}
 	}
 	if invalidContract {
-		Die("found Atomic Swap Contract does not meet the given expectations")
+		DieWithExitCode(AuditContractExitCodeInvalidContract,
+			"found Atomic Swap Contract does not meet the given expectations")
 	}
 	fmt.Fprintln(os.Stderr, "found Atomic Swap Contract is valid")
 	switch source {
 	case auditSourceTransactionPool:
 		fmt.Fprintln(os.Stderr, "NOTE: this contract is still in the transaction pool and thus unconfirmed")
+		DieWithExitCode(ExitCodeTemporaryError, "contract is not yet confirmed")
 	case auditSourceUser:
 		fmt.Fprintln(os.Stderr, `NOTE: this contract was given as part of a raw JSON-encoded transaction,
 and it is therefore possible that this contract is not yet created,
 confirmed or not`)
 	}
 }
+
+const (
+	// AuditContractExitCodeInvalidContract is returned as exit code,
+	// in case the contract was found, but failed to validate against the given validation flags.
+	AuditContractExitCodeInvalidContract = 128
+)
 
 // extractsecret transactionid [outputid]
 func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
@@ -537,6 +720,10 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 				continue
 			}
 			if ft := ci.Fulfillment.FulfillmentType(); ft != types.FulfillmentTypeAtomicSwap {
+				if outputIDGiven && ci.ParentID == outputID {
+					Die(fmt.Sprintf(
+						"received unexpected fulfillment type of type %d (%T)", ft, ci.Fulfillment.Fulfillment))
+				}
 				continue
 			}
 			getter, ok := ci.Fulfillment.Fulfillment.(atomicSwapSecretGetter)
@@ -553,6 +740,10 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 	// it should mean that the transaction is already part of a created block
 	err = _DefaultClient.httpClient.GetAPI("/consensus/transactions/"+txnID.String(), &txnResp)
 	if err != nil {
+		if err == errStatusNotFound {
+			DieWithExitCode(ExitCodeUsage,
+				"failed to find transaction:", err, "; Long ID:", txnID)
+		}
 		Die("failed to get transaction:", err, "; Long ID:", txnID)
 	}
 
@@ -563,6 +754,10 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 			continue
 		}
 		if ft := ci.Fulfillment.FulfillmentType(); ft != types.FulfillmentTypeAtomicSwap {
+			if outputIDGiven && ci.ParentID == outputID {
+				Die(fmt.Sprintf(
+					"received unexpected fulfillment type of type %d (%T)", ft, ci.Fulfillment.Fulfillment))
+			}
 			continue
 		}
 		getter, ok := ci.Fulfillment.Fulfillment.(atomicSwapSecretGetter)
@@ -576,13 +771,15 @@ func atomicswapextractsecretcmd(cmd *cobra.Command, args []string) {
 
 secretCheck:
 	if secret == (types.AtomicSwapSecret{}) {
-		Die("failed to find a matching atomic swap contract fulfillment in transaction with LongID: ", txnID)
+		DieWithExitCode(ExitCodeNotFound,
+			"failed to find a matching atomic swap contract fulfillment in transaction with LongID: ", txnID)
 	}
 	if atomicSwapExtractSecretcfg.HashedSecret != (types.AtomicSwapHashedSecret{}) {
 		hs := types.NewAtomicSwapHashedSecret(secret)
 		if hs != atomicSwapExtractSecretcfg.HashedSecret {
-			Die(fmt.Sprintf("found secret %s does not match expected and given secret hash %s",
-				secret, atomicSwapExtractSecretcfg.HashedSecret))
+			DieWithExitCode(AuditContractExitCodeInvalidContract,
+				fmt.Sprintf("found secret %s does not match expected and given secret hash %s",
+					secret, atomicSwapExtractSecretcfg.HashedSecret))
 		}
 	}
 
@@ -660,7 +857,8 @@ func spendAtomicSwapContract(outputID types.CoinOutputID, secret types.AtomicSwa
 	err := _DefaultClient.httpClient.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err != nil {
 		if err == errStatusNotFound {
-			Die("failed to get unspent coinoutput from consensus: no output with ID " + outputID.String() + " exists")
+			DieWithExitCode(ExitCodeNotFound,
+				"failed to get unspent coinoutput from consensus: no output with ID "+outputID.String()+" exists")
 		} else {
 			Die("failed to get unspent coinoutput from consensus:", err)
 		}
