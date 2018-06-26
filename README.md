@@ -78,3 +78,15 @@ Troubleshooting
   After loading your seed, you will need to stop and restart your daemon. If after that
   the coins still haven't appeared (and you are sure they should be there), you can
   try `rivinec wallet addresses` to force load some more addresses.
+
+  Note that when you recover a wallet from an existing seed, using `wallet recover`,
+  effectively creating a new wallet using an existing set,
+  your addresses will already be loaded when unlocking it.
+
+- My daemon exits imediately upon startup, giving the error: `error opening consensus database: invalid argument`:
+
+  Make sure that the file system you are using for your daemon's persistent directory
+  supports features such as `mmap` and `flock`. Shared folders for example, as is common
+  in virtual environments or containers, might not support `mmap` and therefore will
+  fail to function. The scenario in this example can easily be resolved by making sure
+  the persistent directory isn't located within a shared folder.
