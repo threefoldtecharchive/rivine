@@ -109,6 +109,9 @@ func dbGetUnlockHashForFulfillfment(tx *bolt.Tx, parentID types.OutputID, fulfil
 	if len(v) == 0 {
 		// fallback for those rare cases where someone already used an atomic swap in a previous release
 		uh = types.ComputeLegacyFulfillmentUnlockHash(fulfillment.Fulfillment)
+		if uh == types.NilUnlockHash {
+			err = errors.New("Failed to compute legacy fulfillment unlock hash")
+		}
 		return
 	}
 	err = encoding.Unmarshal(v, &uh)

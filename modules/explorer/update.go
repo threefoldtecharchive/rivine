@@ -63,7 +63,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbRemoveCoinOutputID(tx, sci.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err != nil {
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err == nil {
 						dbRemoveUnlockHash(tx, uh, txid)
 					}
 				}
@@ -76,7 +76,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err != nil {
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err == nil {
 						dbRemoveUnlockHash(tx, uh, txid)
 					}
 				}
@@ -134,7 +134,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbAddCoinOutputID(tx, sci.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err != nil {
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err == nil {
 						dbAddUnlockHash(tx, uh, txid)
 					}
 				}
@@ -147,7 +147,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err != nil {
+					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err == nil {
 						dbAddUnlockHash(tx, uh, txid)
 					}
 				}
