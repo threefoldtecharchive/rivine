@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 )
@@ -220,15 +221,19 @@ func (uh *UnlockHash) LoadString(strUH string) error {
 	var unlockHash crypto.Hash
 	copy(unlockHash[:], unlockHashBytes[:])
 
-	// Decode and verify the checksum.
-	var checksum []byte
-	_, err = fmt.Sscanf(strUH[2+crypto.HashSize*2:], "%x", &checksum)
-	if err != nil {
-		return err
-	}
-	expectedChecksum := crypto.HashAll(ut, unlockHash)
-	if !bytes.Equal(expectedChecksum[:UnlockHashChecksumSize], checksum) {
-		return ErrInvalidUnlockHashChecksum
+	if ut != UnlockTypeNil {
+		// Decode and verify the checksum.
+		var checksum []byte
+		_, err = fmt.Sscanf(strUH[2+crypto.HashSize*2:], "%x", &checksum)
+		if err != nil {
+			return err
+		}
+		expectedChecksum := crypto.HashAll(ut, unlockHash)
+		if !bytes.Equal(expectedChecksum[:UnlockHashChecksumSize], checksum) {
+			return ErrInvalidUnlockHashChecksum
+		}
+	} else if build.DEBUG && unlockHash != NilUnlockHash.Hash {
+		panic("unexpected crypto hash for UnlockTypeNil: " + NilUnlockHash.Hash.String())
 	}
 
 	uh.Type = ut

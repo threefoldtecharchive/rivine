@@ -267,8 +267,8 @@ func TestUnlockHashLoadEmptyString(t *testing.T) {
 	if err != nil {
 		t.Fatal("unexpected error:", err)
 	}
-	if uh.Cmp(UnlockHash{}) != 0 {
-		t.Fatal(uh, "!=", UnlockHash{})
+	if uh.Cmp(NilUnlockHash) != 0 {
+		t.Fatal(uh, "!=", NilUnlockHash)
 	}
 }
 
@@ -279,7 +279,31 @@ func TestUnlockHashLoadEmptyJSONString(t *testing.T) {
 	if err != nil {
 		t.Fatal("unexpected error:", err)
 	}
-	if uh.Cmp(UnlockHash{}) != 0 {
-		t.Fatal(uh, "!=", UnlockHash{})
+	if uh.Cmp(NilUnlockHash) != 0 {
+		t.Fatal(uh, "!=", NilUnlockHash)
+	}
+}
+
+// test as part of fix for https://github.com/rivine/rivine/issues/410
+func TestUnlockHashLoadNilUnlockHashString(t *testing.T) {
+	var uh UnlockHash
+	err := uh.LoadString("000000000000000000000000000000000000000000000000000000000000000000000000000000")
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if uh.Cmp(NilUnlockHash) != 0 {
+		t.Fatal(uh, "!=", NilUnlockHash)
+	}
+}
+
+// test as part of fix for https://github.com/rivine/rivine/issues/410
+func TestUnlockHashLoadNilUnlockHashJSONString(t *testing.T) {
+	var uh UnlockHash
+	err := uh.UnmarshalJSON([]byte(`"000000000000000000000000000000000000000000000000000000000000000000000000000000"`))
+	if err != nil {
+		t.Fatal("unexpected error:", err)
+	}
+	if uh.Cmp(NilUnlockHash) != 0 {
+		t.Fatal(uh, "!=", NilUnlockHash)
 	}
 }
