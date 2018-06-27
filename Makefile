@@ -12,7 +12,7 @@ testpkgs = ./build ./crypto ./encoding ./modules ./modules/gateway ./modules/blo
 
 version = $(shell git describe | cut -d '-' -f 1)
 commit = $(shell git rev-parse --short HEAD)
-ifeq ($(commit), $(shell git rev-list -n 1 $(version) | cut -c1-7))
+ifeq ($(commit), $(shell git rev-list -n 1 $(version) | cut -c1-8))
 fullversion = $(version)
 else
 fullversion = $(version)-$(commit)

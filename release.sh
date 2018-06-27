@@ -11,7 +11,7 @@ package="github.com/rivine/rivine"
 
 version="$(git describe | cut -d '-' -f 1)"
 commit="$(git rev-parse --short HEAD)"
-if [ "$commit" == "$(git rev-list -n 1 $version | cut -c1-7)" ]
+if [ "$commit" == "$(git rev-list -n 1 $version | cut -c1-8)" ]
 then
 	full_version="$version"
 else
