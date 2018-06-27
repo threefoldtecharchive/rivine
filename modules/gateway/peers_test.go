@@ -175,7 +175,7 @@ func TestListen(t *testing.T) {
 		t.Fatal("dial failed:", err)
 	}
 	addr := modules.NetAddress(conn.LocalAddr().String())
-	ack, err := g.connectHandshake(conn, build.NewVersion(0, 1, 0), gatewayID{}, g.myAddr, true)
+	ack, err := g.connectHandshake(conn, build.NewVersion(0, 1, 0, 0), gatewayID{}, g.myAddr, true)
 	if err != errPeerRejectedConn {
 		t.Fatal(err)
 	}
@@ -408,7 +408,7 @@ func TestConnectRejectsVersions(t *testing.T) {
 	}{
 		// Test that Connect fails when the remote peer's version is < 1.0.0 (0).
 		{
-			version: build.NewVersion(0, 0, 0),
+			version: build.NewVersion(0, 0, 0, 0),
 			errWant: insufficientVersionError("0.0.0"),
 			msg:     "Connect should fail when the remote peer's version is 0.0.0",
 		},
@@ -871,7 +871,7 @@ func TestLegacyPeerConnects(t *testing.T) {
 	g := newTestingGateway(t)
 
 	// connect with 1.0.2 legacy peer
-	err := legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 2))
+	err := legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 2, 0))
 	if err != errPeerRejectedConn {
 		t.Error("expected errPeerRejectedConn, but received:", err)
 	}
@@ -879,7 +879,7 @@ func TestLegacyPeerConnects(t *testing.T) {
 	g = newTestingGateway(t)
 
 	// connect with 1.0.1 legacy peer
-	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 1))
+	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 1, 0))
 	if err != nil {
 		t.Error(err)
 	}
@@ -887,7 +887,7 @@ func TestLegacyPeerConnects(t *testing.T) {
 	g = newTestingGateway(t)
 
 	// connect with 1.0.0 legacy peer
-	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 0))
+	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 0, 0))
 	if err != nil {
 		t.Error(err)
 	}
@@ -895,7 +895,7 @@ func TestLegacyPeerConnects(t *testing.T) {
 	g = newTestingGateway(t)
 
 	// connect with 0.0.1 legacy peer
-	err = legacyConnect(string(g.myAddr), build.NewVersion(0, 0, 1))
+	err = legacyConnect(string(g.myAddr), build.NewVersion(0, 0, 1, 0))
 	if err != errPeerRejectedConn {
 		t.Error("expected errPeerRejectedConn, but received:", err)
 	}

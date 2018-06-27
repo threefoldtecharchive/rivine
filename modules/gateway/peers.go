@@ -23,7 +23,7 @@ var (
 var (
 	// constant to explicitly indicate a reject,
 	// new since v1.0.2
-	rejectedVersion = build.NewPrereleaseVersion(0, 0, 0, "reject")
+	rejectedVersion = build.NewPrereleaseVersion(0, 0, 0, 0, "reject")
 )
 
 // insufficientVersionError indicates a peer's version is insufficient.
@@ -539,7 +539,7 @@ func (g *Gateway) legacyAcceptConnectHandshake(conn net.Conn, version build.Prot
 	return
 }
 
-var legacyMinAcceptableVersion = build.NewVersion(0, 0, 1)
+var legacyMinAcceptableVersion = build.NewVersion(0, 0, 1, 0)
 
 const legacyEncodedVersionHeaderLength = 57
 

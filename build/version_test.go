@@ -12,17 +12,51 @@ func TestVersionCmp(t *testing.T) {
 		a, b ProtocolVersion
 		exp  int
 	}{
-		{NewVersion(0, 1, 0), NewVersion(0, 0, 9), 1},
-		{NewVersion(0, 1, 0), NewVersion(0, 1, 0), 0},
-		{NewVersion(0, 1, 0), NewVersion(0, 1, 1), -1},
-		{NewVersion(0, 1, 0), NewVersion(1, 1, 0), -1},
-		{NewPrereleaseVersion(0, 1, 1, "0"), NewVersion(0, 1, 1), -1},
+		{NewVersion(0, 1, 0, 0), NewVersion(0, 0, 9, 0), 1},
+		{NewVersion(0, 1, 0, 0), NewVersion(0, 1, 0, 0), 0},
+		{NewVersion(0, 1, 0, 0), NewVersion(0, 1, 1, 0), -1},
+		{NewVersion(0, 1, 0, 0), NewVersion(1, 1, 0, 0), -1},
+		{NewVersion(0, 1, 0, 1), NewVersion(0, 1, 0, 0), 1},
+		{NewVersion(0, 1, 0, 0), NewVersion(0, 1, 0, 1), -1},
+		{NewVersion(0, 1, 0, 1), NewVersion(0, 1, 0, 1), 0},
+		{NewPrereleaseVersion(0, 1, 1, 0, "0"), NewVersion(0, 1, 1, 0), -1},
+		{NewPrereleaseVersion(1, 2, 3, 4, "0"), NewVersion(1, 2, 3, 4), -1},
+		{NewVersion(1, 2, 3, 4), NewPrereleaseVersion(1, 2, 3, 4, "0"), 1},
+		{NewPrereleaseVersion(1, 2, 3, 4, "foo"), NewPrereleaseVersion(1, 2, 3, 4, "bar"), 0},
 	}
 
 	for _, test := range versionTests {
 		if actual := test.a.Compare(test.b); actual != test.exp {
 			t.Errorf("Comparing %s to %s should return %v (got %v)",
 				test.a.String(), test.b.String(), test.exp, actual)
+		}
+	}
+}
+
+func TestVersionPartialVersionString(t *testing.T) {
+	versionTests := []struct {
+		v   ProtocolVersion
+		exp string
+	}{
+		{NewPrereleaseVersion(1, 0, 0, 0, "123456789"), "1.0.0-12345678"}, // overflow prerelease should also handle
+		{NewPrereleaseVersion(1, 0, 0, 0, "12345678"), "1.0.0-12345678"},
+		{NewPrereleaseVersion(1, 0, 0, 1, "12345678"), "1.0.0.1-12345678"},
+		{NewPrereleaseVersion(1, 0, 0, 1, "1234567"), "1.0.0.1-1234567"},
+		{NewPrereleaseVersion(1, 0, 0, 1, "1234"), "1.0.0.1-1234"},
+		{NewPrereleaseVersion(1, 0, 0, 0, "?"), "1.0.0-?"},
+		{NewPrereleaseVersion(1, 0, 0, 0, ""), "1.0.0"},
+		{NewPrereleaseVersion(1, 2, 3, 0, ""), "1.2.3"},
+		{NewPrereleaseVersion(1, 2, 3, 4, ""), "1.2.3.4"},
+		{NewVersion(1, 0, 0, 0), "1.0.0"},
+		{NewVersion(1, 2, 3, 0), "1.2.3"},
+		{NewVersion(1, 0, 3, 4), "1.0.3.4"},
+		{NewVersion(0, 0, 0, 1), "0.0.0.1"},
+	}
+
+	for _, test := range versionTests {
+		if actual := test.v.String(); actual != test.exp {
+			t.Errorf("stringifying %v should result in %v (got %v)",
+				test.v, test.exp, actual)
 		}
 	}
 }
@@ -34,13 +68,18 @@ func TestVersionStringReflection(t *testing.T) {
 		{"1", "1.0.0"},
 		{"1.1", "1.1.0"},
 		{"1.1.1", "1.1.1"},
-		{"1.1.1-1", "1.1.1-1\x00\x00\x00\x00\x00\x00\x00"},
+		{"1.1.1-1", "1.1.1-1"},
 		{"255.255.255-12345678", "255.255.255-12345678"},
 		{"000.000.000-00000000", "0.0.0-00000000"},
-		{"1.2.3-alpha", "1.2.3-alpha\x00\x00\x00"},
-		{"1-4", "1.0.0-4\x00\x00\x00\x00\x00\x00\x00"},
-		{"1.2-4", "1.2.0-4\x00\x00\x00\x00\x00\x00\x00"},
-		{"1.2.3-4", "1.2.3-4\x00\x00\x00\x00\x00\x00\x00"},
+		{"1.2.3-alpha", "1.2.3-alpha"},
+		{"1-4", "1.0.0-4"},
+		{"1.2-4", "1.2.0-4"},
+		{"1.2.3-4", "1.2.3-4"},
+		{"0.1", "0.1.0"},
+		{"0.0.1", "0.0.1"},
+		{"0.0.0.1", "0.0.0.1"},
+		{"1.2.3.4", "1.2.3.4"},
+		{"1.2.3.4-5", "1.2.3.4-5"},
 	}
 
 	for index, testCase := range testCases {
@@ -73,10 +112,14 @@ func TestVersionStringReflection(t *testing.T) {
 
 func TestVersionJSONReflection(t *testing.T) {
 	testCases := []ProtocolVersion{
-		NewVersion(0, 0, 0),
-		NewVersion(1, 2, 3),
-		NewPrereleaseVersion(1, 2, 3, "4"),
-		NewPrereleaseVersion(255, 255, 255, "        "),
+		NewVersion(0, 0, 0, 0),
+		NewVersion(1, 2, 3, 0),
+		NewVersion(1, 2, 3, 4),
+		NewPrereleaseVersion(1, 2, 3, 0, "4"),
+		NewPrereleaseVersion(1, 2, 3, 4, "5"),
+		NewPrereleaseVersion(1, 2, 3, 4, "12345678"),
+		NewPrereleaseVersion(255, 255, 255, 0, "        "),
+		NewPrereleaseVersion(255, 255, 255, 255, "        "),
 	}
 	for index, in := range testCases {
 		bytes, err := in.MarshalJSON()
@@ -114,20 +157,42 @@ func TestInvalidStringVersionRange(t *testing.T) {
 	if _, err := Parse("256.256.256"); err == nil {
 		t.Fatal("expected `256.256.256` to be out of range")
 	}
+	if _, err := Parse("1.1.1.256"); err == nil {
+		t.Fatal("expected `1.1.1.256` to be out of range")
+	}
+	if _, err := Parse("1.1.256.256"); err == nil {
+		t.Fatal("expected `1.1.256.256` to be out of range")
+	}
+	if _, err := Parse("1.256.256.256"); err == nil {
+		t.Fatal("expected `1.256.256.256` to be out of range")
+	}
+	if _, err := Parse("256.256.256.256"); err == nil {
+		t.Fatal("expected `256.256.256.256` to be out of range")
+	}
 }
 
 func TestValidStringVersionRange(t *testing.T) {
 	for major := 0; major <= 255; major += 25 {
 		for minor := 0; minor <= 255; minor += 15 {
-			for patch := 0; patch <= 255; patch++ {
-				raw := fmt.Sprintf("%d.%d.%d", major, minor, patch)
-				version, err := Parse(raw)
-				if err != nil {
-					t.Errorf("test %q failed: %v", raw, err)
-					continue
-				}
-				if out := version.String(); raw != out {
-					t.Errorf("test failed: expected %q, while received %q", raw, out)
+			for patch := 0; patch <= 255; patch += 10 {
+				for build := 0; build <= 255; build += 5 {
+					raw := fmt.Sprintf("%d.%d.%d.%d", major, minor, patch, build)
+					version, err := Parse(raw)
+					if err != nil {
+						t.Errorf("test %q failed: %v", raw, err)
+						continue
+					}
+					if out := version.String(); raw != out {
+						if build != 0 {
+							t.Errorf("test failed: expected %q, while received %q", raw, out)
+							continue
+						}
+						raw = raw[:len(raw)-2]
+						if raw != out {
+							t.Errorf("test failed: expected %q, while received %q", raw, out)
+							continue
+						}
+					}
 				}
 			}
 		}

@@ -10,18 +10,36 @@ import (
 // Parse attempts to create a version based on a given string
 func Parse(raw string) (ver ProtocolVersion, err error) {
 	parts := versionReg.FindStringSubmatch(raw)
-	if len(parts) != 5 {
+	if len(parts) != 6 {
 		err = InvalidVersionError(raw)
 		return
 	}
-
-	// because of the regexp we can be sure that this will always succeed
-	// an empty string automatically results in 0, even though it also returns an err
+	if parts[1] == "" {
+		// at least one number is required,
+		// the major in case it is the only number given
+		err = InvalidVersionError(raw)
+		return
+	}
 	major, _ := strconv.ParseUint(parts[1], 10, 8)
-	minor, _ := strconv.ParseUint(parts[2], 10, 8)
-	patch, _ := strconv.ParseUint(parts[3], 10, 8)
+	var optionalParts [3]uint64 // contains minor, patch and build
+	for i, part := range parts[2:5] {
+		if part == "" {
+			// we can stop as soon as we have one optional number not,
+			// given that it should mean that we have no other number following this one
+			break
+		}
+		// because of the regexp we can be sure that this will always succeed,
+		// as long as it is found
+		optionalParts[i], _ = strconv.ParseUint(part, 10, 8)
+	}
 
-	ver = NewPrereleaseVersion(uint8(major), uint8(minor), uint8(patch), parts[4])
+	ver = NewPrereleaseVersion(
+		uint8(major),
+		uint8(optionalParts[0]),
+		uint8(optionalParts[1]),
+		uint8(optionalParts[2]),
+		parts[5],
+	)
 	return
 }
 
@@ -36,14 +54,14 @@ func MustParse(raw string) ProtocolVersion {
 }
 
 // NewVersion creates a new protocol version
-func NewVersion(major, minor, patch uint8) ProtocolVersion {
-	return NewPrereleaseVersion(major, minor, patch, "")
+func NewVersion(major, minor, patch, build uint8) ProtocolVersion {
+	return NewPrereleaseVersion(major, minor, patch, build, "")
 }
 
 // NewPrereleaseVersion creates a new protocol prerelease version
-func NewPrereleaseVersion(major, minor, patch uint8, prerelease string) ProtocolVersion {
+func NewPrereleaseVersion(major, minor, patch, build uint8, prerelease string) ProtocolVersion {
 	var v ProtocolVersion
-	v.Version = (uint32(major) << 24) | (uint32(minor) << 16) | (uint32(patch) << 8)
+	v.Version = (uint32(major) << 24) | (uint32(minor) << 16) | (uint32(patch) << 8) | uint32(build)
 	copy(v.Prerelease[:], prerelease[:])
 	return v
 }
@@ -97,9 +115,18 @@ func (pv ProtocolVersion) String() string {
 		(pv.Version>>8)&0xFF,  // patch
 	)
 
+	// optional build number, only printed when non-0
+	if build := pv.Version & 0xFF; build != 0 {
+		str += fmt.Sprintf(".%d", build)
+	}
+
 	// optional prerelease
 	if pv.Prerelease != nilPreRelease {
-		str += "-" + string(pv.Prerelease[:])
+		index := 0
+		for index < 8 && pv.Prerelease[index] != 0 {
+			index++
+		}
+		str += "-" + string(pv.Prerelease[:index])
 	}
 
 	return str
@@ -143,7 +170,7 @@ const (
 	EncodedVersionLength = 16 // sizeof(uint32==64) + sizeof([8]uint8)
 )
 
-const versionRe = `^v?(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:-(.+?))?$`
+const versionRe = `^^v?(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:\.(0{0,2}[0-9]|[0-1]?[0-9]{1,2}|2[0-4][0-9]|25[0-5]))?(?:-(.+?))?$`
 
 // contains the regexp for all valid versions
 var versionReg = regexp.MustCompile(versionRe)
