@@ -37,10 +37,26 @@ type (
 		RawTransaction types.Transaction   `json:"rawtransaction"`
 		HexTransaction string              `json:"hextransaction"`
 
-		CoinInputOutputs       []types.CoinOutput         `json:"coininputoutputs"` // the outputs being spent
-		CoinOutputIDs          []types.CoinOutputID       `json:"coinoutputids"`
-		BlockStakeInputOutputs []types.BlockStakeOutput   `json:"blockstakeinputoutputs"` // the outputs being spent
-		BlockStakeOutputIDs    []types.BlockStakeOutputID `json:"blockstakeoutputids"`
+		CoinInputOutputs             []ExplorerCoinOutput       `json:"coininputoutputs"` // the outputs being spent
+		CoinOutputIDs                []types.CoinOutputID       `json:"coinoutputids"`
+		CoinOutputUnlockHashes       []types.UnlockHash         `json:"coinoutputunlockhashes"`
+		BlockStakeInputOutputs       []ExplorerBlockStakeOutput `json:"blockstakeinputoutputs"` // the outputs being spent
+		BlockStakeOutputIDs          []types.BlockStakeOutputID `json:"blockstakeoutputids"`
+		BlockStakeOutputUnlockHashes []types.UnlockHash         `json:"blockstakeunlockhashes"`
+	}
+
+	// ExplorerCoinOutput is the same a regular types.CoinOutput,
+	// but with the addition of the pre-computed UnlockHash of its condition.
+	ExplorerCoinOutput struct {
+		types.CoinOutput
+		UnlockHash types.UnlockHash `json:"unlockhash"`
+	}
+
+	// ExplorerBlockStakeOutput is the same a regular types.BlockStakeOutput,
+	// but with the addition of the pre-computed UnlockHash of its condition.
+	ExplorerBlockStakeOutput struct {
+		types.BlockStakeOutput
+		UnlockHash types.UnlockHash `json:"unlockhash"`
 	}
 
 	// ExplorerGET is the object returned as a response to a GET request to
@@ -89,11 +105,15 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 		if build.DEBUG && !exists {
 			panic("could not find corresponding coin output")
 		}
-		et.CoinInputOutputs = append(et.CoinInputOutputs, sco)
+		et.CoinInputOutputs = append(et.CoinInputOutputs, ExplorerCoinOutput{
+			CoinOutput: sco,
+			UnlockHash: sco.Condition.UnlockHash(),
+		})
 	}
 
-	for i := range txn.CoinOutputs {
+	for i, co := range txn.CoinOutputs {
 		et.CoinOutputIDs = append(et.CoinOutputIDs, txn.CoinOutputID(uint64(i)))
+		et.CoinOutputUnlockHashes = append(et.CoinOutputUnlockHashes, co.Condition.UnlockHash())
 	}
 
 	// Add the siafund outputs that correspond to each siacoin input.
@@ -102,11 +122,15 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 		if build.DEBUG && !exists {
 			panic("could not find corresponding blockstake output")
 		}
-		et.BlockStakeInputOutputs = append(et.BlockStakeInputOutputs, sco)
+		et.BlockStakeInputOutputs = append(et.BlockStakeInputOutputs, ExplorerBlockStakeOutput{
+			BlockStakeOutput: sco,
+			UnlockHash:       sco.Condition.UnlockHash(),
+		})
 	}
 
-	for i := range txn.BlockStakeOutputs {
+	for i, bso := range txn.BlockStakeOutputs {
 		et.BlockStakeOutputIDs = append(et.BlockStakeOutputIDs, txn.BlockStakeOutputID(uint64(i)))
+		et.BlockStakeOutputUnlockHashes = append(et.BlockStakeOutputUnlockHashes, bso.Condition.UnlockHash())
 	}
 
 	return et
