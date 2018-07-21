@@ -4,9 +4,9 @@ import (
 	"encoding/hex"
 	"errors"
 
-	bip39 "github.com/rivine/go-bip39"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/types"
+	bip39 "github.com/tyler-smith/go-bip39"
 )
 
 const (

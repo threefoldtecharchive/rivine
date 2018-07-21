@@ -191,7 +191,7 @@ wallet is locked.
 A seed is an encoded version of a 128 bit random seed. The output is 15 words
 chosen from a small dictionary as indicated by the input. The encoding also
 contains a small checksum of the seed, to help catch simple mistakes when
-copying. The library [go-bip39](https://github.com/rivine/go-bip39) is used 
+copying. The library [go-bip39](https://github.com/tyler-smith/go-bip39) is used 
 when encoding.
 
 ###### JSON Response

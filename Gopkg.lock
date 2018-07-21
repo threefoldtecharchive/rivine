@@ -85,12 +85,6 @@
   version = "v1.3.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/rivine/go-bip39"
-  packages = ["."]
-  revision = "e35a707fc62766b909ae41fc6d45c1efac74bf34"
-
-[[projects]]
   name = "github.com/rivine/smux"
   packages = ["."]
   revision = "e28719eede1ac5714cf0b06ba2f403125864ebe0"
@@ -107,6 +101,15 @@
   packages = ["."]
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/tyler-smith/go-bip39"
+  packages = [
+    ".",
+    "wordlists"
+  ]
+  revision = "95c66720ed7ac2f4b78ddb31d940d59193894f49"
 
 [[projects]]
   branch = "master"
@@ -166,6 +169,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d4cd494db490f1dc14fe88306546ae7261a6e13161e0a85399036d8beb978284"
+  inputs-digest = "34a52614f0e309dd357ac2ed9e3b6a14688619749d3beb3fabe5e8a001dfd1be"
   solver-name = "gps-cdcl"
   solver-version = 1
