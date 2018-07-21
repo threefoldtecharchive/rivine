@@ -348,7 +348,7 @@ func atomicswapparticipatecmd(participantAddress, amount, hashedSecret string) {
 	createAtomicSwapContract(hastings, sender, receiver, hash, atomicSwapParticipatecfg.duration)
 }
 
-func atomicswapinitiatecmd(participatorAddress, amount string) {
+func atomicswapinitiatecmd(participantAddress, amount string) {
 	// parse hastings
 	hastings := parseCoinArg(amount)
 
@@ -356,9 +356,9 @@ func atomicswapinitiatecmd(participatorAddress, amount string) {
 	var (
 		receiver, sender types.UnlockHash
 	)
-	err := receiver.LoadString(participatorAddress)
+	err := receiver.LoadString(participantAddress)
 	if err != nil {
-		DieWithExitCode(ExitCodeUsage, "failed to parse participator address (unlock hash):", err)
+		DieWithExitCode(ExitCodeUsage, "failed to parse participant address (unlock hash):", err)
 	}
 	if atomicSwapInitiatecfg.sourceUnlockHash.Type != 0 {
 		// use the hash given by the user explicitly
@@ -634,7 +634,7 @@ TimeLock reached in: %s
 		}
 	}
 	if atomicSwapAuditcfg.ReceiverAddress != (types.UnlockHash{}) {
-		// optionally validate participator's address (unlockhash)
+		// optionally validate receiver's address (unlockhash)
 		if atomicSwapAuditcfg.ReceiverAddress.Cmp(condition.Receiver) != 0 {
 			invalidContract = true
 			fmt.Fprintln(os.Stderr, "found contract's receiver's address "+
@@ -644,7 +644,7 @@ TimeLock reached in: %s
 		}
 	}
 	if atomicSwapAuditcfg.MinDurationLeft != 0 {
-		// optionally validate participator's address (unlockhash)
+		// optionally validate locktime
 		if durationLeft < atomicSwapAuditcfg.MinDurationLeft {
 			invalidContract = true
 			fmt.Fprintln(os.Stderr, "found contract's duration left "+
@@ -792,7 +792,7 @@ secretCheck:
 	}
 
 	// otherwise print it for a human, in a more verbose and friendly way
-	fmt.Println("atomic swap contract was redeemed by participator")
+	fmt.Println("atomic swap contract was redeemed")
 	fmt.Println("extracted secret:", secret.String())
 }
 
@@ -1081,13 +1081,13 @@ func init() {
 
 	atomicSwapParticipateCmd.Flags().DurationVarP(
 		&atomicSwapParticipatecfg.duration, "duration", "d",
-		time.Hour*24, "the duration of the atomic swap contract, the amount of time the participator has to collect")
+		time.Hour*24, "the duration of the atomic swap contract, the amount of time the initiator has to collect")
 	atomicSwapParticipateCmd.Flags().Var(cli.StringLoaderFlag{StringLoader: &atomicSwapParticipatecfg.sourceUnlockHash}, "initiator",
 		"optionally define a wallet address (unlockhash) that is to be used for refunding purposes, one will be generated for you if none is given")
 
 	atomicSwapInitiateCmd.Flags().DurationVarP(
 		&atomicSwapInitiatecfg.duration, "duration", "d",
-		time.Hour*48, "the duration of the atomic swap contract, the amount of time the participator has to collect")
+		time.Hour*48, "the duration of the atomic swap contract, the amount of time the participant has to collect")
 	atomicSwapInitiateCmd.Flags().Var(cli.StringLoaderFlag{StringLoader: &atomicSwapInitiatecfg.sourceUnlockHash}, "initiator",
 		"optionally define a wallet address (unlockhash) that is to be used for refunding purposes, one will be generated for you if none is given")
 
