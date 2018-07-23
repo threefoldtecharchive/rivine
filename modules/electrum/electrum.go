@@ -2,6 +2,7 @@ package electrum
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -20,9 +21,8 @@ type Electrum struct {
 	tp       modules.TransactionPool
 	explorer modules.Explorer
 
-	mu                  sync.Mutex
-	connections         map[*Client]chan<- *Update
-	addressSubscription map[types.UnlockHash][]*Client
+	mu          sync.Mutex
+	connections map[*Client]chan<- *Update
 
 	log    *persist.Logger
 	bcInfo types.BlockchainInfo
@@ -48,13 +48,16 @@ func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 		return nil, errors.New("Consensus set is required for the Electrum module")
 	}
 
+	if explorer == nil {
+		return nil, errors.New("Explorer is required for the Electrum module")
+	}
+
 	e := &Electrum{
 		cs:       cs,
 		tp:       tp,
 		explorer: explorer,
 
-		connections:         make(map[*Client]chan<- *Update), // add update channel value
-		addressSubscription: make(map[types.UnlockHash][]*Client),
+		connections: make(map[*Client]chan<- *Update), // add update channel value
 
 		bcInfo: bcInfo,
 
@@ -77,7 +80,9 @@ func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 	}
 	e.httpServer = httpServer
 
-	return e, nil
+	err := cs.ConsensusSetSubscribe(e, modules.ConsensusChangeRecent)
+
+	return e, err
 }
 
 // AddressStatus generates the status for an address as per the
@@ -85,6 +90,10 @@ func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 	// Get confirmed transactions
 	txns := e.explorer.UnlockHash(address)
+
+	if len(txns) == 0 {
+		return ""
+	}
 	// Get the heights
 	// multiple txns could be at the same height
 
@@ -108,7 +117,7 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 	}
 	statusHash := sha256.Sum256([]byte(statusString))
 
-	return string(statusHash[:])
+	return hex.EncodeToString(statusHash[:])
 }
 
 // Start all the servers, and accept incomming connections
@@ -127,9 +136,11 @@ func (e *Electrum) Start() {
 // Close closses the Electrum instance and every connection it is managing
 func (e *Electrum) Close() error {
 	// TODO: FIX log closing (threadgroup)
+	e.cs.Unsubscribe(e)
 	if e.httpServer != nil {
 		if err := e.httpServer.Shutdown(nil); err != nil {
 			e.log.Println("[ERROR] [HTTPSERVER] Error while closing http server:", err)
+			return err
 		}
 	}
 	close(e.stopChan)

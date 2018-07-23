@@ -77,7 +77,11 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 		return nil, errFatal
 	}
 
-	e.registerBlockchainMethods(cl)
+	if err = e.registerBlockchainMethods(cl); err != nil {
+		// TODO: in case of dup registration, this is not the right
+		// error to return
+		return nil, ErrInternal
+	}
 	// TODO: SET SERVER VERSION
 	e.log.Debug("Set proto version")
 	resp.ProtoVersion = e.availableVersions[0]

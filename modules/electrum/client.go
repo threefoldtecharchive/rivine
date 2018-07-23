@@ -36,6 +36,8 @@ func (cl *Client) registerService(name string, f rpcFunc) error {
 }
 
 func (cl *Client) sendUpdate(update *Update) {
+	cl.mu.RLock()
+	defer cl.mu.RUnlock()
 	for subscribedAddress := range cl.addressSubscriptions {
 		if status, exists := update.addressStates[subscribedAddress]; exists {
 			cl.notify("blockchain.address.subscribe",
@@ -44,14 +46,14 @@ func (cl *Client) sendUpdate(update *Update) {
 	}
 }
 
-func (cl *Client) notify(method string, params interface{}) {
+func (cl *Client) notify(method string, params interface{}) error {
 	n := &Notification{
 		JSONRPC: jsonRPCVersion,
 		Method:  method,
 		Params:  params,
 	}
 
-	cl.transport.Send(n)
+	return cl.transport.Send(n)
 }
 
 func (cl *Client) registerAddressSubscription(address types.UnlockHash) error {
@@ -67,24 +69,19 @@ func (cl *Client) registerAddressSubscription(address types.UnlockHash) error {
 }
 
 func (cl *Client) call(r *Request) (interface{}, error) {
-	cl.mu.RLock()
-	defer cl.mu.RUnlock()
 
+	if r.JSONRPC != jsonRPCVersion {
+		return nil, ErrParse
+	}
+
+	cl.mu.RLock()
 	f, exists := cl.serviceMap[r.Method]
+	cl.mu.RUnlock()
 	if !exists {
 		return nil, ErrMethodNotFound
 	}
 
 	return f(cl, r.Params)
-	// result, err := f(cl, r.Params)
-	// response := newResponse(r.ID, result, err)
-
-	// // If response is nil there is nothing to send, so return here
-	// if response == nil {
-	// 	return nil
-	// }
-	// cl.transport.Send(response)
-	// return nil
 
 }
 

@@ -99,16 +99,16 @@ func newResponse(ID interface{}, result interface{}, err error) *Response {
 	// check for an error first, and only set the result if the error
 	// is not nil
 
+	var rpcError RPCError
 	if err != nil {
 		if rpce, ok := err.(RPCError); ok {
-			err = rpce
+			rpcError = rpce
 		} else {
 			// Convert to RPCError
-			err = RPCError{
-				Code:    1, // TODO: define custom error codes
-				Message: err.Error(),
-			}
+			rpcError.Code = 1 // TODO: define custom error codes
+			rpcError.Message = err.Error()
 		}
+		r.Error = &rpcError
 		return r
 	}
 
@@ -133,13 +133,16 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 	e.connections[cl] = updateChan
 	e.mu.Unlock()
 
-	e.registerServerMethods(cl)
+	if err := e.registerServerMethods(cl); err != nil {
+		e.log.Println("[ERROR] Failed to register server methods:", err)
+		e.closeConnection(cl)
+	}
 
 	// start read loop
 	for {
 		select {
 		case update := <-updateChan:
-			// handle subscriptions
+			// handle subscriptions.
 			cl.sendUpdate(update)
 		case req := <-cl.transport.GetRequest():
 			// handle request
@@ -148,12 +151,14 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 
 			go func() {
 				result, err := cl.call(&req)
-				response := newResponse(req.ID, result, err)
 
+				response := newResponse(req.ID, result, err)
+				e.log.Debugln(response)
 				// If response is nil there is nothing to send, so return here
 				if response == nil {
 					return
 				}
+				e.log.Println("Send response")
 				cl.transport.Send(response)
 			}()
 
@@ -168,6 +173,8 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 			}
 
 			e.log.Debugln("Client error on connection:", err)
+			// TODO: Send parse error
+			// How to get ID if parsing fails?
 			cl.resetTimer()
 
 		case <-cl.timer.C:
