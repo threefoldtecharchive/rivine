@@ -36,6 +36,10 @@
   branch = "master"
   name = "github.com/tyler-smith/go-bip39"
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/rivine/bbolt"
+
 [prune]
   go-tests = true
   unused-packages = true
