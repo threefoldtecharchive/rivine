@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sort"
 	"sync"
@@ -31,6 +32,8 @@ type Electrum struct {
 
 	// http server for websocket connections
 	httpServer *http.Server
+	// tcp listener for tcp connections
+	tcpServer net.Listener
 
 	stopChan chan struct{}
 }
@@ -42,7 +45,8 @@ type Electrum struct {
 //
 // Listerners are not started yet, this is done through the Start method
 func New(cs modules.ConsensusSet, tp modules.TransactionPool,
-	explorer modules.Explorer, wsAddress string, persistDir string, bcInfo types.BlockchainInfo) (*Electrum, error) {
+	explorer modules.Explorer, tcpAddress string, wsAddress string,
+	persistDir string, bcInfo types.BlockchainInfo) (*Electrum, error) {
 
 	if cs == nil {
 		return nil, errors.New("Consensus set is required for the Electrum module")
@@ -80,7 +84,17 @@ func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 	}
 	e.httpServer = httpServer
 
-	err := cs.ConsensusSetSubscribe(e, modules.ConsensusChangeRecent)
+	var tcpServer net.Listener
+	var err error
+	if tcpAddress != "" {
+		tcpServer, err = net.Listen("tcp", tcpAddress)
+		if err != nil {
+			return nil, err
+		}
+	}
+	e.tcpServer = tcpServer
+
+	err = cs.ConsensusSetSubscribe(e, modules.ConsensusChangeRecent)
 
 	return e, err
 }
@@ -124,10 +138,19 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 func (e *Electrum) Start() {
 	// Start the http server if one is configured
 	if e.httpServer != nil {
+		e.log.Println("Starting http server for websocket connections")
 		go func() {
-			e.log.Println("Starting http server for websocket connections")
 			if err := e.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				e.log.Critical("[ERROR] [HTTPSERVER]: error while running http server: ", err)
+				e.log.Critical("[ERROR] [HTTPSERVER]: error while running http server:", err)
+			}
+		}()
+	}
+	// Start listening for raw tcp connections
+	if e.tcpServer != nil {
+		e.log.Println("Start accepting tcp connections")
+		go func() {
+			if err := e.listenTCP(); err != nil {
+				e.log.Critical("[ERROR] [TCPSERVER]: error while listening for tcp connections:", err)
 			}
 		}()
 	}
@@ -143,6 +166,14 @@ func (e *Electrum) Close() error {
 			return err
 		}
 	}
+
+	if e.tcpServer != nil {
+		if err := e.tcpServer.Close(); err != nil {
+			e.log.Println("[ERROR] [TCPSERVER]: Error while closing tcp listener:", err)
+			return err
+		}
+	}
+
 	close(e.stopChan)
 	if err := e.log.Close(); err != nil {
 		fmt.Println("Failed to close electrum logger:", err)

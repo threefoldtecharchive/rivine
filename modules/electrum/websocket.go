@@ -11,7 +11,7 @@ import (
 
 type websocketConn struct {
 	conn        *websocket.Conn
-	requestChan chan Request
+	requestChan chan *Request
 	errorChan   chan error
 
 	// Synchronize writes
@@ -43,7 +43,7 @@ func (e *Electrum) handleWs(w http.ResponseWriter, r *http.Request) {
 func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 	c := &websocketConn{
 		conn:        conn,
-		requestChan: make(chan Request),
+		requestChan: make(chan *Request),
 		errorChan:   make(chan error),
 	}
 
@@ -52,8 +52,8 @@ func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 		for {
 			// Since we only use jsonrpc, we can use the
 			// ReadJSON convenience method here
-			req := Request{}
-			if err := c.conn.ReadJSON(&req); err != nil {
+			req := &Request{}
+			if err := c.conn.ReadJSON(req); err != nil {
 				// Since we don't expect the client to close the connection,
 				// everything is unexpected
 				if websocket.IsUnexpectedCloseError(err) || err == io.ErrUnexpectedEOF {
@@ -79,7 +79,7 @@ func (c *websocketConn) GetError() <-chan error {
 	return c.errorChan
 }
 
-func (c *websocketConn) GetRequest() <-chan Request {
+func (c *websocketConn) GetRequest() <-chan *Request {
 	return c.requestChan
 }
 
