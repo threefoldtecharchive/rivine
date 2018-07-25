@@ -1,0 +1,49 @@
+jobs:
+  include:
+    - stage: test
+      language: go
+      go:
+        - 1.10.x
+      install:
+        - go get -v ./...
+        - go get honnef.co/go/tools/cmd/gosimple
+        - go get honnef.co/go/tools/cmd/unused
+        - go get github.com/kisielk/errcheck
+      script:
+        - make install
+        - make test
+        - make fmt
+        - make gosimple
+        - make unused
+        - make errcheck
+        - make race
+    - stage: test
+      language: go
+      go:
+        - 1.8.x
+      install:
+        - go get -v ./...
+      script:
+        - make install
+        - make test
+        - make race
+    - stage: test
+      language: go
+      go:
+        - 1.9.x
+      install:
+        - go get -v ./...
+      script:
+        - make install
+        - make test
+        - make race
+    - stage: test
+      language: go
+      go:
+        - tip
+      install:
+        - go get -v ./...
+      script:
+        - make install
+        - make test
+        - make race

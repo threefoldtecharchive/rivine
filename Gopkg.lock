@@ -79,10 +79,10 @@
   version = "v0.8.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/rivine/bbolt"
   packages = ["."]
-  revision = "583e8937c61f1af6513608ccc75c97b6abdf4ff9"
-  version = "v1.3.0"
+  revision = "19c3af6fd3cefb5dc9c05dfc84122e8f74f92927"
 
 [[projects]]
   name = "github.com/rivine/smux"
@@ -169,6 +169,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "34a52614f0e309dd357ac2ed9e3b6a14688619749d3beb3fabe5e8a001dfd1be"
+  inputs-digest = "7896271e57a19ddc6e2977617b67779677526914d53cfda5718dbf54c7f3241f"
   solver-name = "gps-cdcl"
   solver-version = 1
