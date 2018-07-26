@@ -19,6 +19,9 @@ type (
 
 		addressSubscriptions map[types.UnlockHash]bool
 
+		// wait for all calls to finish
+		wg sync.WaitGroup
+
 		clientName   string
 		protoVersion ProtocolVersion
 	}

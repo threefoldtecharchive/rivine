@@ -2,7 +2,6 @@ package electrum
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -14,6 +13,7 @@ type tcpConn struct {
 	enc         *json.Encoder
 	requestChan chan *Request
 	errorChan   chan error
+	stopChan    chan struct{}
 
 	// Synchronize writes
 	mu sync.Mutex
@@ -40,6 +40,7 @@ func createTCPConn(conn net.Conn) *tcpConn {
 		enc:         json.NewEncoder(conn),
 		requestChan: make(chan *Request),
 		errorChan:   make(chan error),
+		stopChan:    make(chan struct{}),
 	}
 
 	// Start goroutine which reads on the connection
@@ -48,9 +49,14 @@ func createTCPConn(conn net.Conn) *tcpConn {
 			// Since we only use jsonrpc, we can use the
 			// ReadJSON convenience method here
 			req := &Request{}
-			if err := c.dec.Decode(req); err != nil {
+			err := c.dec.Decode(req)
+			select {
+			case <-c.stopChan:
+				return
+			default:
+			}
+			if err != nil {
 				if err == io.EOF || err == io.ErrUnexpectedEOF {
-					fmt.Println("The transport is closed")
 					c.errorChan <- errTransportClosed{err}
 					// No need to keep on reading here
 					return
@@ -65,7 +71,13 @@ func createTCPConn(conn net.Conn) *tcpConn {
 	return c
 }
 
-func (c *tcpConn) Close() error {
+func (c *tcpConn) Close(wg sync.WaitGroup) error {
+	close(c.stopChan)
+	close(c.requestChan)
+	close(c.errorChan)
+	// Wait untill all active calls have finished before actually closing
+	// the connection
+	wg.Wait()
 	return c.conn.Close()
 }
 
@@ -85,4 +97,8 @@ func (c *tcpConn) Send(msg interface{}) error {
 
 func (c *tcpConn) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
+}
+
+func (c *tcpConn) IsClosed() <-chan struct{} {
+	return c.stopChan
 }

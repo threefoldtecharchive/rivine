@@ -13,6 +13,7 @@ type websocketConn struct {
 	conn        *websocket.Conn
 	requestChan chan *Request
 	errorChan   chan error
+	stopChan    chan struct{}
 
 	// Synchronize writes
 	mu sync.Mutex
@@ -45,6 +46,7 @@ func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 		conn:        conn,
 		requestChan: make(chan *Request),
 		errorChan:   make(chan error),
+		stopChan:    make(chan struct{}),
 	}
 
 	// Start goroutine which reads on the connection
@@ -53,7 +55,13 @@ func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 			// Since we only use jsonrpc, we can use the
 			// ReadJSON convenience method here
 			req := &Request{}
-			if err := c.conn.ReadJSON(req); err != nil {
+			err := c.conn.ReadJSON(req)
+			select {
+			case <-c.stopChan:
+				return
+			default:
+			}
+			if err != nil {
 				// Since we don't expect the client to close the connection,
 				// everything is unexpected
 				if websocket.IsUnexpectedCloseError(err) || err == io.ErrUnexpectedEOF {
@@ -71,7 +79,13 @@ func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 	return c
 }
 
-func (c *websocketConn) Close() error {
+func (c *websocketConn) Close(wg sync.WaitGroup) error {
+	close(c.stopChan)
+	close(c.requestChan)
+	close(c.errorChan)
+	// Wait untill all active calls have finished before actually closing
+	// the connection
+	wg.Wait()
 	return c.conn.Close()
 }
 
@@ -86,9 +100,14 @@ func (c *websocketConn) GetRequest() <-chan *Request {
 func (c *websocketConn) Send(msg interface{}) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	return c.conn.WriteJSON(msg)
 }
 
 func (c *websocketConn) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
+}
+
+func (c *websocketConn) IsClosed() <-chan struct{} {
+	return c.stopChan
 }

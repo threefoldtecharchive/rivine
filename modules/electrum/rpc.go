@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/rivine/rivine/types"
@@ -31,13 +32,13 @@ type (
 		GetError() <-chan error
 		// Send a response or notification
 		Send(interface{}) error
+		// IsClosed checks if the connections is closed or closing.
+		IsClosed() <-chan struct{}
 		// Close the underlying connection and any goroutines
 		// used to e.g. read from the connection
-		Close() error
+		Close(sync.WaitGroup) error
 		// RemoteAddr returns the remote address of the connection
 		RemoteAddr() net.Addr
-		// AddService adds a new service to the connection
-		// AddService(recv interface{}) error
 	}
 
 	// errTransportClosed indicates that the underlying transport is closed
@@ -141,6 +142,11 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 	// start read loop
 	for {
 		select {
+		case <-cl.transport.IsClosed():
+			// transport closing, exit
+			e.log.Println("Closed connection to", cl.transport.RemoteAddr(), "as transport is closed")
+			return
+
 		case update := <-updateChan:
 			// handle subscriptions.
 			cl.sendUpdate(update)
@@ -152,6 +158,9 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 
 			// Need to ensure calls complete before exiting
 			go func() {
+				cl.wg.Add(1)
+				defer cl.wg.Done()
+
 				result, err := cl.call(req)
 				if err == errFatal {
 					e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to an error")
@@ -180,8 +189,13 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 			}
 
 			e.log.Debugln("Client error on connection:", err)
-			// TODO: Send parse error
-			// How to get ID if parsing fails?
+			// If we are here the connection is alive but the request could
+			// not be parsed. Send a parse error
+			response := &Response{
+				Error:   &ErrParse,
+				JSONRPC: jsonRPCVersion,
+			}
+			cl.transport.Send(response)
 			cl.resetTimer()
 
 		case <-cl.timer.C:
@@ -216,7 +230,9 @@ func (e *Electrum) closeConnection(cl *Client) error {
 		default:
 		}
 	}
-	err := cl.transport.Close()
+	// Wait for the calls to finish
+	cl.wg.Wait()
+	err := cl.transport.Close(cl.wg)
 	if err != nil {
 		e.log.Println("[ERROR]: Failed to close connection:", err)
 	}
