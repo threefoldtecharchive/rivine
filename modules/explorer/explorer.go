@@ -79,7 +79,7 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		return nil, err
 	}
 
-	err = cs.ConsensusSetSubscribe(e, recentChange)
+	err = cs.ConsensusSetSubscribe(e, recentChange, nil)
 	if err != nil {
 		// TODO: restart from 0
 		return nil, errors.New("explorer subscription failed: " + err.Error())

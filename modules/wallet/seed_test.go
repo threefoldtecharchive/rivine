@@ -255,7 +255,7 @@ func TestLoadSeed(t *testing.T) {
 
 	// rescan
 	cs.Unsubscribe(w)
-	err = cs.ConsensusSetSubscribe(w, modules.ConsensusChangeID{})
+	err = cs.ConsensusSetSubscribe(w, modules.ConsensusChangeID{}, w.tg.StopChan())
 	if err != nil {
 		t.Errorf("Couldn't rescan by unsubscribing and subscribing again: %v", err)
 	}
