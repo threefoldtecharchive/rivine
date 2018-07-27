@@ -178,6 +178,9 @@ func (w *Wallet) updateConfirmedSet(tx *bolt.Tx, cc modules.ConsensusChange) err
 			} else {
 				w.log.Println("Wallet has lost a spendable block stake output:", diff.ID, "::", diff.BlockStakeOutput.Value)
 				err = dbDeleteBlockStakeOutput(tx, diff.ID)
+				if err == nil {
+					err = dbDeleteUnspentBlockstakeOutput(tx, diff.ID)
+				}
 			}
 			if err != nil {
 				w.log.Severe("Could not update block stake output:", err)

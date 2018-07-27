@@ -281,6 +281,9 @@ func dbGetAddrTransactions(tx *bolt.Tx, addr types.UnlockHash) (txns []uint64, e
 func dbPutUnspentBlockstakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, ubso types.UnspentBlockStakeOutput) error {
 	return dbPut(tx.Bucket(bucketUnspentBlockStakeOutputs), id, ubso)
 }
+func dbDeleteUnspentBlockstakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) error {
+	return dbDelete(tx.Bucket(bucketUnspentBlockStakeOutputs), id)
+}
 func dbForEachUnspentBlockStakeOutput(tx *bolt.Tx, fn func(types.BlockStakeOutputID, types.UnspentBlockStakeOutput)) error {
 	return dbForEach(tx.Bucket(bucketUnspentBlockStakeOutputs), fn)
 }
