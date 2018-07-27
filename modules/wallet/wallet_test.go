@@ -1022,7 +1022,7 @@ func (css *consensusSetStub) TryTransactionSet(txs []types.Transaction) (change 
 	return cc, nil
 }
 
-func (css *consensusSetStub) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, changeID modules.ConsensusChangeID) error {
+func (css *consensusSetStub) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, changeID modules.ConsensusChangeID, cancel <-chan struct{}) error {
 	if _, ok := css.subscribers[subscriber]; ok {
 		return errors.New("subscriber already registered to stub consensus set")
 	}
@@ -1031,13 +1031,23 @@ func (css *consensusSetStub) ConsensusSetSubscribe(subscriber modules.ConsensusS
 	var i int
 	if changeID != modules.ConsensusChangeID(crypto.Hash{}) {
 		for ; i < len(css.blocks); i++ {
+			select {
+			case <-cancel:
+				return errors.New("abort (stub) ConsensusSetSubscribe")
+			default:
+			}
 			if modules.ConsensusChangeID(crypto.HashObject(css.blocks[i])) == changeID {
 				break
 			}
 		}
 	}
 	for _, block := range css.blocks[i:] {
-		processAppliedBlock(block, subscriber)
+		select {
+		case <-cancel:
+			return errors.New("abort (stub) ConsensusSetSubscribe")
+		default:
+			processAppliedBlock(block, subscriber)
+		}
 	}
 	return nil
 }
