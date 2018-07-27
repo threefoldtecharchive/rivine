@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NebulousLabs/fastrand"
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
@@ -43,14 +44,7 @@ func postEncryptionTesting(w *Wallet, masterKey crypto.TwofishKey) {
 	if err != errAlreadyUnlocked {
 		panic(err)
 	}
-	// Mine enough coins so that a balance appears (and some buffer for the
-	// send later).
-	/*for i := types.BlockHeight(0); i <= types.DefaultChainConstants().MaturityDelay+1; i++ {
-		_, err := m.AddBlock()
-		if err != nil {
-			panic(err)
-		}
-	}*/ // TODO
+
 	siacoinBal, _, err := w.ConfirmedBalance()
 	if err != nil {
 		panic(err)
@@ -80,16 +74,15 @@ func postEncryptionTesting(w *Wallet, masterKey crypto.TwofishKey) {
 	if err != nil {
 		panic(err)
 	}
+
+	/* // TODO: turn this part into something useful within the context of rivine
 	// Verify that the secret keys have been restored by sending coins to the
 	// void. Send more coins than are received by mining a block.
-	_, err = w.SendCoins(types.ZeroCurrency, types.NewCondition(&types.NilCondition{}), nil)
+	_, err = w.SendCoins(w.chainCts.MinimumTransactionFee.Mul64(2), types.NewCondition(&types.NilCondition{}), nil)
 	if err != nil {
 		panic(err)
 	}
-	/*_, err = m.AddBlock()
-	if err != nil {
-		panic(err)
-	}*/ // TODO
+
 	siacoinBal2, _, err := w.ConfirmedBalance()
 	if err != nil {
 		panic(err)
@@ -97,6 +90,7 @@ func postEncryptionTesting(w *Wallet, masterKey crypto.TwofishKey) {
 	if siacoinBal2.Cmp(siacoinBal) >= 0 {
 		panic("balance did not increase")
 	}
+	*/
 }
 
 // TestIntegrationPreEncryption checks that the wallet operates as expected
@@ -464,6 +458,7 @@ func TestReset(t *testing.T) {
 	}
 	postEncryptionTesting(wt.wallet, newKey)
 }
+*/
 
 // TestChangeKey tests that a wallet can only be unlocked with the new key
 // after changing it and that it shows the same balance as before
@@ -472,11 +467,18 @@ func TestChangeKey(t *testing.T) {
 		t.SkipNow()
 	}
 
-	wt, err := createWalletTester(t.Name())
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer wt.closeWt()
+
+	uc, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs.addTransactionAsBlock(uc, wt.wallet.chainCts.MinimumTransactionFee.Mul64(10))
 
 	var newKey crypto.TwofishKey
 	fastrand.Read(newKey[:])
@@ -518,4 +520,3 @@ func TestChangeKey(t *testing.T) {
 	}
 	postEncryptionTesting(wt.wallet, newKey)
 }
-*/

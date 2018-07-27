@@ -147,6 +147,13 @@ The Minimum Miner Fee will be added on top of the total given amount automatical
 		Run:   Wrap(walletbalancecmd),
 	}
 
+	walletChangepassphraseCmd = &cobra.Command{
+		Use:   "change-passphrase",
+		Short: "Change the wallet passphrase",
+		Long:  "Change the encryption passphrase of the wallet, re-encrypting all keys + seeds kept by the wallet.",
+		Run:   Wrap(walletchangepassphrasecmd),
+	}
+
 	walletTransactionsCmd = &cobra.Command{
 		Use:   "transactions",
 		Short: "View transactions",
@@ -274,6 +281,29 @@ func walletaddressescmd() {
 	for _, addr := range addrs.Addresses {
 		fmt.Println(addr)
 	}
+}
+
+// walletchangepassphrasecmd changes the password of the wallet.
+func walletchangepassphrasecmd() {
+	passphrase, err := speakeasy.Ask("Current wallet passphrase: ")
+	if err != nil {
+		DieWithError("Reading current passphrase failed:", err)
+	}
+	newPassphrase, err := speakeasy.Ask("New wallet passphrase: ")
+	if err != nil {
+		DieWithError("Reading new passphrase failed:", err)
+	}
+	if newPassphraseConfirmation, err := speakeasy.Ask("Confirm new wallet passphrase: "); err != nil {
+		DieWithError("Reading confirmation of new passphrase failed:", err)
+	} else if newPassphraseConfirmation != newPassphrase {
+		Die("confirmation of new passphrase does not match the given new passphrase")
+	}
+	qs := fmt.Sprintf("passphrase=%s&newpassphrase=%s", passphrase, newPassphrase)
+	err = _DefaultClient.httpClient.Post("/wallet/changepassphrase", qs)
+	if err != nil {
+		DieWithError("Changing the passphrase failed:", err)
+	}
+	fmt.Println("Passphrase changed successfully.")
 }
 
 // walletinitcmd encrypts the wallet with the given password

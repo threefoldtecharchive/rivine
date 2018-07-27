@@ -667,6 +667,29 @@ func (api *API) walletUnlockHandler(w http.ResponseWriter, req *http.Request, _ 
 	WriteError(w, Error{"error when calling /wallet/unlock: " + modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
 }
 
+// walletChangePasswordHandler handles API calls to /wallet/changepassphrase
+func (api *API) walletChangePassphraseHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var newKey crypto.TwofishKey
+	newPassphrase := req.FormValue("newpassphrase")
+	if newPassphrase == "" {
+		WriteError(w, Error{"a passphrase must be provided to newpassphrase"}, http.StatusBadRequest)
+		return
+	}
+	newKey = crypto.TwofishKey(crypto.HashObject(newPassphrase))
+
+	key := crypto.TwofishKey(crypto.HashObject(req.FormValue("passphrase")))
+	err := api.wallet.ChangeKey(key, newKey)
+	if err == nil {
+		WriteSuccess(w)
+		return
+	}
+	if err != nil && err != modules.ErrBadEncryptionKey {
+		WriteError(w, Error{"error when calling /wallet/changepassphrase: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteError(w, Error{"error when calling /wallet/changepassphrase: " + modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+}
+
 // walletListUnlcokedHandler handles API calls to /wallet/unlocked
 func (api *API) walletListUnlockedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	ucos, ubsos, err := api.wallet.UnlockedUnspendOutputs()

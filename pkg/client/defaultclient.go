@@ -195,6 +195,7 @@ func DefaultCLIClient(address, name string, configFunc func(*Config) Config) {
 		walletBalanceCmd,
 		walletTransactionsCmd,
 		walletUnlockCmd,
+		walletChangepassphraseCmd,
 		walletBlockStakeStatCmd,
 		walletRegisterDataCmd,
 		walletListCmd,
