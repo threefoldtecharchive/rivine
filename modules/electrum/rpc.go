@@ -36,7 +36,7 @@ type (
 		IsClosed() <-chan struct{}
 		// Close the underlying connection and any goroutines
 		// used to e.g. read from the connection
-		Close(sync.WaitGroup) error
+		Close(*sync.WaitGroup) error
 		// RemoteAddr returns the remote address of the connection
 		RemoteAddr() net.Addr
 	}
@@ -232,7 +232,7 @@ func (e *Electrum) closeConnection(cl *Client) error {
 	}
 	// Wait for the calls to finish
 	cl.wg.Wait()
-	err := cl.transport.Close(cl.wg)
+	err := cl.transport.Close(&cl.wg)
 	if err != nil {
 		e.log.Println("[ERROR]: Failed to close connection:", err)
 	}

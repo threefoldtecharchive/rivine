@@ -73,7 +73,7 @@ func createTCPConn(conn net.Conn) *tcpConn {
 	return c
 }
 
-func (c *tcpConn) Close(wg sync.WaitGroup) error {
+func (c *tcpConn) Close(wg *sync.WaitGroup) error {
 	close(c.stopChan)
 	close(c.requestChan)
 	close(c.errorChan)

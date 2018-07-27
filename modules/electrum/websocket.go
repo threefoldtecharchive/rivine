@@ -79,7 +79,7 @@ func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 	return c
 }
 
-func (c *websocketConn) Close(wg sync.WaitGroup) error {
+func (c *websocketConn) Close(wg *sync.WaitGroup) error {
 	close(c.stopChan)
 	close(c.requestChan)
 	close(c.errorChan)
