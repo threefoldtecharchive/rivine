@@ -42,5 +42,12 @@ Escape character is '^]'.
 {"jsonrpc":"2.0","result":{"status":"fb3995dc380e373d3a6eee90695db3e9628150ff498608824ed62bd07b36929f"},"id":3}
 ```
 
-The client is now subscribed to the address, and will receive updates any time the address changes. Note that the server will close the connection without warning
-if we do not send a new request in 10 minutes.
+The client is now subscribed to the address, and will receive updates any time the address changes.
+
+6. Receive notifications
+
+```bash
+{"jsonrpc":"2.0","method":"blockchain.address.subscribe","params":{"address":"015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f","status":"d8d8a9bbad21842c9768d1053d074f52585283a0d0c38f520f272d20234a8b3d"}}
+```
+
+Note that the server will close the connection without warning if we do not send a new request in 10 minutes.
