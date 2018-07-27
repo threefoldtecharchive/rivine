@@ -120,6 +120,8 @@ func newResponse(ID interface{}, result interface{}, err error) *Response {
 // ServeRPC serves the electrum protocol on the given transport.
 // This blocks untill the connection is closed
 func (e *Electrum) ServeRPC(transport RPCTransport) {
+	e.activeConnections.Add(1)
+
 	cl := &Client{
 		transport:            transport,
 		timer:                time.NewTimer(connectionTimeout),
@@ -216,6 +218,8 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 
 // closeConnection is a utility mehtod to clean up a connection
 func (e *Electrum) closeConnection(cl *Client) error {
+	defer e.activeConnections.Done()
+
 	e.log.Debugln("Closing connection to", cl.transport.RemoteAddr())
 
 	// unregister the connections
@@ -230,8 +234,6 @@ func (e *Electrum) closeConnection(cl *Client) error {
 		default:
 		}
 	}
-	// Wait for the calls to finish
-	cl.wg.Wait()
 	err := cl.transport.Close(&cl.wg)
 	if err != nil {
 		e.log.Println("[ERROR]: Failed to close connection:", err)

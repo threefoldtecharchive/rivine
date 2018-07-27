@@ -35,7 +35,9 @@ type Electrum struct {
 	// tcp listener for tcp connections
 	tcpServer net.Listener
 
-	stopChan chan struct{}
+	// Make sure we can wait for all active connections to be closed when stopping
+	activeConnections sync.WaitGroup
+	stopChan          chan struct{}
 }
 
 // New creates a new Electrum instance using the provided consensus set, transactionpool,
@@ -158,8 +160,8 @@ func (e *Electrum) Start() {
 
 // Close closses the Electrum instance and every connection it is managing
 func (e *Electrum) Close() error {
-	// TODO: FIX log closing (threadgroup)
 	e.cs.Unsubscribe(e)
+
 	if e.httpServer != nil {
 		if err := e.httpServer.Shutdown(nil); err != nil {
 			e.log.Println("[ERROR] [HTTPSERVER] Error while closing http server:", err)
@@ -175,6 +177,9 @@ func (e *Electrum) Close() error {
 	}
 
 	close(e.stopChan)
+
+	e.activeConnections.Wait()
+
 	if err := e.log.Close(); err != nil {
 		fmt.Println("Failed to close electrum logger:", err)
 	}
