@@ -2,6 +2,7 @@ package modules
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/rivine/rivine/crypto"
@@ -252,4 +253,48 @@ func (cc ConsensusChange) Append(cc2 ConsensusChange) ConsensusChange {
 		CoinOutputDiffs:       append(cc.CoinOutputDiffs, cc2.CoinOutputDiffs...),
 		BlockStakeOutputDiffs: append(cc.BlockStakeOutputDiffs, cc2.BlockStakeOutputDiffs...),
 	}
+}
+
+// EstimatedActiveBlockStakesAt returns the estimated active block stakes,
+// using the given consensus set and parameters. rootDepth is required and
+// should be the one defined in the chain constants.
+//
+// If no activeBlockRange is given (0), 200 is used by default.
+// if a (block) height of 0 is given, the current block height is used.
+func EstimatedActiveBlockStakesAt(cs ConsensusSet, rootDepth types.Target, height types.BlockHeight, activeBlockRange types.BlockHeight) (types.Difficulty, error) {
+	if height == 0 {
+		height = cs.Height()
+	}
+	if activeBlockRange == 0 {
+		activeBlockRange = 200
+	}
+	block, exists := cs.BlockAtHeight(height)
+	if !exists {
+		return types.Difficulty{}, fmt.Errorf("no block exists at height %d", height)
+	}
+	currentTimeStamp := block.Timestamp
+	totalDifficulty, exists := cs.ChildTarget(block.ParentID)
+	if !exists {
+		return types.Difficulty{}, fmt.Errorf(
+			"failed to get child target from parent block %s (height: %d)", block.ID().String(), height)
+	}
+	var oldestTimestamp types.Timestamp
+	for i := types.BlockHeight(1); i < activeBlockRange; i++ {
+		height--
+		block, exists = cs.BlockAtHeight(height)
+		if !exists {
+			if height < 0 {
+				break
+			}
+			return types.Difficulty{}, fmt.Errorf("ConsensusSet is missing block at height %d", height)
+		}
+		target, exists := cs.ChildTarget(block.ParentID)
+		if !exists {
+			return types.Difficulty{}, fmt.Errorf("ConsensusSet is missing target of known block %s", block.ParentID.String())
+		}
+		totalDifficulty = totalDifficulty.AddDifficulties(target, rootDepth)
+		oldestTimestamp = block.Timestamp
+	}
+	secondsPassed := currentTimeStamp - oldestTimestamp
+	return totalDifficulty.Difficulty(rootDepth).Div64(uint64(secondsPassed)), nil
 }

@@ -255,8 +255,13 @@ func (api *API) walletBlockStakeStats(w http.ResponseWriter, req *http.Request, 
 	bss := make([]uint64, count)
 	bsn := make([]types.Currency, count)
 	bsutxoa := make([]types.BlockStakeOutputID, count)
-	tabs := types.NewCurrency64(1000000) //TODO rivine change this to estimated num of BS
 	tbs := types.NewCurrency64(0)
+	tabsDiff, err := modules.EstimatedActiveBlockStakesAt(api.cs, api.chainCts.RootDepth, 0, 0)
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet/blockstakestat: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	tabs := types.NewCurrency(tabsDiff.Big())
 
 	num := 0
 	tbclt, bsf, bc, err := api.wallet.BlockStakeStats()

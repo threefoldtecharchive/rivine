@@ -365,6 +365,7 @@ func StartDaemon(cfg Config) (err error) {
 		g,
 		tpool,
 		w,
+		networkConfig.Constants,
 	)
 
 	// connect the API to the server
