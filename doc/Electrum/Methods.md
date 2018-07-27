@@ -8,9 +8,26 @@ Ping the server to make sure it is responding, and to keep the session alive.
 
 - None
 
+Example Request:
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "server.ping"
+}
+```
+
 ### Result
 
 - None
+
+```json
+{
+    "jsonrpc": "2.0",
+    "id": 1
+}
+```
 
 -----
 
@@ -37,7 +54,7 @@ Example Request:
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1,
+    "id": 2,
     "method": "server.version",
     "params": {
         "client_name": "my_electrum_client_v1",
@@ -61,7 +78,7 @@ Example Response:
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 1,
+    "id": 2,
     "result": {
         "server_software_version": "v1.0.8",
         "protocol_version": "1.0"
@@ -84,7 +101,7 @@ Example Request:
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 2,
+    "id": 3,
     "method": "blockchain.address.subscribe",
     "params": {
         "address": "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"
@@ -103,7 +120,7 @@ Example Response:
 ```json
 {
     "jsonrpc": "2.0",
-    "id": 2,
+    "id": 3,
     "result": {
         "status": "fb3995dc380e373d3a6eee90695db3e9628150ff498608824ed62bd07b36929f"
     }
