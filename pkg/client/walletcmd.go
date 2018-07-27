@@ -378,6 +378,7 @@ func walletrecovercmd() {
 
 	qs := fmt.Sprintf("passphrase=%s&seed=%s", passphrase, seed)
 
+	fmt.Println("Recovering the wallet, this may take a couple of minutes...")
 	err = _DefaultClient.httpClient.PostResp("/wallet/init", qs, &er)
 	if err != nil {
 		DieWithError("Error when encrypting wallet:", err)
@@ -767,7 +768,7 @@ func wallettransactionscmd() {
 
 		// Print the results.
 		if txn.ConfirmationHeight < 1e9 {
-			fmt.Printf("%12v", txn.ConfirmationHeight-1)
+			fmt.Printf("%12v", txn.ConfirmationHeight)
 		} else {
 			fmt.Printf(" unconfirmed")
 		}
@@ -842,7 +843,7 @@ func walletunlockcmd() {
 	if err != nil {
 		Die("Reading password failed:", err)
 	}
-	fmt.Println("Unlocking the wallet. This may take several minutes...")
+	fmt.Println("Unlocking the wallet...")
 	qs := fmt.Sprintf("passphrase=%s", password)
 	err = _DefaultClient.httpClient.Post("/wallet/unlock", qs)
 	if err != nil {
