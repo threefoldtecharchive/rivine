@@ -593,11 +593,12 @@ Unlock the wallet to view balance
 
 	fmt.Printf(`Wallet status:
 %s, Unlocked
+Height:              %v
 Confirmed Balance:   %v
 Locked Balance:      %v
 Unconfirmed Delta:   %v
 BlockStakes:         %v BS
-`, encStatus, _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance),
+`, encStatus, status.Height, _CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedCoinBalance),
 		_CurrencyConvertor.ToCoinStringWithUnit(status.ConfirmedLockedCoinBalance),
 		delta, status.BlockStakeBalance)
 	if !status.LockedBlockStakeBalance.IsZero() {

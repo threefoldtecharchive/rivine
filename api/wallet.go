@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -17,8 +18,10 @@ import (
 type (
 	// WalletGET contains general information about the wallet.
 	WalletGET struct {
-		Encrypted bool `json:"encrypted"`
-		Unlocked  bool `json:"unlocked"`
+		Encrypted  bool              `json:"encrypted"`
+		Height     types.BlockHeight `json:"height"`
+		Rescanning bool              `json:"rescanning"`
+		Unlocked   bool              `json:"unlocked"`
 
 		ConfirmedCoinBalance       types.Currency `json:"confirmedcoinbalance"`
 		ConfirmedLockedCoinBalance types.Currency `json:"confirmedlockedcoinbalance"`
@@ -202,10 +205,32 @@ func (api *API) walletHandler(w http.ResponseWriter, req *http.Request, _ httpro
 		WriteError(w, Error{"error after call to /wallet: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
 	}
+	encrypted, err := api.wallet.Encrypted()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	unlocked, err := api.wallet.Unlocked()
+	if err != nil {
+		WriteError(w, Error{"error after call to /wallet: " + err.Error()}, walletErrorToHTTPStatus(err))
+		return
+	}
+	rescanning, err := api.wallet.Rescanning()
+	if err != nil {
+		WriteError(w, Error{fmt.Sprintf("Error when calling /wallet: %v", err)}, http.StatusBadRequest)
+		return
+	}
+	height, err := api.wallet.Height()
+	if err != nil {
+		WriteError(w, Error{fmt.Sprintf("Error when calling /wallet: %v", err)}, http.StatusBadRequest)
+		return
+	}
 
 	WriteJSON(w, WalletGET{
-		Encrypted: api.wallet.Encrypted(),
-		Unlocked:  api.wallet.Unlocked(),
+		Encrypted:  encrypted,
+		Unlocked:   unlocked,
+		Rescanning: rescanning,
+		Height:     height,
 
 		ConfirmedCoinBalance:       coinBal,
 		ConfirmedLockedCoinBalance: coinLockBal,
@@ -312,6 +337,15 @@ func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ ht
 			http.StatusUnauthorized)
 		return
 	}
+	encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
+
+	if req.FormValue("force") == "true" {
+		err := api.wallet.Reset()
+		if err != nil {
+			WriteError(w, Error{"error when calling /wallet/init/seed: " + err.Error()}, http.StatusBadRequest)
+			return
+		}
+	}
 
 	seedStr := req.FormValue("seed")
 	var seed modules.Seed
@@ -323,13 +357,18 @@ func (api *API) walletInitHandler(w http.ResponseWriter, req *http.Request, _ ht
 				http.StatusBadRequest)
 			return
 		}
-	}
-
-	encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
-	seed, err := api.wallet.Encrypt(encryptionKey, seed)
-	if err != nil {
-		WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
-		return
+		err = api.wallet.InitFromSeed(encryptionKey, seed)
+		if err != nil {
+			WriteError(w, Error{"error when calling /wallet/init?passphrase: " + err.Error()}, http.StatusBadRequest)
+			return
+		}
+	} else {
+		var err error
+		seed, err = api.wallet.Init(encryptionKey)
+		if err != nil {
+			WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
+			return
+		}
 	}
 
 	mnemonic, err := modules.NewMnemonic(seed)
@@ -384,7 +423,7 @@ func (api *API) walletLockHandler(w http.ResponseWriter, req *http.Request, _ ht
 // walletSeedsHandler handles API calls to /wallet/seeds.
 func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	// Get the primary seed information.
-	primarySeed, progress, err := api.wallet.PrimarySeed()
+	primarySeed, addrsRemaining, err := api.wallet.PrimarySeed()
 	if err != nil {
 		WriteError(w, Error{"error after call to /wallet/seeds: " + err.Error()}, walletErrorToHTTPStatus(err))
 		return
@@ -412,7 +451,7 @@ func (api *API) walletSeedsHandler(w http.ResponseWriter, req *http.Request, _ h
 	}
 	WriteJSON(w, WalletSeedsGET{
 		PrimarySeed:        primarySeedStr,
-		AddressesRemaining: int(modules.PublicKeysPerSeed - progress),
+		AddressesRemaining: int(addrsRemaining),
 		AllSeeds:           allSeedsStrs,
 	})
 }

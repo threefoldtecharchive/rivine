@@ -40,12 +40,17 @@ type inputSignContext struct {
 	UnlockHash types.UnlockHash
 }
 
-// FundCoins will add a siacoin input of exactly 'amount' to the
+// FundCoins will add a coin input of exactly 'amount' to the
 // transaction. The coin input will not be signed until 'Sign' is called
 // on the transaction builder.
 func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
+
+	consensusSetHeight, err := dbGetConsensusHeight(tb.wallet.dbTx)
+	if err != nil {
+		return err
+	}
 
 	if !tb.wallet.unlocked {
 		return modules.ErrLockedWallet
@@ -56,13 +61,13 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 
 	// Collect a value-sorted set of fulfillable coin outputs.
 	var so sortedOutputs
-	for scoid, sco := range tb.wallet.coinOutputs {
-		if !sco.Condition.Fulfillable(ctx) {
-			continue
+	dbForEachCoinOutput(tb.wallet.dbTx, func(id types.CoinOutputID, co types.CoinOutput) {
+		if !co.Condition.Fulfillable(ctx) {
+			return
 		}
-		so.ids = append(so.ids, scoid)
-		so.outputs = append(so.outputs, sco)
-	}
+		so.ids = append(so.ids, id)
+		so.outputs = append(so.outputs, co)
+	})
 	// Add all of the unconfirmed outputs as well.
 	for _, upt := range tb.wallet.unconfirmedProcessedTransactions {
 		for i, sco := range upt.Transaction.CoinOutputs {
@@ -94,10 +99,13 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 		scoid := so.ids[i]
 		sco := so.outputs[i]
 		// Check that this output has not recently been spent by the wallet.
-		spendHeight := tb.wallet.spentOutputs[types.OutputID(scoid)]
+		spendHeight, err := dbGetSpentOutput(tb.wallet.dbTx, types.OutputID(scoid))
+		if err != nil && err != errNoKey {
+			return err
+		}
 		// Prevent an underflow error.
-		allowedHeight := tb.wallet.consensusSetHeight - RespendTimeout
-		if tb.wallet.consensusSetHeight < RespendTimeout {
+		allowedHeight := consensusSetHeight - RespendTimeout
+		if consensusSetHeight < RespendTimeout {
 			allowedHeight = 0
 		}
 		if spendHeight > allowedHeight {
@@ -152,7 +160,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 
 	// Create a refund output if needed.
 	if !amount.Equals(fund) {
-		refundUnlockHash, err := tb.wallet.nextPrimarySeedAddress()
+		refundUnlockHash, err := tb.wallet.nextPrimarySeedAddress(tb.wallet.dbTx)
 		if err != nil {
 			return err
 		}
@@ -165,7 +173,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 
 	// Mark all outputs that were spent as spent.
 	for _, scoid := range spentScoids {
-		tb.wallet.spentOutputs[types.OutputID(scoid)] = tb.wallet.consensusSetHeight
+		dbPutSpentOutput(tb.wallet.dbTx, types.OutputID(scoid), consensusSetHeight)
 	}
 	return nil
 }
@@ -176,6 +184,11 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
+
+	consensusSetHeight, err := dbGetConsensusHeight(tb.wallet.dbTx)
+	if err != nil {
+		return err
+	}
 
 	if !tb.wallet.unlocked {
 		return modules.ErrLockedWallet
@@ -189,43 +202,54 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 	var fund types.Currency
 	var potentialFund types.Currency
 	var spentSfoids []types.BlockStakeOutputID
-	for sfoid, sfo := range tb.wallet.blockstakeOutputs {
-		if !sfo.Condition.Fulfillable(ctx) {
-			continue
+
+	var forEachErr error
+	dbForEachBlockStakeOutput(tb.wallet.dbTx, func(id types.BlockStakeOutputID, bso types.BlockStakeOutput) {
+		if !bso.Condition.Fulfillable(ctx) {
+			return
 		}
 		// Check that this output has not recently been spent by the wallet.
-		spendHeight := tb.wallet.spentOutputs[types.OutputID(sfoid)]
+		var spendHeight types.BlockHeight
+		spendHeight, forEachErr = dbGetSpentOutput(tb.wallet.dbTx, types.OutputID(id))
+		if forEachErr != nil {
+			if forEachErr != errNoKey {
+				return
+			}
+			forEachErr = nil
+		}
 		// Prevent an underflow error.
-		allowedHeight := tb.wallet.consensusSetHeight - RespendTimeout
-		if tb.wallet.consensusSetHeight < RespendTimeout {
+		allowedHeight := consensusSetHeight - RespendTimeout
+		if consensusSetHeight < RespendTimeout {
 			allowedHeight = 0
 		}
 		if spendHeight > allowedHeight {
-			potentialFund = potentialFund.Add(sfo.Value)
-			continue
+			potentialFund = potentialFund.Add(bso.Value)
+			return
 		}
 
 		// prepare fulfillment, matching the output
-		uh := sfo.Condition.UnlockHash()
+		uh := bso.Condition.UnlockHash()
 		var ff types.MarshalableUnlockFulfillment
-		switch sfo.Condition.ConditionType() {
+		switch bso.Condition.ConditionType() {
 		case types.ConditionTypeUnlockHash, types.ConditionTypeTimeLock:
 			// ConditionTypeTimeLock is fine, as we know it's fulfillable,
 			// and that can only mean for now that it is using an internal unlockHashCondition or nilCondition
-			pk, _, err := tb.wallet.getKey(uh)
-			if err != nil {
-				return err
+			var pk types.SiaPublicKey
+			pk, _, forEachErr = tb.wallet.getKey(uh)
+			if forEachErr != nil {
+				return
 			}
 			ff = types.NewSingleSignatureFulfillment(pk)
 		default:
 			if build.DEBUG {
-				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sfo.Condition))
+				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", bso.Condition))
 			}
-			return types.ErrUnexpectedUnlockCondition
+			forEachErr = types.ErrUnexpectedUnlockCondition
+			return
 		}
 		// Add a block stake input for this output.
 		sfi := types.BlockStakeInput{
-			ParentID:    sfoid,
+			ParentID:    id,
 			Fulfillment: types.NewFulfillment(ff),
 		}
 		tb.blockstakeInputs = append(tb.blockstakeInputs, inputSignContext{
@@ -234,14 +258,17 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 		})
 		tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, sfi)
 
-		spentSfoids = append(spentSfoids, sfoid)
+		spentSfoids = append(spentSfoids, id)
 
 		// Add the output to the total fund
-		fund = fund.Add(sfo.Value)
-		potentialFund = potentialFund.Add(sfo.Value)
+		fund = fund.Add(bso.Value)
+		potentialFund = potentialFund.Add(bso.Value)
 		if fund.Cmp(amount) >= 0 {
-			break
+			return
 		}
+	})
+	if forEachErr != nil {
+		return forEachErr
 	}
 	if potentialFund.Cmp(amount) >= 0 && fund.Cmp(amount) < 0 {
 		return modules.ErrIncompleteTransactions
@@ -252,7 +279,7 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 
 	// Create a refund output if needed.
 	if !amount.Equals(fund) {
-		refundUnlockHash, err := tb.wallet.nextPrimarySeedAddress()
+		refundUnlockHash, err := tb.wallet.nextPrimarySeedAddress(tb.wallet.dbTx)
 		if err != nil {
 			return err
 		}
@@ -265,7 +292,7 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 
 	// Mark all outputs that were spent as spent.
 	for _, sfoid := range spentSfoids {
-		tb.wallet.spentOutputs[types.OutputID(sfoid)] = tb.wallet.consensusSetHeight
+		dbPutSpentOutput(tb.wallet.dbTx, types.OutputID(sfoid), consensusSetHeight)
 	}
 	return nil
 }
@@ -313,12 +340,17 @@ func (tb *transactionBuilder) SpendBlockStake(ubsoid types.BlockStakeOutputID) e
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
+	consensusSetHeight, err := dbGetConsensusHeight(tb.wallet.dbTx)
+	if err != nil {
+		return err
+	}
+
 	if !tb.wallet.unlocked {
 		return modules.ErrLockedWallet
 	}
 
-	ubso, ok := tb.wallet.unspentblockstakeoutputs[ubsoid]
-	if !ok {
+	ubso, err := dbGetBlockStakeOutput(tb.wallet.dbTx, ubsoid)
+	if err != nil {
 		return modules.ErrIncompleteTransactions //TODO: not right error
 	}
 
@@ -338,7 +370,7 @@ func (tb *transactionBuilder) SpendBlockStake(ubsoid types.BlockStakeOutputID) e
 	tb.transaction.BlockStakeInputs = append(tb.transaction.BlockStakeInputs, bsi)
 
 	// Mark output as spent.
-	tb.wallet.spentOutputs[types.OutputID(ubsoid)] = tb.wallet.consensusSetHeight
+	dbPutSpentOutput(tb.wallet.dbTx, types.OutputID(ubsoid), consensusSetHeight)
 	return nil
 }
 
@@ -366,7 +398,7 @@ func (tb *transactionBuilder) Drop() {
 	txns := append(tb.parents, tb.transaction)
 	for _, txn := range txns {
 		for _, sci := range txn.CoinInputs {
-			delete(tb.wallet.spentOutputs, types.OutputID(sci.ParentID))
+			dbDeleteSpentOutput(tb.wallet.dbTx, types.OutputID(sci.ParentID))
 		}
 	}
 
@@ -504,7 +536,7 @@ func (tb *transactionBuilder) signFulfillment(idx int, fulfillment *types.Unlock
 		// we use nextPrimarySeedAddress, instead of NextAddres,
 		// as the parent function of signFulfillment, SignAllPossibleInputs,
 		// has already locked the wallet's mutex
-		uh, err = tb.wallet.nextPrimarySeedAddress()
+		uh, err = tb.wallet.nextPrimarySeedAddress(tb.wallet.dbTx)
 		if err != nil {
 			return err
 		}

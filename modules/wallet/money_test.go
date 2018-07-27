@@ -4,7 +4,6 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
@@ -115,59 +114,6 @@ func TestIntegrationSendOverUnder(t *testing.T) {
 	_, err = wt.wallet.SendCoins(reasonableCoins, types.NewCondition(nil), nil)
 	if err != nil {
 		t.Error("unexpected error: ", err)
-	}
-}
-
-// TestIntegrationSpendHalfHalf spends more than half of the coins, and then
-// more than half of the coins again, to make sure that the wallet is not
-// reusing outputs that it has already spent.
-func TestIntegrationSpendHalfHalf(t *testing.T) {
-	//if testing.Short() {
-	t.SkipNow()
-	//}
-	wt, err := createWalletTester(t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer wt.closeWt()
-
-	// Spend more than half of the coins twice.
-	halfPlus := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.NewCondition(nil), nil)
-	if err != nil {
-		t.Error("unexpected error: ", err)
-	}
-	_, err = wt.wallet.SendCoins(halfPlus,
-		types.NewCondition(types.NewUnlockHashCondition(types.NewUnlockHash(0, crypto.Hash{1}))),
-		nil)
-	if err != modules.ErrIncompleteTransactions {
-		t.Error("wallet appears to be reusing outputs when building transactions: ", err)
-	}
-}
-
-// TestIntegrationSpendUnconfirmed spends an unconfirmed siacoin output.
-func TestIntegrationSpendUnconfirmed(t *testing.T) {
-	//if testing.Short() {
-	t.SkipNow()
-	//}
-	wt, err := createWalletTester(t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer wt.closeWt()
-
-	// Spend the only output.
-	halfPlus := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(200e3)
-	_, err = wt.wallet.SendCoins(halfPlus, types.NewCondition(nil), nil)
-	if err != nil {
-		t.Error("unexpected error: ", err)
-	}
-	someMore := wt.wallet.chainCts.CurrencyUnits.OneCoin.Mul64(75e3)
-	_, err = wt.wallet.SendCoins(someMore,
-		types.NewCondition(types.NewUnlockHashCondition(types.NewUnlockHash(0, crypto.Hash{1}))),
-		nil)
-	if err != nil {
-		t.Error("wallet appears to be struggling to spend unconfirmed outputs")
 	}
 }
 

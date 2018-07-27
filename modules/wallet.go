@@ -44,6 +44,10 @@ var (
 	// ErrLockedWallet is returned when an action cannot be performed due to
 	// the wallet being locked.
 	ErrLockedWallet = errors.New("wallet must be unlocked before it can be used")
+
+	// ErrWalletShutdown is returned when a method can't continue execution due
+	// to the wallet shutting down.
+	ErrWalletShutdown = errors.New("wallet is shutting down")
 )
 
 type (
@@ -58,6 +62,7 @@ type (
 	// coming from an address and going to the outputs. The fund types are
 	// 'SiacoinInput', 'SiafundInput'.
 	ProcessedInput struct {
+		ParentID types.OutputID  `json:"parentid"`
 		FundType types.Specifier `json:"fundtype"`
 		// WalletAddress indicates it's an address owned by this wallet
 		WalletAddress  bool             `json:"walletaddress"`
@@ -77,6 +82,7 @@ type (
 	// available. CoinInputs and BlockStakeInputs become available immediately.
 	// MinerPayouts become available after 144 confirmations.
 	ProcessedOutput struct {
+		ID             types.OutputID    `json:"id"`
 		FundType       types.Specifier   `json:"fundtype"`
 		MaturityHeight types.BlockHeight `json:"maturityheight"`
 		// WalletAddress indicates it's an address owned by this wallet
@@ -221,21 +227,32 @@ type (
 	// EncryptionManager can encrypt, lock, unlock, and indicate the current
 	// status of the EncryptionManager.
 	EncryptionManager interface {
-		// Encrypt will encrypt the wallet using the input key. Upon
+		// Init will encrypt the wallet using the input key. Upon
 		// encryption, a primary seed will be created for the wallet (no seed
 		// exists prior to this point). If the key is blank, then the hash of
 		// the seed that is generated will be used as the key.
 		//
-		// Encrypt can only be called once throughout the life of the wallet
+		// Init can only be called once throughout the life of the wallet
 		// and will return an error on subsequent calls (even after restarting
 		// the wallet). To reset the wallet, the wallet files must be moved to
 		// a different directory or deleted.
-		Encrypt(masterKey crypto.TwofishKey, primarySeed Seed) (Seed, error)
+		Init(masterKey crypto.TwofishKey) (Seed, error)
+
+		// InitFromSeed functions like Init, but using a specified seed. Unlike Init,
+		// the blockchain will be scanned to determine the seed's progress. For this
+		// reason, InitFromSeed should not be called until the blockchain is fully
+		// synced.
+		InitFromSeed(masterKey crypto.TwofishKey, seed Seed) error
+
+		// Reset will reset the wallet, clearing the database and returning it to
+		// the unencrypted state. Reset can only be called on a wallet that has
+		// already been encrypted.
+		Reset() error
 
 		// Encrypted returns whether or not the wallet has been encrypted yet.
 		// After being encrypted for the first time, the wallet can only be
 		// unlocked using the encryption password.
-		Encrypted() bool
+		Encrypted() (bool, error)
 
 		// Lock deletes all keys in memory and prevents the wallet from being
 		// used to spend coins or extract keys until 'Unlock' is called.
@@ -252,7 +269,7 @@ type (
 
 		// Unlocked returns true if the wallet is currently unlocked, false
 		// otherwise.
-		Unlocked() bool
+		Unlocked() (bool, error)
 	}
 
 	// KeyManager manages wallet keys, including the use of seeds, creating and
@@ -330,6 +347,9 @@ type (
 		// not considered in the unconfirmed balance.
 		UnconfirmedBalance() (outgoingSiacoins types.Currency, incomingSiacoins types.Currency, err error)
 
+		// Height returns the wallet's internal processed consensus height
+		Height() (types.BlockHeight, error)
+
 		// AddressTransactions returns all of the transactions that are related
 		// to a given address.
 		AddressTransactions(types.UnlockHash) ([]ProcessedTransaction, error)
@@ -361,6 +381,10 @@ type (
 		// RegisterTransaction takes a transaction and its parents and returns
 		// a TransactionBuilder which can be used to expand the transaction.
 		RegisterTransaction(t types.Transaction, parents []types.Transaction) TransactionBuilder
+
+		// Rescanning reports whether the wallet is currently rescanning the
+		// blockchain.
+		Rescanning() (bool, error)
 
 		// StartTransaction is a convenience method that calls
 		// RegisterTransaction(types.Transaction{}, nil)

@@ -24,6 +24,11 @@ type sortedOutputs struct {
 // ConfirmedBalance returns the balance of the wallet according to all of the
 // confirmed transactions.
 func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency, err error) {
+	if err = w.tg.Add(); err != nil {
+		return types.ZeroCurrency, types.ZeroCurrency, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -32,26 +37,37 @@ func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalan
 		return
 	}
 
+	// ensure durability of reported balance
+	if err = w.syncDB(); err != nil {
+		return
+	}
+
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
 
-	// get all coin and block stake stum
-	for _, sco := range w.coinOutputs {
-		if sco.Condition.Fulfillable(ctx) {
-			coinBalance = coinBalance.Add(sco.Value)
+	// get all coin and block stake sum
+	dbForEachCoinOutput(w.dbTx, func(_ types.CoinOutputID, co types.CoinOutput) {
+		if co.Condition.Fulfillable(ctx) {
+			coinBalance = coinBalance.Add(co.Value)
 		}
-	}
-	for _, sfo := range w.blockstakeOutputs {
-		if sfo.Condition.Fulfillable(ctx) {
-			blockstakeBalance = blockstakeBalance.Add(sfo.Value)
+	})
+	dbForEachBlockStakeOutput(w.dbTx, func(_ types.BlockStakeOutputID, bso types.BlockStakeOutput) {
+		if bso.Condition.Fulfillable(ctx) {
+			blockstakeBalance = blockstakeBalance.Add(bso.Value)
 		}
-	}
+	})
+
 	return
 }
 
 // ConfirmedLockedBalance returns the locked balance of the wallet according to all of the
 // confirmed transactions, which have locked outputs.
 func (w *Wallet) ConfirmedLockedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency, err error) {
+	if err := w.tg.Add(); err != nil {
+		return types.ZeroCurrency, types.ZeroCurrency, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -60,26 +76,37 @@ func (w *Wallet) ConfirmedLockedBalance() (coinBalance types.Currency, blockstak
 		return
 	}
 
+	// ensure durability of reported balance
+	if err = w.syncDB(); err != nil {
+		return
+	}
+
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
 
-	// get all coin and block stake stum
-	for _, sco := range w.coinOutputs {
-		if !sco.Condition.Fulfillable(ctx) {
-			coinBalance = coinBalance.Add(sco.Value)
+	// get all coin and block stake sum
+	dbForEachCoinOutput(w.dbTx, func(_ types.CoinOutputID, co types.CoinOutput) {
+		if !co.Condition.Fulfillable(ctx) {
+			coinBalance = coinBalance.Add(co.Value)
 		}
-	}
-	for _, sfo := range w.blockstakeOutputs {
-		if !sfo.Condition.Fulfillable(ctx) {
-			blockstakeBalance = blockstakeBalance.Add(sfo.Value)
+	})
+	dbForEachBlockStakeOutput(w.dbTx, func(_ types.BlockStakeOutputID, bso types.BlockStakeOutput) {
+		if !bso.Condition.Fulfillable(ctx) {
+			blockstakeBalance = blockstakeBalance.Add(bso.Value)
 		}
-	}
+	})
+
 	return
 }
 
 // UnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 // address this wallet has an unlockhash for.
 func (w *Wallet) UnspentBlockStakeOutputs() (map[types.BlockStakeOutputID]types.BlockStakeOutput, error) {
+	if err := w.tg.Add(); err != nil {
+		return nil, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -87,17 +114,21 @@ func (w *Wallet) UnspentBlockStakeOutputs() (map[types.BlockStakeOutputID]types.
 		return nil, modules.ErrLockedWallet
 	}
 
+	// ensure durability of reported balance
+	if err := w.syncDB(); err != nil {
+		return nil, err
+	}
+
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
 
 	// get all unspend block stake outputs, which are fulfillable
 	outputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput, 0)
-	for id := range w.blockstakeOutputs {
-		output := w.blockstakeOutputs[id]
-		if output.Condition.Fulfillable(ctx) {
-			outputs[id] = output
+	dbForEachBlockStakeOutput(w.dbTx, func(id types.BlockStakeOutputID, bso types.BlockStakeOutput) {
+		if bso.Condition.Fulfillable(ctx) {
+			outputs[id] = bso
 		}
-	}
+	})
 	return outputs, nil
 }
 
@@ -105,6 +136,11 @@ func (w *Wallet) UnspentBlockStakeOutputs() (map[types.BlockStakeOutputID]types.
 // the unconfirmed transaction set. Refund outputs are included in this
 // reporting.
 func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoins types.Currency, err error) {
+	if err := w.tg.Add(); err != nil {
+		return types.ZeroCurrency, types.ZeroCurrency, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -130,6 +166,11 @@ func (w *Wallet) UnconfirmedBalance() (outgoingCoins types.Currency, incomingCoi
 
 // MultiSigWallets returns all multisig wallets which contain at least one unlock hash owned by this wallet.
 func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
+	if err := w.tg.Add(); err != nil {
+		return nil, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -138,12 +179,11 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 	}
 
 	wallets := make(map[types.UnlockHash]*modules.MultiSigWallet)
-
 	ctx := w.getFulfillableContextForLatestBlock()
 
 	var wallet *modules.MultiSigWallet
 	var exists bool
-	for id, co := range w.multiSigCoinOutputs {
+	dbForEachMultisigCoinOutput(w.dbTx, func(id types.CoinOutputID, co types.CoinOutput) {
 		address := co.Condition.UnlockHash()
 		// Check if the wallet exists
 		if wallet, exists = wallets[address]; !exists {
@@ -155,7 +195,7 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 				if build.DEBUG {
 					panic("Failed to convert output to multisig condition")
 				}
-				continue
+				return
 			}
 			// Create a new wallet for this address
 			wallet = &modules.MultiSigWallet{
@@ -174,9 +214,8 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 		}
 		// Add the output ID
 		wallet.CoinOutputIDs = append(wallet.CoinOutputIDs, id)
-	}
-
-	for id, bso := range w.multiSigBlockStakeOutputs {
+	})
+	dbForEachMultisigBlockStakeOutput(w.dbTx, func(id types.BlockStakeOutputID, bso types.BlockStakeOutput) {
 		address := bso.Condition.UnlockHash()
 		// Check if the wallet exists
 		if wallet, exists = wallets[address]; !exists {
@@ -188,7 +227,7 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 				if build.DEBUG {
 					panic("Failed to convert output to multisig condition")
 				}
-				continue
+				return
 			}
 			// Create a new wallet for this address
 			wallet = &modules.MultiSigWallet{
@@ -207,7 +246,7 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 		}
 		// Add the output ID
 		wallet.BlockStakeOutputIDs = append(wallet.BlockStakeOutputIDs, id)
-	}
+	})
 
 	// Check unconfrimed transactions
 	for _, upt := range w.unconfirmedProcessedTransactions {

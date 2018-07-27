@@ -9,8 +9,11 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/NebulousLabs/threadgroup"
+	bolt "github.com/rivine/bbolt"
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
+	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/persist"
 	siasync "github.com/rivine/rivine/sync"
@@ -53,23 +56,20 @@ func (sk spendableKey) UnlockHash() types.UnlockHash {
 // Wallet is an object that tracks balances, creates keys and addresses,
 // manages building and sending transactions.
 type Wallet struct {
-	// unlocked indicates whether the wallet is currently storing secret keys
-	// in memory. subscribed indicates whether the wallet has subscribed to the
-	// consensus set yet - the wallet is unable to subscribe to the consensus
-	// set until it has been unlocked for the first time. The primary seed is
-	// used to generate new addresses for the wallet.
+	// encrypted indicates whether the wallet has been encrypted (i.e.
+	// initialized). unlocked indicates whether the wallet is currently
+	// storing secret keys in memory. subscribed indicates whether the wallet
+	// has subscribed to the consensus set yet - the wallet is unable to
+	// subscribe to the consensus set until it has been unlocked for the first
+	// time. The primary seed is used to generate new addresses for the
+	// wallet.
+	encrypted   bool
 	unlocked    bool
 	subscribed  bool
-	persist     WalletPersist
 	primarySeed modules.Seed
 
-	// The wallet's dependencies. The items 'consensusSetHeight' and
-	// 'siafundPool' are tracked separately from the consensus set to minimize
-	// the number of queries that the wallet needs to make to the consensus
-	// set; queries to the consensus set are very slow.
-	cs                 modules.ConsensusSet
-	tpool              modules.TransactionPool
-	consensusSetHeight types.BlockHeight
+	cs    modules.ConsensusSet
+	tpool modules.TransactionPool
 
 	// The following set of fields are responsible for tracking the confirmed
 	// outputs, and for being able to spend them. The seeds are used to derive
@@ -77,54 +77,63 @@ type Wallet struct {
 	// from the seeds, when checking new outputs or spending outputs, the seeds
 	// are not referenced at all. The seeds are only stored so that the user
 	// may access them.
-	//
-	// coinOutputs, blockstakeOutputs, and spentOutputs are kept so that they
-	// can be scanned when trying to fund transactions.
-	seeds                    []modules.Seed
-	keys                     map[types.UnlockHash]spendableKey
-	coinOutputs              map[types.CoinOutputID]types.CoinOutput
-	blockstakeOutputs        map[types.BlockStakeOutputID]types.BlockStakeOutput
-	unspentblockstakeoutputs map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput
-	spentOutputs             map[types.OutputID]types.BlockHeight
+	seeds     []modules.Seed
+	keys      map[types.UnlockHash]spendableKey
+	lookahead map[types.UnlockHash]uint64
 
-	// multiSigOutputs holds all the multisig addresses this wallet is part of
-	multiSigCoinOutputs       map[types.CoinOutputID]types.CoinOutput
-	multiSigBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
+	// A separate TryMutex is used to protect against concurrent unlocking or
+	// initialization.
+	scanLock siasync.TryMutex
 
-	// The following fields are kept to track transaction history.
-	// processedTransactions are stored in chronological order, and have a map for
-	// constant time random access. The set of full transactions is kept as
-	// well, ordering can be determined by the processedTransactions slice.
+	// unconfirmedProcessedTransactions tracks unconfirmed transactions.
 	//
-	// The unconfirmed transactions are kept the same way, except without the
-	// random access. It is assumed that the list of unconfirmed transactions
-	// will be small enough that this will not be a problem.
-	//
-	// historicOutputs is kept so that the values and addresses of transaction inputs can be
-	// determined. historicOutputs is never cleared, but in general should be
-	// small compared to the list of transactions.
-	processedTransactions            []modules.ProcessedTransaction
-	processedTransactionMap          map[types.TransactionID]*modules.ProcessedTransaction
+	// TODO: Replace this field with a linked list. Currently when a new
+	// transaction set diff is provided, the entire array needs to be
+	// reallocated. Since this can happen tens of times per second, and the
+	// array can have tens of thousands of elements, it's a performance issue.
 	unconfirmedProcessedTransactions []modules.ProcessedTransaction
 
-	// TODO: Storing the whole set of historic outputs is expensive and
-	// unnecessary. There's a better way to do it.
-	historicOutputs map[types.OutputID]historicOutput
+	// The wallet's database tracks its seeds, keys, outputs, and
+	// transactions. A global db transaction is maintained in memory to avoid
+	// excessive disk writes. Any operations involving dbTx must hold an
+	// exclusive lock.
+	//
+	// If dbRollback is set, then when the database syncs it will perform a
+	// rollback instead of a commit. For safety reasons, the db will close and
+	// the wallet will close if a rollback is performed.
+	db         *persist.BoltDatabase
+	dbRollback bool
+	dbTx       *bolt.Tx
 
 	persistDir string
 	log        *persist.Logger
 	mu         sync.RWMutex
 	// The wallet's ThreadGroup tells tracked functions to shut down and
 	// blocks until they have all exited before returning from Close.
-	tg siasync.ThreadGroup
+	tg threadgroup.ThreadGroup
 
 	bcInfo   types.BlockchainInfo
 	chainCts types.ChainConstants
 }
 
-type historicOutput struct {
-	UnlockHash types.UnlockHash
-	Value      types.Currency
+// Height return the internal processed consensus height of the wallet
+func (w *Wallet) Height() (types.BlockHeight, error) {
+	if err := w.tg.Add(); err != nil {
+		return 0, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	var height uint64
+	err := w.db.View(func(tx *bolt.Tx) error {
+		return encoding.Unmarshal(tx.Bucket(bucketWallet).Get(keyConsensusHeight), &height)
+	})
+	if err != nil {
+		return 0, err
+	}
+	return types.BlockHeight(height), nil
 }
 
 // New creates a new wallet, loading any known addresses from the input file
@@ -145,17 +154,8 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		cs:    cs,
 		tpool: tpool,
 
-		keys:                      make(map[types.UnlockHash]spendableKey),
-		coinOutputs:               make(map[types.CoinOutputID]types.CoinOutput),
-		blockstakeOutputs:         make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
-		spentOutputs:              make(map[types.OutputID]types.BlockHeight),
-		unspentblockstakeoutputs:  make(map[types.BlockStakeOutputID]types.UnspentBlockStakeOutput),
-		multiSigCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
-		multiSigBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
-
-		processedTransactionMap: make(map[types.TransactionID]*modules.ProcessedTransaction),
-
-		historicOutputs: make(map[types.OutputID]historicOutput),
+		keys:      make(map[types.UnlockHash]spendableKey),
+		lookahead: make(map[types.UnlockHash]uint64),
 
 		persistDir: persistDir,
 
@@ -180,8 +180,9 @@ func (w *Wallet) Close() error {
 	// Once the wallet is locked it cannot be unlocked except using the
 	// unexported unlock method (w.Unlock returns an error if the wallet's
 	// ThreadGroup is stopped).
-	if w.Unlocked() {
-		if err := w.Lock(); err != nil {
+	unlocked := w.managedUnlocked()
+	if unlocked {
+		if err := w.managedLock(); err != nil {
 			errs = append(errs, err)
 		}
 	}
@@ -201,6 +202,11 @@ func (w *Wallet) Close() error {
 // AllAddresses returns all addresses that the wallet is able to spend from.
 // Addresses are returned sorted in byte-order.
 func (w *Wallet) AllAddresses() ([]types.UnlockHash, error) {
+	if err := w.tg.Add(); err != nil {
+		return []types.UnlockHash{}, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
@@ -212,7 +218,9 @@ func (w *Wallet) AllAddresses() ([]types.UnlockHash, error) {
 	for addr := range w.keys {
 		addrs = append(addrs, addr)
 	}
-	sort.Sort(addrs)
+	sort.Slice(addrs, func(i, j int) bool {
+		return addrs[i].Cmp(addrs[j]) < 0
+	})
 	return addrs, nil
 }
 
@@ -242,29 +250,53 @@ func (w *Wallet) keyExists(address types.UnlockHash) (bool, error) {
 	return exists, nil
 }
 
+// Rescanning reports whether the wallet is currently rescanning the
+// blockchain.
+func (w *Wallet) Rescanning() (bool, error) {
+	if err := w.tg.Add(); err != nil {
+		return false, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
+	rescanning := !w.scanLock.TryLock()
+	if !rescanning {
+		w.scanLock.Unlock()
+	}
+	return rescanning, nil
+}
+
 // GetUnspentBlockStakeOutputs returns the blockstake outputs where the beneficiary is an
 // address this wallet has an unlockhash for.
-func (w *Wallet) GetUnspentBlockStakeOutputs() (unspent []types.UnspentBlockStakeOutput, err error) {
+func (w *Wallet) GetUnspentBlockStakeOutputs() ([]types.UnspentBlockStakeOutput, error) {
+	if err := w.tg.Add(); err != nil {
+		return nil, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
 	if !w.unlocked {
-		err = modules.ErrLockedWallet
-		return
+		return nil, modules.ErrLockedWallet
 	}
 
-	unspent = make([]types.UnspentBlockStakeOutput, 0)
+	// ensure durability of reported balance
+	if err := w.syncDB(); err != nil {
+		return nil, err
+	}
+
+	unspent := make([]types.UnspentBlockStakeOutput, 0)
 
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
 
 	// collect all fulfillable block stake outputs
-	for usbsoid, output := range w.blockstakeOutputs {
-		if output.Condition.Fulfillable(ctx) {
-			unspent = append(unspent, w.unspentblockstakeoutputs[usbsoid])
+	dbForEachUnspentBlockStakeOutput(w.dbTx, func(_ types.BlockStakeOutputID, ubso types.UnspentBlockStakeOutput) {
+		if ubso.Condition.Fulfillable(ctx) {
+			unspent = append(unspent, ubso)
 		}
-	}
-	return
+	})
+	return unspent, nil
 }
 
 func (w *Wallet) getFulfillableContextForLatestBlock() types.FulfillableContext {

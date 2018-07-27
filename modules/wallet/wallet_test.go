@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
@@ -61,7 +62,7 @@ func createWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = w.Encrypt(masterKey, modules.Seed{})
+	_, err = w.Init(masterKey)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 	if err != nil {
 		return nil, err
 	}
-	_, err = w.Encrypt(masterKey, modules.Seed{})
+	_, err = w.Init(masterKey)
 	if err != nil {
 		return nil, err
 	}
@@ -168,8 +169,9 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 // createBlankWalletTester creates a wallet tester that has not mined any
 // blocks or encrypted the wallet.
 func createBlankWalletTester(name string) (*walletTester, error) {
-	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
+	bcInfo := types.DefaultBlockchainInfo()
+
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
@@ -188,18 +190,13 @@ func createBlankWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	// m, err := miner.New(cs, tp, w, filepath.Join(testdir, modules.WalletDir))
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	// Assemble all components into a wallet tester.
 	wt := &walletTester{
 		gateway: g,
 		cs:      cs,
 		tpool:   tp,
-		// miner:   m,
-		wallet: w,
+		wallet:  w,
 
 		persistDir: testdir,
 	}
@@ -207,17 +204,14 @@ func createBlankWalletTester(name string) (*walletTester, error) {
 }
 
 // closeWt closes all of the modules in the wallet tester.
-func (wt *walletTester) closeWt() {
+func (wt *walletTester) closeWt() error {
 	errs := []error{
 		wt.gateway.Close(),
 		wt.cs.Close(),
 		wt.tpool.Close(),
-		//		wt.miner.Close(),
 		wt.wallet.Close(),
 	}
-	if err := build.JoinErrors(errs, "; "); err != nil {
-		panic(err)
-	}
+	return build.JoinErrors(errs, "; ")
 }
 
 // TestNilInputs tries starting the wallet using nil inputs.
@@ -226,8 +220,9 @@ func TestNilInputs(t *testing.T) {
 		t.SkipNow()
 	}
 
-	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.DefaultChainConstants()
+	bcInfo := types.DefaultBlockchainInfo()
+
 	testdir := build.TempDir(modules.WalletDir, t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
@@ -261,9 +256,8 @@ func TestNilInputs(t *testing.T) {
 // addresses in sorted order.
 func TestAllAddresses(t *testing.T) {
 	if testing.Short() {
-		t.SkipNow()
+		t.Skip()
 	}
-
 	wt, err := createWalletTester(t.Name())
 	if err != nil {
 		t.Fatal(err)
@@ -291,9 +285,6 @@ func TestAllAddresses(t *testing.T) {
 		if addrs[i].Hash[0] != byte(i) {
 			t.Error("address sorting failed:", i, addrs[i].Hash[0])
 		}
-		if addrs[i+6].Hash[0] != byte(i) {
-			t.Error("address sorting failed:", i+6, addrs[i+6].Hash[0])
-		}
 	}
 }
 
@@ -302,8 +293,10 @@ func TestCloseWallet(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	bcInfo := types.DefaultBlockchainInfo()
+
 	chainCts := types.DefaultChainConstants()
+	bcInfo := types.DefaultBlockchainInfo()
+
 	testdir := build.TempDir(modules.WalletDir, t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
@@ -326,6 +319,433 @@ func TestCloseWallet(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestRescanning verifies that calling Rescanning during a scan operation
+// returns true, and false otherwise.
+func TestRescanning(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	wt, err := createWalletTester(t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	// A fresh wallet should not be rescanning.
+	rescanning, err := wt.wallet.Rescanning()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rescanning {
+		t.Fatal("fresh wallet should not report that a scan is underway")
+	}
+
+	// lock the wallet
+	wt.wallet.Lock()
+
+	// spawn an unlock goroutine
+	errChan := make(chan error)
+	go func() {
+		// acquire the write lock so that Unlock acquires the trymutex, but
+		// cannot proceed further
+		wt.wallet.mu.Lock()
+		errChan <- wt.wallet.Unlock(wt.walletMasterKey)
+	}()
+
+	// wait for goroutine to start, after which Rescanning should return true
+	time.Sleep(time.Millisecond * 10)
+	rescanning, err = wt.wallet.Rescanning()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rescanning {
+		t.Fatal("wallet should report that a scan is underway")
+	}
+
+	// release the mutex and allow the call to complete
+	wt.wallet.mu.Unlock()
+	if err := <-errChan; err != nil {
+		t.Fatal("unlock failed:", err)
+	}
+
+	// Rescanning should now return false again
+	rescanning, err = wt.wallet.Rescanning()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rescanning {
+		t.Fatal("wallet should not report that a scan is underway")
+	}
+}
+
+// TestFutureAddressGeneration checks if the right amount of future addresses
+// is generated after calling NextAddress() or locking + unlocking the wallet.
+func TestLookaheadGeneration(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	wt, err := createWalletTester(t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	// Check if number of future keys is correct
+	wt.wallet.mu.RLock()
+	progress, err := dbGetPrimarySeedProgress(wt.wallet.dbTx)
+	wt.wallet.mu.RUnlock()
+	if err != nil {
+		t.Fatal("Couldn't fetch primary seed from db")
+	}
+
+	actualKeys := uint64(len(wt.wallet.lookahead))
+	expectedKeys := maxLookahead(progress)
+	if actualKeys != expectedKeys {
+		t.Errorf("expected len(lookahead) == %d but was %d", actualKeys, expectedKeys)
+	}
+
+	// Generate some more keys
+	for i := 0; i < 100; i++ {
+		wt.wallet.NextAddress()
+	}
+
+	// Lock and unlock
+	wt.wallet.Lock()
+	wt.wallet.Unlock(wt.walletMasterKey)
+
+	wt.wallet.mu.RLock()
+	progress, err = dbGetPrimarySeedProgress(wt.wallet.dbTx)
+	wt.wallet.mu.RUnlock()
+	if err != nil {
+		t.Fatal("Couldn't fetch primary seed from db")
+	}
+
+	actualKeys = uint64(len(wt.wallet.lookahead))
+	expectedKeys = maxLookahead(progress)
+	if actualKeys != expectedKeys {
+		t.Errorf("expected len(lookahead) == %d but was %d", actualKeys, expectedKeys)
+	}
+
+	wt.wallet.mu.RLock()
+	defer wt.wallet.mu.RUnlock()
+	for i := range wt.wallet.keys {
+		_, exists := wt.wallet.lookahead[i]
+		if exists {
+			t.Fatal("wallet keys contained a key which is also present in lookahead")
+		}
+	}
+}
+
+// TODO: fix tests
+/*
+// TestAdvanceLookaheadNoRescan tests if a transaction to multiple lookahead addresses
+// is handled correctly without forcing a wallet rescan.
+func TestAdvanceLookaheadNoRescan(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	builder := wt.wallet.StartTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	payout := types.ZeroCurrency
+
+	// Get the current progress
+	wt.wallet.mu.RLock()
+	progress, err := dbGetPrimarySeedProgress(wt.wallet.dbTx)
+	wt.wallet.mu.RUnlock()
+	if err != nil {
+		t.Fatal("Couldn't fetch primary seed from db")
+	}
+
+	// choose 10 keys in the lookahead and remember them
+	var receivingAddresses []types.UnlockHash
+	for _, sk := range generateKeys(wt.wallet.primarySeed, progress, 10) {
+		sco := types.CoinOutput{
+			Condition: types.NewCondition(types.NewUnlockHashCondition(sk.UnlockHash())),
+			Value:     types.NewCurrency64(1e3),
+		}
+
+		builder.AddCoinOutput(sco)
+		payout = payout.Add(sco.Value)
+		receivingAddresses = append(receivingAddresses, sk.UnlockHash())
+	}
+
+	uc, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs.addTransactionAsBlock(uc, wt.wallet.chainCts.MinimumTransactionFee.Add(payout))
+
+	err = builder.FundCoins(payout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tSet, err := builder.Sign()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = wt.tpool.AcceptTransactionSet(tSet)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check if the receiving addresses were moved from future keys to keys
+	wt.wallet.mu.RLock()
+	defer wt.wallet.mu.RUnlock()
+	for _, uh := range receivingAddresses {
+		_, exists := wt.wallet.lookahead[uh]
+		if exists {
+			t.Fatal("UnlockHash still exists in wallet lookahead")
+		}
+
+		_, exists = wt.wallet.keys[uh]
+		if !exists {
+			t.Fatal("UnlockHash not in map of spendable keys")
+		}
+	}
+}
+
+// TestAdvanceLookaheadNoRescan tests if a transaction to multiple lookahead addresses
+// is handled correctly forcing a wallet rescan.
+func TestAdvanceLookaheadForceRescan(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	// Get the current progress and balance
+	wt.wallet.mu.RLock()
+	progress, err := dbGetPrimarySeedProgress(wt.wallet.dbTx)
+	wt.wallet.mu.RUnlock()
+	if err != nil {
+		t.Fatal("Couldn't fetch primary seed from db")
+	}
+	startBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Send coins to an address with a high seed index, just outside the
+	// lookahead range. It will not be initially detected, but later the
+	// rescan should find it.
+	highIndex := progress + uint64(len(wt.wallet.lookahead)) + 5
+	farAddr := generateSpendableKey(wt.wallet.primarySeed, highIndex).UnlockHash()
+	farPayout := types.DefaultChainConstants().CurrencyUnits.OneCoin.Mul64(8888)
+
+	builder := wt.wallet.StartTransaction()
+	builder.AddCoinOutput(types.CoinOutput{
+		Condition: types.NewCondition(types.NewUnlockHashCondition(farAddr)),
+		Value:     farPayout,
+	})
+	uc, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cs.addTransactionAsBlock(uc, wt.wallet.chainCts.MinimumTransactionFee.Add(farPayout))
+	err = builder.FundCoins(farPayout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txnSet, err := builder.Sign()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = wt.tpool.AcceptTransactionSet(txnSet)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !startBal.Sub(newBal).Equals(farPayout) {
+		t.Fatal("wallet should not recognize coins sent to very high seed index")
+	}
+
+	builder = wt.wallet.StartTransaction()
+	var payout types.Currency
+
+	// choose 10 keys in the lookahead and remember them
+	var receivingAddresses []types.UnlockHash
+	for uh, index := range wt.wallet.lookahead {
+		// Only choose keys that force a rescan
+		if index < progress+lookaheadRescanThreshold {
+			continue
+		}
+		sco := types.CoinOutput{
+			Condition: types.NewCondition(types.NewUnlockHashCondition(uh)),
+			Value:     types.DefaultChainConstants().CurrencyUnits.OneCoin.Mul64(1000),
+		}
+		builder.AddCoinOutput(sco)
+		payout = payout.Add(sco.Value)
+		receivingAddresses = append(receivingAddresses, uh)
+
+		if len(receivingAddresses) >= 10 {
+			break
+		}
+	}
+
+	cs.addTransactionAsBlock(uc, wt.wallet.chainCts.MinimumTransactionFee.Add(payout))
+	err = builder.FundCoins(payout)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txnSet, err = builder.Sign()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = wt.tpool.AcceptTransactionSet(txnSet)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Allow the wallet rescan to finish
+	time.Sleep(time.Second * 2)
+
+	// Check that high seed index txn was discovered in the rescan
+	rescanBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rescanBal.Equals(startBal) {
+		t.Fatal("wallet did not discover txn after rescan")
+	}
+
+	// Check if the receiving addresses were moved from future keys to keys
+	wt.wallet.mu.RLock()
+	defer wt.wallet.mu.RUnlock()
+	for _, uh := range receivingAddresses {
+		_, exists := wt.wallet.lookahead[uh]
+		if exists {
+			t.Fatal("UnlockHash still exists in wallet lookahead")
+		}
+
+		_, exists = wt.wallet.keys[uh]
+		if !exists {
+			t.Fatal("UnlockHash not in map of spendable keys")
+		}
+	}
+}
+*/
+
+/* // TODO: fix broken test
+// TestDistantWallets tests if two wallets that use the same seed stay
+// synchronized.
+func TestDistantWallets(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	chainCts := types.DefaultChainConstants()
+	bcInfo := types.DefaultBlockchainInfo()
+
+	// Create another wallet with the same seed.
+	w2, err := New(wt.cs, wt.tpool, build.TempDir(modules.WalletDir, t.Name()+"2", modules.WalletDir), bcInfo, chainCts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = w2.InitFromSeed(crypto.TwofishKey{}, wt.wallet.primarySeed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = w2.Unlock(crypto.TwofishKey(crypto.HashObject(wt.wallet.primarySeed)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	uc1, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cs.addTransactionAsBlock(
+		uc1,
+		chainCts.MinimumTransactionFee.Add(chainCts.CurrencyUnits.OneCoin).
+			Mul64(uint64(lookaheadBuffer/2)),
+	)
+
+	// Use the first wallet.
+	for i := uint64(0); i < lookaheadBuffer/2; i++ {
+		_, err = wt.wallet.SendCoins(chainCts.CurrencyUnits.OneCoin, types.NewCondition(&types.NilCondition{}), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// The second wallet's balance should update accordingly.
+	w1bal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	w2bal, _, err := w2.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !w1bal.Equals(w2bal) {
+		t.Fatal("balances do not match:", w1bal, w2bal)
+	}
+
+	// Send coins to an address with a very high seed index, outside the
+	// lookahead range. w2 should not detect it.
+	tbuilder := wt.wallet.StartTransaction()
+	farAddr := generateSpendableKey(wt.wallet.primarySeed, lookaheadBuffer*10).UnlockHash()
+	value := chainCts.CurrencyUnits.OneCoin.Mul64(1e3)
+	tbuilder.AddCoinOutput(types.CoinOutput{
+		Condition: types.NewCondition(types.NewUnlockHashCondition(farAddr)),
+		Value:     value,
+	})
+	cs.addTransactionAsBlock(
+		uc1,
+		chainCts.MinimumTransactionFee.Add(value))
+	err = tbuilder.FundCoins(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	txnSet, err := tbuilder.Sign()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = wt.tpool.AcceptTransactionSet(txnSet)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if newBal, _, err := w2.ConfirmedBalance(); !newBal.Equals(w2bal.Sub(value)) {
+		if err != nil {
+			t.Fatal(err)
+		}
+		// TODO: FAILS HERE!!
+		t.Fatal("wallet should not recognize coins sent to very high seed index")
+	}
+}*/
 
 func newConsensusSetStub() *consensusSetStub {
 	chainCts := types.DefaultChainConstants()
@@ -364,6 +784,20 @@ func (css *consensusSetStub) addTransactionAsBlock(unlockHash types.UnlockHash, 
 	})
 }
 
+func (css *consensusSetStub) revertBlock() error {
+	li := len(css.blocks) - 1
+	if li < 0 {
+		return errors.New("there are no blocks to revert")
+	}
+	block := css.blocks[li]
+	css.blocks = css.blocks[:li]
+	for subscriber := range css.subscribers {
+		processRevertedBlock(block, subscriber)
+	}
+
+	return nil
+}
+
 func (css *consensusSetStub) AcceptBlock(block types.Block) error {
 	id := block.ID()
 	for _, b := range css.blocks {
@@ -389,6 +823,23 @@ func processAppliedBlock(block types.Block, subscriber modules.ConsensusSetSubsc
 		for _, co := range tx.CoinOutputs {
 			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, modules.CoinOutputDiff{
 				Direction:  modules.DiffApply,
+				ID:         types.CoinOutputID(crypto.HashObject(co)),
+				CoinOutput: co,
+			})
+		}
+	}
+	subscriber.ProcessConsensusChange(cc)
+}
+
+func processRevertedBlock(block types.Block, subscriber modules.ConsensusSetSubscriber) {
+	cc := modules.ConsensusChange{
+		ID:             modules.ConsensusChangeID(crypto.HashObject(block)),
+		RevertedBlocks: []types.Block{block},
+	}
+	for _, tx := range block.Transactions {
+		for _, co := range tx.CoinOutputs {
+			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, modules.CoinOutputDiff{
+				Direction:  modules.DiffRevert,
 				ID:         types.CoinOutputID(crypto.HashObject(co)),
 				CoinOutput: co,
 			})

@@ -7,11 +7,22 @@ import (
 
 // UnlockedUnspendOutputs returns all unlocked coinoutput and blockstakeoutputs
 func (w *Wallet) UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput, error) {
+	if err := w.tg.Add(); err != nil {
+		return nil, nil, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	if !w.unlocked {
 		return nil, nil, modules.ErrLockedWallet
+	}
+
+	// ensure durability of reported balance
+	err := w.syncDB()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	ucom := make(map[types.CoinOutputID]types.CoinOutput)
@@ -20,40 +31,60 @@ func (w *Wallet) UnlockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutp
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
 
-	// get all coin and block stake stum
-	for id, co := range w.coinOutputs {
+	// get all (multisig) coin/blockStake unspend outputs
+	err = dbForEachCoinOutput(w.dbTx, func(id types.CoinOutputID, co types.CoinOutput) {
 		if co.Condition.Fulfillable(ctx) {
 			ucom[id] = co
 		}
+	})
+	if err != nil {
+		return nil, nil, err
 	}
-	// same for multisig
-	for id, co := range w.multiSigCoinOutputs {
+	err = dbForEachBlockStakeOutput(w.dbTx, func(id types.BlockStakeOutputID, bso types.BlockStakeOutput) {
+		if bso.Condition.Fulfillable(ctx) {
+			ubsom[id] = bso
+		}
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	err = dbForEachMultisigCoinOutput(w.dbTx, func(id types.CoinOutputID, co types.CoinOutput) {
 		if co.Condition.Fulfillable(ctx) {
 			ucom[id] = co
 		}
+	})
+	if err != nil {
+		return nil, nil, err
 	}
-	// block stakes
-	for id, bso := range w.blockstakeOutputs {
+	err = dbForEachMultisigBlockStakeOutput(w.dbTx, func(id types.BlockStakeOutputID, bso types.BlockStakeOutput) {
 		if bso.Condition.Fulfillable(ctx) {
 			ubsom[id] = bso
 		}
-	}
-	// block stake multisigs
-	for id, bso := range w.multiSigBlockStakeOutputs {
-		if bso.Condition.Fulfillable(ctx) {
-			ubsom[id] = bso
-		}
+	})
+	if err != nil {
+		return nil, nil, err
 	}
 	return ucom, ubsom, nil
 }
 
 // LockedUnspendOutputs returnas all locked coinoutput and blockstakeoutputs
 func (w *Wallet) LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput, map[types.BlockStakeOutputID]types.BlockStakeOutput, error) {
+	if err := w.tg.Add(); err != nil {
+		return nil, nil, modules.ErrWalletShutdown
+	}
+	defer w.tg.Done()
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	if !w.unlocked {
 		return nil, nil, modules.ErrLockedWallet
+	}
+
+	// ensure durability of reported balance
+	err := w.syncDB()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	ucom := make(map[types.CoinOutputID]types.CoinOutput)
@@ -62,29 +93,38 @@ func (w *Wallet) LockedUnspendOutputs() (map[types.CoinOutputID]types.CoinOutput
 	// prepare fulfillable context
 	ctx := w.getFulfillableContextForLatestBlock()
 
-	// get all coin and block stake stum
-	for id, co := range w.coinOutputs {
+	// get all (multisig) coin/blockStake unspend outputs
+	err = dbForEachCoinOutput(w.dbTx, func(id types.CoinOutputID, co types.CoinOutput) {
 		if !co.Condition.Fulfillable(ctx) {
 			ucom[id] = co
 		}
+	})
+	if err != nil {
+		return nil, nil, err
 	}
-	// same for multisig
-	for id, co := range w.multiSigCoinOutputs {
+	err = dbForEachBlockStakeOutput(w.dbTx, func(id types.BlockStakeOutputID, bso types.BlockStakeOutput) {
+		if !bso.Condition.Fulfillable(ctx) {
+			ubsom[id] = bso
+		}
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	err = dbForEachMultisigCoinOutput(w.dbTx, func(id types.CoinOutputID, co types.CoinOutput) {
 		if !co.Condition.Fulfillable(ctx) {
 			ucom[id] = co
 		}
+	})
+	if err != nil {
+		return nil, nil, err
 	}
-	// block stakes
-	for id, bso := range w.blockstakeOutputs {
+	err = dbForEachMultisigBlockStakeOutput(w.dbTx, func(id types.BlockStakeOutputID, bso types.BlockStakeOutput) {
 		if !bso.Condition.Fulfillable(ctx) {
 			ubsom[id] = bso
 		}
-	}
-	// block stake multisigs
-	for id, bso := range w.multiSigBlockStakeOutputs {
-		if !bso.Condition.Fulfillable(ctx) {
-			ubsom[id] = bso
-		}
+	})
+	if err != nil {
+		return nil, nil, err
 	}
 	return ucom, ubsom, nil
 }

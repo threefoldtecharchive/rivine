@@ -17,6 +17,7 @@ func TestPrimarySeed(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
+	t.Parallel()
 	// Start with a blank wallet tester.
 	wt, err := createBlankWalletTester(t.Name())
 	if err != nil {
@@ -25,37 +26,36 @@ func TestPrimarySeed(t *testing.T) {
 	defer wt.closeWt()
 
 	// Create a seed and unlock the wallet.
-	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
-	seed, err := wt.wallet.Encrypt(encryptionKey, modules.Seed{})
+	seed, err := wt.wallet.Init(crypto.TwofishKey{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = wt.wallet.Unlock(encryptionKey)
+	err = wt.wallet.Unlock(crypto.TwofishKey(crypto.HashObject(seed)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Try getting an address, see that the seed advances correctly.
-	primarySeed, progress, err := wt.wallet.PrimarySeed()
+	primarySeed, remaining, err := wt.wallet.PrimarySeed()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(primarySeed[:], seed[:]) {
 		t.Error("PrimarySeed is returning a value inconsitent with the seed returned by Encrypt")
 	}
-	if progress != 0 {
-		t.Error("primary seed is returning the wrong progress")
+	if remaining != maxScanKeys {
+		t.Error("primary seed is returning the wrong number of remaining addresses")
 	}
 	_, err = wt.wallet.NextAddress()
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, progress, err = wt.wallet.PrimarySeed()
+	_, remaining, err = wt.wallet.PrimarySeed()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if progress != 1 {
-		t.Error("primary seed is returning the wrong progress")
+	if remaining != maxScanKeys-1 {
+		t.Error("primary seed is returning the wrong number of remaining addresses")
 	}
 
 	// Lock then unlock the wallet and check the responses.
@@ -67,93 +67,19 @@ func TestPrimarySeed(t *testing.T) {
 	if err != modules.ErrLockedWallet {
 		t.Error("unexpected err:", err)
 	}
-	err = wt.wallet.Unlock(encryptionKey)
+	err = wt.wallet.Unlock(crypto.TwofishKey(crypto.HashObject(seed)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	primarySeed, progress, err = wt.wallet.PrimarySeed()
+	primarySeed, remaining, err = wt.wallet.PrimarySeed()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(primarySeed[:], seed[:]) {
 		t.Error("PrimarySeed is returning a value inconsitent with the seed returned by Encrypt")
 	}
-	if progress != 1 {
-		t.Error("progress reporting an unexpected value")
-	}
-
-	// recover first wallet into second wallet
-
-	wt2, err := createBlankWalletTester(t.Name() + "2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer wt2.closeWt()
-
-	encryptionKey2 := crypto.TwofishKey(crypto.HashObject("TREZOR 2"))
-	seedDup, err := wt2.wallet.Encrypt(encryptionKey2, seed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if bytes.Compare(seed[:], seedDup[:]) != 0 {
-		t.Fatal(seed, "!=", seedDup)
-	}
-
-	err = wt2.wallet.Unlock(encryptionKey2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	primarySeed, progress, err = wt2.wallet.PrimarySeed()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(primarySeed[:], seed[:]) {
-		t.Error("PrimarySeed is returning a value inconsitent with the seed returned by Encrypt",
-			primarySeed, "!=", seed)
-	}
-	expectedProgress := uint64(modules.PublicKeysPerSeed - modules.WalletSeedPreloadDepth)
-	if progress != expectedProgress {
-		t.Error("progress reporting an unexpected value", progress, "!=", expectedProgress)
-	}
-
-	_, err = wt2.wallet.NextAddress()
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, progress, err = wt2.wallet.PrimarySeed()
-	if err != nil {
-		t.Fatal(err)
-	}
-	expectedProgress++
-	if progress != expectedProgress {
-		t.Error("primary seed is returning the wrong progress", progress, "!=", expectedProgress)
-	}
-
-	// ensure we have all addresses of original wallet in the new wallet
-	uhs1, err := wt.wallet.AllAddresses()
-	if err != nil {
-		t.Fatal(err)
-	}
-	uhs2, err := wt2.wallet.AllAddresses()
-	if err != nil {
-		t.Fatal(err)
-	}
-	il := len(uhs2)
-	for _, uh1 := range uhs1 {
-		l := len(uhs2)
-		for i, uh2 := range uhs2 {
-			if uh1.Cmp(uh2) == 0 {
-				uhs2 = append(uhs2[:i], uhs2[i+1:]...)
-				break
-			}
-		}
-		if l == len(uhs1) {
-			t.Error("couldn't find ", uh1, " in new wallet")
-		}
-	}
-	if il-len(uhs1) != len(uhs2) {
-		t.Error("couldn't find all original hashes in the new wallet")
+	if remaining != maxScanKeys-1 {
+		t.Error("primary seed is returning the wrong number of remaining addresses")
 	}
 }
 
@@ -164,9 +90,7 @@ func TestLoadSeed(t *testing.T) {
 		t.SkipNow()
 	}
 	t.Parallel()
-
 	cs := newConsensusSetStub()
-
 	wt, err := createWalletTesterWithStubCS(t.Name(), cs)
 	if err != nil {
 		t.Fatal(err)
@@ -181,49 +105,25 @@ func TestLoadSeed(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(allSeeds) != 1 {
-		t.Error("AllSeeds should be returning the primary seed.")
+		t.Fatal("AllSeeds should be returning the primary seed.")
+	} else if allSeeds[0] != seed {
+		t.Fatal("AllSeeds returned the wrong seed")
 	}
-	if allSeeds[0] != seed {
-		t.Error("AllSeeds returned the wrong seed")
-	}
+	wt.wallet.Close()
 
-	addr, err := wt.wallet.NextAddress()
-	if err != nil {
-		t.Errorf("next address couldn't be created: %v", err)
-	}
-
-	c, _, err := wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !c.Equals64(0) {
-		t.Error("fresh wallet should not have a balance")
-	}
-
-	err = cs.addTransactionAsBlock(addr, types.NewCurrency64(1000))
-	if err != nil {
-		t.Errorf("failed to add transaction as block: %v", err)
-	}
-
-	c, _, err = wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !c.Equals64(1000) {
-		t.Error("wallet requires 1000 coins at this point")
-	}
+	chainCts := types.DefaultChainConstants()
+	bcInfo := types.DefaultBlockchainInfo()
 
 	dir := filepath.Join(build.TempDir(modules.WalletDir, t.Name()+"1"), modules.WalletDir)
-	w, err := New(wt.cs, wt.tpool, dir, types.DefaultBlockchainInfo(), types.DefaultChainConstants())
+	w, err := New(wt.cs, wt.tpool, dir, bcInfo, chainCts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
-	newSeed, err := w.Encrypt(encryptionKey, modules.Seed{})
+	newSeed, err := w.Init(crypto.TwofishKey{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = w.Unlock(encryptionKey)
+	err = w.Unlock(crypto.TwofishKey(crypto.HashObject(newSeed)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,9 +135,36 @@ func TestLoadSeed(t *testing.T) {
 	if !siacoinBal.Equals64(0) {
 		t.Error("fresh wallet should not have a balance")
 	}
-	err = w.LoadSeed(encryptionKey, seed)
+	err = w.LoadSeed(crypto.TwofishKey(crypto.HashObject(newSeed)), seed)
 	if err != nil {
 		t.Fatal(err)
+	}
+	allSeeds, err = w.AllSeeds()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(allSeeds) != 2 {
+		t.Error("AllSeeds should be returning the primary seed with the recovery seed.")
+	}
+	if allSeeds[0] != newSeed {
+		t.Error("AllSeeds returned the wrong seed")
+	}
+	if !bytes.Equal(allSeeds[1][:], seed[:]) {
+		t.Error("AllSeeds returned the wrong seed")
+	}
+	err = cs.addTransactionAsBlock(
+		types.NewEd25519PubKeyUnlockHash(generateKeys(newSeed, 1, 1)[0].PublicKey),
+		types.NewCurrency64(1000))
+	if err != nil {
+		t.Errorf("failed to add transaction as block: %v", err)
+	}
+
+	siacoinBal2, _, err := w.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if siacoinBal2.Cmp64(0) <= 0 {
+		t.Error("wallet failed to load a seed with money in it")
 	}
 	allSeeds, err = w.AllSeeds()
 	if err != nil {
@@ -252,52 +179,358 @@ func TestLoadSeed(t *testing.T) {
 	if !bytes.Equal(allSeeds[1][:], seed[:]) {
 		t.Error("AllSeeds returned the wrong seed")
 	}
+}
 
-	// rescan
-	cs.Unsubscribe(w)
-	err = cs.ConsensusSetSubscribe(w, modules.ConsensusChangeID{})
+/*
+// TODO: enable when sweep-seed feature is enabled
+// TestSweepSeedCoins tests that sweeping a seed results in the transfer of
+// its siacoin outputs to the wallet.
+func TestSweepSeedCoins(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	t.Parallel()
+	// create a wallet with some money
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS("TestSweepSeedCoins0", cs)
 	if err != nil {
-		t.Errorf("Couldn't rescan by unsubscribing and subscribing again: %v", err)
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+	seed, _, err := wt.wallet.PrimarySeed()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// send money to ourselves, so that we sweep a real output (instead of
+	// just a miner payout)
+	uc, err := wt.wallet.NextAddress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	chainCts := types.DefaultChainConstants()
+	cs.addTransactionAsBlock(uc, chainCts.MinimumTransactionFee.Add(chainCts.CurrencyUnits.OneCoin))
+	_, err = wt.wallet.SendCoins(chainCts.CurrencyUnits.OneCoin,
+		types.NewCondition(types.NewUnlockHashCondition(uc)), nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	// Balance of wallet should be 0.
-	siacoinBal, _, err = w.ConfirmedBalance()
+	bcInfo := types.DefaultBlockchainInfo()
+	// create a blank wallet
+	dir := filepath.Join(build.TempDir(modules.WalletDir, "TestSweepSeedCoins1"), modules.WalletDir)
+	w, err := New(wt.cs, wt.tpool, dir, bcInfo, chainCts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !siacoinBal.Equals64(1000) {
-		t.Errorf("wallet with loaded key should have old balance but has: %v", siacoinBal)
+	newSeed, err := w.Init(crypto.TwofishKey{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = w.Unlock(crypto.TwofishKey(crypto.HashObject(newSeed)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// starting balance should be 0.
+	siacoinBal, _, err := w.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !siacoinBal.IsZero() {
+		t.Error("fresh wallet should not have a balance")
 	}
 
-	// Rather than worry about a rescan, which isn't implemented and has
-	// synchronization difficulties, just load a new wallet from the same
-	// settings file - the same effect is achieved without the difficulties.
-	w2, err := New(wt.cs, wt.tpool, dir, types.DefaultBlockchainInfo(), types.DefaultChainConstants())
+	// sweep the seed of the first wallet into the second
+	sweptCoins, _, err := w.SweepSeed(seed)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = w2.Unlock(encryptionKey)
+
+	// new wallet should have exactly 'sweptCoins' coins
+	_, incoming, err := w.UnconfirmedBalance()
 	if err != nil {
 		t.Fatal(err)
 	}
-	siacoinBal, _, err = w2.ConfirmedBalance()
+	if incoming.Cmp(sweptCoins) != 0 {
+		t.Fatalf("wallet should have correct balance after sweeping seed: wanted %v, got %v", sweptCoins, incoming)
+	}
+}
+
+// Disabled as Rivine has no miner
+// TODO: enable once again
+/*
+// TestSweepSeedFunds tests that sweeping a seed results in the transfer of
+// its siafund outputs to the wallet.
+func TestSweepSeedFunds(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	t.Parallel()
+	wt, err := createWalletTester("TestSweepSeedFunds", modules.ProdDependencies)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !siacoinBal.Equals64(1000) {
-		t.Errorf("wallet with loaded key should have old balance but has: %v", siacoinBal)
+	defer wt.closeWt()
+
+	// Load the key into the wallet.
+	err = wt.wallet.LoadSiagKeys(wt.walletMasterKey, []string{"../../types/siag0of1of1.siakey"})
+	if err != nil {
+		t.Error(err)
 	}
-	allSeeds, err = w2.AllSeeds()
+
+	_, siafundBal, _, err := wt.wallet.ConfirmedBalance()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(allSeeds) != 2 {
-		t.Error("AllSeeds should be returning the primary seed with the recovery seed.")
+	if siafundBal.Cmp(types.NewCurrency64(2000)) != 0 {
+		t.Error("expecting a siafund balance of 2000 from the 1of1 key")
 	}
-	if !bytes.Equal(allSeeds[0][:], newSeed[:]) {
-		t.Error("AllSeeds returned the wrong seed")
+	// need to reset the miner as well, since it depends on the wallet
+	wt.miner, err = miner.New(wt.cs, wt.tpool, wt.wallet, wt.wallet.persistDir)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !bytes.Equal(allSeeds[1][:], seed[:]) {
-		t.Error("AllSeeds returned the wrong seed")
+
+	// Create a seed and generate an address to send money to.
+	seed := modules.Seed{1, 2, 3}
+	sk := generateSpendableKey(seed, 1)
+
+	// Send some siafunds to the address.
+	_, err = wt.wallet.SendSiafunds(types.NewCurrency64(12), sk.UnlockConditions.UnlockHash())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Send some siacoins to the address, but not enough to cover the
+	// transaction fee.
+	_, err = wt.wallet.SendSiacoins(types.NewCurrency64(1), sk.UnlockConditions.UnlockHash())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// mine blocks without earning payout until our balance is stable
+	for i := types.BlockHeight(0); i < types.MaturityDelay; i++ {
+		wt.addBlockNoPayout()
+	}
+	oldCoinBalance, siafundBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if siafundBal.Cmp(types.NewCurrency64(1988)) != 0 {
+		t.Errorf("expecting balance of %v after sending siafunds to the seed, got %v", 1988, siafundBal)
+	}
+
+	// Sweep the seed.
+	coins, funds, err := wt.wallet.SweepSeed(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !coins.IsZero() {
+		t.Error("expected to sweep 0 coins, got", coins)
+	}
+	if funds.Cmp(types.NewCurrency64(12)) != 0 {
+		t.Errorf("expected to sweep %v funds, got %v", 12, funds)
+	}
+	// add a block without earning its payout
+	wt.addBlockNoPayout()
+
+	// Wallet balance should have decreased to pay for the sweep transaction.
+	newCoinBalance, _, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newCoinBalance.Cmp(oldCoinBalance) >= 0 {
+		t.Error("expecting balance to go down; instead, increased by", newCoinBalance.Sub(oldCoinBalance))
+	}
+}
+
+// TestSweepSeedSentFunds tests that sweeping a seed results in the transfer
+// of its siafund outputs to the wallet, even after the funds have been
+// transferred a few times.
+func TestSweepSeedSentFunds(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	t.Parallel()
+	wt, err := createWalletTester("TestSweepSeedSentFunds", modules.ProdDependencies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	// Load the key into the wallet.
+	err = wt.wallet.LoadSiagKeys(wt.walletMasterKey, []string{"../../types/siag0of1of1.siakey"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, siafundBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if siafundBal.Cmp(types.NewCurrency64(2000)) != 0 {
+		t.Error("expecting a siafund balance of 2000 from the 1of1 key")
+	}
+	// need to reset the miner as well, since it depends on the wallet
+	wt.miner, err = miner.New(wt.cs, wt.tpool, wt.wallet, wt.wallet.persistDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// send funds to ourself a few times
+	for i := 0; i < 10; i++ {
+		uc, err := wt.wallet.NextAddress()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = wt.wallet.SendSiafunds(types.NewCurrency64(1), uc.UnlockHash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		wt.addBlockNoPayout()
+	}
+	// send some funds to the void
+	_, err = wt.wallet.SendSiafunds(types.NewCurrency64(10), types.UnlockHash{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wt.addBlockNoPayout()
+
+	// Create a seed and generate an address to send money to.
+	seed := modules.Seed{1, 2, 3}
+	sk := generateSpendableKey(seed, 1)
+
+	// Send some siafunds to the address.
+	_, err = wt.wallet.SendSiafunds(types.NewCurrency64(12), sk.UnlockConditions.UnlockHash())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// mine blocks without earning payout until our balance is stable
+	for i := types.BlockHeight(0); i < types.MaturityDelay; i++ {
+		wt.addBlockNoPayout()
+	}
+	oldCoinBalance, siafundBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if expected := 2000 - 12 - 10; siafundBal.Cmp(types.NewCurrency64(uint64(expected))) != 0 {
+		t.Errorf("expecting balance of %v after sending siafunds to the seed, got %v", expected, siafundBal)
+	}
+
+	// Sweep the seed.
+	coins, funds, err := wt.wallet.SweepSeed(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !coins.IsZero() {
+		t.Error("expected to sweep 0 coins, got", coins)
+	}
+	if funds.Cmp(types.NewCurrency64(12)) != 0 {
+		t.Errorf("expected to sweep %v funds, got %v", 12, funds)
+	}
+	// add a block without earning its payout
+	wt.addBlockNoPayout()
+
+	// Wallet balance should have decreased to pay for the sweep transaction.
+	newCoinBalance, _, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newCoinBalance.Cmp(oldCoinBalance) >= 0 {
+		t.Error("expecting balance to go down; instead, increased by", newCoinBalance.Sub(oldCoinBalance))
+	}
+}
+*/
+
+/*
+// TestSweepSeedCoinsAndFunds tests that sweeping a seed results in the
+// transfer of its siacoin and siafund outputs to the wallet.
+func TestSweepSeedCoinsAndFunds(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	t.Parallel()
+	wt, err := createWalletTester("TestSweepSeedCoinsAndFunds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer wt.closeWt()
+
+	// Load the key into the wallet.
+	err = wt.wallet.LoadSiagKeys(wt.walletMasterKey, []string{"../../types/siag0of1of1.siakey"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, siafundBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if siafundBal.Cmp(types.NewCurrency64(2000)) != 0 {
+		t.Error("expecting a siafund balance of 2000 from the 1of1 key")
+	}
+
+	// Create a seed and generate an address to send money to.
+	seed := modules.Seed{1, 2, 3}
+	sk := generateSpendableKey(seed, 1)
+
+	// Send some siafunds to the address.
+	for i := 0; i < 12; i++ {
+		_, err = wt.wallet.SendSiafunds(types.NewCurrency64(1), sk.UnlockConditions.UnlockHash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		wt.addBlockNoPayout()
+	}
+	// Send some siacoins to the address -- must be more than the transaction
+	// fee.
+	for i := 0; i < 100; i++ {
+		_, err = wt.wallet.SendSiacoins(types.SiacoinPrecision.Mul64(10), sk.UnlockConditions.UnlockHash())
+		if err != nil {
+			t.Fatal(err)
+		}
+		wt.addBlockNoPayout()
+	}
+	// mine blocks without earning payout until our balance is stable
+	for i := types.BlockHeight(0); i < types.MaturityDelay; i++ {
+		wt.addBlockNoPayout()
+	}
+	oldCoinBalance, siafundBal, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if siafundBal.Cmp(types.NewCurrency64(1988)) != 0 {
+		t.Errorf("expecting balance of %v after sending siafunds to the seed, got %v", 1988, siafundBal)
+	}
+
+	// Sweep the seed.
+	coins, funds, err := wt.wallet.SweepSeed(seed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if coins.IsZero() {
+		t.Error("expected to sweep coins, got 0")
+	}
+	if funds.Cmp(types.NewCurrency64(12)) != 0 {
+		t.Errorf("expected to sweep %v funds, got %v", 12, funds)
+	}
+	// add a block without earning its payout
+	wt.addBlockNoPayout()
+
+	// Wallet balance should have decreased to pay for the sweep transaction.
+	newCoinBalance, _, _, err := wt.wallet.ConfirmedBalance()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newCoinBalance.Cmp(oldCoinBalance) <= 0 {
+		t.Error("expecting balance to go up; instead, decreased by", oldCoinBalance.Sub(newCoinBalance))
+	}
+}
+*/ // enable, by doing it without a Sia Key
+
+// TestGenerateKeys tests that the generateKeys function correctly generates a
+// key for every index specified.
+func TestGenerateKeys(t *testing.T) {
+	for i, k := range generateKeys(modules.Seed{}, 1000, 4000) {
+		if len(k.UnlockHash().Hash) == 0 {
+			t.Errorf("index %v was skipped", i)
+		}
 	}
 }
