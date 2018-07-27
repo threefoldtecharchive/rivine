@@ -62,6 +62,8 @@ func createTCPConn(conn net.Conn) *tcpConn {
 					return
 				}
 				c.errorChan <- err
+				// decoder errored, replace with new one
+				c.dec = json.NewDecoder(c.conn)
 				continue
 			}
 			c.requestChan <- req
