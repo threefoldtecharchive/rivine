@@ -132,12 +132,18 @@ func TestIntegrationPreEncryption(t *testing.T) {
 		t.Fatal(err)
 	}
 	encrypted, err = w1.Encrypted()
+	if err != nil {
+		t.Fatal(err)
+	}
 	if encrypted {
 		t.Error("wallet is reporting that it has been encrypted when no such action has occurred")
 	}
 	unlocked, err := w1.Unlocked()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if unlocked {
+		t.Error("new wallet is not being treated as locked")
 	}
 	unlocked, err = w1.Unlocked()
 	if err != nil {

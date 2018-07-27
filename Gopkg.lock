@@ -40,6 +40,12 @@
   revision = "1db44fa75fb1036c6d7be59a5793be4b1fb8a5ab"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/NebulousLabs/threadgroup"
+  packages = ["."]
+  revision = "d137120f1e2837732baa67b3e8a3c199043f876a"
+
+[[projects]]
   name = "github.com/bgentry/speakeasy"
   packages = ["."]
   revision = "4aabc24848ce5fd31929f7d1e4ea74d3709c14cd"
@@ -169,6 +175,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7896271e57a19ddc6e2977617b67779677526914d53cfda5718dbf54c7f3241f"
+  inputs-digest = "0c4379bdadb2638f90ac8b96979c798b8642ca8253addc68645ed1f46ed6c118"
   solver-name = "gps-cdcl"
   solver-version = 1
