@@ -55,12 +55,13 @@ type scannedOutput struct {
 // A seedScanner scans the blockchain for addresses that belong to a given
 // seed.
 type seedScanner struct {
-	keys              map[types.UnlockHash]uint64 // map address to seed index
-	largestIndexSeen  uint64                      // largest index that has appeared in the blockchain
-	seed              modules.Seed
-	coinOutputs       map[types.CoinOutputID]scannedOutput
-	blockStakeOutputs map[types.BlockStakeOutputID]scannedOutput
-	// TODO: support multisig outputs (see: https://github.com/rivine/rivine/issues/428)
+	keys                      map[types.UnlockHash]uint64 // map address to seed index
+	largestIndexSeen          uint64                      // largest index that has appeared in the blockchain
+	seed                      modules.Seed
+	coinOutputs               map[types.CoinOutputID]scannedOutput
+	blockStakeOutputs         map[types.BlockStakeOutputID]scannedOutput
+	multiSigCoinOutputs       map[types.CoinOutputID]scannedOutput
+	multiSigBlockStakeOutputs map[types.BlockStakeOutputID]scannedOutput
 
 	log *persist.Logger
 }
@@ -79,59 +80,98 @@ func (s *seedScanner) generateKeys(n uint64) {
 
 // ProcessConsensusChange scans the blockchain for information relevant to the
 // seedScanner.
-// TODO: support multisig outputs (see: https://github.com/rivine/rivine/issues/428)
 func (s *seedScanner) ProcessConsensusChange(cc modules.ConsensusChange) {
-	// update outputs
+	// update outputs & largest seen index
 	for _, diff := range cc.CoinOutputDiffs {
-		if diff.Direction == modules.DiffApply {
-			if index, exists := s.keys[diff.CoinOutput.Condition.UnlockHash()]; exists {
-				s.coinOutputs[diff.ID] = scannedOutput{
-					id:        types.OutputID(diff.ID),
-					value:     diff.CoinOutput.Value,
-					condition: diff.CoinOutput.Condition,
-					seedIndex: index,
+		if diff.CoinOutput.Condition.Condition == nil {
+			continue // no need to continue, we ignore nil condition outputs for this purpose
+		}
+		var (
+			exists bool
+			index  uint64
+			m      map[types.CoinOutputID]scannedOutput
+		)
+		if index, exists = s.keys[diff.CoinOutput.Condition.UnlockHash()]; !exists {
+			// try to add it as multisig if our address appears in it
+			uhs, _ := getMultisigConditionProperties(diff.CoinOutput.Condition.Condition)
+			for _, uh := range uhs {
+				if index, exists = s.keys[uh]; exists {
+					m = s.multiSigCoinOutputs
+					break
 				}
 			}
-		} else if diff.Direction == modules.DiffRevert {
-			// NOTE: DiffRevert means the output was either spent or was in a
-			// block that was reverted.
-			delete(s.coinOutputs, diff.ID)
-		}
-	}
-	for _, diff := range cc.BlockStakeOutputDiffs {
-		if diff.Direction == modules.DiffApply {
-			if index, exists := s.keys[diff.BlockStakeOutput.Condition.UnlockHash()]; exists {
-				s.blockStakeOutputs[diff.ID] = scannedOutput{
-					id:        types.OutputID(diff.ID),
-					value:     diff.BlockStakeOutput.Value,
-					condition: diff.BlockStakeOutput.Condition,
-					seedIndex: index,
-				}
+			if !exists {
+				continue
 			}
-		} else if diff.Direction == modules.DiffRevert {
-			// NOTE: DiffRevert means the output was either spent or was in a
-			// block that was reverted.
-			delete(s.blockStakeOutputs, diff.ID)
+		} else {
+			// found index, referenced by a PubKey (SingleSig) unlock hash
+			m = s.coinOutputs
 		}
-	}
 
-	// update s.largestIndexSeen
-	for _, diff := range cc.CoinOutputDiffs {
-		index, exists := s.keys[diff.CoinOutput.Condition.UnlockHash()]
-		if exists {
-			s.log.Debugln("Seed scanner found a key used at index", index)
-			if index > s.largestIndexSeen {
-				s.largestIndexSeen = index
+		// update s.LargestIndexSeen
+		s.log.Debugln("Seed scanner found a key used at index", index)
+		if index > s.largestIndexSeen {
+			s.largestIndexSeen = index
+		}
+
+		// update coin output
+		if diff.Direction == modules.DiffApply {
+			// NOTE: this does not mean the output is also fulfillable,
+			// it only means that at this point of the consensus state it is spendable and owned by the embedded seed
+			m[diff.ID] = scannedOutput{
+				id:        types.OutputID(diff.ID),
+				value:     diff.CoinOutput.Value,
+				condition: diff.CoinOutput.Condition,
+				seedIndex: index,
 			}
+		} else if diff.Direction == modules.DiffRevert {
+			delete(m, diff.ID)
 		}
 	}
 	for _, diff := range cc.BlockStakeOutputDiffs {
-		index, exists := s.keys[diff.BlockStakeOutput.Condition.UnlockHash()]
-		if exists {
-			s.log.Debugln("Seed scanner found a key used at index", index)
-			if index > s.largestIndexSeen {
-				s.largestIndexSeen = index
+		if diff.BlockStakeOutput.Condition.Condition == nil {
+			continue // no need to continue, we ignore nil condition outputs for this purpose
+		}
+		var (
+			exists bool
+			index  uint64
+			m      map[types.BlockStakeOutputID]scannedOutput
+		)
+		if index, exists = s.keys[diff.BlockStakeOutput.Condition.UnlockHash()]; !exists {
+			// try to add it as multisig if our address appears in it
+			uhs, _ := getMultisigConditionProperties(diff.BlockStakeOutput.Condition.Condition)
+			for _, uh := range uhs {
+				if index, exists = s.keys[uh]; exists {
+					m = s.multiSigBlockStakeOutputs
+					break
+				}
 			}
+			if !exists {
+				continue
+			}
+		} else {
+			m = s.blockStakeOutputs
+			// found index, referenced by a PubKey (SingleSig) unlock hash
+		}
+
+		// update s.LargestIndexSeen
+		s.log.Debugln("Seed scanner found a key used at index", index)
+		if index > s.largestIndexSeen {
+			s.largestIndexSeen = index
+		}
+
+		// update block stake output
+		if diff.Direction == modules.DiffApply {
+			// NOTE: this does not mean the output is also fulfillable,
+			// it only means that at this point of the consensus state it is spendable and owned by the embedded seed
+			m[diff.ID] = scannedOutput{
+				id:        types.OutputID(diff.ID),
+				value:     diff.BlockStakeOutput.Value,
+				condition: diff.BlockStakeOutput.Condition,
+				seedIndex: index,
+			}
+		} else if diff.Direction == modules.DiffRevert {
+			delete(m, diff.ID)
 		}
 	}
 }
@@ -170,10 +210,12 @@ func (s *seedScanner) scan(cs modules.ConsensusSet, cancel <-chan struct{}) erro
 // newSeedScanner returns a new seedScanner.
 func newSeedScanner(seed modules.Seed, log *persist.Logger) *seedScanner {
 	return &seedScanner{
-		seed:              seed,
-		keys:              make(map[types.UnlockHash]uint64, numInitialKeys),
-		coinOutputs:       make(map[types.CoinOutputID]scannedOutput),
-		blockStakeOutputs: make(map[types.BlockStakeOutputID]scannedOutput),
+		seed:                      seed,
+		keys:                      make(map[types.UnlockHash]uint64, numInitialKeys),
+		coinOutputs:               make(map[types.CoinOutputID]scannedOutput),
+		blockStakeOutputs:         make(map[types.BlockStakeOutputID]scannedOutput),
+		multiSigCoinOutputs:       make(map[types.CoinOutputID]scannedOutput),
+		multiSigBlockStakeOutputs: make(map[types.BlockStakeOutputID]scannedOutput),
 
 		log: log,
 	}

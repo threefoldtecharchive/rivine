@@ -61,6 +61,9 @@ func TestScanLargeIndex(t *testing.T) {
 	}
 }
 
+// TODO: add test which ensures we can also detect largest index during seed scanning,
+//       when referenced as part of a multisig output
+
 /* // TODO FIX AND ENABLE
 // TestScanLoop tests that the scan loop will continue to run as long as it
 // finds indices in the upper half of the last set of generated keys.
