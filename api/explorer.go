@@ -321,6 +321,7 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 			WriteError(w, Error{
 				"error during call to /explorer/hash: failed to get txn from transaction pool: " + err.Error()},
 				http.StatusInternalServerError)
+			return
 		}
 	}
 
