@@ -112,6 +112,13 @@ type (
 		AllSeeds           []string `json:"allseeds"`
 	}
 
+	// WalletSweepPOST contains the coins and block stakes returned by a call to
+	// /wallet/sweep.
+	WalletSweepPOST struct {
+		Coins       types.Currency `json:"coins"`
+		BlockStakes types.Currency `json:"blockstakes"`
+	}
+
 	// WalletKeyGet contains the public and private key used by the wallet.
 	WalletKeyGet struct {
 		AlgorithmSpecifier types.Specifier `json:"specifier"`
@@ -560,6 +567,28 @@ func (api *API) walletDataHandler(w http.ResponseWriter, req *http.Request, _ ht
 	}
 	WriteJSON(w, WalletCoinsPOSTResp{
 		TransactionID: tx.ID(),
+	})
+}
+
+// walletSweepSeedHandler handles API calls to /wallet/sweep/seed.
+func (api *API) walletSweepSeedHandler(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	var seed modules.Seed
+	err := seed.LoadString(req.FormValue("seed"))
+	if err != nil {
+		WriteError(w, Error{
+			"error when calling /wallet/sweep/seed: invalid seed given: " + err.Error()},
+			http.StatusBadRequest)
+		return
+	}
+
+	coins, blockstakes, err := api.wallet.SweepSeed(seed)
+	if err != nil {
+		WriteError(w, Error{"error when calling /wallet/sweep/seed: " + err.Error()}, http.StatusBadRequest)
+		return
+	}
+	WriteJSON(w, WalletSweepPOST{
+		Coins:       coins,
+		BlockStakes: blockstakes,
 	})
 }
 

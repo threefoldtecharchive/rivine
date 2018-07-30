@@ -181,8 +181,6 @@ func TestLoadSeed(t *testing.T) {
 	}
 }
 
-/*
-// TODO: enable when sweep-seed feature is enabled
 // TestSweepSeedCoins tests that sweeping a seed results in the transfer of
 // its siacoin outputs to the wallet.
 func TestSweepSeedCoins(t *testing.T) {
@@ -190,7 +188,6 @@ func TestSweepSeedCoins(t *testing.T) {
 		t.SkipNow()
 	}
 	t.Parallel()
-	// create a wallet with some money
 	cs := newConsensusSetStub()
 	wt, err := createWalletTesterWithStubCS("TestSweepSeedCoins0", cs)
 	if err != nil {
@@ -255,27 +252,21 @@ func TestSweepSeedCoins(t *testing.T) {
 	}
 }
 
-// Disabled as Rivine has no miner
-// TODO: enable once again
+// TODO: fix and enable
 /*
-// TestSweepSeedFunds tests that sweeping a seed results in the transfer of
-// its siafund outputs to the wallet.
-func TestSweepSeedFunds(t *testing.T) {
+// TestSweepSeedBlockStakes tests that sweeping a seed results in the transfer of
+// its block stakes outputs to the wallet.
+func TestSweepSeedBlockStakes(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
 	t.Parallel()
-	wt, err := createWalletTester("TestSweepSeedFunds", modules.ProdDependencies)
+	cs := newConsensusSetStub()
+	wt, err := createWalletTesterWithStubCS("TestSweepSeedCoins0", cs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer wt.closeWt()
-
-	// Load the key into the wallet.
-	err = wt.wallet.LoadSiagKeys(wt.walletMasterKey, []string{"../../types/siag0of1of1.siakey"})
-	if err != nil {
-		t.Error(err)
-	}
 
 	_, siafundBal, _, err := wt.wallet.ConfirmedBalance()
 	if err != nil {
@@ -340,190 +331,20 @@ func TestSweepSeedFunds(t *testing.T) {
 		t.Error("expecting balance to go down; instead, increased by", newCoinBalance.Sub(oldCoinBalance))
 	}
 }
-
-// TestSweepSeedSentFunds tests that sweeping a seed results in the transfer
-// of its siafund outputs to the wallet, even after the funds have been
-// transferred a few times.
-func TestSweepSeedSentFunds(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	t.Parallel()
-	wt, err := createWalletTester("TestSweepSeedSentFunds", modules.ProdDependencies)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer wt.closeWt()
-
-	// Load the key into the wallet.
-	err = wt.wallet.LoadSiagKeys(wt.walletMasterKey, []string{"../../types/siag0of1of1.siakey"})
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, siafundBal, _, err := wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if siafundBal.Cmp(types.NewCurrency64(2000)) != 0 {
-		t.Error("expecting a siafund balance of 2000 from the 1of1 key")
-	}
-	// need to reset the miner as well, since it depends on the wallet
-	wt.miner, err = miner.New(wt.cs, wt.tpool, wt.wallet, wt.wallet.persistDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// send funds to ourself a few times
-	for i := 0; i < 10; i++ {
-		uc, err := wt.wallet.NextAddress()
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = wt.wallet.SendSiafunds(types.NewCurrency64(1), uc.UnlockHash())
-		if err != nil {
-			t.Fatal(err)
-		}
-		wt.addBlockNoPayout()
-	}
-	// send some funds to the void
-	_, err = wt.wallet.SendSiafunds(types.NewCurrency64(10), types.UnlockHash{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wt.addBlockNoPayout()
-
-	// Create a seed and generate an address to send money to.
-	seed := modules.Seed{1, 2, 3}
-	sk := generateSpendableKey(seed, 1)
-
-	// Send some siafunds to the address.
-	_, err = wt.wallet.SendSiafunds(types.NewCurrency64(12), sk.UnlockConditions.UnlockHash())
-	if err != nil {
-		t.Fatal(err)
-	}
-	// mine blocks without earning payout until our balance is stable
-	for i := types.BlockHeight(0); i < types.MaturityDelay; i++ {
-		wt.addBlockNoPayout()
-	}
-	oldCoinBalance, siafundBal, _, err := wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if expected := 2000 - 12 - 10; siafundBal.Cmp(types.NewCurrency64(uint64(expected))) != 0 {
-		t.Errorf("expecting balance of %v after sending siafunds to the seed, got %v", expected, siafundBal)
-	}
-
-	// Sweep the seed.
-	coins, funds, err := wt.wallet.SweepSeed(seed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !coins.IsZero() {
-		t.Error("expected to sweep 0 coins, got", coins)
-	}
-	if funds.Cmp(types.NewCurrency64(12)) != 0 {
-		t.Errorf("expected to sweep %v funds, got %v", 12, funds)
-	}
-	// add a block without earning its payout
-	wt.addBlockNoPayout()
-
-	// Wallet balance should have decreased to pay for the sweep transaction.
-	newCoinBalance, _, _, err := wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if newCoinBalance.Cmp(oldCoinBalance) >= 0 {
-		t.Error("expecting balance to go down; instead, increased by", newCoinBalance.Sub(oldCoinBalance))
-	}
-}
 */
 
-/*
-// TestSweepSeedCoinsAndFunds tests that sweeping a seed results in the
-// transfer of its siacoin and siafund outputs to the wallet.
-func TestSweepSeedCoinsAndFunds(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	t.Parallel()
-	wt, err := createWalletTester("TestSweepSeedCoinsAndFunds")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer wt.closeWt()
-
-	// Load the key into the wallet.
-	err = wt.wallet.LoadSiagKeys(wt.walletMasterKey, []string{"../../types/siag0of1of1.siakey"})
-	if err != nil {
-		t.Error(err)
-	}
-
-	_, siafundBal, _, err := wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if siafundBal.Cmp(types.NewCurrency64(2000)) != 0 {
-		t.Error("expecting a siafund balance of 2000 from the 1of1 key")
-	}
-
-	// Create a seed and generate an address to send money to.
-	seed := modules.Seed{1, 2, 3}
-	sk := generateSpendableKey(seed, 1)
-
-	// Send some siafunds to the address.
-	for i := 0; i < 12; i++ {
-		_, err = wt.wallet.SendSiafunds(types.NewCurrency64(1), sk.UnlockConditions.UnlockHash())
-		if err != nil {
-			t.Fatal(err)
-		}
-		wt.addBlockNoPayout()
-	}
-	// Send some siacoins to the address -- must be more than the transaction
-	// fee.
-	for i := 0; i < 100; i++ {
-		_, err = wt.wallet.SendSiacoins(types.SiacoinPrecision.Mul64(10), sk.UnlockConditions.UnlockHash())
-		if err != nil {
-			t.Fatal(err)
-		}
-		wt.addBlockNoPayout()
-	}
-	// mine blocks without earning payout until our balance is stable
-	for i := types.BlockHeight(0); i < types.MaturityDelay; i++ {
-		wt.addBlockNoPayout()
-	}
-	oldCoinBalance, siafundBal, _, err := wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if siafundBal.Cmp(types.NewCurrency64(1988)) != 0 {
-		t.Errorf("expecting balance of %v after sending siafunds to the seed, got %v", 1988, siafundBal)
-	}
-
-	// Sweep the seed.
-	coins, funds, err := wt.wallet.SweepSeed(seed)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if coins.IsZero() {
-		t.Error("expected to sweep coins, got 0")
-	}
-	if funds.Cmp(types.NewCurrency64(12)) != 0 {
-		t.Errorf("expected to sweep %v funds, got %v", 12, funds)
-	}
-	// add a block without earning its payout
-	wt.addBlockNoPayout()
-
-	// Wallet balance should have decreased to pay for the sweep transaction.
-	newCoinBalance, _, _, err := wt.wallet.ConfirmedBalance()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if newCoinBalance.Cmp(oldCoinBalance) <= 0 {
-		t.Error("expecting balance to go up; instead, decreased by", oldCoinBalance.Sub(newCoinBalance))
-	}
+// TestSweepSeedCoinsAndBlockStakes tests that sweeping a seed results in the transfer of
+// its coins and block stakes outputs to the wallet.
+func TestSweepSeedCoinsAndBlockStakes(t *testing.T) {
+	// TODO
 }
-*/ // enable, by doing it without a Sia Key
+
+// TestSweepSeedNothing tests that sweeping a seed results in the transfer of
+// its coins and block stakes outputs to the wallet, and that it simply returns an error with nothing changed,
+// in case nothing can be sweeped.
+func TestSweepSeedNothing(t *testing.T) {
+	// TODO
+}
 
 // TestGenerateKeys tests that the generateKeys function correctly generates a
 // key for every index specified.

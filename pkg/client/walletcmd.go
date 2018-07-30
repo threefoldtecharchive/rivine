@@ -133,6 +133,14 @@ The Minimum Miner Fee will be added on top of the total given amount automatical
 		Run: walletsendblockstakescmd,
 	}
 
+	walletSweepCmd = &cobra.Command{
+		Use:   "sweep",
+		Short: "Sweep coins and block stakes from a seed.",
+		Long: `Sweep coins and block stakes from a seed. The (singlesig) outputs belonging to the seed
+will be sent to your wallet.`,
+		Run: Wrap(walletsweepcmd),
+	}
+
 	walletRegisterDataCmd = &cobra.Command{
 		Use:   "registerdata <namespace> <data> <dest>",
 		Short: "Register data on the blockchain",
@@ -689,6 +697,29 @@ BlockStakes:         %v BS
 		fmt.Println()
 		fmt.Println("Minimum signatures required:", wallet.MinSigs)
 	}
+}
+
+// walletsweepcmd sweeps coins and funds from a seed.
+func walletsweepcmd() {
+	mnemonic, err := speakeasy.Ask("Seed Mnemonic: ")
+	if err != nil {
+		DieWithError("Reading seed mnemonic failed:", err)
+	}
+	seed, err := modules.InitialSeedFromMnemonic(mnemonic)
+	if err != nil {
+		DieWithError("Invalid seed mnemonic given:", err)
+	}
+
+	fmt.Println("Sweeping the given seed, this may take a couple of minutes...")
+
+	var swept api.WalletSweepPOST
+	err = _DefaultClient.httpClient.PostResp(
+		"/wallet/sweep/seed", fmt.Sprintf("seed=%s", seed.String()), &swept)
+	if err != nil {
+		DieWithError("Could not sweep seed:", err)
+	}
+	fmt.Printf("Swept %v and %v BS from seed.\n",
+		_CurrencyConvertor.ToCoinStringWithUnit(swept.Coins), swept.BlockStakes)
 }
 
 // wallettransactionscmd lists all of the transactions related to the wallet,

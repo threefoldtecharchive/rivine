@@ -48,6 +48,7 @@ var numInitialKeys = func() uint64 {
 type scannedOutput struct {
 	id        types.OutputID
 	value     types.Currency
+	condition types.UnlockConditionProxy
 	seedIndex uint64
 }
 
@@ -59,6 +60,7 @@ type seedScanner struct {
 	seed              modules.Seed
 	coinOutputs       map[types.CoinOutputID]scannedOutput
 	blockStakeOutputs map[types.BlockStakeOutputID]scannedOutput
+	// TODO: support multisig outputs (see: https://github.com/rivine/rivine/issues/428)
 
 	log *persist.Logger
 }
@@ -77,6 +79,7 @@ func (s *seedScanner) generateKeys(n uint64) {
 
 // ProcessConsensusChange scans the blockchain for information relevant to the
 // seedScanner.
+// TODO: support multisig outputs (see: https://github.com/rivine/rivine/issues/428)
 func (s *seedScanner) ProcessConsensusChange(cc modules.ConsensusChange) {
 	// update outputs
 	for _, diff := range cc.CoinOutputDiffs {
@@ -85,15 +88,14 @@ func (s *seedScanner) ProcessConsensusChange(cc modules.ConsensusChange) {
 				s.coinOutputs[diff.ID] = scannedOutput{
 					id:        types.OutputID(diff.ID),
 					value:     diff.CoinOutput.Value,
+					condition: diff.CoinOutput.Condition,
 					seedIndex: index,
 				}
 			}
 		} else if diff.Direction == modules.DiffRevert {
 			// NOTE: DiffRevert means the output was either spent or was in a
 			// block that was reverted.
-			if _, exists := s.keys[diff.CoinOutput.Condition.UnlockHash()]; exists {
-				delete(s.coinOutputs, diff.ID)
-			}
+			delete(s.coinOutputs, diff.ID)
 		}
 	}
 	for _, diff := range cc.BlockStakeOutputDiffs {
@@ -102,15 +104,14 @@ func (s *seedScanner) ProcessConsensusChange(cc modules.ConsensusChange) {
 				s.blockStakeOutputs[diff.ID] = scannedOutput{
 					id:        types.OutputID(diff.ID),
 					value:     diff.BlockStakeOutput.Value,
+					condition: diff.BlockStakeOutput.Condition,
 					seedIndex: index,
 				}
 			}
 		} else if diff.Direction == modules.DiffRevert {
 			// NOTE: DiffRevert means the output was either spent or was in a
 			// block that was reverted.
-			if _, exists := s.keys[diff.BlockStakeOutput.Condition.UnlockHash()]; exists {
-				delete(s.blockStakeOutputs, diff.ID)
-			}
+			delete(s.blockStakeOutputs, diff.ID)
 		}
 	}
 

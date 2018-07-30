@@ -1,12 +1,16 @@
 package wallet
 
 import (
+	"encoding/json"
+	"fmt"
 	"runtime"
+	"strconv"
 	"sync"
 
 	"github.com/NebulousLabs/errors"
 	"github.com/NebulousLabs/fastrand"
 	bolt "github.com/rivine/bbolt"
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
@@ -327,11 +331,12 @@ func (w *Wallet) LoadSeed(masterKey crypto.TwofishKey, seed modules.Seed) error 
 	return nil
 }
 
-/* TODO: Enable when adding this feature
 // SweepSeed scans the blockchain for outputs generated from seed and creates
 // a transaction that transfers them to the wallet. Note that this incurs a
 // transaction fee. It returns the total value of the outputs, minus the fee.
 // If only block stakes were found, the fee is deducted from the wallet.
+// The (transaction) fee has to be paid as many times as there are transactions required
+// in order to spend all outputs.
 func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency, err error) {
 	if err = w.tg.Add(); err != nil {
 		return
@@ -357,13 +362,23 @@ func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency
 		return
 	}
 
+	const (
+		// size of txn overhead in bytes,
+		// meaning the amount of bytes we'll always need to use in order to send our single output:
+		// 1 (version) + 82 (upper coin output) + 8 (coin input length) +
+		// 24 (nil blockStake in/out and arb. data) + 32 (upper miner fee) +
+		// 8 (txn data length)
+		txnSingleOverheadSize = 155
+		// extra overhead when using both coin outputs and block stake outputs
+		txnDoubleOverheadSizeExtra = 74
+	)
+
 	// scan blockchain for outputs, filtering out 'dust' (outputs that cost
 	// more in fees than they are worth)
 	s := newSeedScanner(seed, w.log)
-	// TODO: check if maxOutputs is valid, and see if we cannot define it more smart
-	// using constants such as w.chainCts.TransactionPool.TransactionSizeLimit
-	const maxOutputs = 50 // approx. number of outputs that a transaction can handle
-	if err = s.scan(w.cs); err != nil {
+
+	// scan for given seed
+	if err = s.scan(w.cs, w.tg.StopChan()); err != nil {
 		return
 	}
 
@@ -374,7 +389,8 @@ func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency
 	}
 
 	// Flatten map to slice
-	var coinOutputs, blockStakeOutputs []scannedOutput
+	coinOutputs := make([]scannedOutput, 0, len(s.coinOutputs))
+	blockStakeOutputs := make([]scannedOutput, 0, len(s.blockStakeOutputs))
 	for _, sco := range s.coinOutputs {
 		coinOutputs = append(coinOutputs, sco)
 	}
@@ -382,20 +398,19 @@ func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency
 		blockStakeOutputs = append(blockStakeOutputs, sfo)
 	}
 
-	for len(coinOutputs) > 0 || len(blockStakeOutputs) > 0 {
-		// process up to maxOutputs coinOutputs
-		txnCoinOutputs := make([]scannedOutput, maxOutputs)
-		n := copy(txnCoinOutputs, coinOutputs)
-		txnCoinOutputs = txnCoinOutputs[:n]
-		coinOutputs = coinOutputs[n:]
+	type inputToSign struct {
+		Index     uint64
+		SeedIndex uint64
+	}
 
-		// process up to (maxOutputs-n) blockStakeOutputs
-		txnBlockStakeOutputs := make([]scannedOutput, maxOutputs-n)
-		n = copy(txnBlockStakeOutputs, blockStakeOutputs)
-		txnBlockStakeOutputs = txnBlockStakeOutputs[:n]
-		blockStakeOutputs = blockStakeOutputs[n:]
+	// prepare fulfillable context
+	ctx := w.getFulfillableContextForLatestBlock()
+
+	for len(coinOutputs) > 0 || len(blockStakeOutputs) > 0 {
+		txnSize := txnSingleOverheadSize
 
 		var txnCoins, txnBlockStakes types.Currency
+		var coinInputs, blockStakeInputs []inputToSign
 
 		// construct a transaction that spends the outputs
 		tb := w.StartTransaction()
@@ -405,25 +420,76 @@ func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency
 			}
 		}()
 		var sweptCoins, sweptBlockStakes types.Currency // total values of swept outputs
-		for _, output := range txnCoinOutputs {
+		// try to add coin outputs
+		for _, output := range coinOutputs {
+			// ensure output is fulfillable
+			if !output.condition.Fulfillable(ctx) {
+				// update coin output slice & continue
+				coinOutputs = coinOutputs[1:]
+				continue
+			}
 			// construct a coin input that spends the output
 			sk := generateSpendableKey(seed, output.seedIndex)
-			tb.AddCoinInput(types.CoinInput{
+			ci := types.CoinInput{
 				ParentID: types.CoinOutputID(output.id),
 				Fulfillment: types.NewFulfillment(
 					types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(sk.PublicKey))),
-			})
+			}
+			// check if the coin input fits in the transaction
+			inputByteSize := len(encoding.Marshal(ci))
+			newTxnSize := txnSize + inputByteSize
+			if newTxnSize > w.chainCts.TransactionPool.TransactionSizeLimit {
+				break
+			}
+			// it fits, add the coin input and continue
+			txnSize = newTxnSize
+			index := tb.AddCoinInput(ci)
 			sweptCoins = sweptCoins.Add(output.value)
+			// add coin input info, to be used for manual signing
+			coinInputs = append(coinInputs, inputToSign{
+				Index:     index,
+				SeedIndex: output.seedIndex,
+			})
+			// update coin output slice
+			coinOutputs = coinOutputs[1:]
 		}
-		for _, output := range txnBlockStakeOutputs {
+		if !txnCoins.IsZero() {
+			// ensure to add the extra overhead,
+			// that we get because we now also have a (single) blockstake output
+			txnSize += txnDoubleOverheadSizeExtra
+		}
+		// try to add block stake outputs
+		for _, output := range blockStakeOutputs {
+			// ensure output is fulfillable
+			if !output.condition.Fulfillable(ctx) {
+				// update block output slice & continue
+				blockStakeOutputs = blockStakeOutputs[1:]
+				continue
+			}
 			// construct a block stake input that spends the output
 			sk := generateSpendableKey(seed, output.seedIndex)
-			tb.AddBlockStakeInput(types.BlockStakeInput{
+			bsi := types.BlockStakeInput{
 				ParentID: types.BlockStakeOutputID(output.id),
 				Fulfillment: types.NewFulfillment(
 					types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(sk.PublicKey))),
-			})
+			}
+			// check if the coin input fits in the transaction
+			inputByteSize := len(encoding.Marshal(bsi))
+			newTxnSize := txnSize + inputByteSize
+			if newTxnSize > w.chainCts.TransactionPool.TransactionSizeLimit {
+				break
+			}
+			// it fits, add the coin input and continue
+			txnSize = newTxnSize
+			index := tb.AddBlockStakeInput(bsi)
 			sweptBlockStakes = sweptBlockStakes.Add(output.value)
+			// add coin input info, to be used for manual signing
+			blockStakeInputs = append(blockStakeInputs, inputToSign{
+				Index:     index,
+				SeedIndex: output.seedIndex,
+			})
+			// update block stake output slice
+			blockStakeOutputs = blockStakeOutputs[1:]
 		}
 
 		estFee := w.chainCts.MinimumTransactionFee.Mul64(1) // TODO better fee algo
@@ -461,7 +527,7 @@ func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency
 			})
 			err = tb.FundCoins(estFee)
 			if err != nil {
-				return types.ZeroCurrency, types.ZeroCurrency, errors.New("couldn't pay transaction fee on swept funds: " + err.Error())
+				return types.ZeroCurrency, types.ZeroCurrency, errors.New("couldn't pay transaction fee on swept block stakes: " + err.Error())
 			}
 
 		case !txnCoins.IsZero() && !txnBlockStakes.IsZero():
@@ -477,16 +543,48 @@ func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency
 			})
 		}
 
+		// sign the coins given using the funding
 		txnSet, err := tb.Sign()
 		if err != nil {
 			return types.ZeroCurrency, types.ZeroCurrency, err
 		}
-		if len(txnSet) == 0 {
-			panic("unexpected txnSet length: " + strconv.Itoa(len(txnSet)))
+		if len(txnSet) != 1 {
+			if build.DEBUG {
+				panic("unexpected txnSet length: " + strconv.Itoa(len(txnSet)))
+			}
+			return types.Currency{}, types.Currency{}, fmt.Errorf("unexpected txnSet length: " + strconv.Itoa(len(txnSet)))
 		}
+
+		// sign all other inputs
+		txn := txnSet[0]
+		for _, ci := range coinInputs {
+			key := generateSpendableKey(seed, ci.SeedIndex)
+			err = txn.CoinInputs[ci.Index].Fulfillment.Sign(types.FulfillmentSignContext{
+				InputIndex:  ci.Index,
+				Transaction: txn,
+				Key:         key.SecretKey,
+			})
+			if err != nil {
+				return types.Currency{}, types.Currency{}, fmt.Errorf("unexpectatly failed to sign coin input: " + strconv.Itoa(len(txnSet)))
+			}
+		}
+		for _, bsi := range blockStakeInputs {
+			key := generateSpendableKey(seed, bsi.SeedIndex)
+			err = txn.BlockStakeInputs[bsi.Index].Fulfillment.Sign(types.FulfillmentSignContext{
+				InputIndex:  bsi.Index,
+				Transaction: txn,
+				Key:         key.SecretKey,
+			})
+			if err != nil {
+				return types.Currency{}, types.Currency{}, fmt.Errorf("unexpectatly failed to sign coin input: " + strconv.Itoa(len(txnSet)))
+			}
+		}
+
 		err = w.tpool.AcceptTransactionSet(txnSet)
 		if err != nil {
-			return types.ZeroCurrency, types.ZeroCurrency, err
+			b, _ := json.Marshal(txnSet)
+			fmt.Println(string(b))
+			return types.ZeroCurrency, types.ZeroCurrency, fmt.Errorf("failed to accept txn set: %v", err)
 		}
 
 		w.log.Println("Creating a transaction set to sweep a seed, IDs:")
@@ -499,5 +597,3 @@ func (w *Wallet) SweepSeed(seed modules.Seed) (coins, blockStakes types.Currency
 	}
 	return
 }
-
-*/

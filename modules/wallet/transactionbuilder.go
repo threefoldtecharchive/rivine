@@ -479,28 +479,29 @@ func (tb *transactionBuilder) Sign() ([]types.Transaction, error) {
 }
 
 // AttemptSigning tries to sign any input for which keys are loaded in the wallet
-func (tb *transactionBuilder) SignAllPossibleInputs() error {
+func (tb *transactionBuilder) SignAllPossibleInputs() ([]types.Transaction, error) {
 	if tb.signed {
-		return errBuilderAlreadySigned
+		return nil, errBuilderAlreadySigned
 	}
 
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
 	if !tb.wallet.unlocked {
-		return modules.ErrLockedWallet
+		return nil, modules.ErrLockedWallet
 	}
 
 	for i := range tb.transaction.CoinInputs {
 		ci := &tb.transaction.CoinInputs[i]
 		uco, err := tb.wallet.cs.GetCoinOutput(ci.ParentID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if err = tb.signCoinInput(i, ci, uco.Condition.Condition); err != nil {
-			return err
+			return nil, err
 		}
+		tb.signed = true
 
 	}
 
@@ -508,14 +509,17 @@ func (tb *transactionBuilder) SignAllPossibleInputs() error {
 		bsi := &tb.transaction.BlockStakeInputs[i]
 		ubso, err := tb.wallet.cs.GetBlockStakeOutput(bsi.ParentID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if err = tb.signBlockStakeInput(i, bsi, ubso.Condition.Condition); err != nil {
-			return err
+			return nil, err
 		}
+		tb.signed = true
 	}
 
-	return nil
+	// Get the transaction set and delete the transaction from the registry.
+	txnSet := append(tb.parents, tb.transaction)
+	return txnSet, nil
 }
 
 // signCoinInput attempts to sign a coin input with a key from the wallet

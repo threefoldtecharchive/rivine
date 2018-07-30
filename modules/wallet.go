@@ -221,7 +221,7 @@ type (
 
 		// SignAllPossibleInputs tries to sign as much of the inputs in the tranaction
 		// using the keys loaded in the wallet
-		SignAllPossibleInputs() error
+		SignAllPossibleInputs() ([]types.Transaction, error)
 	}
 
 	// EncryptionManager can encrypt, lock, unlock, and indicate the current
@@ -299,6 +299,14 @@ type (
 		// unencrypted, with an int indicating how many addresses have been
 		// consumed.
 		PrimarySeed() (Seed, uint64, error)
+
+		// SweepSeed scans the blockchain for outputs generated from seed and creates
+		// a transaction that transfers them to the wallet. Note that this incurs a
+		// transaction fee. It returns the total value of the outputs, minus the fee.
+		// If only block stakes were found, the fee is deducted from the wallet.
+		// The (transaction) fee has to be paid as many times as there are transactions required
+		// in order to spend all outputs.
+		SweepSeed(seed Seed) (coins, funds types.Currency, err error)
 
 		// NextAddress returns a new coin addresses generated from the
 		// primary seed.
