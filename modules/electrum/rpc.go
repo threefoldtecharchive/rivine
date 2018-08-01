@@ -145,12 +145,6 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 	for {
 		select {
 
-		case <-e.stopChan:
-			// Server is closing, so close the connection
-			e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to server shutdown")
-			e.closeConnection(cl)
-			return
-
 		case <-cl.transport.IsClosed():
 			// transport closing, exit
 			e.log.Println("Closed connection to", cl.transport.RemoteAddr(), "as transport is closed")
@@ -160,7 +154,10 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 			// handle subscriptions.
 			cl.sendUpdate(update)
 
-		case reqs := <-cl.transport.GetRequest():
+		case reqs, ok := <-cl.transport.GetRequest():
+			if !ok {
+				return
+			}
 			// handle request
 			cl.resetTimer()
 
@@ -214,7 +211,10 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 				cl.wg.Done()
 			}()
 
-		case err := <-cl.transport.GetError():
+		case err, ok := <-cl.transport.GetError():
+			if !ok {
+				return
+			}
 			// handle error
 
 			// Check if the underlying transport is closed. If so, clean up
@@ -238,6 +238,12 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 			// Client didn't sent any request for the past `connectionTimeout`
 			// seconds. As such, disconnect the client for being idle
 			e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "for being idle")
+			e.closeConnection(cl)
+			return
+
+		case <-e.stopChan:
+			// Server is closing, so close the connection
+			e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to server shutdown")
 			e.closeConnection(cl)
 			return
 
