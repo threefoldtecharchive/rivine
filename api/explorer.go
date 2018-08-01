@@ -1,13 +1,11 @@
 package api
 
 import (
-	"encoding/hex"
 	"fmt"
 	"net/http"
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
@@ -22,7 +20,6 @@ type (
 		MinerPayoutIDs []types.CoinOutputID  `json:"minerpayoutids"`
 		Transactions   []ExplorerTransaction `json:"transactions"`
 		RawBlock       types.Block           `json:"rawblock"`
-		HexBlock       string                `json:"hexblock"`
 
 		modules.BlockFacts
 	}
@@ -35,7 +32,6 @@ type (
 		Height         types.BlockHeight   `json:"height"`
 		Parent         types.BlockID       `json:"parent"`
 		RawTransaction types.Transaction   `json:"rawtransaction"`
-		HexTransaction string              `json:"hextransaction"`
 
 		CoinInputOutputs             []ExplorerCoinOutput       `json:"coininputoutputs"` // the outputs being spent
 		CoinOutputIDs                []types.CoinOutputID       `json:"coinoutputids"`
@@ -97,7 +93,6 @@ func (api *API) buildExplorerTransaction(height types.BlockHeight, parent types.
 	et.Height = height
 	et.Parent = parent
 	et.RawTransaction = txn
-	et.HexTransaction = hex.EncodeToString(encoding.Marshal(txn))
 
 	// Add the siacoin outputs that correspond with each siacoin input.
 	for _, sci := range txn.CoinInputs {
@@ -158,7 +153,6 @@ func (api *API) buildExplorerBlock(height types.BlockHeight, block types.Block) 
 		MinerPayoutIDs: mpoids,
 		Transactions:   etxns,
 		RawBlock:       block,
-		HexBlock:       hex.EncodeToString(encoding.Marshal(block)),
 
 		BlockFacts: facts,
 	}
