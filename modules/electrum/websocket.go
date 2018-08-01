@@ -11,7 +11,7 @@ import (
 
 type websocketConn struct {
 	conn        *websocket.Conn
-	requestChan chan *Request
+	requestChan chan *BatchRequest
 	errorChan   chan error
 	stopChan    chan struct{}
 
@@ -44,7 +44,7 @@ func (e *Electrum) handleWs(w http.ResponseWriter, r *http.Request) {
 func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 	c := &websocketConn{
 		conn:        conn,
-		requestChan: make(chan *Request),
+		requestChan: make(chan *BatchRequest),
 		errorChan:   make(chan error),
 		stopChan:    make(chan struct{}),
 	}
@@ -54,7 +54,7 @@ func createWebsocketConn(conn *websocket.Conn) *websocketConn {
 		for {
 			// Since we only use jsonrpc, we can use the
 			// ReadJSON convenience method here
-			req := &Request{}
+			req := &BatchRequest{}
 			err := c.conn.ReadJSON(req)
 			select {
 			case <-c.stopChan:
@@ -93,7 +93,7 @@ func (c *websocketConn) GetError() <-chan error {
 	return c.errorChan
 }
 
-func (c *websocketConn) GetRequest() <-chan *Request {
+func (c *websocketConn) GetRequest() <-chan *BatchRequest {
 	return c.requestChan
 }
 

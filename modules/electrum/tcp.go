@@ -11,7 +11,7 @@ type tcpConn struct {
 	conn        net.Conn
 	dec         *json.Decoder
 	enc         *json.Encoder
-	requestChan chan *Request
+	requestChan chan *BatchRequest
 	errorChan   chan error
 	stopChan    chan struct{}
 
@@ -38,7 +38,7 @@ func createTCPConn(conn net.Conn) *tcpConn {
 		conn:        conn,
 		dec:         json.NewDecoder(conn),
 		enc:         json.NewEncoder(conn),
-		requestChan: make(chan *Request),
+		requestChan: make(chan *BatchRequest),
 		errorChan:   make(chan error),
 		stopChan:    make(chan struct{}),
 	}
@@ -46,10 +46,9 @@ func createTCPConn(conn net.Conn) *tcpConn {
 	// Start goroutine which reads on the connection
 	go func() {
 		for {
-			// Since we only use jsonrpc, we can use the
-			// ReadJSON convenience method here
-			req := &Request{}
+			req := &BatchRequest{}
 			err := c.dec.Decode(req)
+
 			select {
 			case <-c.stopChan:
 				return
@@ -87,7 +86,7 @@ func (c *tcpConn) GetError() <-chan error {
 	return c.errorChan
 }
 
-func (c *tcpConn) GetRequest() <-chan *Request {
+func (c *tcpConn) GetRequest() <-chan *BatchRequest {
 	return c.requestChan
 }
 
