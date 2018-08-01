@@ -2,8 +2,10 @@ package explorer
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/rivine/rivine/build"
+	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
@@ -82,6 +84,32 @@ func (e *Explorer) UnlockHash(uh types.UnlockHash) []types.TransactionID {
 		ids = nil
 	}
 	return ids
+}
+
+// MultiSigAddresses returns all multisig addresses this wallet address is involved in.
+func (e *Explorer) MultiSigAddresses(uh types.UnlockHash) (uhs []types.UnlockHash) {
+	if uh.Type != types.UnlockTypePubKey {
+		return nil
+	}
+	err := e.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).Bucket(encoding.Marshal(uh))
+		if b == nil {
+			return errors.New("not found")
+		}
+		return b.ForEach(func(k, _ []byte) error {
+			var uh types.UnlockHash
+			err := encoding.Unmarshal(k, &uh)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal unlockhash: %v", err)
+			}
+			uhs = append(uhs, uh)
+			return nil
+		})
+	})
+	if err != nil {
+		uhs = nil
+	}
+	return
 }
 
 // CoinOutput returns the coin output associated with the specified ID.
