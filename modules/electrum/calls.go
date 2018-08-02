@@ -53,6 +53,13 @@ func (e *Electrum) ServerPing(cl *Client, args *json.RawMessage) (interface{}, e
 // ServerVersion should be the first method called by a new connection. Before this call,
 // only a very limit amount of calls are available.
 func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}, error) {
+	if (cl.protoVersion != ProtocolVersion{}) {
+		// Protocol version already set, ignore this request
+		return nil, RPCError{
+			Code:    101,
+			Message: "Protocol version already set for this connection",
+		}
+	}
 	// TODO
 	input := struct {
 		ClientName      string           `json:"client_name"`
@@ -78,8 +85,7 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 	}
 
 	if err = e.registerBlockchainMethods(cl); err != nil {
-		// TODO: in case of dup registration, this is not the right
-		// error to return
+		e.log.Println("[ERROR] Failed to register blockchain methods:", err)
 		return nil, ErrInternal
 	}
 	// TODO: SET SERVER VERSION
