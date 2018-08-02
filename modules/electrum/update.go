@@ -20,7 +20,6 @@ func (e *Electrum) ProcessConsensusChange(cc modules.ConsensusChange) {
 	// but that requires implementing subsriptions in that module first. For
 	// now rely on the fact that the explorer module subsribes to the cs first,
 	// so relevant info should already be processed there
-	e.log.Debug("Processing consensus change", cc.ID)
 
 	change := &Update{addressStates: make(map[types.UnlockHash]string)}
 

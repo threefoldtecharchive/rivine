@@ -10,6 +10,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/persist"
 	"github.com/rivine/rivine/types"
@@ -113,8 +114,6 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 	// Get the heights
 	// multiple txns could be at the same height
 
-	// TODO: ORDER IN BLOCK + AVOID COLLISIONS
-
 	txnLocation := make(map[int][]types.TransactionID)
 	heights := make([]int, len(txns))
 	for i, tx := range txns {
@@ -125,11 +124,72 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 	// order heights
 	sort.Ints(heights)
 
+	// Generate the status string. The order is:
+	// 	- Transactionpool transactions
+	//  - Per block, sordted in height ascending order:
+	// 		* miner payout
+	// 		* transactions ordered by appearance in the block
+	//
+	// TODO: if a transactionpool transaction is depending on another unconfirmed
+	// (transactionpool) transaction, its height must be -1.
+	// Enfore deterministic ordering of transactionpool transactions in some way. Right now
+	// we depend on the explorer module keeping the ordering deterministic. Note that this may
+	// cause a discrepancy between multiple different servers, if they received the transactions
+	// in a different order. Hence we should fix this somehow eventually
 	var statusString string
 	for _, height := range heights {
-		for _, tx := range txnLocation[height] {
-			statusString += fmt.Sprintf("%v:%v", tx.String(), height)
+		if height == 0 && len(txnLocation[height]) > 0 {
+			// first load the genesis block and sort the transactions from that block
+			var genesisStatusString string
+			genesis, exists := e.cs.BlockAtHeight(types.BlockHeight(height))
+			if build.DEBUG && !exists {
+				build.Critical("Genesis block does not exist")
+			}
+			for _, genesisTx := range genesis.Transactions {
+				// Loop backward through the transactions so we can slice out the ones we find in genesis
+				for i := len(txnLocation[height]) - 1; i >= 0; i-- {
+					if txnLocation[height][i] == genesisTx.ID() {
+						genesisStatusString += fmt.Sprintf("%v:%v", genesisTx.ID().String(), height)
+						txnLocation[height] = append(txnLocation[height][:i], txnLocation[height][i+1:]...)
+						continue
+					}
+				}
+			}
+			// now add transactions from the transactionpool to the status string
+			for _, txid := range txnLocation[height] {
+				statusString += fmt.Sprintf("%v:%v", txid.String(), height)
+			}
+			// finally add the status from the genesis block to the transaction ID
+			statusString += genesisStatusString
+			continue
 		}
+		// if there is more than 1 txn in the block, fetch the block and and iterate over the txns
+		// to put them in the right order
+		// height must be bigger than zero because tp transactions are reported at height 0
+		if len(txnLocation[height]) > 1 {
+			block, exists := e.cs.BlockAtHeight(types.BlockHeight(height))
+			if build.DEBUG && !exists {
+				build.Critical("Block does not exist in consensus set:", height)
+			}
+			// if the transaction id is the block id (miner payout), place it first in the ordering
+			for _, txid := range txnLocation[height] {
+				if txid == types.TransactionID(block.ID()) {
+					statusString += fmt.Sprintf("%v:%v", txid.String(), height)
+				}
+			}
+			// iterate through the remaining transactions in order
+			for _, blocktx := range block.Transactions {
+				for _, txid := range txnLocation[height] {
+					if txid == blocktx.ID() {
+						statusString += fmt.Sprintf("%v:%v", txid.String(), height)
+						continue
+					}
+				}
+			}
+			continue
+		}
+		// there is only one transaction for this height
+		statusString += fmt.Sprintf("%v:%v", txnLocation[height][0].String(), height)
 	}
 	statusHash := sha256.Sum256([]byte(statusString))
 
