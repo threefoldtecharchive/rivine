@@ -60,7 +60,7 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 			Message: "Protocol version already set for this connection",
 		}
 	}
-	// TODO
+	// TODO: PROPER VERSION NEGOTIATION
 	input := struct {
 		ClientName      string           `json:"client_name"`
 		ProtocolVersion ProtocolArgument `json:"protocol_version"`
@@ -89,7 +89,7 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 		return nil, ErrInternal
 	}
 	// TODO: SET SERVER VERSION
-	e.log.Debug("Set proto version")
+	e.log.Debug("Set proto version to", input.ProtocolVersion, "for client at", cl.transport.RemoteAddr())
 	resp.ProtoVersion = e.availableVersions[0]
 
 	cl.protoVersion = input.ProtocolVersion.protocolMax
