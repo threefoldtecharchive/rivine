@@ -118,6 +118,9 @@ type (
 		// provided unlock hash.
 		UnlockHash(types.UnlockHash) []types.TransactionID
 
+		// MultiSigAddresses returns all multisig addresses this wallet address is involved in.
+		MultiSigAddresses(types.UnlockHash) []types.UnlockHash
+
 		// CoinOutput will return the coin output associated with the
 		// input id.
 		CoinOutput(types.CoinOutputID) (types.CoinOutput, bool)

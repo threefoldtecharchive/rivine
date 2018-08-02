@@ -76,12 +76,13 @@ type (
 	// the fields will be blank. For everything else, 'Transactions' and
 	// 'Blocks' will/may be filled out and everything else will be blank.
 	ExplorerHashGET struct {
-		HashType     string                `json:"hashtype"`
-		Block        ExplorerBlock         `json:"block"`
-		Blocks       []ExplorerBlock       `json:"blocks"`
-		Transaction  ExplorerTransaction   `json:"transaction"`
-		Transactions []ExplorerTransaction `json:"transactions"`
-		Unconfirmed  bool                  `json:"unconfirmed"`
+		HashType          string                `json:"hashtype"`
+		Block             ExplorerBlock         `json:"block"`
+		Blocks            []ExplorerBlock       `json:"blocks"`
+		Transaction       ExplorerTransaction   `json:"transaction"`
+		Transactions      []ExplorerTransaction `json:"transactions"`
+		MultiSigAddresses []types.UnlockHash    `json:"multisigaddresses"`
+		Unconfirmed       bool                  `json:"unconfirmed"`
 	}
 )
 
@@ -226,13 +227,20 @@ func (api *API) explorerHashHandler(w http.ResponseWriter, req *http.Request, ps
 		// a colliding unlock hash (such a collision can only happen if done
 		// intentionally) will be unable to find their unlock hash in the
 		// blockchain through the explorer hash lookup.
-		txids := api.explorer.UnlockHash(addr)
-		if len(txids) != 0 {
-			txns, blocks := api.buildTransactionSet(txids)
+		var (
+			txns   []ExplorerTransaction
+			blocks []ExplorerBlock
+		)
+		if txids := api.explorer.UnlockHash(addr); len(txids) != 0 {
+			txns, blocks = api.buildTransactionSet(txids)
+		}
+		multiSigAddresses := api.explorer.MultiSigAddresses(addr)
+		if len(txns) != 0 || len(blocks) != 0 || len(multiSigAddresses) != 0 {
 			WriteJSON(w, ExplorerHashGET{
-				HashType:     "unlockhash",
-				Blocks:       blocks,
-				Transactions: txns,
+				HashType:          "unlockhash",
+				Blocks:            blocks,
+				Transactions:      txns,
+				MultiSigAddresses: multiSigAddresses,
 			})
 			return
 		}

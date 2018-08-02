@@ -63,28 +63,22 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbRemoveCoinOutputID(tx, sci.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err == nil {
-						dbRemoveUnlockHash(tx, uh, txid)
-					}
+					unmapParentUnlockConditionHash(tx, sci.ParentID, txid)
 				}
 				for k, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(k))
 					dbRemoveCoinOutputID(tx, scoid, txid)
-					dbRemoveUnlockHash(tx, sco.Condition.UnlockHash(), txid)
 					dbRemoveCoinOutput(tx, scoid)
-					dbDeleteUnlockHashForOutputID(tx, types.OutputID(scoid))
+					unmapUnlockConditionHash(tx, sco.Condition, txid)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err == nil {
-						dbRemoveUnlockHash(tx, uh, txid)
-					}
+					unmapParentUnlockConditionHash(tx, sfi.ParentID, txid)
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbRemoveBlockStakeOutputID(tx, sfoid, txid)
-					dbRemoveUnlockHash(tx, sfo.Condition.UnlockHash(), txid)
-					dbDeleteUnlockHashForOutputID(tx, types.OutputID(sfoid))
+					unmapUnlockConditionHash(tx, sfo.Condition, txid)
 				}
 			}
 
@@ -134,29 +128,21 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbAddCoinOutputID(tx, sci.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sci.ParentID), sci.Fulfillment); err == nil {
-						dbAddUnlockHash(tx, uh, txid)
-					}
+					mapParentUnlockConditionHash(tx, sci.ParentID, txid)
 				}
 				for j, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(j))
 					dbAddCoinOutputID(tx, scoid, txid)
-					uh := sco.Condition.UnlockHash()
-					dbAddUnlockHash(tx, uh, txid)
-					dbSetUnlockHashForOutputID(tx, types.OutputID(scoid), uh)
+					mapUnlockConditionHash(tx, sco.Condition, txid)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
-					if uh, err := dbGetUnlockHashForFulfillfment(tx, types.OutputID(sfi.ParentID), sfi.Fulfillment); err == nil {
-						dbAddUnlockHash(tx, uh, txid)
-					}
+					mapParentUnlockConditionHash(tx, sfi.ParentID, txid)
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbAddBlockStakeOutputID(tx, sfoid, txid)
-					uh := sfo.Condition.UnlockHash()
-					dbAddUnlockHash(tx, uh, txid)
-					dbSetUnlockHashForOutputID(tx, types.OutputID(sfoid), uh)
+					mapUnlockConditionHash(tx, sfo.Condition, txid)
 				}
 			}
 
@@ -301,13 +287,13 @@ func (e *Explorer) dbAddGenesisBlock(tx *bolt.Tx) {
 	for i, sco := range e.chainCts.GenesisCoinDistribution {
 		scoid := e.genesisBlock.Transactions[0].CoinOutputID(uint64(i))
 		dbAddCoinOutputID(tx, scoid, txid)
-		dbAddUnlockHash(tx, sco.Condition.UnlockHash(), txid)
+		mapUnlockConditionHash(tx, sco.Condition, txid)
 		dbAddCoinOutput(tx, scoid, sco)
 	}
 	for i, sfo := range e.chainCts.GenesisBlockStakeAllocation {
 		sfoid := e.genesisBlock.Transactions[0].BlockStakeOutputID(uint64(i))
 		dbAddBlockStakeOutputID(tx, sfoid, txid)
-		dbAddUnlockHash(tx, sfo.Condition.UnlockHash(), txid)
+		mapUnlockConditionHash(tx, sfo.Condition, txid)
 		dbAddBlockStakeOutput(tx, sfoid, sfo)
 	}
 	dbAddBlockFacts(tx, blockFacts{
@@ -426,6 +412,133 @@ func dbRemoveTransactionID(tx *bolt.Tx, id types.TransactionID) {
 	mustDelete(tx.Bucket(bucketTransactionIDs), id)
 }
 
+func mapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.TransactionID) {
+	switch id := parentID.(type) {
+	case types.CoinOutputID:
+		var sco types.CoinOutput
+		err := dbGetAndDecode(bucketCoinOutputs, id, &sco)(tx)
+		if err != nil {
+			return
+		}
+		mapUnlockConditionHash(tx, sco.Condition, txid)
+
+	case types.BlockStakeOutputID:
+		var bso types.BlockStakeOutput
+		err := dbGetAndDecode(bucketBlockStakeOutputs, id, &bso)(tx)
+		if err != nil {
+			return
+		}
+		mapUnlockConditionHash(tx, bso.Condition, txid)
+
+	default:
+		panic(fmt.Sprintf("unexpected output ID type: %T", parentID))
+	}
+}
+func unmapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.TransactionID) {
+	switch id := parentID.(type) {
+	case types.CoinOutputID:
+		var sco types.CoinOutput
+		err := dbGetAndDecode(bucketCoinOutputs, id, &sco)(tx)
+		if err != nil {
+			return
+		}
+		unmapUnlockConditionHash(tx, sco.Condition, txid)
+
+	case types.BlockStakeOutputID:
+		var bso types.BlockStakeOutput
+		err := dbGetAndDecode(bucketBlockStakeOutputs, id, &bso)(tx)
+		if err != nil {
+			return
+		}
+		unmapUnlockConditionHash(tx, bso.Condition, txid)
+
+	default:
+		panic(fmt.Sprintf("unexpected output ID type: %T", parentID))
+	}
+}
+func mapUnlockConditionHash(tx *bolt.Tx, ucp types.UnlockConditionProxy, txid types.TransactionID) {
+	muh := ucp.UnlockHash()
+	dbAddUnlockHash(tx, muh, txid)
+	if ucp.ConditionType() == types.ConditionTypeNil {
+		return // nothing to do
+	}
+	mapUnlockConditionMultiSigAddress(tx, muh, ucp.Condition, txid)
+}
+func unmapUnlockConditionHash(tx *bolt.Tx, ucp types.UnlockConditionProxy, txid types.TransactionID) {
+	muh := ucp.UnlockHash()
+	dbRemoveUnlockHash(tx, muh, txid)
+	if ucp.ConditionType() == types.ConditionTypeNil {
+		return // nothing to do
+	}
+	unmapUnlockConditionMultiSigAddress(tx, muh, ucp.Condition, txid)
+}
+func mapUnlockConditionMultiSigAddress(tx *bolt.Tx, muh types.UnlockHash, cond types.MarshalableUnlockCondition, txid types.TransactionID) {
+	switch cond.ConditionType() {
+	case types.ConditionTypeTimeLock:
+		cg, ok := cond.(types.MarshalableUnlockConditionGetter)
+		if !ok {
+			if build.DEBUG {
+				panic(fmt.Sprintf("unexpected Go-type for TimeLockCondition: %T", cond))
+			}
+			return
+		}
+		cond = cg.GetMarshalableUnlockCondition()
+		if cond == nil {
+			if build.DEBUG {
+				panic("unexpected nil-type for Internal condition of TimeLockCondition")
+			}
+			return
+		}
+		mapUnlockConditionMultiSigAddress(tx, muh, cond, txid)
+
+	case types.ConditionTypeMultiSignature:
+		mcond, ok := cond.(types.UnlockHashSliceGetter)
+		if !ok {
+			if build.DEBUG {
+				panic(fmt.Sprintf("unexpected Go-type for MultiSignatureCondition: %T", cond))
+			}
+			return
+		}
+		// map the multisig address to all internal addresses
+		for _, uh := range mcond.UnlockHashSlice() {
+			dbAddWalletAddressToMultiSigAddressMapping(tx, uh, muh, txid)
+		}
+	}
+}
+func unmapUnlockConditionMultiSigAddress(tx *bolt.Tx, muh types.UnlockHash, cond types.MarshalableUnlockCondition, txid types.TransactionID) {
+	switch cond.ConditionType() {
+	case types.ConditionTypeTimeLock:
+		cg, ok := cond.(types.MarshalableUnlockConditionGetter)
+		if !ok {
+			if build.DEBUG {
+				panic(fmt.Sprintf("unexpected Go-type for TimeLockCondition: %T", cond))
+			}
+			return
+		}
+		cond = cg.GetMarshalableUnlockCondition()
+		if cond == nil {
+			if build.DEBUG {
+				panic("unexpected nil-type for Internal condition of TimeLockCondition")
+			}
+			return
+		}
+		unmapUnlockConditionMultiSigAddress(tx, muh, cond, txid)
+
+	case types.ConditionTypeMultiSignature:
+		mcond, ok := cond.(types.UnlockHashSliceGetter)
+		if !ok {
+			if build.DEBUG {
+				panic(fmt.Sprintf("unexpected Go-type for MultiSignatureCondition: %T", cond))
+			}
+			return
+		}
+		// unmap the multisig address to all internal addresses
+		for _, uh := range mcond.UnlockHashSlice() {
+			dbRemoveWalletAddressToMultiSigAddressMapping(tx, uh, muh, txid)
+		}
+	}
+}
+
 // Add/Remove txid from unlock hash bucket
 func dbAddUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
 	b, err := tx.Bucket(bucketUnlockHashes).CreateBucketIfNotExists(encoding.Marshal(uh))
@@ -433,9 +546,50 @@ func dbAddUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID)
 	mustPutSet(b, txid)
 }
 func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
-	bucket := tx.Bucket(bucketUnlockHashes).Bucket(encoding.Marshal(uh))
-	mustDelete(bucket, txid)
-	if bucketIsEmpty(bucket) {
-		tx.Bucket(bucketUnlockHashes).DeleteBucket(encoding.Marshal(uh))
+	uhb := tx.Bucket(bucketUnlockHashes)
+	muh := encoding.Marshal(uh)
+	b := uhb.Bucket(muh)
+	mustDelete(b, txid)
+	if bucketIsEmpty(b) {
+		uhb.DeleteBucket(muh)
+	}
+}
+
+// add/remove multisig address from wallet address mapping bucket
+func dbAddWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, multiSigAddress types.UnlockHash, txid types.TransactionID) {
+	if build.DEBUG {
+		if walletAddress.Type != types.UnlockTypePubKey {
+			panic(fmt.Sprintf("wallet address has wrong type: %d", walletAddress.Type))
+		}
+		if multiSigAddress.Type != types.UnlockTypeMultiSig {
+			panic(fmt.Sprintf("multisig address has wrong type: %d", multiSigAddress.Type))
+		}
+	}
+	wab, err := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).CreateBucketIfNotExists(encoding.Marshal(walletAddress))
+	assertNil(err)
+	b, err := wab.CreateBucketIfNotExists(encoding.Marshal(multiSigAddress))
+	assertNil(err)
+	mustPutSet(b, txid)
+}
+func dbRemoveWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, multiSigAddress types.UnlockHash, txid types.TransactionID) {
+	if build.DEBUG {
+		if walletAddress.Type != types.UnlockTypePubKey {
+			panic(fmt.Sprintf("wallet address has wrong type: %d", walletAddress.Type))
+		}
+		if multiSigAddress.Type != types.UnlockTypeMultiSig {
+			panic(fmt.Sprintf("multisig address has wrong type: %d", multiSigAddress.Type))
+		}
+	}
+	mb := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping)
+	wa := encoding.Marshal(walletAddress)
+	wb := mb.Bucket(wa)
+	msa := encoding.Marshal(multiSigAddress)
+	msb := wb.Bucket(msa)
+	mustDelete(msb, txid)
+	if bucketIsEmpty(msb) {
+		wb.DeleteBucket(msa)
+		if bucketIsEmpty(wb) {
+			mb.DeleteBucket(wa)
+		}
 	}
 }
