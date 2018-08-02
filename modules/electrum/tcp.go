@@ -24,7 +24,6 @@ func (e *Electrum) listenTCP() error {
 	for {
 		conn, err := e.tcpServer.Accept()
 		if err != nil {
-			// TODO: Ignore server close errors
 			return err
 		}
 		tcpConn := createTCPConn(conn)

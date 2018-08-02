@@ -152,6 +152,13 @@ func (e *Electrum) Start() {
 		e.log.Println("Start accepting tcp connections on", e.tcpServer.Addr())
 		go func() {
 			if err := e.listenTCP(); err != nil {
+				// Error for listenTCP on closed connection is not exported, so we can't reliably match it.
+				// As a workaround, check if the server is stopping, and if so, ignore the error
+				select {
+				case <-e.stopChan:
+					return
+				default:
+				}
 				e.log.Critical("[ERROR] [TCPSERVER]: error while listening for tcp connections:", err)
 			}
 		}()
@@ -161,6 +168,8 @@ func (e *Electrum) Start() {
 // Close closses the Electrum instance and every connection it is managing
 func (e *Electrum) Close() error {
 	e.cs.Unsubscribe(e)
+
+	close(e.stopChan)
 
 	if e.httpServer != nil {
 		if err := e.httpServer.Shutdown(nil); err != nil {
@@ -175,8 +184,6 @@ func (e *Electrum) Close() error {
 			return err
 		}
 	}
-
-	close(e.stopChan)
 
 	e.activeConnections.Wait()
 
