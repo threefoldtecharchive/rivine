@@ -140,7 +140,7 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 func (e *Electrum) Start() {
 	// Start the http server if one is configured
 	if e.httpServer != nil {
-		e.log.Println("Starting http server for websocket connections")
+		e.log.Println("Starting http server for websocket connections on", e.httpServer.Addr)
 		go func() {
 			if err := e.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 				e.log.Critical("[ERROR] [HTTPSERVER]: error while running http server:", err)
@@ -149,7 +149,7 @@ func (e *Electrum) Start() {
 	}
 	// Start listening for raw tcp connections
 	if e.tcpServer != nil {
-		e.log.Println("Start accepting tcp connections")
+		e.log.Println("Start accepting tcp connections on", e.tcpServer.Addr())
 		go func() {
 			if err := e.listenTCP(); err != nil {
 				e.log.Critical("[ERROR] [TCPSERVER]: error while listening for tcp connections:", err)
