@@ -26,8 +26,9 @@ type Electrum struct {
 	mu          sync.Mutex
 	connections map[*Client]chan<- *Update
 
-	log    *persist.Logger
-	bcInfo types.BlockchainInfo
+	log      *persist.Logger
+	bcInfo   types.BlockchainInfo
+	chainCts types.ChainConstants
 
 	availableVersions []ProtocolVersion
 
@@ -49,7 +50,7 @@ type Electrum struct {
 // Listerners are not started yet, this is done through the Start method
 func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 	explorer modules.Explorer, tcpAddress string, wsAddress string,
-	persistDir string, bcInfo types.BlockchainInfo) (*Electrum, error) {
+	persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*Electrum, error) {
 
 	if cs == nil {
 		return nil, errors.New("Consensus set is required for the Electrum module")
@@ -66,7 +67,8 @@ func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 
 		connections: make(map[*Client]chan<- *Update), // add update channel value
 
-		bcInfo: bcInfo,
+		bcInfo:   bcInfo,
+		chainCts: chainCts,
 
 		// Support only "v1.0.0"
 		availableVersions: []ProtocolVersion{ProtocolVersion{1, 0, 0}},

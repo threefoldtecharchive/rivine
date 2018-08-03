@@ -54,7 +54,11 @@ func (e *Electrum) ServerPing(cl *Client, args *json.RawMessage) (interface{}, e
 // only a very limit amount of calls are available.
 func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}, error) {
 	if (cl.protoVersion != ProtocolVersion{}) {
-		// Protocol version already set, ignore this request
+		// Protocol version already set, according to the spec new requests should be ignored
+		// it is however not specified what "ignored" means. Completely ignore request, return
+		// the information as set in the first request and don't do anything, or something else.
+		//
+		// For now return an error, can fix it later when version negotiation is properly implemented
 		return nil, RPCError{
 			Code:    101,
 			Message: "Protocol version already set for this connection",
@@ -88,9 +92,10 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 		e.log.Println("[ERROR] Failed to register blockchain methods:", err)
 		return nil, ErrInternal
 	}
-	// TODO: SET SERVER VERSION
+
 	e.log.Debug("Set proto version to", input.ProtocolVersion, "for client at", cl.transport.RemoteAddr())
 	resp.ProtoVersion = e.availableVersions[0]
+	resp.ServerVersion = e.bcInfo.ChainVersion.String()
 
 	cl.protoVersion = input.ProtocolVersion.protocolMax
 	cl.clientName = input.ClientName
