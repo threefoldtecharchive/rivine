@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+  <meta charset="utf-8" />
+  <title>Electrum WebSocket Demo</title>
+  <script language="javascript" type="text/javascript">
+
+  var wsUri = "ws://127.0.0.1:7002/";
+  var output;
+
+  function init()
+  {
+    output = document.getElementById("output");
+    testWebSocket();
+  }
+
+  function testWebSocket()
+  {
+    websocket = new WebSocket(wsUri);
+    websocket.onopen = function(evt) { onOpen(evt) };
+    websocket.onclose = function(evt) { onClose(evt) };
+    websocket.onmessage = function(evt) { onMessage(evt) };
+    websocket.onerror = function(evt) { onError(evt) };
+  }
+
+  function onOpen(evt)
+  {
+    writeToScreen("CONNECTED");
+
+    // doSend only sends data, any response received will be received in the onMessage callback.
+    // This means that a synchronous structure would require some kind of controll structure, for instance a queue,
+    // which matches requests and responses based on the ID field. Since this is just a small demo, we will not
+    // implement such a structure. To ensure some ordering in the requests, We use increasing timeouts, which space out
+    // requests every 1 second. Also not that we assume there is no error, as the responses are not checked in this example.
+    setTimeout(() => {
+        doSend(pingServer(1));
+    }, 1000);
+    setTimeout(() => {
+        doSend(requestVersion(2, "1.0", "1.0"));
+    }, 2000);
+    setTimeout(() => {
+        doSend(subscribeAddress(3, "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"));
+    }, 3000);
+  }
+
+  function onClose(evt)
+  {
+    writeToScreen("DISCONNECTED");
+  }
+
+  function onMessage(evt)
+  {
+    writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+  }
+
+  function onError(evt)
+  {
+    writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
+  }
+
+  function doSend(message)
+  {
+    writeToScreen("SENT: " + message);
+    websocket.send(message);
+  }
+
+  function writeToScreen(message)
+  {
+    var pre = document.createElement("p");
+    pre.style.wordWrap = "break-word";
+    pre.innerHTML = message;
+    output.appendChild(pre);
+  }
+
+  function pingServer(id) {
+      return JSON.stringify(
+          {
+              id: id,
+              jsonrpc: "2.0",
+              method: "server.ping"
+          }
+      );
+  }
+
+  function requestVersion(id, version_min, version_max) {
+      return JSON.stringify(
+          {
+              id: id,
+              jsonrpc: "2.0",
+              method: "server.version",
+              params: {
+                  protocol_version: [version_min, version_max],
+                  client_name: "websocket_demo_v1.0.0"
+              }
+          }
+      );
+  }
+
+  function subscribeAddress(id, address) {
+    return JSON.stringify(
+          {
+              id: id,
+              jsonrpc: "2.0",
+              method: "blockchain.address.subscribe",
+              params: {
+                  address: address
+              }
+          }
+      );
+  }
+
+  window.addEventListener("load", init, false);
+
+  </script>
+
+  <h2>Electrum WebSocket Demo</h2>
+
+  <div id="output"></div>

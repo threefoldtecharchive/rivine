@@ -115,7 +115,7 @@ func (e *Electrum) BlockchainAddressSubscribe(cl *Client, args *json.RawMessage)
 
 	err := json.Unmarshal(*args, &input)
 	if err != nil {
-		e.log.Debug("Error getting params for blockhain.address.subsribe:", err)
+		e.log.Debug("Error getting params for blockhain.address.subscribe:", err)
 		return nil, ErrInvalidParams
 	}
 

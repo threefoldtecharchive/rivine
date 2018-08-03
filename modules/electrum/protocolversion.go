@@ -107,6 +107,7 @@ func (pa *ProtocolArgument) UnmarshalJSON(data []byte) error {
 			protocolMin: versions[0],
 			protocolMax: versions[1],
 		}
+		return nil
 	}
 	*pa = ProtocolArgument{
 		protocolMin: pv,
