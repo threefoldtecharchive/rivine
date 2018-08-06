@@ -93,7 +93,7 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 		return nil, ErrInternal
 	}
 
-	e.log.Debug("Set proto version to", input.ProtocolVersion, "for client at", cl.transport.RemoteAddr())
+	e.log.Debug("Set proto version to ", input.ProtocolVersion.protocolMax.String(), " for client at ", cl.transport.RemoteAddr())
 	resp.ProtoVersion = e.availableVersions[0]
 	resp.ServerVersion = e.bcInfo.ChainVersion.String()
 
