@@ -90,6 +90,7 @@ func (br *BatchResponse) UnmarshalJSON(data []byte) error {
 			responses: responses,
 			isBatch:   true,
 		}
+		return nil
 	}
 	*br = BatchResponse{
 		responses: []*Response{&response},
