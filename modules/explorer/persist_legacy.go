@@ -97,6 +97,14 @@ func (e *Explorer) convertLegacyDatabase(filePath string) (db *persist.BoltDatab
 			})
 		})
 	})
+	// If a bucket exist error is thrown its because we used to have a software version which ran this migration but did not update
+	// the database metadata
+	if err == nil || err == bolt.ErrBucketExists {
+		// set the new metadata, and save it,
+		// such that next time we have the new version stored
+		db.Header, db.Version = explorerMetadata.Header, explorerMetadata.Version
+		err = db.SaveMetadata()
+	}
 	if err != nil {
 		err := db.Close()
 		if build.DEBUG && err != nil {
