@@ -147,7 +147,6 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 
 		case <-cl.transport.IsClosed():
 			// transport closing, exit
-			e.log.Println("Closed connection to", cl.transport.RemoteAddr(), "as transport is closed")
 			return
 
 		case update := <-updateChan:
