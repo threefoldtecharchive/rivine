@@ -153,7 +153,7 @@ func (w *Wallet) managedUnlock(masterKey crypto.TwofishKey) error {
 				}
 			}()
 		}
-		err = w.cs.ConsensusSetSubscribe(w, modules.ConsensusChangeBeginning)
+		err = w.cs.ConsensusSetSubscribe(w, modules.ConsensusChangeBeginning, w.tg.StopChan())
 		if err != nil {
 			return errors.New("wallet subscription failed: " + err.Error())
 		}

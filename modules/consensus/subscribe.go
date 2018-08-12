@@ -1,6 +1,8 @@
 package consensus
 
 import (
+	"errors"
+
 	"github.com/rivine/rivine/modules"
 
 	"github.com/rivine/bbolt"
@@ -91,7 +93,7 @@ func (cs *ConsensusSet) readlockUpdateSubscribers(ce changeEntry) {
 //
 // As a special case, using an empty id as the start will have all the changes
 // sent to the modules starting with the genesis block.
-func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID) error {
+func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID, cancel <-chan struct{}) error {
 	return cs.db.View(func(tx *bolt.Tx) error {
 		// 'exists' and 'entry' are going to be pointed to the first entry that
 		// has not yet been seen by subscriber.
@@ -130,12 +132,17 @@ func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubsc
 
 		// Send all remaining consensus changes to the subscriber.
 		for exists {
-			cc, err := cs.computeConsensusChange(tx, entry)
-			if err != nil {
-				return err
+			select {
+			case <-cancel:
+				return errors.New("aborting initializeSubscribe")
+			default:
+				cc, err := cs.computeConsensusChange(tx, entry)
+				if err != nil {
+					return err
+				}
+				subscriber.ProcessConsensusChange(cc)
+				entry, exists = entry.NextEntry(tx)
 			}
-			subscriber.ProcessConsensusChange(cc)
-			entry, exists = entry.NextEntry(tx)
 		}
 		return nil
 	})
@@ -147,7 +154,7 @@ func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubsc
 //
 // As a special case, using an empty id as the start will have all the changes
 // sent to the modules starting with the genesis block.
-func (cs *ConsensusSet) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID) error {
+func (cs *ConsensusSet) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID, cancel <-chan struct{}) error {
 	err := cs.tg.Add()
 	if err != nil {
 		return err
@@ -158,7 +165,7 @@ func (cs *ConsensusSet) ConsensusSetSubscribe(subscriber modules.ConsensusSetSub
 
 	// Get the input module caught up to the currenct consnesus set.
 	cs.subscribers = append(cs.subscribers, subscriber)
-	err = cs.initializeSubscribe(subscriber, start)
+	err = cs.initializeSubscribe(subscriber, start, cancel)
 	if err != nil {
 		// Remove the subscriber from the set of subscribers.
 		cs.subscribers = cs.subscribers[:len(cs.subscribers)-1]
