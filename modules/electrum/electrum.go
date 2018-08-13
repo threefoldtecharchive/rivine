@@ -153,14 +153,14 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 			// if the transaction id is the block id (miner payout), place it first in the ordering
 			for _, txid := range txnLocation[height] {
 				if txid == types.TransactionID(block.ID()) {
-					statusString += fmt.Sprintf("%v:%v", txid.String(), height)
+					statusString += fmt.Sprintf("%v:%v:", txid.String(), height)
 				}
 			}
 			// iterate through the remaining transactions in order
 			for _, blocktx := range block.Transactions {
 				for _, txid := range txnLocation[height] {
 					if txid == blocktx.ID() {
-						statusString += fmt.Sprintf("%v:%v", txid.String(), height)
+						statusString += fmt.Sprintf("%v:%v:", txid.String(), height)
 						continue
 					}
 				}
@@ -168,7 +168,7 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 			continue
 		}
 		// there is only one transaction for this height
-		statusString += fmt.Sprintf("%v:%v", txnLocation[height][0].String(), height)
+		statusString += fmt.Sprintf("%v:%v:", txnLocation[height][0].String(), height)
 	}
 
 	// Now fetch all unconfirmed transactions from the transaction pool
@@ -263,13 +263,13 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 		// First loop for the ones with unconfirmed inputs
 		for txid, inputsConfirmed := range relevantTpTransactions {
 			if !inputsConfirmed {
-				statusString += fmt.Sprintf("%v:%v", txid.String(), "-1")
+				statusString += fmt.Sprintf("%v:%v:", txid.String(), "-1")
 			}
 			delete(relevantTpTransactions, txid)
 		}
 		// and a final loop for the ones which are using confirmed inputs
 		for txid := range relevantTpTransactions {
-			statusString += fmt.Sprintf("%v:%v", txid.String(), "0")
+			statusString += fmt.Sprintf("%v:%v:", txid.String(), "0")
 		}
 	}
 
