@@ -293,8 +293,8 @@ func createAtomicSwapCmd(client *CommandLineClient) *cobra.Command {
 	auditCmd.Flags().Var(
 		cli.StringLoaderFlag{StringLoader: &atomicSwapCmd.auditCfg.ReceiverAddress}, "receiver",
 		"optionally validate the given receiver's address (unlockhash) to the one found in the atomic swap contract condition")
-	auditCmd.Flags().Var(
-		currencyFlag(atomicSwapCmd.cli, &atomicSwapCmd.auditCfg.CoinAmount), "amount",
+	auditCmd.Flags().StringVar(
+		&atomicSwapCmd.auditCfg.CoinAmountString, "amount", "",
 		"optionally validate the given coin amount to the one found in the unspent coin output")
 	auditCmd.Flags().DurationVar(
 		&atomicSwapCmd.auditCfg.MinDurationLeft, "min-duration", 0,
@@ -324,10 +324,10 @@ type atomicSwapCmd struct {
 		SourceUnlockHash types.UnlockHash
 	}
 	auditCfg struct {
-		ReceiverAddress types.UnlockHash
-		CoinAmount      types.Currency
-		HashedSecret    types.AtomicSwapHashedSecret
-		MinDurationLeft time.Duration
+		ReceiverAddress  types.UnlockHash
+		CoinAmountString string
+		HashedSecret     types.AtomicSwapHashedSecret
+		MinDurationLeft  time.Duration
 	}
 	extractSecretCfg struct {
 		HashedSecret types.AtomicSwapHashedSecret
@@ -667,14 +667,18 @@ TimeLock reached in: %s
 	}
 
 	var invalidContract bool
-	if !atomicSwapCmd.auditCfg.CoinAmount.IsZero() {
+	if atomicSwapCmd.auditCfg.CoinAmountString != "" && atomicSwapCmd.auditCfg.CoinAmountString != "0" {
+		amount, err := currencyConverter.ParseCoinString(atomicSwapCmd.auditCfg.CoinAmountString)
+		if err != nil {
+			DieWithError("failed to parse amount string: ", err)
+		}
 		// optionally validate coin amount
-		if !atomicSwapCmd.auditCfg.CoinAmount.Equals(co.Value) {
+		if !amount.Equals(co.Value) {
 			invalidContract = true
 			fmt.Fprintln(os.Stderr, "unspent out's value "+
 				currencyConverter.ToCoinStringWithUnit(co.Value)+
 				" does not match the expected value "+
-				currencyConverter.ToCoinStringWithUnit(atomicSwapCmd.auditCfg.CoinAmount))
+				currencyConverter.ToCoinStringWithUnit(amount))
 		}
 	}
 	if atomicSwapCmd.auditCfg.HashedSecret != (types.AtomicSwapHashedSecret{}) {
