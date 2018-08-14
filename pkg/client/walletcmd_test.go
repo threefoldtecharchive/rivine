@@ -152,7 +152,7 @@ func TestParsePairedOutputs(t *testing.T) {
 		}, // no error, a more complex example
 	}
 	for idx, testCase := range testCases {
-		pairs, err := parsePairedOutputs(testCase.Arguments, _CurrencyConvertor.ParseCoinString)
+		pairs, err := parsePairedOutputs(testCase.Arguments, createDefaultCurrencyConvertor().ParseCoinString)
 		if len(testCase.ExpectedPairs) == 0 {
 			// expecting error
 			if err == nil {
@@ -184,9 +184,7 @@ func TestParsePairedOutputs(t *testing.T) {
 	}
 }
 
-func init() {
-	_CurrencyConvertor.createConvertorOnce.Do(func() {
-		bchainInfo := types.DefaultBlockchainInfo()
-		_CurrencyConvertor.convertor = NewCurrencyConvertor(types.DefaultCurrencyUnits(), bchainInfo.CoinUnit)
-	})
+func createDefaultCurrencyConvertor() CurrencyConvertor {
+	bchainInfo := types.DefaultBlockchainInfo()
+	return NewCurrencyConvertor(types.DefaultCurrencyUnits(), bchainInfo.CoinUnit)
 }

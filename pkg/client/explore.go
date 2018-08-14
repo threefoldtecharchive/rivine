@@ -5,62 +5,82 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/pkg/cli"
-	"github.com/spf13/cobra"
 )
 
-var (
-	exploreCmd = &cobra.Command{
-		Use:   "explore",
-		Short: "Explore the blockchain",
-		Long:  "Explore the blockchain using the daemon's explorer module.",
-	}
+func createExploreCmd(client *CommandLineClient) *cobra.Command {
+	exploreCmd := &exploreCmd{cli: client}
 
-	exploreBlockCmd = &cobra.Command{
-		Use:   "block <height>",
-		Short: "Explore a block on the blockchain",
-		Long:  "Explore a block on the blockchain, using its ID.",
-		Run:   Wrap(exploreblockcmd),
-	}
+	// create root explore command and all subs
+	var (
+		rootCmd = &cobra.Command{
+			Use:   "explore",
+			Short: "Explore the blockchain",
+			Long:  "Explore the blockchain using the daemon's explorer module.",
+		}
+		blockCmd = &cobra.Command{
+			Use:   "block <height>",
+			Short: "Explore a block on the blockchain",
+			Long:  "Explore a block on the blockchain, using its ID.",
+			Run:   Wrap(exploreCmd.blockCmd),
+		}
+		hashCmd = &cobra.Command{
+			Use:   "hash <unlockhash>|<transactionID>|<blockID>|<outputID>",
+			Short: "Explore an item on the blockchain",
+			Long:  "Explore an item on the blockchain, using its hash or ID.",
+			Run:   Wrap(exploreCmd.hashCmd),
+		}
+	)
+	rootCmd.AddCommand(blockCmd, hashCmd)
 
-	exploreHashCmd = &cobra.Command{
-		Use:   "hash <unlockhash>|<transactionID>|<blockID>|<outputID>",
-		Short: "Explore an item on the blockchain",
-		Long:  "Explore an item on the blockchain, using its hash or ID.",
-		Run:   Wrap(explorehashcmd),
-	}
-)
+	// create flags
+	blockCmd.Flags().Var(
+		cli.NewEncodingTypeFlag(0, &exploreCmd.blockCfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON), "encoding",
+		cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON))
+	blockCmd.Flags().BoolVar(
+		&exploreCmd.blockCfg.BlockOnly, "block-only", false, "print the raw block only")
 
-var (
-	exploreBlockcfg struct {
+	hashCmd.Flags().Var(
+		cli.NewEncodingTypeFlag(0, &exploreCmd.hashCfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON), "encoding",
+		cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON))
+
+	// return root command
+	return rootCmd
+}
+
+type exploreCmd struct {
+	cli      *CommandLineClient
+	blockCfg struct {
 		EncodingType cli.EncodingType
 		BlockOnly    bool
 	}
-	exploreHashcfg struct {
+	hashCfg struct {
 		EncodingType cli.EncodingType
 	}
-)
+}
 
-// exploreblockcmd is the handler for the command `rivinec explore block`,
+// blockCmd is the handler for the command `rivinec explore block`,
 // explores a block on the blockchain, by looking it up by its height,
 // and printing either all info, or just the raw block itself.
-func exploreblockcmd(blockHeightStr string) {
+func (cmd *exploreCmd) blockCmd(blockHeightStr string) {
 	// get the block on the given height, using the daemon's explorer module
 	var resp api.ExplorerBlockGET
-	err := _DefaultClient.httpClient.GetAPI("/explorer/blocks/"+blockHeightStr, &resp)
+	err := cmd.cli.GetAPI("/explorer/blocks/"+blockHeightStr, &resp)
 	if err != nil {
 		Die(fmt.Sprintf("Could not get a block on height %q: %v", blockHeightStr, err))
 	}
 
 	// define the value to print
 	value := interface{}(resp.Block)
-	if exploreBlockcfg.BlockOnly {
+	if cmd.blockCfg.BlockOnly {
 		value = resp.Block.RawBlock
 	}
 
 	// print depending on the encoding type
-	switch exploreBlockcfg.EncodingType {
+	switch cmd.blockCfg.EncodingType {
 	case cli.EncodingTypeJSON:
 		json.NewEncoder(os.Stdout).Encode(value)
 	default:
@@ -73,16 +93,16 @@ func exploreblockcmd(blockHeightStr string) {
 // explorehashcmd is the handler for the command `rivinec explore hash`,
 // explores an item on the blockchain, by looking it up by its hash,
 // and printing all info it receives back for that hash
-func explorehashcmd(hash string) {
+func (cmd *exploreCmd) hashCmd(hash string) {
 	// get the block on the given height, using the daemon's explorer module
 	var resp api.ExplorerHashGET
-	err := _DefaultClient.httpClient.GetAPI("/explorer/hashes/"+hash, &resp)
+	err := cmd.cli.GetAPI("/explorer/hashes/"+hash, &resp)
 	if err != nil {
 		Die(fmt.Sprintf("Could not get an item using the hash %q: %v", hash, err))
 	}
 
 	// print depending on the encoding type
-	switch exploreHashcfg.EncodingType {
+	switch cmd.hashCfg.EncodingType {
 	case cli.EncodingTypeJSON:
 		json.NewEncoder(os.Stdout).Encode(resp)
 	default:
@@ -90,16 +110,4 @@ func explorehashcmd(hash string) {
 		e.SetIndent("", "  ")
 		e.Encode(resp)
 	}
-}
-
-func init() {
-	exploreBlockCmd.Flags().Var(
-		cli.NewEncodingTypeFlag(0, &exploreBlockcfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON), "encoding",
-		cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON))
-	exploreBlockCmd.Flags().BoolVar(
-		&exploreBlockcfg.BlockOnly, "block-only", false, "print the raw block only")
-
-	exploreHashCmd.Flags().Var(
-		cli.NewEncodingTypeFlag(0, &exploreHashcfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON), "encoding",
-		cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON))
 }

@@ -1,6 +1,8 @@
 package transactionpool
 
 import (
+	"fmt"
+
 	"github.com/rivine/rivine/encoding"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
@@ -12,9 +14,15 @@ import (
 // are within an acceptable byte size range, when binary encoded.
 func (tp *TransactionPool) ValidateTransactionSet(ts []types.Transaction) error {
 	totalSize := 0
+	blockHeight := tp.consensusSet.Height()
+	block, ok := tp.consensusSet.BlockAtHeight(blockHeight)
+	if !ok {
+		return fmt.Errorf("failed to fetch block at height %d", blockHeight)
+	}
 	ctx := types.ValidationContext{
 		Confirmed:   false,
-		BlockHeight: tp.consensusSet.Height(),
+		BlockHeight: blockHeight,
+		BlockTime:   block.Timestamp,
 	}
 	//validate each transaction in the transaction set
 	var err error

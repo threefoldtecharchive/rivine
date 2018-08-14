@@ -476,7 +476,11 @@ func (css *consensusSetStub) Flush() error {
 }
 
 func (css *consensusSetStub) Height() types.BlockHeight {
-	return types.BlockHeight(len(css.blocks))
+	l := len(css.blocks)
+	if l == 0 {
+		return 0
+	}
+	return types.BlockHeight(l - 1)
 }
 
 func (css *consensusSetStub) Synced() bool {

@@ -14,33 +14,47 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	consensusCmd = &cobra.Command{
-		Use:   "consensus",
-		Short: "Print the current state of consensus",
-		Long:  "Print the current state of consensus such as current block, block height, and target.",
-		Run:   Wrap(consensuscmd),
-	}
+func createConsensusCmd(client *CommandLineClient) (*consensusCmd, *cobra.Command) {
+	consensusCmd := &consensusCmd{cli: client}
 
-	consensusTransactionCmd = &cobra.Command{
-		Use:   "transaction <shortID>|<longID>",
-		Short: "Get an existing transaction",
-		Long:  "Get an existing transaction from the blockchain, using its given shortID or longID.",
-		Run:   Wrap(consensustransactioncmd),
-	}
-)
+	// create root consensus command and all subs
+	var (
+		rootCmd = &cobra.Command{
+			Use:   "consensus",
+			Short: "Print the current state of consensus",
+			Long:  "Print the current state of consensus such as current block, block height, and target.",
+			Run:   Wrap(consensusCmd.rootCmd),
+		}
+		transactionCmd = &cobra.Command{
+			Use:   "transaction <shortID>|<longID>",
+			Short: "Get an existing transaction",
+			Long:  "Get an existing transaction from the blockchain, using its given shortID or longID.",
+			Run:   Wrap(consensusCmd.transactionCmd),
+		}
+	)
+	rootCmd.AddCommand(transactionCmd)
 
-var (
-	consensusTransactioncfg struct {
+	// create flags
+	transactionCmd.Flags().Var(
+		cli.NewEncodingTypeFlag(0, &consensusCmd.transactionCfg.EncodingType, 0), "encoding",
+		cli.EncodingTypeFlagDescription(0))
+
+	// return root command
+	return consensusCmd, rootCmd
+}
+
+type consensusCmd struct {
+	cli            *CommandLineClient
+	transactionCfg struct {
 		EncodingType cli.EncodingType
 	}
-)
+}
 
-// Consensuscmd is the handler for the command `rivinec consensus`.
+// rootCmd is the handler for the command `rivinec consensus`.
 // Prints the current state of consensus.
-func consensuscmd() {
+func (consensusCmd *consensusCmd) rootCmd() {
 	var cg api.ConsensusGET
-	err := _DefaultClient.httpClient.GetAPI("/consensus", &cg)
+	err := consensusCmd.cli.GetAPI("/consensus", &cg)
 	if err != nil {
 		Die("Could not get current consensus state:", err)
 	}
@@ -51,7 +65,7 @@ Height: %v
 Target: %v
 `, YesNo(cg.Synced), cg.CurrentBlock, cg.Height, cg.Target)
 	} else {
-		estimatedHeight := EstimatedHeightAt(time.Now())
+		estimatedHeight := consensusCmd.estimatedHeightAt(time.Now())
 		estimatedProgress := float64(cg.Height) / float64(estimatedHeight) * 100
 		if estimatedProgress > 99 {
 			estimatedProgress = 99
@@ -66,12 +80,15 @@ Progress (estimated): %.2f%%
 // EstimatedHeightAt returns the estimated block height for the given time.
 // Block height is estimated by calculating the minutes since a known block in
 // the past and dividing by 10 minutes (the block time).
-func EstimatedHeightAt(t time.Time) types.BlockHeight {
-	cfg := _ConfigStorage.Config()
-	if cfg.GenesisBlockTimestamp == 0 {
+func (consensusCmd *consensusCmd) estimatedHeightAt(t time.Time) types.BlockHeight {
+	if consensusCmd.cli.Config.GenesisBlockTimestamp == 0 {
 		panic("GenesisBlockTimestamp is undefined")
 	}
-	return estimatedHeightBetween(int64(cfg.GenesisBlockTimestamp), t.Unix(), cfg.BlockFrequencyInSeconds)
+	return estimatedHeightBetween(
+		int64(consensusCmd.cli.Config.GenesisBlockTimestamp),
+		t.Unix(),
+		consensusCmd.cli.Config.BlockFrequencyInSeconds,
+	)
 }
 
 func estimatedHeightBetween(from, to, blockFrequency int64) types.BlockHeight {
@@ -83,19 +100,19 @@ func estimatedHeightBetween(from, to, blockFrequency int64) types.BlockHeight {
 	return types.BlockHeight(estimatedHeight + 0.5) // round to the nearest block
 }
 
-// consensustransactioncmd is the handler for the command `rivinec consensus transaction`.
+// transactionCmd is the handler for the command `rivinec consensus transaction`.
 // Prints the transaction found for the given id. If the ID is a long transaction ID, it also
 // prints the short transaction ID for future reference
-func consensustransactioncmd(id string) {
+func (consensusCmd *consensusCmd) transactionCmd(id string) {
 	var txn api.ConsensusGetTransaction
 
-	err := _DefaultClient.httpClient.GetAPI("/consensus/transactions/"+id, &txn)
+	err := consensusCmd.cli.GetAPI("/consensus/transactions/"+id, &txn)
 	if err != nil {
 		Die("failed to get transaction:", err, "; ID:", id)
 	}
 
 	var encode func(interface{}) error
-	switch consensusTransactioncfg.EncodingType {
+	switch consensusCmd.transactionCfg.EncodingType {
 	case cli.EncodingTypeHuman:
 		e := json.NewEncoder(os.Stdout)
 		e.SetIndent("", "  ")
@@ -114,10 +131,4 @@ func consensustransactioncmd(id string) {
 	if err != nil {
 		Die("failed to encode transaction:", err, "; ID:", id)
 	}
-}
-
-func init() {
-	consensusTransactionCmd.Flags().Var(
-		cli.NewEncodingTypeFlag(0, &consensusTransactioncfg.EncodingType, 0), "encoding",
-		cli.EncodingTypeFlagDescription(0))
 }

@@ -11,29 +11,39 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	mergeCmd = &cobra.Command{
-		Use:   "merge",
-		Short: "merge transaction inputs",
-		// Run field is not set, as the create command itself is not a valid command.
-		// A subcommand must be provided.
-	}
+func createMergeCmd(*CommandLineClient) *cobra.Command {
+	mergeCmd := new(mergeCmd)
 
-	mergeTransactionsCmd = &cobra.Command{
-		Use:   "transactions <txnjson1> <txnjson2> [txnjsonN...]",
-		Short: "Merge compatible input fulfillments",
-		Long: `Merge the compatible input fulfillments from two or more transactions together.
+	// create root merge command and all subs
+	var (
+		rootCmd = &cobra.Command{
+			Use:   "merge",
+			Short: "merge transaction inputs",
+			// Run field is not set, as the create command itself is not a valid command.
+			// A subcommand must be provided.
+		}
+		mergeTxCmd = &cobra.Command{
+			Use:   "transactions <txnjson1> <txnjson2> [txnjsonN...]",
+			Short: "Merge compatible input fulfillments",
+			Long: `Merge the compatible input fulfillments from two or more transactions together.
 Currently only multisignature inputs can be merged.
 
 Duplicate signatures are only deleted if there are more signatures for a public key given,
 than that the condition defines for that public key's unlock hash.
 `,
-		Args: cobra.MinimumNArgs(2),
-		Run:  walletmergetransactions,
-	}
-)
+			Args: cobra.MinimumNArgs(2),
+			Run:  mergeCmd.mergeTransactions,
+		}
+	)
+	rootCmd.AddCommand(mergeTxCmd)
 
-func walletmergetransactions(cmd *cobra.Command, args []string) {
+	// return root command
+	return rootCmd
+}
+
+type mergeCmd struct{}
+
+func (mergeCmd *mergeCmd) mergeTransactions(cmd *cobra.Command, args []string) {
 	var masterTxn transactionInputs
 	err := json.NewDecoder(bytes.NewBufferString(args[0])).Decode(&masterTxn)
 	if err != nil {

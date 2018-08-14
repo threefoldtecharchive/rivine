@@ -11,52 +11,30 @@ import (
 	"github.com/rivine/bbolt"
 )
 
-var (
-	errMissingCoinOutput             = errors.New("transaction spends a nonexisting coin output")
-	errMissingBlockStakeOutput       = errors.New("transaction spends a nonexisting blockstake output")
-	errSiacoinInputOutputMismatch    = errors.New("coin inputs do not equal coin outputs for transaction")
-	errBlockStakeInputOutputMismatch = errors.New("blockstake inputs do not equal blockstake outputs for transaction")
-	errWrongUnlockConditions         = errors.New("transaction contains incorrect unlock conditions")
-)
-
 // validCoins checks that the coin inputs and outputs are valid in the
 // context of the current consensus set, meaning that total coin input sum
 // equals the total coin output sum, as well as the fact that all conditions referenced coin outputs,
 // have been correctly fulfilled by the child coin inputs.
 func validCoins(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockHeight, blockTimestamp types.Timestamp) (err error) {
-	scoBucket := tx.Bucket(CoinOutputs)
-	var inputSum types.Currency
-	for inputIndex, sci := range t.CoinInputs {
+	coinInputs := make(map[types.CoinOutputID]types.CoinOutput, len(t.CoinInputs))
+	for _, sci := range t.CoinInputs {
 		// Check that the input spends an existing output.
-		scoBytes := scoBucket.Get(sci.ParentID[:])
+		scoBytes := tx.Bucket(CoinOutputs).Get(sci.ParentID[:])
 		if scoBytes == nil {
-			return errMissingCoinOutput
+			continue // ignore, up to transaction to define if this is invalid
 		}
-
 		// unmarshall the output bytes
 		var sco types.CoinOutput
 		err = encoding.Unmarshal(scoBytes, &sco)
 		if build.DEBUG && err != nil {
 			panic(err)
 		}
-
-		// check if the referenced output's condition has been fulfilled
-		err = sco.Condition.Fulfill(sci.Fulfillment, types.FulfillContext{
-			InputIndex:  uint64(inputIndex),
-			BlockHeight: blockHeight,
-			BlockTime:   blockTimestamp,
-			Transaction: t,
-		})
-		if err != nil {
-			return
-		}
-
-		inputSum = inputSum.Add(sco.Value)
+		coinInputs[sci.ParentID] = sco
 	}
-	if !inputSum.Equals(t.CoinOutputSum()) {
-		return errSiacoinInputOutputMismatch
-	}
-	return nil
+	return t.ValidateCoinOutputs(types.FundValidationContext{
+		BlockHeight: blockHeight,
+		BlockTime:   blockTimestamp,
+	}, coinInputs)
 }
 
 // validBlockStakes checks that the blockstake portions of the transaction are valid
@@ -64,36 +42,19 @@ func validCoins(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockHeight,
 // equals the block stake output sum, as well as the fact that all conditions
 // of referenced block stake outputs, have been correctly fulfilled by the child block stkae inputs.
 func validBlockStakes(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockHeight, blockTimestamp types.Timestamp) (err error) {
-	// Compare the number of input blockstake to the output blockstake.
-	var blockstakeInputSum types.Currency
-	var blockstakeOutputSum types.Currency
-	var bso types.BlockStakeOutput
-	for inputIndex, bsi := range t.BlockStakeInputs {
-		bso, err = getBlockStakeOutput(tx, bsi.ParentID)
-		if err != nil {
-			return
+	blockStakeInputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput, len(t.BlockStakeInputs))
+	for _, bsi := range t.BlockStakeInputs {
+		// Check that the input spends an existing output.
+		bso, err := getBlockStakeOutput(tx, bsi.ParentID)
+		if err == errNilItem {
+			continue // ignore, up to transaction to define if this is invalid
 		}
-
-		// check if the referenced output's condition has been fulfilled
-		err = bso.Condition.Fulfill(bsi.Fulfillment, types.FulfillContext{
-			InputIndex:  uint64(inputIndex),
-			BlockHeight: blockHeight,
-			BlockTime:   blockTimestamp,
-			Transaction: t,
-		})
-		if err != nil {
-			return
-		}
-
-		blockstakeInputSum = blockstakeInputSum.Add(bso.Value)
+		blockStakeInputs[bsi.ParentID] = bso
 	}
-	for _, bso := range t.BlockStakeOutputs {
-		blockstakeOutputSum = blockstakeOutputSum.Add(bso.Value)
-	}
-	if !blockstakeOutputSum.Equals(blockstakeInputSum) {
-		return errBlockStakeInputOutputMismatch
-	}
-	return
+	return t.ValidateBlockStakeOutputs(types.FundValidationContext{
+		BlockHeight: blockHeight,
+		BlockTime:   blockTimestamp,
+	}, blockStakeInputs)
 }
 
 // validTransaction checks that all fields are valid within the current
@@ -104,6 +65,7 @@ func validTransaction(tx *bolt.Tx, t types.Transaction, constants types.Transact
 	err := t.ValidateTransaction(types.ValidationContext{
 		Confirmed:   true,
 		BlockHeight: blockHeight,
+		BlockTime:   blockTimestamp,
 	}, constants)
 	if err != nil {
 		return err
