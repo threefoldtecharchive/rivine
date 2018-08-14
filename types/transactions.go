@@ -370,14 +370,49 @@ var (
 func (t Transaction) ValidateTransaction(ctx ValidationContext, constants TransactionValidationConstants) error {
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
-		// this will also trigger for v0 transactions
-		return DefaultTransactionValidation(t, ctx, constants)
+		return ErrUnknownTransactionType
 	}
 	validator, ok := controller.(TransactionValidator)
 	if !ok {
 		return DefaultTransactionValidation(t, ctx, constants)
 	}
 	return validator.ValidateTransaction(t, ctx, constants)
+}
+
+// ValidateCoinOutputs validates the coin outputs within the current blockchain context.
+// This behaviour can be overwritten by the used Transaction Controller.
+//
+// The default validation logic ensures that the total amount of output coins (including fees),
+// equals the total amount of input coins. It also ensures that all coin inputs refer with their given ParentID
+// to an existing unspent coin output.
+func (t Transaction) ValidateCoinOutputs(ctx FundValidationContext, coinInputs map[CoinOutputID]CoinOutput) error {
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return ErrUnknownTransactionType
+	}
+	validator, ok := controller.(CoinOutputValidator)
+	if !ok {
+		return DefaultCoinOutputValidation(t, ctx, coinInputs)
+	}
+	return validator.ValidateCoinOutputs(t, ctx, coinInputs)
+}
+
+// ValidateBlockStakeOutputs validates the blockstake outputs within the current blockchain context.
+// This behaviour can be overwritten by the used Transaction Controller.
+//
+// The default validation logic ensures that the total amount of output blockstakes,
+// equals the total amount of input blockstakes. It also ensures that all blockstake inputs refer with their given ParentID
+// to an existing unspent blockstake output.
+func (t Transaction) ValidateBlockStakeOutputs(ctx FundValidationContext, blockStakeInputs map[BlockStakeOutputID]BlockStakeOutput) error {
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return ErrUnknownTransactionType
+	}
+	validator, ok := controller.(BlockStakeOutputValidator)
+	if !ok {
+		return DefaultBlockStakeOutputValidation(t, ctx, blockStakeInputs)
+	}
+	return validator.ValidateBlockStakeOutputs(t, ctx, blockStakeInputs)
 }
 
 // MarshalSia implements SiaMarshaler.MarshalSia

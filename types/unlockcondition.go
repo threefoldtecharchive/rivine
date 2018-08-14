@@ -169,6 +169,9 @@ type (
 		// or it defines the height of the last confirmed/created block.
 		// It's the latter in case Confirmed is false, the first otherwise.
 		BlockHeight BlockHeight
+		// BlockTime defines the time of the currently last registered block,
+		// the transaction belonged to.
+		BlockTime Timestamp
 	}
 
 	// FulfillmentSignContext is given as part of the sign call of an UnlockFullment,
@@ -207,6 +210,18 @@ type (
 	// as to provide the necessary context required for fulfilling a fulfillment.
 	FulfillableContext struct {
 		// BlockHeight of the currently last registered block.
+		BlockHeight BlockHeight
+		// BlockTime defines the time of the currently last registered block,
+		// the transaction belonged to.
+		BlockTime Timestamp
+	}
+
+	// FundValidationContext is used for coin- and block stake- validators,
+	// optional types which validate if a fund output is properly backed by an input.
+	FundValidationContext struct {
+		// BlockHeight defines either the height of the block the (parent) transaction is part of,
+		// or it defines the height of the last confirmed/created block.
+		// It's the latter in case Confirmed is false, the first otherwise.
 		BlockHeight BlockHeight
 		// BlockTime defines the time of the currently last registered block,
 		// the transaction belonged to.

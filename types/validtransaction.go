@@ -13,12 +13,16 @@ import (
 
 // various errors that can be returned as result of a specific transaction validation
 var (
-	ErrDoubleSpend           = errors.New("transaction uses a parent object twice")
-	ErrNonZeroRevision       = errors.New("new file contract has a nonzero revision number")
-	ErrTransactionTooLarge   = errors.New("transaction is too large to fit in a block")
-	ErrTooSmallMinerFee      = errors.New("transaction has a too small miner fee")
-	ErrZeroOutput            = errors.New("transaction cannot have an output or payout that has zero value")
-	ErrArbitraryDataTooLarge = errors.New("arbitrary data is too large to fit in a transaction")
+	ErrDoubleSpend                   = errors.New("transaction uses a parent object twice")
+	ErrNonZeroRevision               = errors.New("new file contract has a nonzero revision number")
+	ErrTransactionTooLarge           = errors.New("transaction is too large to fit in a block")
+	ErrTooSmallMinerFee              = errors.New("transaction has a too small miner fee")
+	ErrZeroOutput                    = errors.New("transaction cannot have an output or payout that has zero value")
+	ErrArbitraryDataTooLarge         = errors.New("arbitrary data is too large to fit in a transaction")
+	ErrCoinInputOutputMismatch       = errors.New("coin inputs do not equal coin outputs for transaction")
+	ErrBlockStakeInputOutputMismatch = errors.New("blockstake inputs do not equal blockstake outputs for transaction")
+	ErrMissingCoinOutput             = errors.New("transaction spends a nonexisting coin output")
+	ErrMissingBlockStakeOutput       = errors.New("transaction spends a nonexisting blockstake output")
 )
 
 // TransactionFitsInABlock checks if the transaction is likely to fit in a block.
@@ -133,5 +137,63 @@ func DefaultTransactionValidation(t Transaction, ctx ValidationContext, constant
 		}
 	}
 	// transaction is valid, according to this local check
+	return nil
+}
+
+// DefaultCoinOutputValidation contains the default coin output
+// (within the context of a transaction) validation logic.
+func DefaultCoinOutputValidation(t Transaction, ctx FundValidationContext, coinInputs map[CoinOutputID]CoinOutput) (err error) {
+	var inputSum Currency
+	for index, sci := range t.CoinInputs {
+		sco, ok := coinInputs[sci.ParentID]
+		if !ok {
+			return ErrMissingCoinOutput
+		}
+		// check if the referenced output's condition has been fulfilled
+		err = sco.Condition.Fulfill(sci.Fulfillment, FulfillContext{
+			InputIndex:  uint64(index),
+			BlockHeight: ctx.BlockHeight,
+			BlockTime:   ctx.BlockTime,
+			Transaction: t,
+		})
+		if err != nil {
+			return
+		}
+		inputSum = inputSum.Add(sco.Value)
+	}
+	if !inputSum.Equals(t.CoinOutputSum()) {
+		return ErrCoinInputOutputMismatch
+	}
+	return nil
+}
+
+// DefaultBlockStakeOutputValidation contains the default blockstkae output
+// (within the context of a transaction) validation logic.
+func DefaultBlockStakeOutputValidation(t Transaction, ctx FundValidationContext, blockStakeInputs map[BlockStakeOutputID]BlockStakeOutput) (err error) {
+	var inputSum Currency
+	for index, bsi := range t.BlockStakeInputs {
+		bso, ok := blockStakeInputs[bsi.ParentID]
+		if !ok {
+			return ErrMissingBlockStakeOutput
+		}
+		// check if the referenced output's condition has been fulfilled
+		err = bso.Condition.Fulfill(bsi.Fulfillment, FulfillContext{
+			InputIndex:  uint64(index),
+			BlockHeight: ctx.BlockHeight,
+			BlockTime:   ctx.BlockTime,
+			Transaction: t,
+		})
+		if err != nil {
+			return
+		}
+		inputSum = inputSum.Add(bso.Value)
+	}
+	var blockstakeOutputSum Currency
+	for _, bso := range t.BlockStakeOutputs {
+		blockstakeOutputSum = blockstakeOutputSum.Add(bso.Value)
+	}
+	if !inputSum.Equals(blockstakeOutputSum) {
+		return ErrBlockStakeInputOutputMismatch
+	}
 	return nil
 }
