@@ -415,6 +415,25 @@ func (t Transaction) ValidateBlockStakeOutputs(ctx FundValidationContext, blockS
 	return validator.ValidateBlockStakeOutputs(t, ctx, blockStakeInputs)
 }
 
+// SignExtension allows the transaction to sign —using the given sign callback—
+// any fulfillment defined within the extension data of the transaction that has to be signed.
+func (t *Transaction) SignExtension(sign func(*UnlockFulfillmentProxy, UnlockConditionProxy) error) error {
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return ErrUnknownTransactionType
+	}
+	signer, ok := controller.(TransactionExtensionSigner)
+	if !ok {
+		return nil // nothing to do
+	}
+	extension, err := signer.SignExtension(t.Extension, sign)
+	if err != nil {
+		return err
+	}
+	t.Extension = extension
+	return nil
+}
+
 // MarshalSia implements SiaMarshaler.MarshalSia
 func (v TransactionVersion) MarshalSia(w io.Writer) error {
 	_, err := w.Write([]byte{byte(v)})

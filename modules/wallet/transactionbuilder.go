@@ -446,8 +446,8 @@ func (tb *transactionBuilder) Sign() ([]types.Transaction, error) {
 	return txnSet, nil
 }
 
-// AttemptSigning tries to sign any input for which keys are loaded in the wallet
-func (tb *transactionBuilder) SignAllPossibleInputs() error {
+// SignAllPossible tries to sign any input for which keys are loaded in the wallet
+func (tb *transactionBuilder) SignAllPossible() error {
 	if tb.signed {
 		return errBuilderAlreadySigned
 	}
@@ -459,6 +459,7 @@ func (tb *transactionBuilder) SignAllPossibleInputs() error {
 		return modules.ErrLockedWallet
 	}
 
+	// sign all coin inputs
 	for i := range tb.transaction.CoinInputs {
 		ci := &tb.transaction.CoinInputs[i]
 		uco, err := tb.wallet.cs.GetCoinOutput(ci.ParentID)
@@ -472,6 +473,7 @@ func (tb *transactionBuilder) SignAllPossibleInputs() error {
 
 	}
 
+	// sign all blockstake inputs
 	for i := range tb.transaction.BlockStakeInputs {
 		bsi := &tb.transaction.BlockStakeInputs[i]
 		ubso, err := tb.wallet.cs.GetBlockStakeOutput(bsi.ParentID)
@@ -481,6 +483,20 @@ func (tb *transactionBuilder) SignAllPossibleInputs() error {
 		if err = tb.signBlockStakeInput(i, bsi, ubso.Condition.Condition); err != nil {
 			return err
 		}
+	}
+
+	// sign the extension if required
+	err := tb.transaction.SignExtension(func(fulfillment *types.UnlockFulfillmentProxy, condition types.UnlockConditionProxy) error {
+		if fulfillment == nil {
+			return errors.New("failed to sign extension: nil fulfillment proxy cannot be signed")
+		}
+		if condition.ConditionType() == types.ConditionTypeNil {
+			return tb.signFulfillment(0, fulfillment, &types.NilCondition{})
+		}
+		return tb.signFulfillment(0, fulfillment, condition.Condition)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to sign extension, using tx-defined logic: %v", err)
 	}
 
 	return nil

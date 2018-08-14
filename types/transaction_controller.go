@@ -116,6 +116,14 @@ type (
 		// Should an input not be found, it will be ignored and not be part of the mapped block stake inputs.
 		ValidateBlockStakeOutputs(t Transaction, ctx FundValidationContext, blockStakeInputs map[BlockStakeOutputID]BlockStakeOutput) error
 	}
+
+	// TransactionExtensionSigner defines an interface for transactions which have fulfillments in the
+	// extension part of the data that have to be signed as well.
+	TransactionExtensionSigner interface {
+		// SignExtension allows the transaction to sign —using the given sign callback—
+		// any fulfillment (giving its condition as reference) that has to be signed.
+		SignExtension(extension interface{}, sign func(*UnlockFulfillmentProxy, UnlockConditionProxy) error) (interface{}, error)
+	}
 )
 
 // RegisterTransactionVersion registers or unregisters a given transaction version,

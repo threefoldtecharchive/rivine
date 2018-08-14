@@ -213,9 +213,9 @@ type (
 		// should only be used before signatures are added.
 		Drop()
 
-		// SignAllPossibleInputs tries to sign as much of the inputs in the tranaction
-		// using the keys loaded in the wallet
-		SignAllPossibleInputs() error
+		// SignAllPossible tries to sign as much of the inputs —and extension if required—
+		// in the tranaction using the keys loaded in the wallet
+		SignAllPossible() error
 	}
 
 	// EncryptionManager can encrypt, lock, unlock, and indicate the current
