@@ -12,8 +12,5 @@ type (
 		// Close closes the electrum server. It will also close all currently
 		// open connections
 		Close() error
-		// Start all the listeners which accept incomming connections to serve
-		// the electrum protocol on
-		Start()
 	}
 )

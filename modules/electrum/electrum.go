@@ -99,7 +99,11 @@ func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 	}
 	e.tcpServer = tcpServer
 
-	err = cs.ConsensusSetSubscribe(e, modules.ConsensusChangeRecent)
+	if err = cs.ConsensusSetSubscribe(e, modules.ConsensusChangeRecent); err != nil {
+		return nil, err
+	}
+
+	e.start()
 
 	return e, err
 }
@@ -278,8 +282,8 @@ func (e *Electrum) AddressStatus(address types.UnlockHash) string {
 	return hex.EncodeToString(statusHash[:])
 }
 
-// Start all the servers, and accept incomming connections
-func (e *Electrum) Start() {
+// start all the servers, and accept incomming connections
+func (e *Electrum) start() {
 	// Start the http server if one is configured
 	if e.httpServer != nil {
 		e.log.Println("Starting http server for websocket connections on", e.httpServer.Addr)

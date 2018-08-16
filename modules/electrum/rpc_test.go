@@ -85,7 +85,6 @@ func TestElectrum_ServeRPC(t *testing.T) {
 	if err != nil {
 		t.Fatal("Failed to intitialize electrum:", err)
 	}
-	electrum.Start()
 
 	testConn := createTestConn()
 	go electrum.ServeRPC(testConn)
