@@ -24,7 +24,7 @@ type (
 )
 
 // RegisterTransactionPoolHTTPHandlers registers the default Rivine handlers for all default Rivine TransactionPool HTTP endpoints.
-func RegisterTransactionPoolHTTPHandlers(router *httprouter.Router, cs modules.ConsensusSet, tpool modules.TransactionPool, requiredPassword string) {
+func RegisterTransactionPoolHTTPHandlers(router Router, cs modules.ConsensusSet, tpool modules.TransactionPool, requiredPassword string) {
 	if cs == nil {
 		panic("no consensus set module given")
 	}

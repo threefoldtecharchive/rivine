@@ -181,7 +181,7 @@ type (
 )
 
 // RegisterWalletHTTPHandlers registers the default Rivine handlers for all default Rivine Wallet HTTP endpoints.
-func RegisterWalletHTTPHandlers(router *httprouter.Router, wallet modules.Wallet, requiredPassword string) {
+func RegisterWalletHTTPHandlers(router Router, wallet modules.Wallet, requiredPassword string) {
 	if wallet == nil {
 		panic("no wallet module given")
 	}

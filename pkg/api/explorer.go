@@ -198,7 +198,7 @@ type (
 )
 
 // RegisterExplorerHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
-func RegisterExplorerHTTPHandlers(router *httprouter.Router, cs modules.ConsensusSet, explorer modules.Explorer, tpool modules.TransactionPool) {
+func RegisterExplorerHTTPHandlers(router Router, cs modules.ConsensusSet, explorer modules.Explorer, tpool modules.TransactionPool) {
 	if cs == nil {
 		panic("no consensus module given")
 	}

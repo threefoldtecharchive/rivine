@@ -15,7 +15,7 @@ type GatewayGET struct {
 }
 
 // RegisterGatewayHTTPHandlers registers the default Rivine handlers for all default Rivine Gateway HTTP endpoints.
-func RegisterGatewayHTTPHandlers(router *httprouter.Router, gateway modules.Gateway, requiredPassword string) {
+func RegisterGatewayHTTPHandlers(router Router, gateway modules.Gateway, requiredPassword string) {
 	if gateway == nil {
 		panic("no gateway module given")
 	}
