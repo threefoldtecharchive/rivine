@@ -2,6 +2,7 @@ package daemon
 
 import (
 	"bytes"
+	"sort"
 	"testing"
 )
 
@@ -15,8 +16,18 @@ func TestDefaultModuleSetFlag(t *testing.T) {
 		t.Fatal("unexpected flag string:", expectedStr, "!=", str)
 	}
 
+	// invalid flags
+	err := flag.Set("c")
+	if err == nil {
+		t.Fatal("should fail as gateway is missing")
+	}
+	err = flag.Set("bct")
+	if err == nil {
+		t.Fatal("should fail as gateway is missing")
+	}
+
 	// set flag as a pure explorer node might do
-	err := flag.Set("gce")
+	err = flag.Set("gce")
 	if err != nil {
 		t.Fatal("failed to set module flag set as a pure explorer node might do:", err)
 	}
@@ -178,7 +189,7 @@ func TestModuleIdentifierSet(t *testing.T) {
 		t.Fatal("empty set shouldn't contain 'b', but it does")
 	}
 	// should have a length of zero
-	length, expectedLength := set.Length(), 0
+	length, expectedLength := set.Len(), 0
 	if expectedLength != length {
 		t.Fatal("unexpected set length:", expectedLength, "!=", length)
 	}
@@ -196,7 +207,7 @@ func TestModuleIdentifierSet(t *testing.T) {
 		t.Fatal("set should contain 'a', but it doesn't")
 	}
 	// should have a length of one
-	length, expectedLength = set.Length(), 1
+	length, expectedLength = set.Len(), 1
 	if expectedLength != length {
 		t.Fatal("unexpected set length:", expectedLength, "!=", length)
 	}
@@ -214,7 +225,7 @@ func TestModuleIdentifierSet(t *testing.T) {
 		t.Fatal("set should contain 'a', but it doesn't")
 	}
 	// should have a length of one
-	length, expectedLength = set.Length(), 1
+	length, expectedLength = set.Len(), 1
 	if expectedLength != length {
 		t.Fatal("unexpected set length:", expectedLength, "!=", length)
 	}
@@ -232,7 +243,7 @@ func TestModuleIdentifierSet(t *testing.T) {
 		t.Fatal("set should contain 'a', but it doesn't")
 	}
 	// should have a length of two
-	length, expectedLength = set.Length(), 2
+	length, expectedLength = set.Len(), 2
 	if expectedLength != length {
 		t.Fatal("unexpected set length:", expectedLength, "!=", length)
 	}
@@ -273,10 +284,60 @@ func TestModuleIdentifierSet(t *testing.T) {
 		t.Fatal("set shouldn't contain 'd', but it does")
 	}
 	// should have a length of three
-	length, expectedLength = set.Length(), 3
+	length, expectedLength = set.Len(), 3
 	if expectedLength != length {
 		t.Fatal("unexpected set length:", expectedLength, "!=", length)
 	}
+}
+
+func TestModuleIdentifierSetSort(t *testing.T) {
+	var set ModuleIdentifierSet
+	// empty set can be sorted as well
+	str, expectedStr := set.String(), ""
+	if expectedStr != str {
+		t.Fatal("unexpected set string:", expectedStr, "!=", str)
+	}
+	sort.Sort(set)
+	str, expectedStr = set.String(), ""
+	if expectedStr != str {
+		t.Fatal("unexpected set string:", expectedStr, "!=", str)
+	}
+
+	// sort filled set
+	set.identifiers = []ModuleIdentifier{'e', 'a', 'b', 'd', 'c'}
+	str, expectedStr = set.String(), "eabdc"
+	if expectedStr != str {
+		t.Fatal("unexpected set string:", expectedStr, "!=", str)
+	}
+	sort.Sort(set)
+	str, expectedStr = set.String(), "abcde"
+	if expectedStr != str {
+		t.Fatal("unexpected set string:", expectedStr, "!=", str)
+	}
+}
+
+func TestModuleIdentifierSetComplement(t *testing.T) {
+	testComplement := func(a, b []ModuleIdentifier, expectedComplementStr string) {
+		t.Helper()
+		setA := ModuleIdentifierSet{identifiers: a}
+		setB := ModuleIdentifierSet{identifiers: b}
+		c := setA.Complement(setB)
+		str := c.String()
+		if expectedComplementStr != str {
+			t.Fatal("unexpected complement set string:", expectedComplementStr, "!=", str)
+		}
+		c = setB.Complement(setA)
+		str = c.String()
+		if expectedComplementStr != str {
+			t.Fatal("unexpected complement set string:", expectedComplementStr, "!=", str)
+		}
+	}
+	testComplement([]ModuleIdentifier{}, []ModuleIdentifier{}, "")
+	testComplement([]ModuleIdentifier{'a'}, []ModuleIdentifier{}, "a")
+	testComplement([]ModuleIdentifier{'a', 'b'}, []ModuleIdentifier{'b'}, "a")
+	testComplement([]ModuleIdentifier{'b'}, []ModuleIdentifier{'c', 'a', 'b'}, "ac")
+	testComplement([]ModuleIdentifier{'a', 'c', 'e'}, []ModuleIdentifier{'a', 'b', 'c', 'd', 'e'}, "bd")
+
 }
 
 func TestModuleSet(t *testing.T) {
@@ -349,6 +410,33 @@ func TestModuleSet(t *testing.T) {
 	description, expectedDescription = set.moduleForIdentifier('b').Description, "b original"
 	if expectedDescription != description {
 		t.Fatal("unexpected module description for 'b' after creating 'c':", expectedDescription, "!=", description)
+	}
+}
+
+func TestModuleSetValidateIdentifierSet(t *testing.T) {
+	testCases := []struct {
+		Set   ModuleIdentifierSet
+		Valid bool
+	}{
+		{ForceNewIdentifierSet('g'), true},
+		{ForceNewIdentifierSet('c'), false},                // missing gateway
+		{ForceNewIdentifierSet('t'), false},                // missing consensusSet and gateway
+		{ForceNewIdentifierSet('t', 'c'), false},           // missing gateway
+		{ForceNewIdentifierSet('b', 'c', 't', 'w'), false}, // missing gateway
+		{ForceNewIdentifierSet('b', 'c', 't', 'w', 'g'), true},
+		{ForceNewIdentifierSet('e', 'b', 'c', 't', 'w', 'g'), true},
+		{ForceNewIdentifierSet('e', 'c', 'g'), true},
+		{ForceNewIdentifierSet('e', 'c', 't', 'g'), true},
+	}
+
+	set := DefaultModuleSet()
+	for idx, testCase := range testCases {
+		err := set.ValidateIdentifierSet(testCase.Set)
+		if testCase.Valid && err != nil {
+			t.Errorf("%d) expected set %s to be valid within %s but was invalid: %v", idx, testCase.Set.String(), set.String(), err)
+		} else if !testCase.Valid && err == nil {
+			t.Errorf("%d) expected set %s to be invalid within %s but was valid", idx, testCase.Set.String(), set.String())
+		}
 	}
 }
 

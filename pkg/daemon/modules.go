@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -200,8 +201,7 @@ func (msf *ModuleSetFlag) Set(str string) (err error) {
 			return
 		}
 	}
-	msf.availableModules.ValidateIdentifierSet(msf.identifiers)
-	return nil
+	return msf.availableModules.ValidateIdentifierSet(msf.identifiers)
 }
 
 // AppendModuleIdentifier appends a given identifier to the registered set of identifiers
@@ -299,8 +299,18 @@ func NewIdentifierSet(identifiers ...ModuleIdentifier) (set ModuleIdentifierSet,
 }
 
 // Length returns the length of the module identifier set.
-func (set ModuleIdentifierSet) Length() int {
+func (set ModuleIdentifierSet) Len() int {
 	return len(set.identifiers)
+}
+
+// Less implemenets sort.Interface.Less
+func (set ModuleIdentifierSet) Less(i, j int) bool {
+	return set.identifiers[i] < set.identifiers[j]
+}
+
+// Swap implemenets sort.Interface.Swap
+func (set ModuleIdentifierSet) Swap(i, j int) {
+	set.identifiers[i], set.identifiers[j] = set.identifiers[j], set.identifiers[i]
 }
 
 // Contains returns True if the set contains the given id.
@@ -362,6 +372,46 @@ func (set *ModuleIdentifierSet) AppendIfUnique(id ModuleIdentifier) (bool, error
 	}
 	set.identifiers = append(set.identifiers, id)
 	return true, nil
+}
+
+// Complement returns the complement of two identifier sets.
+func (set ModuleIdentifierSet) Complement(other ModuleIdentifierSet) (c ModuleIdentifierSet) {
+	// copy internal slices and sort them
+	a := ModuleIdentifierSet{identifiers: set.Identifiers()}
+	b := ModuleIdentifierSet{identifiers: other.Identifiers()}
+	sort.Sort(a)
+	sort.Sort(b)
+
+	lengthA, lengthB := a.Len(), b.Len()
+	var indexA, indexB int
+	for indexA < lengthA && indexB < lengthB {
+		if a.identifiers[indexA] == b.identifiers[indexB] {
+			indexA++
+			indexB++
+			continue
+		}
+		if a.identifiers[indexA] < b.identifiers[indexB] {
+			// append from the first set
+			c.Append(a.identifiers[indexA])
+			indexA++
+			continue
+		}
+		// append from the second set
+		c.Append(b.identifiers[indexB])
+		indexB++
+	}
+	// append all remaining ones
+	for indexA < lengthA {
+		c.Append(a.identifiers[indexA])
+		indexA++
+	}
+	for indexB < lengthB {
+		c.Append(b.identifiers[indexB])
+		indexB++
+	}
+	// sort our complement and return
+	sort.Sort(c)
+	return
 }
 
 // IsValidModuleIdentifier checks if a given ModuleIdentifier can be
@@ -604,6 +654,16 @@ func (ms ModuleSet) ValidateIdentifierSet(set ModuleIdentifierSet) error {
 		if err != nil {
 			return err
 		}
+	}
+	// ensure complement is 0, as that means all dependencies are referenced in the given set
+	unresolvedDependencySet := set.Complement(dependencySet)
+	if unresolvedDependencySet.Len() > 0 {
+		var names []string
+		for _, id := range unresolvedDependencySet.identifiers {
+			names = append(names, ms.moduleForIdentifier(id).Name+"("+string(id)+")")
+		}
+		return errors.New("unresolved module dependencies: {" +
+			strings.Join(names, ",") + "}")
 	}
 	return nil // all good, we could satisfy all dependencies
 }
