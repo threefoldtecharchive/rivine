@@ -32,7 +32,7 @@ rivined.
 Building From Source
 --------------------
 
-To build from source, [Go 1.8 or higher must be installed](https://golang.org/doc/install)
+To build from source, [Go 1.9 or higher must be installed](https://golang.org/doc/install)
 on the system (older versions of GO might work, but we don't support it). Then simply use `go get`:
 
 ```bash

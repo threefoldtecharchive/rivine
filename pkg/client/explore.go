@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/pkg/api"
 	"github.com/rivine/rivine/pkg/cli"
 )
 
@@ -70,7 +70,7 @@ func (cmd *exploreCmd) blockCmd(blockHeightStr string) {
 	var resp api.ExplorerBlockGET
 	err := cmd.cli.GetAPI("/explorer/blocks/"+blockHeightStr, &resp)
 	if err != nil {
-		Die(fmt.Sprintf("Could not get a block on height %q: %v", blockHeightStr, err))
+		cli.Die(fmt.Sprintf("Could not get a block on height %q: %v", blockHeightStr, err))
 	}
 
 	// define the value to print
@@ -98,7 +98,7 @@ func (cmd *exploreCmd) hashCmd(hash string) {
 	var resp api.ExplorerHashGET
 	err := cmd.cli.GetAPI("/explorer/hashes/"+hash, &resp)
 	if err != nil {
-		Die(fmt.Sprintf("Could not get an item using the hash %q: %v", hash, err))
+		cli.Die(fmt.Sprintf("Could not get an item using the hash %q: %v", hash, err))
 	}
 
 	// print depending on the encoding type

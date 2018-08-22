@@ -2,12 +2,6 @@ jobs:
   include:
     - stage: test
       language: go
-      go: 1.8.x
-      script:
-        - make
-        - make test
-    - stage: test
-      language: go
       go: 1.9.x
       script:
         - make
@@ -36,6 +30,6 @@ jobs:
         - make ineffassign
     - stage: test
       language: go
-      go: 1.8.x
+      go: 1.10.x
       script:
         - go build -o /dev/null ./doc/examples/offline_transaction

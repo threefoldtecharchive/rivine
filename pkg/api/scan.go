@@ -7,8 +7,8 @@ import (
 	"github.com/rivine/rivine/types"
 )
 
-// scanAmount scans a types.Currency from a string.
-func scanAmount(amount string) (types.Currency, bool) {
+// ScanAmount scans a types.Currency from a string.
+func ScanAmount(amount string) (types.Currency, bool) {
 	// use SetString manually to ensure that amount does not contain
 	// multiple values, which would confuse fmt.Scan
 	i, ok := new(big.Int).SetString(amount, 10)
@@ -18,8 +18,8 @@ func scanAmount(amount string) (types.Currency, bool) {
 	return types.NewCurrency(i), true
 }
 
-// scanAddress scans a types.UnlockHash from a string.
-func scanAddress(addrStr string) (addr types.UnlockHash, err error) {
+// ScanAddress scans a types.UnlockHash from a string.
+func ScanAddress(addrStr string) (addr types.UnlockHash, err error) {
 	err = addr.LoadString(addrStr)
 	if err != nil {
 		return types.UnlockHash{}, err
@@ -27,8 +27,8 @@ func scanAddress(addrStr string) (addr types.UnlockHash, err error) {
 	return addr, nil
 }
 
-// scanHash scans a crypto.Hash from a string.
-func scanHash(s string) (h crypto.Hash, err error) {
+// ScanHash scans a crypto.Hash from a string.
+func ScanHash(s string) (h crypto.Hash, err error) {
 	err = h.LoadString(s)
 	if err != nil {
 		return crypto.Hash{}, err

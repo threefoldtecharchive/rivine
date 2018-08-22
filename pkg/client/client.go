@@ -9,19 +9,10 @@ import (
 
 	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/pkg/api"
+	"github.com/rivine/rivine/pkg/cli"
 	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
-)
-
-// exit codes
-// inspired by sysexits.h
-const (
-	ExitCodeGeneral        = 1 // Not in sysexits.h, but is standard practice.
-	ExitCodeNotFound       = 2
-	ExitCodeCancelled      = 3
-	ExitCodeForbidden      = 4
-	ExitCodeTemporaryError = 5
-	ExitCodeUsage          = 64 // EX_USAGE in sysexits.h
 )
 
 // ConfigFromDaemonConstants returns CLI constants using
@@ -76,7 +67,7 @@ func Wrap(fn interface{}) func(*cobra.Command, []string) {
 	return func(cmd *cobra.Command, args []string) {
 		if len(args) != fnType.NumIn() {
 			cmd.UsageFunc()(cmd)
-			os.Exit(ExitCodeUsage)
+			os.Exit(cli.ExitCodeUsage)
 		}
 		argVals := make([]reflect.Value, fnType.NumIn())
 		for i := range args {
@@ -110,7 +101,7 @@ func WrapWithConfig(config *Config, fn interface{}) func(*cobra.Command, []strin
 	return func(cmd *cobra.Command, args []string) {
 		if len(args) != numIn+1 {
 			cmd.UsageFunc()(cmd)
-			os.Exit(ExitCodeUsage)
+			os.Exit(cli.ExitCodeUsage)
 		}
 		argVals := make([]reflect.Value, numIn)
 		argVals[0] = reflect.ValueOf(config)
@@ -121,114 +112,81 @@ func WrapWithConfig(config *Config, fn interface{}) func(*cobra.Command, []strin
 	}
 }
 
-// Die prints its arguments to stderr, then exits the program with the default
-// error code.
-func Die(args ...interface{}) {
-	DieWithExitCode(ExitCodeGeneral, args...)
-}
-
-// ErrorWithStatusCode couples an exit status code to an error (message)
-type ErrorWithStatusCode struct {
-	Err    error
-	Status int
-}
-
-func (ewsc ErrorWithStatusCode) Error() string {
-	return ewsc.Err.Error()
-}
-
-// DieWithError exits with an error.
-// if the error is of the type ErrorWithStatusCode, its status will be used,
-// otherwise the General exit code will be used
-func DieWithError(description string, err error) {
-	if ewsc, ok := err.(ErrorWithStatusCode); ok {
-		DieWithExitCode(ewsc.Status, description, ewsc.Err)
-		return
-	}
-	DieWithExitCode(ExitCodeGeneral, description, err)
-}
-
-// DieWithExitCode prints its arguments to stderr,
-// then exits the program with the given exit code.
-func DieWithExitCode(code int, args ...interface{}) {
-	fmt.Fprintln(os.Stderr, args...)
-	os.Exit(code)
-}
-
 // NewCommandLineClient creates a new CLI client, which can be run as it is,
 // or be extended/modified to fit your needs.
 // If a config is not loaded automatically, it will be tried to be loaded from the daemon
 // automatically, this might however fail.
-func NewCommandLineClient(address, name string) (*CommandLineClient, error) {
+func NewCommandLineClient(address, name, userAgent string) (*CommandLineClient, error) {
 	if address == "" {
 		address = "http://localhost:23110"
 	}
 	if name == "" {
 		name = "R?v?ne"
 	}
-	cli := new(CommandLineClient)
-	cli.HTTPClient = &HTTPClient{
-		RootURL: address,
+	client := new(CommandLineClient)
+	client.HTTPClient = &api.HTTPClient{
+		RootURL:   address,
+		UserAgent: userAgent,
 	}
 
 	var consensusCmd *consensusCmd
-	consensusCmd, cli.ConsensusCmd = createConsensusCmd(cli)
-	cli.RootCmd = &cobra.Command{
+	consensusCmd, client.ConsensusCmd = createConsensusCmd(client)
+	client.RootCmd = &cobra.Command{
 		Use:               os.Args[0],
 		Short:             fmt.Sprintf("%s Client", strings.Title(name)),
 		Long:              fmt.Sprintf("%s Client", strings.Title(name)),
 		Run:               Wrap(consensusCmd.rootCmd),
-		PersistentPreRunE: cli.preRunE,
+		PersistentPreRunE: client.preRunE,
 	}
 
 	// create command tree
-	cli.RootCmd.AddCommand(cli.ConsensusCmd)
-	cli.RootCmd.AddCommand(&cobra.Command{
+	client.RootCmd.AddCommand(client.ConsensusCmd)
+	client.RootCmd.AddCommand(&cobra.Command{
 		Use:   "version",
 		Short: "Print version information",
 		Long:  "Print version information.",
 		Run: Wrap(func() {
 			fmt.Printf("%s Client v%s\r\n",
-				strings.Title(cli.Config.ChainName),
-				cli.Config.ChainVersion.String())
+				strings.Title(client.Config.ChainName),
+				client.Config.ChainVersion.String())
 		}),
 	})
-	cli.RootCmd.AddCommand(&cobra.Command{
+	client.RootCmd.AddCommand(&cobra.Command{
 		Use:   "stop",
 		Short: fmt.Sprintf("Stop the %s daemon", name),
 		Long:  fmt.Sprintf("Stop the %s daemon.", name),
 		Run: Wrap(func() {
-			err := cli.Post("/daemon/stop", "")
+			err := client.Post("/daemon/stop", "")
 			if err != nil {
-				Die("Could not stop daemon:", err)
+				cli.Die("Could not stop daemon:", err)
 			}
-			fmt.Printf("%s daemon stopped.\n", cli.Config.ChainName)
+			fmt.Printf("%s daemon stopped.\n", client.Config.ChainName)
 		}),
 	})
 
-	cli.WalletCmd = createWalletCmd(cli)
-	cli.RootCmd.AddCommand(cli.WalletCmd.Command)
+	client.WalletCmd = createWalletCmd(client)
+	client.RootCmd.AddCommand(client.WalletCmd.Command)
 
-	cli.AtomicSwapCmd = createAtomicSwapCmd(cli)
-	cli.RootCmd.AddCommand(cli.AtomicSwapCmd)
+	client.AtomicSwapCmd = createAtomicSwapCmd(client)
+	client.RootCmd.AddCommand(client.AtomicSwapCmd)
 
-	cli.GatewayCmd = createGatewayCmd(cli)
-	cli.RootCmd.AddCommand(cli.GatewayCmd)
+	client.GatewayCmd = createGatewayCmd(client)
+	client.RootCmd.AddCommand(client.GatewayCmd)
 
-	cli.ExploreCmd = createExploreCmd(cli)
-	cli.RootCmd.AddCommand(cli.ExploreCmd)
+	client.ExploreCmd = createExploreCmd(client)
+	client.RootCmd.AddCommand(client.ExploreCmd)
 
-	cli.MergeCmd = createMergeCmd(cli)
-	cli.RootCmd.AddCommand(cli.MergeCmd)
+	client.MergeCmd = createMergeCmd(client)
+	client.RootCmd.AddCommand(client.MergeCmd)
 
 	// parse flags
-	cli.RootCmd.PersistentFlags().StringVarP(&cli.HTTPClient.RootURL, "addr", "a",
-		cli.HTTPClient.RootURL, fmt.Sprintf(
+	client.RootCmd.PersistentFlags().StringVarP(&client.HTTPClient.RootURL, "addr", "a",
+		client.HTTPClient.RootURL, fmt.Sprintf(
 			"which host/port to communicate with (i.e. the host/port %sd is listening on)",
 			name))
 
-	// return cli
-	return cli, nil
+	// return client
+	return client, nil
 }
 
 // CommandLineClient represents the Rivine Reference CLI Client implementation, which can be run as it is,
@@ -237,7 +195,7 @@ func NewCommandLineClient(address, name string) (*CommandLineClient, error) {
 // If a config is not loaded automatically, it will be tried to be loaded from the daemon
 // automatically, this might however fail, in which case a DefaultConfigFunc can be registered as callback to fallback to.
 type CommandLineClient struct {
-	*HTTPClient
+	*api.HTTPClient
 
 	Config *Config
 
@@ -264,7 +222,7 @@ func (cli *CommandLineClient) preRunE(*cobra.Command, []string) error {
 		var err error
 		cli.Config, err = FetchConfigFromDaemon(cli.HTTPClient)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "etching config from daemon failed: %v", err)
+			fmt.Fprintf(os.Stderr, "fetching config from daemon failed: %v\r\n", err)
 		}
 	}
 	if cli.PreRunE != nil {
@@ -294,7 +252,7 @@ func (cli *CommandLineClient) CreateCurrencyConvertor() CurrencyConvertor {
 
 // FetchConfigFromDaemon fetches constants and creates a config, by fetching the constants from the daemon.
 // Returns an error in case the fetching wasn't possible.
-func FetchConfigFromDaemon(httpClient *HTTPClient) (*Config, error) {
+func FetchConfigFromDaemon(httpClient *api.HTTPClient) (*Config, error) {
 	var constants modules.DaemonConstants
 	err := httpClient.GetAPI("/daemon/constants", &constants)
 	if err == nil {

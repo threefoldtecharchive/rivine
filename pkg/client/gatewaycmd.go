@@ -5,7 +5,8 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/rivine/rivine/api"
+	"github.com/rivine/rivine/pkg/api"
+	"github.com/rivine/rivine/pkg/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -65,7 +66,7 @@ type gatewayCmd struct {
 func (gatewayCmd *gatewayCmd) connectCmd(addr string) {
 	err := gatewayCmd.cli.Post("/gateway/connect/"+addr, "")
 	if err != nil {
-		Die("Could not add peer:", err)
+		cli.Die("Could not add peer:", err)
 	}
 	fmt.Println("Added", addr, "to peer list.")
 }
@@ -75,7 +76,7 @@ func (gatewayCmd *gatewayCmd) connectCmd(addr string) {
 func (gatewayCmd *gatewayCmd) disconnectCmd(addr string) {
 	err := gatewayCmd.cli.Post("/gateway/disconnect/"+addr, "")
 	if err != nil {
-		Die("Could not remove peer:", err)
+		cli.Die("Could not remove peer:", err)
 	}
 	fmt.Println("Removed", addr, "from peer list.")
 }
@@ -86,7 +87,7 @@ func (gatewayCmd *gatewayCmd) addressCmd() {
 	var info api.GatewayGET
 	err := gatewayCmd.cli.GetAPI("/gateway", &info)
 	if err != nil {
-		Die("Could not get gateway address:", err)
+		cli.Die("Could not get gateway address:", err)
 	}
 	fmt.Println("Address:", info.NetAddress)
 }
@@ -97,7 +98,7 @@ func (gatewayCmd *gatewayCmd) rootCmd() {
 	var info api.GatewayGET
 	err := gatewayCmd.cli.GetAPI("/gateway", &info)
 	if err != nil {
-		Die("Could not get gateway address:", err)
+		cli.Die("Could not get gateway address:", err)
 	}
 	fmt.Println("Address:", info.NetAddress)
 	fmt.Println("Active peers:", len(info.Peers))
@@ -109,7 +110,7 @@ func (gatewayCmd *gatewayCmd) listPeersCmd() {
 	var info api.GatewayGET
 	err := gatewayCmd.cli.GetAPI("/gateway", &info)
 	if err != nil {
-		Die("Could not get peer list:", err)
+		cli.Die("Could not get peer list:", err)
 	}
 	if len(info.Peers) == 0 {
 		fmt.Println("No peers to show.")

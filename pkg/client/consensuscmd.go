@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/encoding"
+	"github.com/rivine/rivine/pkg/api"
 	"github.com/rivine/rivine/pkg/cli"
 	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
@@ -56,7 +56,7 @@ func (consensusCmd *consensusCmd) rootCmd() {
 	var cg api.ConsensusGET
 	err := consensusCmd.cli.GetAPI("/consensus", &cg)
 	if err != nil {
-		Die("Could not get current consensus state:", err)
+		cli.Die("Could not get current consensus state:", err)
 	}
 	if cg.Synced {
 		fmt.Printf(`Synced: %v
@@ -108,7 +108,7 @@ func (consensusCmd *consensusCmd) transactionCmd(id string) {
 
 	err := consensusCmd.cli.GetAPI("/consensus/transactions/"+id, &txn)
 	if err != nil {
-		Die("failed to get transaction:", err, "; ID:", id)
+		cli.Die("failed to get transaction:", err, "; ID:", id)
 	}
 
 	var encode func(interface{}) error
@@ -129,6 +129,6 @@ func (consensusCmd *consensusCmd) transactionCmd(id string) {
 
 	err = encode(txn)
 	if err != nil {
-		Die("failed to encode transaction:", err, "; ID:", id)
+		cli.Die("failed to encode transaction:", err, "; ID:", id)
 	}
 }
