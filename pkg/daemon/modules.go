@@ -572,7 +572,26 @@ you also have to specify (and thus use) Its dependencies.`))
 		if err != nil {
 			return fmt.Errorf("failed to write dependency prefix for module %s: %v", module.Name, err)
 		}
-		for idx, dep := range module.Dependencies.identifiers {
+
+		// collect all modifiers first]
+		var depSet ModuleIdentifierSet
+		for _, dep := range module.Dependencies.identifiers {
+			err = ms.createDependencySetFor(dep, &depSet)
+			if err != nil {
+				return fmt.Errorf("failed to resolve dependencies for %s's dependency %s: %v",
+					module.Name, string(dep), err)
+			}
+		}
+		// remove the module itself from the depset
+		modID := module.Identifier()
+		for idx, dep := range depSet.identifiers {
+			if dep == modID {
+				depSet.identifiers = append(depSet.identifiers[:idx-1], depSet.identifiers[idx+1:]...)
+				break
+			}
+		}
+		// print all found dependencies
+		for idx, dep := range depSet.identifiers {
 			mod := ms.moduleForIdentifier(ModuleIdentifier(dep))
 			if mod == nil {
 				continue
@@ -581,7 +600,7 @@ you also have to specify (and thus use) Its dependencies.`))
 			if err != nil {
 				return fmt.Errorf("failed to write dependency %s for module %s: %v", mod.Name, mod.Name, err)
 			}
-			if idx < len(module.Dependencies.identifiers)-1 {
+			if idx < len(depSet.identifiers)-1 {
 				_, err = w.Write([]byte(", "))
 				if err != nil {
 					return fmt.Errorf("failed to write dependency seperator after dependency %s for module %s: %v", mod.Name, mod.Name, err)
