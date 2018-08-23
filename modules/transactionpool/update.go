@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
@@ -107,8 +108,27 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	// Which means that no other modules can require a tpool lock when
 	// processing consensus changes. Overall, the locking is pretty fragile and
 	// more rules need to be put in place.
+	// Accepting the set again will write the current block height in the
+	// broadcast cache. So we copy the cache, clear it, and override it later
+	oldCache := tp.broadcastCache
+	tp.broadcastCache = make(map[TransactionSetID]types.BlockHeight)
+	currentheight := tp.consensusSet.Height()
 	for _, set := range unconfirmedSets {
-		tp.acceptTransactionSet(set) // Error is not checked.
+		if err := tp.acceptTransactionSet(set); err != nil {
+			continue
+		}
+
+		setID := TransactionSetID(crypto.HashObject(set))
+		if originalSubmit, exists := oldCache[setID]; exists {
+			tp.broadcastCache[setID] = originalSubmit
+			blocksInPool := currentheight - originalSubmit
+			// Broadcast only on the defined interval, only a few times, and only if we are already synced
+			if blocksInPool%modules.TransactionPoolRebroadcastDelay == 0 &&
+				blocksInPool <= modules.TransactionPoolRebroadcastDelay*modules.TransactionPoolMaxRebroadcasts &&
+				cc.Synced {
+				go tp.gateway.Broadcast("RelayTransactionSet", set, tp.gateway.Peers())
+			}
+		}
 	}
 
 	// Inform subscribers that an update has executed.

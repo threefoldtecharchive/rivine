@@ -37,6 +37,16 @@ var (
 	TransactionPoolDir = "transactionpool"
 )
 
+const (
+	// TransactionPoolRebroadcastDelay is the amount of blocks we wait for a
+	// transaction in the transaction pool to be broadcasted again, if it is not
+	// included in a block by then.
+	TransactionPoolRebroadcastDelay = 3
+	// TransactionPoolMaxRebroadcasts is the maximum amount of times a transaction
+	// will get broadcast again.
+	TransactionPoolMaxRebroadcasts = 4
+)
+
 // A TransactionPoolSubscriber receives updates about the confirmed and
 // unconfirmed set from the transaction pool. Generally, there is no need to
 // subscribe to both the consensus set and the transaction pool.
