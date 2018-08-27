@@ -25,6 +25,15 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	fmt.Println("Loading...")
 	loadStart := time.Now()
 
+	var (
+		i             = 1
+		modulesToLoad = moduleIdentifiers.Len()
+	)
+	printModuleIsLoading := func(name string) {
+		fmt.Printf("Loading %s (%d/%d)...\r\n", name, i, modulesToLoad)
+		i++
+	}
+
 	// create our server already, this way we can fail early if the API addr is already bound
 	fmt.Println("Binding API Address and serving the API...")
 	srv, err := daemon.NewHTTPServer(cfg.APIaddr)
@@ -42,7 +51,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	// Initialize the Rivine modules
 	var g modules.Gateway
 	if moduleIdentifiers.Contains(daemon.GatewayModule.Identifier()) {
-		fmt.Println("Loading gateway...")
+		printModuleIsLoading("gateway")
 		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap,
 			filepath.Join(cfg.RootPersistentDir, modules.GatewayDir),
 			cfg.BlockchainInfo, networkCfg.Constants, networkCfg.BootstrapPeers)
@@ -61,7 +70,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	}
 	var cs modules.ConsensusSet
 	if moduleIdentifiers.Contains(daemon.ConsensusSetModule.Identifier()) {
-		fmt.Println("Loading consensus...")
+		printModuleIsLoading("consensus")
 		cs, err = consensus.New(g, !cfg.NoBootstrap,
 			filepath.Join(cfg.RootPersistentDir, modules.ConsensusDir),
 			cfg.BlockchainInfo, networkCfg.Constants)
@@ -80,7 +89,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	}
 	var tpool modules.TransactionPool
 	if moduleIdentifiers.Contains(daemon.TransactionPoolModule.Identifier()) {
-		fmt.Println("Loading transaction pool...")
+		printModuleIsLoading("transaction pool")
 		tpool, err = transactionpool.New(cs, g,
 			filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir),
 			cfg.BlockchainInfo, networkCfg.Constants)
@@ -98,7 +107,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	}
 	var w modules.Wallet
 	if moduleIdentifiers.Contains(daemon.WalletModule.Identifier()) {
-		fmt.Println("Loading wallet...")
+		printModuleIsLoading("wallet")
 		w, err = wallet.New(cs, tpool,
 			filepath.Join(cfg.RootPersistentDir, modules.WalletDir),
 			cfg.BlockchainInfo, networkCfg.Constants)
@@ -117,7 +126,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	}
 	var b modules.BlockCreator
 	if moduleIdentifiers.Contains(daemon.BlockCreatorModule.Identifier()) {
-		fmt.Println("Loading block creator...")
+		printModuleIsLoading("block creator")
 		b, err = blockcreator.New(cs, tpool, w,
 			filepath.Join(cfg.RootPersistentDir, modules.BlockCreatorDir),
 			cfg.BlockchainInfo, networkCfg.Constants)
@@ -135,7 +144,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	}
 	var e modules.Explorer
 	if moduleIdentifiers.Contains(daemon.ExplorerModule.Identifier()) {
-		fmt.Println("Loading explorer...")
+		printModuleIsLoading("creator")
 		e, err = explorer.New(cs,
 			filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir),
 			cfg.BlockchainInfo, networkCfg.Constants)
@@ -151,6 +160,8 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 			}
 		}()
 	}
+
+	fmt.Println("Setting up root HTTP API handler...")
 
 	// register our special daemon HTTP handlers
 	router.GET("/daemon/constants", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
