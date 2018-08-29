@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 
 	"github.com/rivine/rivine/build"
@@ -149,6 +150,11 @@ func NewCommandLineClient(address, name, userAgent string) (*CommandLineClient, 
 			fmt.Printf("%s Client v%s\r\n",
 				strings.Title(client.Config.ChainName),
 				client.Config.ChainVersion.String())
+
+			fmt.Println()
+			fmt.Printf("Go Version   v%s\r\n", runtime.Version()[2:])
+			fmt.Printf("GOOS         %s\r\n", runtime.GOOS)
+			fmt.Printf("GOARCH       %s\r\n", runtime.GOARCH)
 		}),
 	})
 	client.RootCmd.AddCommand(&cobra.Command{

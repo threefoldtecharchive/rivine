@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/bgentry/speakeasy"
@@ -71,10 +72,14 @@ func (cmds *commands) versionCommand(*cobra.Command, []string) {
 	default:
 		postfix = "-???"
 	}
-	fmt.Printf("%s Daemon v%s%s\n",
+	fmt.Printf("%s Daemon v%s%s\r\n",
 		strings.Title(cmds.cfg.BlockchainInfo.Name),
 		cmds.cfg.BlockchainInfo.ChainVersion.String(), postfix)
-	fmt.Println("Rivine Protocol v" + cmds.cfg.BlockchainInfo.ProtocolVersion.String())
+
+	fmt.Println()
+	fmt.Printf("Go Version   v%s\r\n", runtime.Version()[2:])
+	fmt.Printf("GOOS         %s\r\n", runtime.GOOS)
+	fmt.Printf("GOARCH       %s\r\n", runtime.GOARCH)
 }
 
 func (cmds *commands) modulesCommand(*cobra.Command, []string) {
