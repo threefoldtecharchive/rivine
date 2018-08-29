@@ -14,6 +14,12 @@ jobs:
         - make test
     - stage: test
       language: go
+      go: 1.11.x
+      script:
+        - make
+        - make test
+    - stage: test
+      language: go
       go: 1.9.x
       install:
         - go get -u github.com/gordonklaus/ineffassign
@@ -28,6 +34,19 @@ jobs:
       script:
         - make test-long
         - make ineffassign
+    - stage: test
+      language: go
+      go: 1.11.x
+      install:
+        - go get -u github.com/gordonklaus/ineffassign
+      script:
+        - make test-long
+        - make ineffassign
+    - stage: test
+      language: go
+      go: 1.11.x
+      script:
+        - go build -o /dev/null ./doc/examples/offline_transaction
     - stage: test
       language: go
       go: 1.10.x
