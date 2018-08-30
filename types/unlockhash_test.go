@@ -296,6 +296,18 @@ func TestUnlockHashLoadNilUnlockHashString(t *testing.T) {
 	}
 }
 
+func TestUnlockHashLoadNilUnlockHashStringErrors(t *testing.T) {
+	var uh UnlockHash
+	err := uh.LoadString(`00000000000000000000000000000000000000000000000000000000000000000000000000000a`)
+	if err == nil {
+		t.Fatal("no error received, while loading nil unlock hash with invalid checksum")
+	}
+	err = uh.LoadString(`000000000000000000000000000000000000000000000000a00000000000000000000000000000`)
+	if err == nil {
+		t.Fatal("no error received, while loading nil unlock hash with invalid hash")
+	}
+}
+
 // test as part of fix for https://github.com/rivine/rivine/issues/410
 func TestUnlockHashLoadNilUnlockHashJSONString(t *testing.T) {
 	var uh UnlockHash
@@ -305,5 +317,17 @@ func TestUnlockHashLoadNilUnlockHashJSONString(t *testing.T) {
 	}
 	if uh.Cmp(NilUnlockHash) != 0 {
 		t.Fatal(uh, "!=", NilUnlockHash)
+	}
+}
+
+func TestUnlockHashLoadNilUnlockHashJSONStringErrors(t *testing.T) {
+	var uh UnlockHash
+	err := uh.UnmarshalJSON([]byte(`"00000000000000000000000000000000000000000000000000000000000000000000000000000a"`))
+	if err == nil {
+		t.Fatal("no error received, while unmarshalling nil unlock hash with invalid checksum")
+	}
+	err = uh.UnmarshalJSON([]byte(`"000000000000000000000000000000000000000000000000a00000000000000000000000000000"`))
+	if err == nil {
+		t.Fatal("no error received, while unmarshalling nil unlock hash with invalid hash")
 	}
 }
