@@ -374,9 +374,9 @@ func (set *ModuleIdentifierSet) AppendIfUnique(id ModuleIdentifier) (bool, error
 	return true, nil
 }
 
-// Difference returns the difference of this set and the other set.
-// Difference meaning that it will return a new set containing the elements which are in this set,
-// but not in the other set.
+// Difference returns the symmetric difference set of symmetric difference of this set and the other set.
+// Symmetric difference meaning that it will return a new set containing the elements which are in this set,
+// but not in the other set, as well as elements which are in the other set but not in this set.
 func (set ModuleIdentifierSet) Difference(other ModuleIdentifierSet) (c ModuleIdentifierSet) {
 	// copy internal slices and sort them
 	a := ModuleIdentifierSet{identifiers: set.Identifiers()}
