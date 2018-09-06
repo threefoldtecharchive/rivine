@@ -316,27 +316,27 @@ func TestModuleIdentifierSetSort(t *testing.T) {
 	}
 }
 
-func TestModuleIdentifierSetComplement(t *testing.T) {
-	testComplement := func(a, b []ModuleIdentifier, expectedComplementStr string) {
+func TestModuleIdentifierSetDifference(t *testing.T) {
+	testDifference := func(a, b []ModuleIdentifier, expectedDifferenceStr string) {
 		t.Helper()
 		setA := ModuleIdentifierSet{identifiers: a}
 		setB := ModuleIdentifierSet{identifiers: b}
-		c := setA.Complement(setB)
+		c := setA.Difference(setB)
 		str := c.String()
-		if expectedComplementStr != str {
-			t.Fatal("unexpected complement set string:", expectedComplementStr, "!=", str)
+		if expectedDifferenceStr != str {
+			t.Fatal("unexpected difference set string:", expectedDifferenceStr, "!=", str)
 		}
-		c = setB.Complement(setA)
+		c = setB.Difference(setA)
 		str = c.String()
-		if expectedComplementStr != str {
-			t.Fatal("unexpected complement set string:", expectedComplementStr, "!=", str)
+		if expectedDifferenceStr != str {
+			t.Fatal("unexpected difference set string:", expectedDifferenceStr, "!=", str)
 		}
 	}
-	testComplement([]ModuleIdentifier{}, []ModuleIdentifier{}, "")
-	testComplement([]ModuleIdentifier{'a'}, []ModuleIdentifier{}, "a")
-	testComplement([]ModuleIdentifier{'a', 'b'}, []ModuleIdentifier{'b'}, "a")
-	testComplement([]ModuleIdentifier{'b'}, []ModuleIdentifier{'c', 'a', 'b'}, "ac")
-	testComplement([]ModuleIdentifier{'a', 'c', 'e'}, []ModuleIdentifier{'a', 'b', 'c', 'd', 'e'}, "bd")
+	testDifference([]ModuleIdentifier{}, []ModuleIdentifier{}, "")
+	testDifference([]ModuleIdentifier{'a'}, []ModuleIdentifier{}, "a")
+	testDifference([]ModuleIdentifier{'a', 'b'}, []ModuleIdentifier{'b'}, "a")
+	testDifference([]ModuleIdentifier{'b'}, []ModuleIdentifier{'c', 'a', 'b'}, "ac")
+	testDifference([]ModuleIdentifier{'a', 'c', 'e'}, []ModuleIdentifier{'a', 'b', 'c', 'd', 'e'}, "bd")
 
 }
 

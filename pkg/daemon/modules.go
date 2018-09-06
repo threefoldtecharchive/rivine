@@ -374,8 +374,10 @@ func (set *ModuleIdentifierSet) AppendIfUnique(id ModuleIdentifier) (bool, error
 	return true, nil
 }
 
-// Complement returns the complement of two identifier sets.
-func (set ModuleIdentifierSet) Complement(other ModuleIdentifierSet) (c ModuleIdentifierSet) {
+// Difference returns the difference of this set and the other set.
+// Difference meaning that it will return a new set containing the elements which are in this set,
+// but not in the other set.
+func (set ModuleIdentifierSet) Difference(other ModuleIdentifierSet) (c ModuleIdentifierSet) {
 	// copy internal slices and sort them
 	a := ModuleIdentifierSet{identifiers: set.Identifiers()}
 	b := ModuleIdentifierSet{identifiers: other.Identifiers()}
@@ -674,8 +676,8 @@ func (ms ModuleSet) ValidateIdentifierSet(set ModuleIdentifierSet) error {
 			return err
 		}
 	}
-	// ensure complement is 0, as that means all dependencies are referenced in the given set
-	unresolvedDependencySet := set.Complement(dependencySet)
+	// ensure difference is 0, as that means all dependencies are referenced in the given set
+	unresolvedDependencySet := set.Difference(dependencySet)
 	if unresolvedDependencySet.Len() > 0 {
 		var names []string
 		for _, id := range unresolvedDependencySet.identifiers {
