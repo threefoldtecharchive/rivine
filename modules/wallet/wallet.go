@@ -273,8 +273,8 @@ func (w *Wallet) GetUnspentBlockStakeOutputs() ([]types.UnspentBlockStakeOutput,
 	}
 	defer w.tg.Done()
 
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	if !w.unlocked {
 		return nil, modules.ErrLockedWallet
