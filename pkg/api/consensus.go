@@ -103,7 +103,11 @@ func RegisterConsensusHTTPHandlers(router Router, cs modules.ConsensusSet) {
 func NewConsensusRootHandler(cs modules.ConsensusSet) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		cbid := cs.CurrentBlock().ID()
-		currentTarget, _ := cs.ChildTarget(cbid)
+		currentTarget, _, err := cs.ChildTarget(cbid)
+		if err != nil {
+			WriteError(w, Error{err.Error()}, http.StatusBadRequest)
+			return
+		}
 		WriteJSON(w, ConsensusGET{
 			Synced:       cs.Synced(),
 			Height:       cs.Height(),

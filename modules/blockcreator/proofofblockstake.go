@@ -59,7 +59,11 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 	currentBlock := bc.cs.CurrentBlock()
 	stakemodifier := bc.cs.CalculateStakeModifier(bc.persist.Height+1, currentBlock, bc.chainCts.StakeModifierDelay-1)
 	cbid := bc.cs.CurrentBlock().ID()
-	target, _ := bc.cs.ChildTarget(cbid)
+	target, _, err := bc.cs.ChildTarget(cbid)
+	if err != nil {
+		bc.log.Printf("failed to start solving block stakes: %v", err)
+		return nil
+	}
 
 	// Try all unspent blockstake outputs
 	unspentBlockStakeOutputs, err := bc.wallet.GetUnspentBlockStakeOutputs()

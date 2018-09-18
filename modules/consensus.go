@@ -184,7 +184,7 @@ type (
 		// ChildTarget returns the target required to extend the current heaviest
 		// fork. This function is typically used by miners looking to extend the
 		// heaviest fork.
-		ChildTarget(types.BlockID) (types.Target, bool)
+		ChildTarget(types.BlockID) (types.Target, bool, error)
 
 		// Close will shut down the consensus set, giving the module enough time to
 		// run any required closing routines.
@@ -268,12 +268,18 @@ func EstimatedActiveBlockStakesAt(cs ConsensusSet, rootDepth types.Target, heigh
 	if activeBlockRange == 0 {
 		activeBlockRange = 200
 	}
+	if activeBlockRange > height {
+		activeBlockRange = height
+	}
 	block, exists := cs.BlockAtHeight(height)
 	if !exists {
 		return types.Difficulty{}, fmt.Errorf("no block exists at height %d", height)
 	}
 	currentTimeStamp := block.Timestamp
-	totalDifficulty, exists := cs.ChildTarget(block.ParentID)
+	totalDifficulty, exists, err := cs.ChildTarget(block.ParentID)
+	if err != nil {
+		return types.Difficulty{}, fmt.Errorf("error while getting block at height %d: %v", height, err)
+	}
 	if !exists {
 		return types.Difficulty{}, fmt.Errorf(
 			"failed to get child target from parent block %s (height: %d)", block.ID().String(), height)
@@ -288,7 +294,10 @@ func EstimatedActiveBlockStakesAt(cs ConsensusSet, rootDepth types.Target, heigh
 			}
 			return types.Difficulty{}, fmt.Errorf("ConsensusSet is missing block at height %d", height)
 		}
-		target, exists := cs.ChildTarget(block.ParentID)
+		target, exists, err := cs.ChildTarget(block.ParentID)
+		if err != nil {
+			return types.Difficulty{}, fmt.Errorf("error while getting child target for parentID %s: %v", block.ParentID.String(), err)
+		}
 		if !exists {
 			return types.Difficulty{}, fmt.Errorf("ConsensusSet is missing target of known block %s", block.ParentID.String())
 		}

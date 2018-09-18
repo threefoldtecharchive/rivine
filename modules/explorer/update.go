@@ -42,7 +42,10 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			dbRemoveBlockID(tx, bid)
 			dbRemoveTransactionID(tx, tbid) // Miner payouts are a transaction
 
-			target, exists := e.cs.ChildTarget(block.ParentID)
+			target, exists, err := e.cs.ChildTarget(block.ParentID)
+			if err != nil {
+				return err
+			}
 			if !exists {
 				target = e.rootTarget
 			}
@@ -101,7 +104,10 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			dbAddBlockID(tx, bid, blockheight)
 			dbAddTransactionID(tx, tbid, blockheight) // Miner payouts are a transaction
 
-			target, exists := e.cs.ChildTarget(block.ParentID)
+			target, exists, err := e.cs.ChildTarget(block.ParentID)
+			if err != nil {
+				return err
+			}
 			if !exists {
 				target = e.rootTarget
 			}
@@ -212,7 +218,8 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 	assertNil(err)
 
 	// get target
-	target, exists := e.cs.ChildTarget(block.ParentID)
+	target, exists, err := e.cs.ChildTarget(block.ParentID)
+	assertNil(err)
 	if !exists {
 		panic(fmt.Sprint("ConsensusSet is missing target of known block", block.ParentID))
 	}
@@ -247,7 +254,8 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 			if !exists {
 				panic(fmt.Sprint("ConsensusSet is missing block at height", bf.Height-i))
 			}
-			target, exists := e.cs.ChildTarget(b.ParentID)
+			target, exists, err := e.cs.ChildTarget(b.ParentID)
+			assertNil(err)
 			if !exists {
 				panic(fmt.Sprint("ConsensusSet is missing target of known block", b.ParentID))
 			}

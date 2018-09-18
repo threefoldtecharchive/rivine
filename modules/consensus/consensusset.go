@@ -297,15 +297,15 @@ func (cs *ConsensusSet) TransactionAtID(id types.TransactionID) (types.Transacti
 }
 
 // ChildTarget returns the target for the child of a block.
-func (cs *ConsensusSet) ChildTarget(id types.BlockID) (target types.Target, exists bool) {
+func (cs *ConsensusSet) ChildTarget(id types.BlockID) (target types.Target, exists bool, err error) {
 	// A call to a closed database can cause undefined behavior.
-	err := cs.tg.Add()
+	err = cs.tg.Add()
 	if err != nil {
-		return types.Target{}, false
+		return types.Target{}, false, nil
 	}
 	defer cs.tg.Done()
 
-	_ = cs.db.View(func(tx *bolt.Tx) error {
+	err = cs.db.View(func(tx *bolt.Tx) error {
 		pb, err := getBlockMap(tx, id)
 		if err != nil {
 			return err
@@ -314,7 +314,7 @@ func (cs *ConsensusSet) ChildTarget(id types.BlockID) (target types.Target, exis
 		exists = true
 		return nil
 	})
-	return target, exists
+	return target, exists, err
 }
 
 // Close safely closes the block database.

@@ -905,9 +905,9 @@ func (css *consensusSetStub) FindParentBlock(b types.Block, depth types.BlockHei
 	return css.blocks[blockIndex-int(depth)], true
 }
 
-func (css *consensusSetStub) ChildTarget(id types.BlockID) (types.Target, bool) {
+func (css *consensusSetStub) ChildTarget(id types.BlockID) (types.Target, bool, error) {
 	// TODO: return a more sensible value if required
-	return types.Target{}, false
+	return types.Target{}, false, nil
 }
 
 func (css *consensusSetStub) Close() error {
