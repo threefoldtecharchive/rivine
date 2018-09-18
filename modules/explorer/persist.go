@@ -14,7 +14,7 @@ import (
 
 var explorerMetadata = persist.Metadata{
 	Header:  "Sia Explorer",
-	Version: "1.0.5",
+	Version: "1.0.8",
 }
 
 // initPersist initializes the persistent structures of the explorer module.
@@ -32,7 +32,7 @@ func (e *Explorer) initPersist() error {
 		if err != persist.ErrBadVersion {
 			return err
 		}
-		db, err = convertLegacyDatabase(dbFilPath)
+		db, err = e.convertLegacyDatabase(dbFilPath)
 		if err != nil {
 			return err
 		}
@@ -53,7 +53,7 @@ func (e *Explorer) initPersist() error {
 			bucketBlockStakeOutputs,
 			bucketTransactionIDs,
 			bucketUnlockHashes,
-			bucketOutputIDUnlockHashMapping,
+			bucketWalletAddressToMultiSigAddressMapping,
 		}
 		for _, b := range buckets {
 			_, err := tx.CreateBucketIfNotExists(b)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/rivine/rivine/encoding"
@@ -470,5 +471,30 @@ func TestCurrencyUnsafeDecode(t *testing.T) {
 		t.Error(err)
 	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
 		t.Errorf("UnmarshalSia changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
+	}
+}
+
+func TestCurrencyStringLoadString(t *testing.T) {
+	testCases := []Currency{
+		NewCurrency64(0),
+		NewCurrency64(rand.Uint64()),
+		NewCurrency64(35),
+		NewCurrency64(rand.Uint64()),
+		NewCurrency64(12345654321),
+		NewCurrency64(rand.Uint64()),
+		NewCurrency64(1111111111111),
+		NewCurrency64(math.MaxUint64),
+	}
+	for i, testCase := range testCases {
+		str := testCase.String()
+		var c Currency
+		err := c.LoadString(str)
+		if err != nil {
+			t.Error(i, testCase, "LoadString", err)
+			continue
+		}
+		if !c.Equals(testCase) {
+			t.Error(i, c, "!=", testCase)
+		}
 	}
 }

@@ -11,9 +11,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/rivine/rivine/api"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
+	"github.com/rivine/rivine/pkg/api"
 	"github.com/rivine/rivine/types"
 )
 

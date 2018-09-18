@@ -35,7 +35,7 @@ transaction structures, requiring their own requirements, validation and encodin
 Such alternative transactions are however up to blockchains to be implemented using the Rivine protocol,
 (using the [`RegisterTransactionVersion`](https://godoc.org/github.com/rivine/rivine/types#RegisterTransactionVersion))
 as Rivine keeps it at the v0 and v1 transactions for now,
-which are only to be used for coin/blockstake transfers, optionally wth some (limited) Arbitrary Data attached to it.
+which are only to be used for coin/blockstake transfers, optionally with some (limited) Arbitrary Data attached to it.
 
 ## Relevant Source Files
 

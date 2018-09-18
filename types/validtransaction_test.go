@@ -186,18 +186,18 @@ func TestUnknownTransactionValidation(t *testing.T) {
 	// Build a working unknown transaction.
 	txn := Transaction{Version: 42}
 
-	// validation of unknown transactions should always succeed,
+	// validation of unknown transactions should never succeed,
 	// as no validation is applied here
 	err := txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
 		BlockSizeLimit:         cts.BlockSizeLimit,
 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
 	})
-	if err != nil {
-		t.Errorf("expected no error, but received: %v", err)
+	if err == nil {
+		t.Error("expected an error because unknown txn version, but received none")
 	}
 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{})
-	if err != nil {
-		t.Errorf("expected no error, but received: %v", err)
+	if err == nil {
+		t.Error("expected an error because unknown txn version, but received none")
 	}
 }
 

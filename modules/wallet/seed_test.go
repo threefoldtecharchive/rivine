@@ -263,6 +263,9 @@ func TestSweepSeedBlockStakes(t *testing.T) {
 	t.Parallel()
 	cs := newConsensusSetStub()
 	wt, err := createWalletTesterWithStubCS("TestSweepSeedCoins0", cs)
+	// rescan
+	cs.Unsubscribe(w)
+	err = cs.ConsensusSetSubscribe(w, modules.ConsensusChangeID{}, w.tg.StopChan())
 	if err != nil {
 		t.Fatal(err)
 	}

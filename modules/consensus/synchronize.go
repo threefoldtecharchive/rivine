@@ -50,23 +50,6 @@ var (
 			panic("unrecognized build.Release")
 		}
 	}()
-	// minIBDWaitTime is the time threadedInitialBlockchainDownload waits before
-	// exiting if there are >= 1 and <= minNumOutbound peers synced. This timeout
-	// will primarily affect people who have multiple nodes daisy chained off each
-	// other. Those nodes will likely have to wait minIBDWaitTime on every startup
-	// before IBD is done.
-	minIBDWaitTime = func() time.Duration {
-		switch build.Release {
-		case "dev":
-			return 80 * time.Second
-		case "standard":
-			return 90 * time.Minute
-		case "testing":
-			return 10 * time.Second
-		default:
-			panic("unrecognized build.Release")
-		}
-	}()
 	// ibdLoopDelay is the time that threadedInitialBlockchainDownload waits
 	// between attempts to synchronize with the network if the last attempt
 	// failed.
@@ -502,14 +485,26 @@ func (cs *ConsensusSet) managedReceiveBlock(id types.BlockID) modules.RPCFunc {
 func (cs *ConsensusSet) threadedInitialBlockchainDownload() error {
 	// The consensus set will not recognize IBD as complete until it has enough
 	// peers. After the deadline though, it will recognize the blockchain
-	// download as complete even with only one peer. This deadline is helpful
+	// download as complete even with only one outbound peer synced. This deadline is helpful
 	// to local-net setups, where a machine will frequently only have one peer
 	// (and that peer will be another machine on the same local network, but
-	// within the local network at least one peer is connected to the braod
+	// within the local network at least one peer is connected to the broad
 	// network).
-	deadline := time.Now().Add(minIBDWaitTime)
+	maxIBDWaitTime := time.Duration(cs.chainCts.BlockFrequency) * time.Second
 	numOutboundSynced := 0
 	numOutboundNotSynced := 0
+
+	// keep track of our initial block height
+	getHeight := func() (height types.BlockHeight) {
+		_ = cs.db.View(func(tx *bolt.Tx) error {
+			height = blockHeight(tx)
+			return nil
+		})
+		return
+	}
+	height := getHeight()
+	lastReceiveTime := time.Now()
+
 	for {
 		numOutboundSynced = 0
 		numOutboundNotSynced = 0
@@ -534,10 +529,19 @@ func (cs *ConsensusSet) threadedInitialBlockchainDownload() error {
 				err = cs.gateway.RPC(p.NetAddress, "SendBlocks", cs.managedReceiveBlocks)
 				if err == nil {
 					numOutboundSynced++
+
+					// check if we moved up our block height
+					currentHeight := getHeight()
+					if currentHeight > height {
+						height = currentHeight
+						lastReceiveTime = time.Now()
+					}
+
 					// In this case, 'return nil' is equivalent to skipping to
 					// the next iteration of the loop.
 					return nil
 				}
+
 				numOutboundNotSynced++
 				if isTimeoutErr(err) {
 					cs.log.Printf("WARN: disconnecting from peer %v because IBD failed: %v", p.NetAddress, err)
@@ -570,12 +574,22 @@ func (cs *ConsensusSet) threadedInitialBlockchainDownload() error {
 		// that they have syncrhonized. Miners and hosts will often have setups
 		// beind a firewall where there is a single node with many peers and
 		// then the rest of the nodes only have a few peers.
-		if numOutboundSynced > numOutboundNotSynced && (numOutboundSynced >= minNumOutbound || time.Now().After(deadline)) {
+		if numOutboundSynced > numOutboundNotSynced && numOutboundSynced >= minNumOutbound {
+			cs.log.Printf("INFO: Stopping IBD, sufficient amount of outbound peers (%d) are in sync", numOutboundSynced)
 			break
-		} else {
-			// Sleep so we don't hammer the network with SendBlock requests.
-			time.Sleep(ibdLoopDelay)
 		}
+
+		// if we didn't receive anything in a sufficient amount of time,
+		// and at least one peer is synced, we will continue as well.
+		if numOutboundSynced >= 1 && time.Since(lastReceiveTime) >= maxIBDWaitTime {
+			cs.log.Printf(
+				"INFO: Stopping IBD, only %d synced outbound peers, but no more blocks received in %v",
+				numOutboundSynced, time.Since(lastReceiveTime))
+			break
+		}
+
+		// Sleep so we don't hammer the network with SendBlock requests.
+		time.Sleep(ibdLoopDelay)
 	}
 
 	cs.log.Printf("INFO: IBD done, synced with %v peers", numOutboundSynced)

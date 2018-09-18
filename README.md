@@ -32,7 +32,7 @@ rivined.
 Building From Source
 --------------------
 
-To build from source, [Go 1.8 or higher must be installed](https://golang.org/doc/install)
+To build from source, [Go 1.9 or higher must be installed](https://golang.org/doc/install)
 on the system (older versions of GO might work, but we don't support it). Then simply use `go get`:
 
 ```bash
@@ -90,3 +90,12 @@ Troubleshooting
   in virtual environments or containers, might not support `mmap` and therefore will
   fail to function. The scenario in this example can easily be resolved by making sure
   the persistent directory isn't located within a shared folder.
+
+- My node can be out of sync with the network for hours, if not days.
+
+  Do you have multiple nodes —which includes the out-of-sync node— running
+  on a single external IP using the same port within the same blockchain network? If the answer is yes,
+  you should ensure that all those nodes are using unique ports for the RPC address.
+  
+  If not already, you will run into problems sooner or later when running multiple nodes
+  using the same external IP address and RPC address port within the same blockchain network.

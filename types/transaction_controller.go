@@ -67,7 +67,7 @@ type (
 // in order to customize a version even more
 type (
 	// TransactionValidator defines the interface a transaction controller
-	// can optonally implement, in order to define custom validation logic
+	// can optionally implement, in order to define custom validation logic
 	// for a transaction, overwriting the default validation logic.
 	TransactionValidator interface {
 		ValidateTransaction(t Transaction, ctx ValidationContext, constants TransactionValidationConstants) error
@@ -85,6 +85,44 @@ type (
 	// instead of using the default binary encoding logic for that transaction (version).
 	TransactionIDEncoder interface {
 		EncodeTransactionIDInput(io.Writer, TransactionData) error
+	}
+
+	// CoinOutputValidator defines the interface a transaction controller
+	// can optionally implement, in order to define custom validation logic
+	// for coin outputs, overwriting the default validation logic.
+	//
+	// The default validation logic ensures that the total amount of output coins (including fees),
+	// equals the total amount of input coins. It also ensures that all coin inputs refer with their given ParentID
+	// to an existing unspent coin output.
+	CoinOutputValidator interface {
+		// ValidateCoinOutputs validates if the coin outputs of a given transaction are valid.
+		// What the criteria for this validity are, is up to the CoinOutputValidator.
+		// All coin inputs of the transaction are already looked up.
+		// Should an input not be found, it will be ignored and not be part of the mapped coin inputs.
+		ValidateCoinOutputs(t Transaction, ctx FundValidationContext, coinInputs map[CoinOutputID]CoinOutput) error
+	}
+
+	// BlockStakeOutputValidator defines the interface a transaction controller
+	// can optionally implement, in order to define custom validation logic
+	// for block stake outputs, overwriting the default validation logic.
+	//
+	// The default validation logic ensures that the total amount of output block stakes,
+	// equals the total amount of input block stakes. It also ensures that all block stake inputs refer with their given ParentID
+	// to an existing unspent block stake output.
+	BlockStakeOutputValidator interface {
+		// ValidateBlockStakeOutputs validates if the block stake outputs of a given transaction are valid.
+		// What the criteria for this validity are, is up to the BlockStakeOutputValidator.
+		// All block stake inputs of the transaction are already looked up.
+		// Should an input not be found, it will be ignored and not be part of the mapped block stake inputs.
+		ValidateBlockStakeOutputs(t Transaction, ctx FundValidationContext, blockStakeInputs map[BlockStakeOutputID]BlockStakeOutput) error
+	}
+
+	// TransactionExtensionSigner defines an interface for transactions which have fulfillments in the
+	// extension part of the data that have to be signed as well.
+	TransactionExtensionSigner interface {
+		// SignExtension allows the transaction to sign —using the given sign callback—
+		// any fulfillment (giving its condition as reference) that has to be signed.
+		SignExtension(extension interface{}, sign func(*UnlockFulfillmentProxy, UnlockConditionProxy) error) (interface{}, error)
 	}
 )
 
@@ -109,10 +147,7 @@ var (
 )
 
 var (
-	_RegisteredTransactionVersions = map[TransactionVersion]TransactionController{
-		TransactionVersionZero: LegacyTransactionController{},
-		TransactionVersionOne:  DefaultTransactionController{},
-	}
+	_RegisteredTransactionVersions = map[TransactionVersion]TransactionController{}
 )
 
 // MarshalSia implements encoding.SiaMarshaller.MarshalSia
@@ -265,4 +300,9 @@ func (ltc LegacyTransactionController) InputSigHash(t Transaction, inputIndex ui
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (ltc LegacyTransactionController) EncodeTransactionIDInput(w io.Writer, td TransactionData) error {
 	return ltc.EncodeTransactionData(w, td)
+}
+
+func init() {
+	RegisterTransactionVersion(TransactionVersionZero, LegacyTransactionController{})
+	RegisterTransactionVersion(TransactionVersionOne, DefaultTransactionController{})
 }

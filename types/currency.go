@@ -240,6 +240,11 @@ func (c Currency) String() string {
 	return c.i.String()
 }
 
+// LoadString loads the given Currency from a string.
+func (c *Currency) LoadString(str string) error {
+	return c.i.UnmarshalText([]byte(str))
+}
+
 // Scan implements the fmt.Scanner interface, allowing Currency values to be
 // scanned from text.
 func (c *Currency) Scan(s fmt.ScanState, ch rune) error {

@@ -7,37 +7,48 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rivine/rivine/pkg/cli"
 	"github.com/rivine/rivine/types"
 	"github.com/spf13/cobra"
 )
 
-var (
-	mergeCmd = &cobra.Command{
-		Use:   "merge",
-		Short: "merge transaction inputs",
-		// Run field is not set, as the create command itself is not a valid command.
-		// A subcommand must be provided.
-	}
+func createMergeCmd(*CommandLineClient) *cobra.Command {
+	mergeCmd := new(mergeCmd)
 
-	mergeTransactionsCmd = &cobra.Command{
-		Use:   "transactions <txnjson1> <txnjson2> [txnjsonN...]",
-		Short: "Merge compatible input fulfillments",
-		Long: `Merge the compatible input fulfillments from two or more transactions together.
+	// create root merge command and all subs
+	var (
+		rootCmd = &cobra.Command{
+			Use:   "merge",
+			Short: "merge transaction inputs",
+			// Run field is not set, as the create command itself is not a valid command.
+			// A subcommand must be provided.
+		}
+		mergeTxCmd = &cobra.Command{
+			Use:   "transactions <txnjson1> <txnjson2> [txnjsonN...]",
+			Short: "Merge compatible input fulfillments",
+			Long: `Merge the compatible input fulfillments from two or more transactions together.
 Currently only multisignature inputs can be merged.
 
 Duplicate signatures are only deleted if there are more signatures for a public key given,
 than that the condition defines for that public key's unlock hash.
 `,
-		Args: cobra.MinimumNArgs(2),
-		Run:  walletmergetransactions,
-	}
-)
+			Args: cobra.MinimumNArgs(2),
+			Run:  mergeCmd.mergeTransactions,
+		}
+	)
+	rootCmd.AddCommand(mergeTxCmd)
 
-func walletmergetransactions(cmd *cobra.Command, args []string) {
+	// return root command
+	return rootCmd
+}
+
+type mergeCmd struct{}
+
+func (mergeCmd *mergeCmd) mergeTransactions(cmd *cobra.Command, args []string) {
 	var masterTxn transactionInputs
 	err := json.NewDecoder(bytes.NewBufferString(args[0])).Decode(&masterTxn)
 	if err != nil {
-		Die("failed to decode transaction first transaction:", err)
+		cli.Die("failed to decode transaction first transaction:", err)
 	}
 
 	// compare the master txn against all other txns,
@@ -50,25 +61,25 @@ func walletmergetransactions(cmd *cobra.Command, args []string) {
 
 		err = json.NewDecoder(bytes.NewBufferString(arg)).Decode(&otherTxn)
 		if err != nil {
-			Die(fmt.Sprintf("failed to decode transaction #%d: %v", txnIndex, err))
+			cli.Die(fmt.Sprintf("failed to decode transaction #%d: %v", txnIndex, err))
 		}
 
 		err = compareNonMergeableTransactionData(masterTxn, otherTxn)
 		if err != nil {
-			Die(fmt.Sprintf("transaction #%d cannot be merged into the previous transaction(s): %v", txnIndex, err))
+			cli.Die(fmt.Sprintf("transaction #%d cannot be merged into the previous transaction(s): %v", txnIndex, err))
 		}
 
 		for i := range masterTxn.Data.CoinInputs {
 			inputIndex := i + 1
 
 			if bytes.Compare(masterTxn.Data.CoinInputs[i].ParentID[:], otherTxn.Data.CoinInputs[i].ParentID[:]) != 0 {
-				Die(fmt.Sprintf("transaction #%d has a different coin input at index %v", txnIndex, inputIndex))
+				cli.Die(fmt.Sprintf("transaction #%d has a different coin input at index %v", txnIndex, inputIndex))
 			}
 
 			err = compareAndMergeFulfillmentsIfNeeded(
 				&masterTxn.Data.CoinInputs[i].Fulfillment, otherTxn.Data.CoinInputs[i].Fulfillment)
 			if err != nil {
-				Die(fmt.Sprintf(
+				cli.Die(fmt.Sprintf(
 					"failed to compare and/or merge fulfillment of coin input #%d in transaction #%d: %v",
 					inputIndex, txnIndex, err))
 			}
@@ -77,13 +88,13 @@ func walletmergetransactions(cmd *cobra.Command, args []string) {
 			inputIndex := i + 1
 
 			if bytes.Compare(masterTxn.Data.BlockStakeInputs[i].ParentID[:], otherTxn.Data.BlockStakeInputs[i].ParentID[:]) != 0 {
-				Die(fmt.Sprintf("transaction #%d has a different block stake input at index %v", txnIndex, inputIndex))
+				cli.Die(fmt.Sprintf("transaction #%d has a different block stake input at index %v", txnIndex, inputIndex))
 			}
 
 			err = compareAndMergeFulfillmentsIfNeeded(
 				&masterTxn.Data.BlockStakeInputs[i].Fulfillment, otherTxn.Data.BlockStakeInputs[i].Fulfillment)
 			if err != nil {
-				Die(fmt.Sprintf(
+				cli.Die(fmt.Sprintf(
 					"failed to compare and/or merge fulfillment of blockstake input #%d in transaction #%d: %v",
 					inputIndex, txnIndex, err))
 			}
