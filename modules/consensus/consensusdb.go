@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	prefixDCO  = []byte("dco_")
-	prefixFCEX = []byte("fcex_")
+	prefixDCO = []byte("dco_")
 
 	// BlockHeight is a bucket that stores the current block height.
 	//
