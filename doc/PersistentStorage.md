@@ -137,6 +137,11 @@ Contains:
   * maps all [Tx short identifiers](https://godoc.org/github.com/rivine/rivine/types#TransactionShortID) to
     their [regular Tx identifier](https://godoc.org/github.com/rivine/rivine/types#TransactionID);
   * used by other modules to be able to fetch a Tx using its (unique) short identifier;
+* bucket `"dco_<height>"`:
+    * used to keep track of all delayed coin outputs;
+    * stores all _delayed_ [coin outputs](https://godoc.org/github.com/rivine/rivine/types#CoinOutput)
+      on [the block height](https://godoc.org/github.com/rivine/rivine/types#BlockHeight)
+      as identified by the bucket using their [coin output identifier](https://godoc.org/github.com/rivine/rivine/types#CoinOutputID);
 
 > `consensus.log`
 
