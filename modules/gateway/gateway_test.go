@@ -22,7 +22,7 @@ func newTestingGateway(t *testing.T) *Gateway {
 	}
 
 	g, err := New("localhost:0", false, build.TempDir("gateway", t.Name()),
-		types.DefaultBlockchainInfo(), types.DefaultChainConstants(), nil)
+		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -37,7 +37,7 @@ func newNamedTestingGateway(t *testing.T, suffix string) *Gateway {
 	}
 
 	g, err := New("localhost:0", false, build.TempDir("gateway", t.Name()+suffix),
-		types.DefaultBlockchainInfo(), types.DefaultChainConstants(), nil)
+		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -131,7 +131,7 @@ func TestNew(t *testing.T) {
 	t.Parallel()
 
 	bcInfo := types.DefaultBlockchainInfo()
-	cts := types.DefaultChainConstants()
+	cts := types.TestnetChainConstants()
 	if _, err := New("", false, "", bcInfo, cts, nil); err == nil {
 		t.Fatal("expecting persistDir error, got nil")
 	}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 )
@@ -147,21 +146,19 @@ func processNetAddr(addr string) string {
 // DefaultNetworkConfig returns the default network config based on a given network name.
 func DefaultNetworkConfig(networkName string) (NetworkConfig, error) {
 	if networkName == "" {
-		// default to build.Release as network name
-		networkName = build.Release
+		networkName = types.DefaultNetworkName()
 	}
 
-	// use default network config creator
-	networkCfg := NetworkConfig{
-		Constants: types.DefaultChainConstants(),
-	}
-	if networkName == "standard" {
-		networkCfg.BootstrapPeers = []modules.NetAddress{
-			"136.243.144.132:23112",
-			"[2a01:4f8:171:1303::2]:23112",
-			"bootstrap2.rivine.io:23112",
-			"bootstrap3.rivine.io:23112",
-		}
+	var networkCfg NetworkConfig
+	switch networkName {
+	case "standard":
+		networkCfg.Constants = types.StandardnetChainConstants()
+	case "testnet":
+		networkCfg.Constants = types.TestnetChainConstants()
+	case "devnet":
+		networkCfg.Constants = types.DevnetChainConstants()
+	default:
+		return NetworkConfig{}, fmt.Errorf("unknown network name %s", networkName)
 	}
 	return networkCfg, nil
 }

@@ -9,7 +9,7 @@ import (
 
 // TestTargetAdd probes the Add function of the target type.
 func TestTargetAdd(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	var target3, target5, target10 Target
 	target3[crypto.HashSize-1] = 3
@@ -47,7 +47,7 @@ func TestTargetCmp(t *testing.T) {
 // TODO: target.Difficulty() has been changed to return a new Difficulty type: https://github.com/rivine/rivine/commit/6c00f3be7798c017b84434a97f8b1cd895bf734a#diff-3e315e2069bf2cb7e545291ccc110377
 // Need to rework test to compile and work with the new type
 func TestTargetDifficulty(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	var target1, target2, target3 Target
 	target2[crypto.HashSize-1] = 1
@@ -81,7 +81,7 @@ func TestTargetInt(t *testing.T) {
 
 // TestTargetIntToTarget probes the IntToTarget function of the target type.
 func TestTargetIntToTarget(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	var target Target
 	target[crypto.HashSize-1] = 5
@@ -107,7 +107,7 @@ func TestTargetInverse(t *testing.T) {
 
 // TestTargetMul probes the Mul function of the target type.
 func TestTargetMul(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	var target2, target6, target10, target14, target20 Target
 	target2[crypto.HashSize-1] = 2
@@ -155,7 +155,7 @@ func TestTargetRat(t *testing.T) {
 // TestTargetOverflow checks that IntToTarget will return a maximum target if
 // there is an overflow.
 func TestTargetOverflow(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	largeInt := new(big.Int).Lsh(big.NewInt(1), 260)
 	expectRoot := IntToTarget(largeInt, cts.RootDepth)
@@ -170,7 +170,7 @@ func TestTargetNegativeIntToTarget(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	// In debug mode, attempting to create a negative target should trigger a
 	// panic.
@@ -200,6 +200,6 @@ func TestTargetNegativeRatToTarget(t *testing.T) {
 		}
 	}()
 	r := big.NewRat(3, -5)
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 	_ = RatToTarget(r, cts.RootDepth)
 }

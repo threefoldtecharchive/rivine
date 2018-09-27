@@ -386,7 +386,7 @@ func TestConnectRejectsVersions(t *testing.T) {
 		t.SkipNow()
 	}
 	bcInfo := types.DefaultBlockchainInfo()
-	cts := types.DefaultChainConstants()
+	cts := types.TestnetChainConstants()
 	g := newTestingGateway(t)
 	defer g.Close()
 	// Setup a listener that mocks Gateway.acceptConn, but sends the
@@ -756,7 +756,7 @@ func TestPeerManagerPriority(t *testing.T) {
 	// Restart g1. It should immediately reconnect to g2, and then g3 after a
 	// delay.
 	g1, err = New(string(g1.myAddr), false, g1.persistDir,
-		types.DefaultBlockchainInfo(), types.DefaultChainConstants(), nil)
+		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -924,7 +924,7 @@ func legacyConnect(addr string, version build.ProtocolVersion) error {
 }
 
 func legacyConnectHandshake(conn net.Conn, version build.ProtocolVersion) (remoteVersion build.ProtocolVersion, err error) {
-	cts := types.DefaultChainConstants()
+	cts := types.TestnetChainConstants()
 	ours := legacyVersionHeader{
 		Version:   version,
 		GenesisID: cts.GenesisBlockID(),

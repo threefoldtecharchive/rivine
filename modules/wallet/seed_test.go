@@ -214,7 +214,7 @@ func TestLoadSeed(t *testing.T) {
 	}
 
 	dir := filepath.Join(build.TempDir(modules.WalletDir, t.Name()+"1"), modules.WalletDir)
-	w, err := New(wt.cs, wt.tpool, dir, types.DefaultBlockchainInfo(), types.DefaultChainConstants())
+	w, err := New(wt.cs, wt.tpool, dir, types.DefaultBlockchainInfo(), types.TestnetChainConstants())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +272,7 @@ func TestLoadSeed(t *testing.T) {
 	// Rather than worry about a rescan, which isn't implemented and has
 	// synchronization difficulties, just load a new wallet from the same
 	// settings file - the same effect is achieved without the difficulties.
-	w2, err := New(wt.cs, wt.tpool, dir, types.DefaultBlockchainInfo(), types.DefaultChainConstants())
+	w2, err := New(wt.cs, wt.tpool, dir, types.DefaultBlockchainInfo(), types.TestnetChainConstants())
 	if err != nil {
 		t.Fatal(err)
 	}

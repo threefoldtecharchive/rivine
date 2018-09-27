@@ -486,13 +486,13 @@ func TestUnlockConditionEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			&AtomicSwapCondition{
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			"",
 		},
@@ -501,13 +501,13 @@ func TestUnlockConditionEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 4},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			&AtomicSwapCondition{
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			"unequal hashed secret",
 		},
@@ -516,13 +516,13 @@ func TestUnlockConditionEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			&AtomicSwapCondition{
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			"unequal receiver",
 		},
@@ -537,7 +537,7 @@ func TestUnlockConditionEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			"unequal time lock",
 		},
@@ -546,13 +546,13 @@ func TestUnlockConditionEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			&AtomicSwapCondition{
 				Sender:       unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			},
 			"unequal sender",
 		},
@@ -1072,7 +1072,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1084,7 +1084,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1099,7 +1099,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1111,7 +1111,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1126,7 +1126,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1138,7 +1138,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1153,7 +1153,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1180,7 +1180,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 2},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -1192,7 +1192,7 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -2170,7 +2170,7 @@ func TestIsStandardCondition(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			}, "receiver has unsupported unlock hash type",
 		},
 		{
@@ -2178,7 +2178,7 @@ func TestIsStandardCondition(t *testing.T) {
 				Sender:       unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
 				Receiver:     unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			}, "sender has unsupported unlock hash type",
 		},
 		{
@@ -2186,7 +2186,7 @@ func TestIsStandardCondition(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			}, "empty/nil hashed secret not allowed",
 		},
 		{
@@ -2202,7 +2202,7 @@ func TestIsStandardCondition(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 			}, "",
 		},
 		// time lock condition
@@ -2294,7 +2294,7 @@ func TestIsStandardCondition(t *testing.T) {
 					Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 					Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 					HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-					TimeLock:     DefaultChainConstants().GenesisTimestamp,
+					TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				},
 			}, "no atomic swap condition can be used as the internal condition of a time lock condition",
 		},
@@ -2558,7 +2558,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Sender:       UnlockHash{},
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key: ByteSlice{
@@ -2586,7 +2586,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     UnlockHash{},
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key: ByteSlice{
@@ -2614,7 +2614,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key: ByteSlice{
@@ -2642,7 +2642,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key:       ByteSlice{1, 2, 3},
@@ -2665,7 +2665,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key: ByteSlice{
@@ -2684,7 +2684,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key: ByteSlice{
@@ -2712,7 +2712,7 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
-				TimeLock:     DefaultChainConstants().GenesisTimestamp,
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
 				PublicKey: SiaPublicKey{
 					Algorithm: SignatureEd25519,
 					Key: ByteSlice{

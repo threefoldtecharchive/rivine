@@ -113,7 +113,7 @@ func TestIntegrationPreEncryption(t *testing.T) {
 	// files have been created, the wallet is still being treated as new.
 	w1, err := New(wt.cs, wt.tpool,
 		filepath.Join(wt.persistDir, modules.WalletDir),
-		types.DefaultBlockchainInfo(), types.DefaultChainConstants())
+		types.DefaultBlockchainInfo(), types.TestnetChainConstants())
 	if err != nil {
 		t.Fatal(err)
 	}

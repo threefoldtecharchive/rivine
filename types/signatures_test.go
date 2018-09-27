@@ -25,7 +25,7 @@ func TestEd25519PublicKey(t *testing.T) {
 // TestSigHash runs the SigHash function of the transaction type.
 func TestSigHash(t *testing.T) {
 	txn := Transaction{
-		Version:           DefaultChainConstants().DefaultTransactionVersion,
+		Version:           TestnetChainConstants().DefaultTransactionVersion,
 		CoinInputs:        []CoinInput{{}},
 		CoinOutputs:       []CoinOutput{{}},
 		BlockStakeInputs:  []BlockStakeInput{{}},

@@ -20,7 +20,7 @@ func TestBlockHeader(t *testing.T) {
 	b.MinerPayouts = []MinerPayout{{Value: NewCurrency64(4)}}
 	b.Transactions = []Transaction{
 		{
-			Version:       DefaultChainConstants().DefaultTransactionVersion,
+			Version:       TestnetChainConstants().DefaultTransactionVersion,
 			ArbitraryData: []byte{'5'},
 		},
 	}
@@ -41,7 +41,7 @@ func TestBlockHeader(t *testing.T) {
 
 // TestBlockID probes the ID function of the block type.
 func TestBlockID(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	// Create a bunch of different blocks and check that all of them have
 	// unique ids.
@@ -61,12 +61,12 @@ func TestBlockID(t *testing.T) {
 	b.MinerPayouts = append(b.MinerPayouts, MinerPayout{Value: cts.BlockCreatorFee})
 	ids = append(ids, b.ID())
 	b.Transactions = append(b.Transactions, Transaction{
-		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		Version:   TestnetChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{cts.BlockCreatorFee},
 	})
 	ids = append(ids, b.ID())
 	b.Transactions = append(b.Transactions, Transaction{
-		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		Version:   TestnetChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{cts.BlockCreatorFee},
 	})
 	ids = append(ids, b.ID())
@@ -85,7 +85,7 @@ func TestBlockID(t *testing.T) {
 // TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 // TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
 func TestHeaderID(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	// Create a bunch of different blocks and check that all of them have
 	// unique ids.
@@ -104,12 +104,12 @@ func TestHeaderID(t *testing.T) {
 	b.MinerPayouts = append(b.MinerPayouts, MinerPayout{Value: cts.BlockCreatorFee})
 	blocks = append(blocks, b)
 	b.Transactions = append(b.Transactions, Transaction{
-		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		Version:   TestnetChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{cts.BlockCreatorFee},
 	})
 	blocks = append(blocks, b)
 	b.Transactions = append(b.Transactions, Transaction{
-		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		Version:   TestnetChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{cts.BlockCreatorFee},
 	})
 	blocks = append(blocks, b)
@@ -145,7 +145,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 	// Calculate when there is a fee in a transcation.
 	expected := coinbase.Add(NewCurrency64(123))
 	txn := Transaction{
-		Version:   DefaultChainConstants().DefaultTransactionVersion,
+		Version:   TestnetChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{NewCurrency64(123)},
 	}
 	b.Transactions = append(b.Transactions, txn)
@@ -155,7 +155,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 
 	// Add a single no-fee transaction and check again.
 	txn = Transaction{
-		Version:       DefaultChainConstants().DefaultTransactionVersion,
+		Version:       TestnetChainConstants().DefaultTransactionVersion,
 		ArbitraryData: []byte{'6'},
 	}
 	b.Transactions = append(b.Transactions, txn)
@@ -166,7 +166,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 	// Add a transaction with multiple fees.
 	expected = expected.Add(NewCurrency64(1 + 2 + 3))
 	txn = Transaction{
-		Version: DefaultChainConstants().DefaultTransactionVersion,
+		Version: TestnetChainConstants().DefaultTransactionVersion,
 		MinerFees: []Currency{
 			NewCurrency64(1),
 			NewCurrency64(2),
@@ -180,7 +180,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 
 	// Add an empty transaction to the beginning.
 	txn = Transaction{
-		Version:       DefaultChainConstants().DefaultTransactionVersion,
+		Version:       TestnetChainConstants().DefaultTransactionVersion,
 		ArbitraryData: []byte{'7'},
 	}
 	b.Transactions = append([]Transaction{txn}, b.Transactions...)
@@ -192,7 +192,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 // TestBlockMinerPayoutID probes the MinerPayout function of the block type.
 // TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestBlockMinerPayoutID(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	// Create a block with 2 miner payouts, and check that each payout has a
 	// different id, and that the id is dependent on the block id.
@@ -220,7 +220,7 @@ func TestBlockMinerPayoutID(t *testing.T) {
 // TestBlockEncodes probes the MarshalSia and UnmarshalSia methods of the
 // Block type.
 func TestBlockEncoding(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	b := Block{
 		MinerPayouts: []MinerPayout{

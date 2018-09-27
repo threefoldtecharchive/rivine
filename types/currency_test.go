@@ -452,7 +452,7 @@ func TestCurrencyUint64(t *testing.T) {
 // TestCurrencyUnsafeDecode tests that decoding into an existing Currency
 // value does not overwrite its contents.
 func TestCurrencyUnsafeDecode(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	// Scan
 	backup := cts.CurrencyUnits.OneCoin.Mul64(1)

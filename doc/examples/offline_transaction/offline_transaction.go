@@ -11,6 +11,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/rivine/rivine/build"
 	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/pkg/api"
@@ -104,8 +105,16 @@ func (w *MyWallet) CreateTxn(amount types.Currency, addressTo types.UnlockHash) 
 	}
 
 	// Create the transaction object
-	txn := types.Transaction{
-		Version: types.DefaultChainConstants().DefaultTransactionVersion,
+	var txn types.Transaction
+	switch build.Release {
+	case "standard":
+		txn.Version = types.StandardnetChainConstants().DefaultTransactionVersion
+	case "testing":
+		txn.Version = types.TestnetChainConstants().DefaultTransactionVersion
+	case "dev":
+		txn.Version = types.DevnetChainConstants().DefaultTransactionVersion
+	default:
+		panic("unknown build.Release tag: " + build.Release)
 	}
 
 	// Greedily add coin inputs until we have enough to fund the output and minerfee

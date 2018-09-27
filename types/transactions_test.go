@@ -18,7 +18,7 @@ import (
 func TestIDs(t *testing.T) {
 	// Create every type of ID using empty fields.
 	txn := Transaction{
-		Version:           DefaultChainConstants().DefaultTransactionVersion,
+		Version:           TestnetChainConstants().DefaultTransactionVersion,
 		CoinOutputs:       []CoinOutput{{}},
 		BlockStakeOutputs: []BlockStakeOutput{{}},
 	}
@@ -50,7 +50,7 @@ func TestIDs(t *testing.T) {
 func TestTransactionCoinOutputSum(t *testing.T) {
 	// Create a transaction with all types of coin outputs.
 	txn := Transaction{
-		Version: DefaultChainConstants().DefaultTransactionVersion,
+		Version: TestnetChainConstants().DefaultTransactionVersion,
 		CoinOutputs: []CoinOutput{
 			{Value: NewCurrency64(1)},
 			{Value: NewCurrency64(20)},

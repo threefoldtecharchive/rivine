@@ -20,13 +20,18 @@ func main() {
 	}
 	// define preRunE, as to ensure we go to a default config should it be required
 	cliClient.PreRunE = func(cfg *client.Config) (*client.Config, error) {
-		if cfg != nil {
-			return cfg, nil
+		if cfg == nil {
+			chainConstants := types.StandardnetChainConstants()
+			daemonConstants := modules.NewDaemonConstants(bchainInfo, chainConstants)
+			newCfg := client.ConfigFromDaemonConstants(daemonConstants)
+			cfg = &newCfg
 		}
-		chainConstants := types.DefaultChainConstants()
-		daemonConstants := modules.NewDaemonConstants(bchainInfo, chainConstants)
-		vcfg := client.ConfigFromDaemonConstants(daemonConstants)
-		return &vcfg, nil
+
+		if !(cfg.NetworkName == "standard" || cfg.NetworkName == "devnet" || cfg.NetworkName == "testnet") {
+			return nil, fmt.Errorf("Netork name %q not recognized", cfg.NetworkName)
+		}
+
+		return cfg, nil
 	}
 	// start cli
 	if err := cliClient.Run(); err != nil {

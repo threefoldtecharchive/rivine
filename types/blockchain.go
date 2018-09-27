@@ -13,22 +13,30 @@ type BlockchainInfo struct {
 	ProtocolVersion build.ProtocolVersion
 }
 
+// DefaultNetworkName returns a sane default network name,
+// based on the build.Release tag (NOTE that in most cases
+// you do really want a user-approved default network name
+// rather than this static value).
+func DefaultNetworkName() string {
+	switch build.Release {
+	case "standard":
+		return "standard"
+	case "testing":
+		return "testnet"
+	case "dev":
+		return "devnet"
+	default:
+		panic("unknown build.Release tag: " + build.Release)
+	}
+}
+
 // DefaultBlockchainInfo returns the blockchain information
 // for the default (Rivine) blockchain, using the version
 // which is set as part of the build process.
 func DefaultBlockchainInfo() BlockchainInfo {
-	var networkName string
-	switch build.Release {
-	case "dev":
-		networkName = "devnet"
-	case "testing":
-		networkName = "testnet"
-	default:
-		networkName = "standard"
-	}
 	return BlockchainInfo{
 		Name:            "Rivine",
-		NetworkName:     networkName,
+		NetworkName:     DefaultNetworkName(),
 		CoinUnit:        "ROC",
 		ChainVersion:    build.Version,
 		ProtocolVersion: build.Version,

@@ -7,7 +7,7 @@ import (
 // TestTransactionFitsInABlock_V0 probes the fitsInABlock method of the
 // Transaction type.
 func TestTransactionFitsInABlock_V0(t *testing.T) {
-	blockSizeLimit := DefaultChainConstants().BlockSizeLimit
+	blockSizeLimit := TestnetChainConstants().BlockSizeLimit
 	data := make([]byte, blockSizeLimit/2)
 	txn := Transaction{
 		Version:       TransactionVersionZero,
@@ -27,10 +27,10 @@ func TestTransactionFitsInABlock_V0(t *testing.T) {
 // TestTransactionFitsInABlock_Vd probes the fitsInABlock method of the
 // Transaction type.
 func TestTransactionFitsInABlock_Vd(t *testing.T) {
-	blockSizeLimit := DefaultChainConstants().BlockSizeLimit
+	blockSizeLimit := TestnetChainConstants().BlockSizeLimit
 	data := make([]byte, blockSizeLimit/2)
 	txn := Transaction{
-		Version:       DefaultChainConstants().DefaultTransactionVersion,
+		Version:       TestnetChainConstants().DefaultTransactionVersion,
 		ArbitraryData: data}
 	err := TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != nil {
@@ -85,7 +85,7 @@ func TestTransactionFollowsMinimumValues_V0(t *testing.T) {
 func TestTransactionFollowsMinimumValues_Vd(t *testing.T) {
 	// Start with a transaction that follows all of minimum-values rules.
 	txn := Transaction{
-		Version:           DefaultChainConstants().DefaultTransactionVersion,
+		Version:           TestnetChainConstants().DefaultTransactionVersion,
 		CoinOutputs:       []CoinOutput{{Value: NewCurrency64(1)}},
 		BlockStakeOutputs: []BlockStakeOutput{{Value: NewCurrency64(1)}},
 		MinerFees:         []Currency{NewCurrency64(1)},
@@ -148,7 +148,7 @@ func TestValidateNoDoubleSpendsWithinTransaction_V0(t *testing.T) {
 func TestValidateNoDoubleSpendsWithinTransaction_Vd(t *testing.T) {
 	// Try a transaction all the repeatable types but no conflicts.
 	txn := Transaction{
-		Version:          DefaultChainConstants().DefaultTransactionVersion,
+		Version:          TestnetChainConstants().DefaultTransactionVersion,
 		CoinInputs:       []CoinInput{{}},
 		BlockStakeInputs: []BlockStakeInput{{}},
 	}
@@ -181,7 +181,7 @@ func TestTransactionArbitraryDataFits_Vd(t *testing.T) {
 }
 
 func TestUnknownTransactionValidation(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	// Build a working unknown transaction.
 	txn := Transaction{Version: 42}
@@ -204,7 +204,7 @@ func TestUnknownTransactionValidation(t *testing.T) {
 // TestLegacyTransactionValidation probes the validation logic of the
 // Transaction type.
 func TestLegacyTransactionValidation(t *testing.T) {
-	cts := DefaultChainConstants()
+	cts := TestnetChainConstants()
 
 	// Build a working transaction.
 	var txn Transaction

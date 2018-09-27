@@ -36,7 +36,7 @@ type walletTester struct {
 // createWalletTester takes a testing.T and creates a WalletTester.
 func createWalletTester(name string) (*walletTester, error) {
 	bcInfo := types.DefaultBlockchainInfo()
-	chainCts := types.DefaultChainConstants()
+	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
@@ -106,7 +106,7 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 		return nil, errors.New("no stub consensus set given")
 	}
 	bcInfo := types.DefaultBlockchainInfo()
-	chainCts := types.DefaultChainConstants()
+	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
@@ -169,7 +169,7 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 // blocks or encrypted the wallet.
 func createBlankWalletTester(name string) (*walletTester, error) {
 	bcInfo := types.DefaultBlockchainInfo()
-	chainCts := types.DefaultChainConstants()
+	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
@@ -227,7 +227,7 @@ func TestNilInputs(t *testing.T) {
 	}
 
 	bcInfo := types.DefaultBlockchainInfo()
-	chainCts := types.DefaultChainConstants()
+	chainCts := types.TestnetChainConstants()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
@@ -303,7 +303,7 @@ func TestCloseWallet(t *testing.T) {
 		t.Skip()
 	}
 	bcInfo := types.DefaultBlockchainInfo()
-	chainCts := types.DefaultChainConstants()
+	chainCts := types.TestnetChainConstants()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
 	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {
@@ -328,7 +328,7 @@ func TestCloseWallet(t *testing.T) {
 }
 
 func newConsensusSetStub() *consensusSetStub {
-	chainCts := types.DefaultChainConstants()
+	chainCts := types.TestnetChainConstants()
 	return &consensusSetStub{
 		blocks: []types.Block{
 			chainCts.GenesisBlock(),
@@ -352,7 +352,7 @@ func (css *consensusSetStub) addTransactionAsBlock(unlockHash types.UnlockHash, 
 		Timestamp: types.CurrentTimestamp(),
 		Transactions: []types.Transaction{
 			{
-				Version: types.DefaultChainConstants().DefaultTransactionVersion,
+				Version: types.TestnetChainConstants().DefaultTransactionVersion,
 				CoinOutputs: []types.CoinOutput{
 					{
 						Value:     value,
@@ -511,7 +511,7 @@ func (css *consensusSetStub) CalculateStakeModifier(height types.BlockHeight, bl
 	// make a signed version of the current height because sub genesis block is
 	// possible here.
 	signedHeight := int64(height)
-	signedHeight -= int64(types.DefaultChainConstants().StakeModifierDelay)
+	signedHeight -= int64(types.TestnetChainConstants().StakeModifierDelay)
 
 	mask := big.NewInt(1)
 	var BlockIDHash *big.Int

@@ -23,7 +23,7 @@ func TestLoad(t *testing.T) {
 	g.mu.Unlock()
 	g.Close()
 
-	g2, err := New("localhost:0", false, g.persistDir, types.DefaultBlockchainInfo(), types.DefaultChainConstants(), nil)
+	g2, err := New("localhost:0", false, g.persistDir, types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

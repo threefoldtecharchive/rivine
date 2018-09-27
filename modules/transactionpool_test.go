@@ -42,7 +42,7 @@ func TestCalculateFee(t *testing.T) {
 	if CalculateFee(txnSet).Cmp(types.ZeroCurrency) != 0 {
 		t.Error("CalculateFee is not correctly calculating the fees on an empty transaction set")
 	}
-	cst := types.DefaultChainConstants()
+	cst := types.TestnetChainConstants()
 
 	// Try a non-empty transaction.
 	txnSet = []types.Transaction{{
