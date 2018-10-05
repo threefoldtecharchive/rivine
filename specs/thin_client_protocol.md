@@ -1,8 +1,8 @@
 # thin client protocol
 
 ## Problem
-Thin clients communicate with  explorers/gateways over hhtps/REST.
-TThere is no subscribe mechanism to allow push notifications so polling is required. 
+Thin clients communicate with  explorers/gateways over https/REST.
+There is no subscribe mechanism to allow push notifications so polling is required. 
 On top of this, the exposed services and json data formats are all custom to Rivine.
 
 ### Why to Change Something That Works?
@@ -19,3 +19,6 @@ Another problem consists of packet storms, coming from clients trying to reconne
 ## Proposed solution
 
  Instead of reinventing the wheel, The [electrum protocol](https://electrumx.readthedocs.io/en/latest/protocol.html) can be implemented.
+
+ Issues: https://github.com/rivine/rivine/issues/385
+
