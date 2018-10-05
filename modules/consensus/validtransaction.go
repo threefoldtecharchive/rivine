@@ -123,6 +123,7 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 				MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
 			}, diffHolder.Height, blockTime)
 			if err != nil {
+				cs.log.Printf("WARN: try-out tx %v is invalid: %v", txn.ID(), err)
 				return err
 			}
 			applyTransaction(tx, diffHolder, txn)

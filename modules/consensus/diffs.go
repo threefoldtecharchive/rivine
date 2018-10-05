@@ -163,6 +163,8 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 			MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
 		}, pb.Height, pb.Block.Timestamp)
 		if err != nil {
+			cs.log.Printf("WARN: block %v cannot be applied: tx %v is invalid: %v",
+				pb.Block.ID(), txn.ID(), err)
 			return err
 		}
 		applyTransaction(tx, pb, txn)

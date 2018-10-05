@@ -21,9 +21,25 @@ var (
 	ErrArbitraryDataTooLarge         = errors.New("arbitrary data is too large to fit in a transaction")
 	ErrCoinInputOutputMismatch       = errors.New("coin inputs do not equal coin outputs for transaction")
 	ErrBlockStakeInputOutputMismatch = errors.New("blockstake inputs do not equal blockstake outputs for transaction")
-	ErrMissingCoinOutput             = errors.New("transaction spends a nonexisting coin output")
-	ErrMissingBlockStakeOutput       = errors.New("transaction spends a nonexisting blockstake output")
 )
+
+// MissingCoinOutputError is returned in case a non-existing coin output is spend by a Tx.
+type MissingCoinOutputError struct {
+	ID CoinOutputID
+}
+
+func (err MissingCoinOutputError) Error() string {
+	return "transaction spends a nonexisting coin output" + err.ID.String()
+}
+
+// MissingBlockStakeOutputError is returned in case a non-existing blockstake output is spend by a Tx.
+type MissingBlockStakeOutputError struct {
+	ID BlockStakeOutputID
+}
+
+func (err MissingBlockStakeOutputError) Error() string {
+	return "transaction spends a nonexisting blockstake output" + err.ID.String()
+}
 
 // TransactionFitsInABlock checks if the transaction is likely to fit in a block.
 // Currently there is no limitation on transaction size other than it must fit
@@ -147,7 +163,7 @@ func DefaultCoinOutputValidation(t Transaction, ctx FundValidationContext, coinI
 	for index, sci := range t.CoinInputs {
 		sco, ok := coinInputs[sci.ParentID]
 		if !ok {
-			return ErrMissingCoinOutput
+			return MissingCoinOutputError{ID: sci.ParentID}
 		}
 		// check if the referenced output's condition has been fulfilled
 		err = sco.Condition.Fulfill(sci.Fulfillment, FulfillContext{
@@ -174,7 +190,7 @@ func DefaultBlockStakeOutputValidation(t Transaction, ctx FundValidationContext,
 	for index, bsi := range t.BlockStakeInputs {
 		bso, ok := blockStakeInputs[bsi.ParentID]
 		if !ok {
-			return ErrMissingBlockStakeOutput
+			return MissingBlockStakeOutputError{ID: bsi.ParentID}
 		}
 		// check if the referenced output's condition has been fulfilled
 		err = bso.Condition.Fulfill(bsi.Fulfillment, FulfillContext{
