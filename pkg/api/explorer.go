@@ -48,6 +48,8 @@ type (
 		BlockStakeInputOutputs       []ExplorerBlockStakeOutput `json:"blockstakeinputoutputs"` // the outputs being spent
 		BlockStakeOutputIDs          []types.BlockStakeOutputID `json:"blockstakeoutputids"`
 		BlockStakeOutputUnlockHashes []types.UnlockHash         `json:"blockstakeunlockhashes"`
+
+		Unconfirmed bool `json:"unconfirmed"`
 	}
 )
 
@@ -268,6 +270,7 @@ func NewExplorerHashHandler(explorer modules.Explorer, tpool modules.Transaction
 			if txids := explorer.UnlockHash(addr); len(txids) != 0 {
 				txns, blocks = BuildTransactionSet(explorer, txids)
 			}
+			txns = append(txns, getUnconfirmedTransactions(explorer, tpool, addr)...)
 			multiSigAddresses := explorer.MultiSigAddresses(addr)
 			if len(txns) != 0 || len(blocks) != 0 || len(multiSigAddresses) != 0 {
 				WriteJSON(w, ExplorerHashGET{
@@ -426,4 +429,65 @@ func NewExplorerRangeStatsHandler(explorer modules.Explorer) httprouter.Handle {
 		}
 		WriteJSON(w, stats)
 	}
+}
+
+// getUnconfirmedTransactions returns a list of all transactions which are unconfirmed and related to the given unlock hash from the transactionpool
+func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.TransactionPool, addr types.UnlockHash) []ExplorerTransaction {
+	if tpool == nil {
+		return nil
+	}
+	relatedTxns := []types.Transaction{}
+	unconfirmedTxns := tpool.TransactionList()
+	for _, txn := range unconfirmedTxns {
+		related := false
+		// Check if any coin output is related to the hash we currently have
+		for _, co := range txn.CoinOutputs {
+			if co.Condition.UnlockHash() == addr {
+				related = true
+				relatedTxns = append(relatedTxns, txn)
+				break
+			}
+		}
+		if related {
+			continue
+		}
+		// Check if any blockstake output is related
+		for _, bso := range txn.BlockStakeOutputs {
+			if bso.Condition.UnlockHash() == addr {
+				related = true
+				relatedTxns = append(relatedTxns, txn)
+				break
+			}
+		}
+		if related {
+			continue
+		}
+		// Check the coin inputs
+		for _, ci := range txn.CoinInputs {
+			co, _ := explorer.CoinOutput(ci.ParentID)
+			if co.Condition.UnlockHash() == addr {
+				related = true
+				relatedTxns = append(relatedTxns, txn)
+				break
+			}
+		}
+		if related {
+			continue
+		}
+		// Check blockstake inputs
+		for _, bsi := range txn.BlockStakeInputs {
+			bsi, _ := explorer.BlockStakeOutput(bsi.ParentID)
+			if bsi.Condition.UnlockHash() == addr {
+				related = true
+				relatedTxns = append(relatedTxns, txn)
+				break
+			}
+		}
+	}
+	explorerTxns := make([]ExplorerTransaction, len(relatedTxns))
+	for i := range relatedTxns {
+		explorerTxns[i] = BuildExplorerTransaction(explorer, 0, types.BlockID{}, relatedTxns[i])
+		explorerTxns[i].Unconfirmed = true
+	}
+	return explorerTxns
 }
