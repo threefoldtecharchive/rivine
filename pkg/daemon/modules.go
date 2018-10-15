@@ -67,6 +67,16 @@ the blockchain.`,
 			ConsensusSetModule.Identifier(),
 		),
 	}
+
+	ElectrumModule = &Module{
+		Name:        "Electrum",
+		Description: `The electrum module serves the electrum protocol.`,
+		Dependencies: ForceNewIdentifierSet(
+			ConsensusSetModule.Identifier(),
+			ExplorerModule.Identifier(),
+		),
+		CustomIdentifier: 'x',
+	}
 )
 
 // DefaultModuleSetFlag returns a new ModuleSetFlag,
@@ -97,6 +107,7 @@ func DefaultModuleSet() ModuleSet {
 		WalletModule,
 		BlockCreatorModule,
 		ExplorerModule,
+		ElectrumModule,
 	)
 	if err != nil {
 		panic(err)
@@ -118,6 +129,10 @@ type (
 		// if given, all listed dependencies have to be unqiue
 		// and refernce an existing/available module.
 		Dependencies ModuleIdentifierSet
+		// Optional identifier that can be defined,
+		// as to be able to choose an identifier different than
+		// the first letter of the Module's Name.
+		CustomIdentifier ModuleIdentifier
 	}
 
 	// ModuleSet is the type which represents a unique set of Modules.
@@ -450,9 +465,10 @@ func NewModuleSet(modules ...*Module) (set ModuleSet, err error) {
 		}
 		// append a clone of the valid and unique module
 		set.modules = append(set.modules, Module{
-			Name:         mod.Name,
-			Description:  mod.Description,
-			Dependencies: ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+			Name:             mod.Name,
+			Description:      mod.Description,
+			Dependencies:     ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+			CustomIdentifier: mod.CustomIdentifier,
 		})
 	}
 	return set, nil
@@ -485,9 +501,10 @@ func (ms *ModuleSet) Append(mod *Module) error {
 	}
 	// add the unique module
 	ms.modules = append(ms.modules, Module{
-		Name:         mod.Name,
-		Description:  mod.Description,
-		Dependencies: ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+		Name:             mod.Name,
+		Description:      mod.Description,
+		Dependencies:     ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+		CustomIdentifier: mod.CustomIdentifier,
 	})
 	return nil
 }
@@ -503,18 +520,20 @@ func (ms *ModuleSet) Set(mod *Module) {
 		if origMod.Identifier() == id {
 			// overwrite an existing module
 			ms.modules[idx] = Module{
-				Name:         mod.Name,
-				Description:  mod.Description,
-				Dependencies: ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+				Name:             mod.Name,
+				Description:      mod.Description,
+				Dependencies:     ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+				CustomIdentifier: mod.CustomIdentifier,
 			}
 			return
 		}
 	}
 	// add the module as a new unique module
 	ms.modules = append(ms.modules, Module{
-		Name:         mod.Name,
-		Description:  mod.Description,
-		Dependencies: ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+		Name:             mod.Name,
+		Description:      mod.Description,
+		Dependencies:     ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
+		CustomIdentifier: mod.CustomIdentifier,
 	})
 	return
 }
@@ -704,5 +723,8 @@ func (m Module) WriteDescription(w io.Writer) error {
 
 // Identifier returns the lower-cased first letter of the module's name as its identifier.
 func (m Module) Identifier() ModuleIdentifier {
+	if m.CustomIdentifier != 0 {
+		return m.CustomIdentifier
+	}
 	return ModuleIdentifier(unicode.ToLower(rune(m.Name[0])))
 }

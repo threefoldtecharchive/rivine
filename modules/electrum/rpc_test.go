@@ -64,7 +64,7 @@ func TestElectrum_ServeRPC(t *testing.T) {
 
 	testDir := build.TempDir(modules.ElectrumDir, "electrumtest")
 	bcInfo := types.DefaultBlockchainInfo()
-	chainCts := types.DefaultChainConstants()
+	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	g, err := gateway.New("localhost:0", false, filepath.Join(testDir, modules.GatewayDir), bcInfo, chainCts, nil)
 	if err != nil {

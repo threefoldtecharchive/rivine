@@ -91,7 +91,7 @@ func TestModuleMethodIdentifier(t *testing.T) {
 
 func TestDefaultModuleIdentifiers(t *testing.T) {
 	set := DefaultModuleSet()
-	expectedIdentifiers := []ModuleIdentifier{'g', 'c', 't', 'w', 'b', 'e'}
+	expectedIdentifiers := []ModuleIdentifier{'g', 'c', 't', 'w', 'b', 'e', 'x'}
 	if len(set.modules) != len(expectedIdentifiers) {
 		t.Fatal("unexpected length for default module set: ", len(set.modules), "!=", len(expectedIdentifiers))
 	}

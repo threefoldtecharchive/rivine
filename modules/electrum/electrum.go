@@ -95,7 +95,7 @@ func New(cs modules.ConsensusSet, tp modules.TransactionPool,
 	}
 	e.tcpServer = tcpServer
 
-	if err = cs.ConsensusSetSubscribe(e, modules.ConsensusChangeRecent); err != nil {
+	if err = cs.ConsensusSetSubscribe(e, modules.ConsensusChangeRecent, nil); err != nil {
 		return nil, err
 	}
 
