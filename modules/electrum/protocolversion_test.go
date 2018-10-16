@@ -86,6 +86,12 @@ func TestProtocolArgument_UnmarshalJSON(t *testing.T) {
 			args:    []byte(`"a.0"`),
 			wantErr: true,
 		},
+		{
+			name:    "12",
+			fields:  fields{ProtocolVersion{1, 0, 0}, ProtocolVersion{1, 0, 0}},
+			args:    []byte(`["1.0.0", "1.0.0.1"]`),
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

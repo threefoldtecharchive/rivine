@@ -52,7 +52,7 @@ type (
 		JSONRPC string           `json:"jsonrpc"`
 		Method  string           `json:"method"`
 		Params  *json.RawMessage `json:"params"`
-		ID      interface{}      `json:"id"`
+		ID      interface{}      `json:"id,omitempty"`
 	}
 
 	// Response is the structure of an rpc response in JSONRPC 2.0. The JSONRPC
@@ -126,8 +126,9 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 		transport:            transport,
 		timer:                time.NewTimer(connectionTimeout),
 		serviceMap:           make(map[string]rpcFunc),
-		addressSubscriptions: make(map[types.UnlockHash]bool),
+		addressSubscriptions: make(map[types.UnlockHash]struct{}),
 	}
+	defer e.closeConnection(cl)
 
 	updateChan := make(chan *Update)
 
@@ -138,13 +139,12 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 
 	if err := e.registerServerMethods(cl); err != nil {
 		e.log.Println("[ERROR] Failed to register server methods:", err)
-		e.closeConnection(cl)
+		return
 	}
 
 	// start read loop
 	for {
 		select {
-
 		case <-cl.transport.IsClosed():
 			// transport closing, exit
 			return
@@ -193,18 +193,22 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 
 				select {
 				// Check if any call created an error
-				case <-errChan:
+				case err := <-errChan:
 					// fatal error, close the connection
 					cl.wg.Done()
-					e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to an error")
-					e.closeConnection(cl)
+					e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to an error:", err)
 					return
 				default:
 				}
 
 				// Avoid sending nil
 				if resp.MustSend() {
-					cl.transport.Send(resp)
+					if err := cl.transport.Send(resp); err != nil {
+						// fatal error, close the connection
+						cl.wg.Done()
+						e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to an error while sending:", err)
+						return
+					}
 				}
 
 				cl.wg.Done()
@@ -219,7 +223,6 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 			// Check if the underlying transport is closed. If so, clean up
 			if _, ok := err.(errTransportClosed); ok {
 				e.log.Println("Cleaning up connection to", cl.transport.RemoteAddr(), "as underlying transport was closed")
-				e.closeConnection(cl)
 				return
 			}
 
@@ -230,20 +233,22 @@ func (e *Electrum) ServeRPC(transport RPCTransport) {
 				Error:   &ErrParse,
 				JSONRPC: jsonRPCVersion,
 			}
-			cl.transport.Send(response)
+			if err := cl.transport.Send(response); err != nil {
+				// fatal error, close the connection
+				e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to an error while sending:", err)
+				return
+			}
 			cl.resetTimer()
 
 		case <-cl.timer.C:
 			// Client didn't sent any request for the past `connectionTimeout`
 			// seconds. As such, disconnect the client for being idle
 			e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "for being idle")
-			e.closeConnection(cl)
 			return
 
 		case <-e.stopChan:
 			// Server is closing, so close the connection
 			e.log.Println("Closing connection to", cl.transport.RemoteAddr(), "due to server shutdown")
-			e.closeConnection(cl)
 			return
 
 		}

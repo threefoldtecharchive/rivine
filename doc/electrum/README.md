@@ -18,7 +18,7 @@ to reset the idle timer, the `server.ping` method should be used.
 
 Request structure:
 
-```json
+```javascript
 {
     "id": "any",
     "method": "string",
@@ -35,7 +35,7 @@ has a `NULL` value, the `request is considered a notification.
 
 Response structure:
 
-```json
+```javascript
 {
     "id": "any",
     "result": {

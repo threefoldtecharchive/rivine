@@ -2,27 +2,45 @@ package electrum
 
 import "errors"
 
+// JSONRPC 2.0 error codes as defined by the spec.
+// These are only the error codes, not the full error
+// objects returned.
+const (
+	ErrCodeParse          int64 = -32700
+	ErrCodeInvalidRequest       = -32600
+	ErrCodeMethodNotFound       = -32601
+	ErrCodeInvalidParams        = -32602
+	ErrCodeInternalError        = -32603
+)
+
+// Error codes we define ourselves. These error codes
+// indicate an error which does not map cleanely to the
+// predefined JSONRPC errors.
+const (
+	ErrCodeVersionAlreadySet = 101
+)
+
 // JSONRPC 2.0 errors as defined by the spec, see
 // https://www.jsonrpc.org/specification
 var (
 	ErrParse = RPCError{
-		Code:    -32700,
+		Code:    ErrCodeParse,
 		Message: "Error parsing the request",
 	}
 	ErrInvalidRequest = RPCError{
-		Code:    -32600,
+		Code:    ErrCodeInvalidRequest,
 		Message: "Invalid request",
 	}
 	ErrMethodNotFound = RPCError{
-		Code:    -32601,
+		Code:    ErrCodeMethodNotFound,
 		Message: "Method not found",
 	}
 	ErrInvalidParams = RPCError{
-		Code:    -32602,
+		Code:    ErrCodeInvalidParams,
 		Message: "Invalid parameters",
 	}
 	ErrInternal = RPCError{
-		Code:    -32603,
+		Code:    ErrCodeInternalError,
 		Message: "Internal error",
 	}
 )
@@ -31,6 +49,7 @@ var (
 // what went wrong. This way the actual call doesn't
 // need to be aware of what is happening
 var (
-	errFatal  = errors.New("Connection needs to be closed")
-	errClient = errors.New("Client error")
+	errFatal             = errors.New("Connection needs to be closed")
+	errClient            = errors.New("Client error")
+	errAlreadySubscribed = errors.New("Already subscribed to this address")
 )

@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
 type (
-
 	// ProtocolVersion is a specific version of the electrum protocol.
 	// The version is denoted by a major and minor number, and optionally, a rivision
 	ProtocolVersion struct {
@@ -56,31 +54,22 @@ func (epv *ProtocolVersion) UnmarshalJSON(data []byte) error {
 // ParseRawVersion tries to parse a version string. If parsing succeeds (no error
 // is returned), the version information is updated.
 func (epv *ProtocolVersion) ParseRawVersion(rawVersion string) error {
-	segments := strings.Split(rawVersion, ".")
-	if len(segments) < 2 || len(segments) > 3 {
+	// Read segments into temp variables first as we only want to update on a succesfull parse
+	var major, minor, revision uint8
+	n, err := fmt.Sscanf(rawVersion+".0", "%d.%d.%d", &major, &minor, &revision)
+	if err != nil {
+		return err
+	}
+	if n != 3 { // due to our added `+"0"` we should always have at least 3 segments
 		return errors.New("Invalid amount of segments")
 	}
-	major, err := strconv.ParseUint(segments[0], 10, 8)
-	if err != nil {
-		return err
+	if len(strings.Split(rawVersion, ".")) > 3 { // we already checked the string is not too short
+		return errors.New("Too many segments")
 	}
-	minor, err := strconv.ParseUint(segments[1], 10, 8)
-	if err != nil {
-		return err
-	}
-	// if there is no revision number we're done here
-	if len(segments) == 2 {
-		epv.major = uint8(major)
-		epv.minor = uint8(minor)
-		return nil
-	}
-	revision, err := strconv.ParseUint(segments[2], 10, 8)
-	if err != nil {
-		return err
-	}
-	epv.major = uint8(major)
-	epv.minor = uint8(minor)
-	epv.revision = uint8(revision)
+	// Update version
+	epv.major = major
+	epv.minor = minor
+	epv.revision = revision
 	return nil
 }
 

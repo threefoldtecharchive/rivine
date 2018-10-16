@@ -17,7 +17,7 @@ type (
 		serviceMap map[string]rpcFunc
 		timer      *time.Timer
 
-		addressSubscriptions map[types.UnlockHash]bool
+		addressSubscriptions map[types.UnlockHash]struct{}
 
 		// wait for all calls to finish
 		wg sync.WaitGroup
@@ -64,10 +64,10 @@ func (cl *Client) registerAddressSubscription(address types.UnlockHash) error {
 	defer cl.mu.Unlock()
 
 	if _, exists := cl.addressSubscriptions[address]; exists {
-		return errors.New("Already subscribed to this address")
+		return errAlreadySubscribed
 	}
 
-	cl.addressSubscriptions[address] = true
+	cl.addressSubscriptions[address] = struct{}{}
 	return nil
 }
 

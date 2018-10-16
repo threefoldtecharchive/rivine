@@ -5,11 +5,22 @@
 
   var wsUri = "ws://127.0.0.1:7002/";
   var output;
+  var websocket;
+  var requestMap = new Map();
 
   function init()
   {
     output = document.getElementById("output");
     testWebSocket();
+
+    // Keep the connection open by sending keep alive pings.
+    // Even though the server disconnects after 10 minutes, the pings
+    // are send every 9 minutes. This ensures we are not disconnected because
+    // of network lag. The ping handler could optionally be expanded to
+    // send requests instead of notifications, which would then allow us to verify
+    // if the server indeed received the ping and retry every x seconds if no
+    // response is received.
+    setInterval(keepAlive, 9 * 60 * 1000);
   }
 
   function testWebSocket()
@@ -29,25 +40,60 @@
     // This means that a synchronous structure would require some kind of controll structure, for instance a queue,
     // which matches requests and responses based on the ID field. Since this is just a small demo, we will not
     // implement such a structure. To ensure some ordering in the requests, We use increasing timeouts, which space out
-    // requests every 1 second. Also not that we assume there is no error, as the responses are not checked in this example.
+    // requests every 1 second. If an error is encountred, close the socket.
+    // We also keep track of the used id's. In the onMessage callback, we verify that if an ID is present in the message (i.e.)
+    // it's not a notification, we indeed have send a request using said ID first
     setTimeout(() => {
-        doSend(pingServer(1));
+        if (!websocket) {
+            return
+        }
+        var ID = 1
+        requestMap.set(ID, {});
+        doSend(pingServer(ID));
     }, 1000);
     setTimeout(() => {
-        doSend(requestVersion(2, "1.0", "1.0"));
+        if (!websocket) {
+            return
+        }
+        var ID = 2;
+        requestMap.set(ID, {});
+        doSend(requestVersion(ID, "1.0", "1.0"));
     }, 2000);
     setTimeout(() => {
-        doSend(subscribeAddress(3, "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"));
+        if (!websocket) {
+            return
+        }
+        var ID = 3;
+        requestMap.set(ID, {});
+        doSend(subscribeAddress(ID, "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"));
     }, 3000);
   }
 
   function onClose(evt)
   {
     writeToScreen("DISCONNECTED");
+    websocket = null;
   }
 
   function onMessage(evt)
   {
+    var data = JSON.parse(evt.data)
+    // Check if there is an error
+    if (data.error) {
+        writeToScreen('<span style="color: red;">RECEIVED ERROR RESPONSE: ' + evt.data + '</span>');
+        closeSocket();
+        return
+    }
+    if (data.id) {
+      // This is a response to a message we have send, check if we know  the ID.
+      if (!requestMap.has(data.id)) {
+          writeToScreen('<span style="color: red;">RECEIVED UNKNOWN ID: ' + evt.data + '</span>');
+          closeSocket();
+          return
+      }
+      // Since we got the response, delete the ID
+      requestMap.delete(data.id);
+    }
     writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
   }
 
@@ -60,6 +106,14 @@
   {
     writeToScreen("SENT: " + message);
     websocket.send(message);
+  }
+
+  function closeSocket() {
+      if (!websocket) {
+          return
+      }
+      websocket.close();
+      websocket = null;
   }
 
   function writeToScreen(message)
@@ -105,6 +159,15 @@
               }
           }
       );
+  }
+
+  function keepAlive() {
+      if (!websocket) {
+          return
+      }
+      // No ID is given since we want this to be a notification,
+      // we don't need the server to send a response for our keepalive ping.
+      doSend(pingServer(null));
   }
 
   window.addEventListener("load", init, false);

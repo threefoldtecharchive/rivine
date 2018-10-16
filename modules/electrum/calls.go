@@ -46,7 +46,6 @@ func (e *Electrum) registerBlockchainMethods(cl *Client) error {
 // counter. It serves no other purpose. As a result, there are no input
 // or output arguments
 func (e *Electrum) ServerPing(cl *Client, args *json.RawMessage) (interface{}, error) {
-
 	return nil, nil
 }
 
@@ -60,7 +59,7 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 		//
 		// For now return an error, can fix it later when version negotiation is properly implemented
 		return nil, RPCError{
-			Code:    101,
+			Code:    ErrCodeVersionAlreadySet,
 			Message: "Protocol version already set for this connection",
 		}
 	}
@@ -84,7 +83,7 @@ func (e *Electrum) ServerVersion(cl *Client, args *json.RawMessage) (interface{}
 	if input.ProtocolVersion.protocolMax != e.availableVersions[0] {
 		// If no protocol version can be found, the connection
 		// should be closed
-		e.log.Debug("Error setting protocol")
+		e.log.Debug("Error setting protocol, max version is " + input.ProtocolVersion.protocolMax.String() + " but we only accept 1.0 for now")
 		return nil, errFatal
 	}
 
@@ -120,7 +119,7 @@ func (e *Electrum) BlockchainAddressSubscribe(cl *Client, args *json.RawMessage)
 	}
 
 	err = cl.registerAddressSubscription(input.Address)
-	if err != nil {
+	if err != nil && err != errAlreadySubscribed {
 		e.log.Debug("Failed to register address subscription:", err)
 	}
 

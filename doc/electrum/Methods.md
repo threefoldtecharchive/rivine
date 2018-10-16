@@ -39,7 +39,7 @@ Negotiate protocol version to use and optionally identify the client to the serv
 
 - client_name (optional)
 
-A string identifying the client software
+A string identifying the client software. It is not directly used by the server for any functional purpose, but could be used for debug purposes.
 
 - protocol_version
 
@@ -67,7 +67,8 @@ Example Request:
 
 - server_software_version
 
-The version of the server running.
+The version of the server running. This is the build version of the server. This allows to exactly identify the state of the server code base,
+usefull should you report a bug or a feature request.
 
 - protocol_version
 
@@ -94,7 +95,7 @@ Example Response:
 
 - address
 
-The string representation of an address
+The string representation of an address.
 
 Example Request:
 
@@ -113,7 +114,7 @@ Example Request:
 
 - status
 
-The status of the address
+The [status](./Status.md#address-status) of the address.
 
 Example Response:
 
@@ -129,17 +130,17 @@ Example Response:
 
 ### Notifications
 
-As a subscribtion, a notification will be send to the client every time the address status changes
+As a subscribtion, a notification will be send to the client every time the address [status](./Status.md#address-status) changes
 
 #### Params
 
 - address
 
-  The address which changed status
+  The address which changed [status](./Status.md#address-status)
 
 - status
   
-  The new status of the address
+  The new [status](./Status.md#address-status) of the address
 
 Example Notification:
 

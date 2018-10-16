@@ -20,6 +20,10 @@ type websocketConn struct {
 }
 
 var upgrader = websocket.Upgrader{
+	// ReadBufferSize and WriteBufferSize specify the sizes of the buffers,
+	// 1KB is both reasonably large to send/receive most of our messages without
+	// doing (too much) copies, while it is also an affordable amount of memory to
+	// occupy for a single connection
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
