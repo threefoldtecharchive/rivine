@@ -2,7 +2,20 @@
 
 The `Electrum` module exposes an implementation of the [Electrum protocol](https://electrumx.readthedocs.io/en/latest/protocol.html). The Electrum protocol itself
 is an RPC protocol, build on JSONRPC. Although the original protocol supports both JSONRPC v1 and v2, we only support v2. This is because the v1 spec does not
-officially support notifications. 
+officially support notifications.
+
+## How to enable
+
+The electrum server is not enabled by default. In order to enable it, the `x` module identifier needs to be specified for the modules flag when starting the deamon.
+Note the that the electrum server depends on the explorer module (it won't start without it), and optionally uses the transactionpool module. Next, you also need to
+specify an address to start the `tcp` listener or `websocket` listerner. The listerners are not started by default, only when an address is explicitly defined.
+An example setup, which listens for websocket connections from the local network on port `7002` (and can be used for the [example](../examples/electrum/websocket.html)) would be:
+
+```bash
+rivined -M gctex --electrum-ws :7002
+```
+
+## Communicating with the server
 
 After the connection has been established, the client can send either `requests` or `notifications` to the server. A notification is a request without
 `ID` field. Notifications mean that the client is not interested in the resposne. Therefore the client also does not know if the request completed successfully,
