@@ -68,6 +68,9 @@ type (
 		// subscriber.
 		subscribers []modules.TransactionPoolSubscriber
 
+		// broadcastCache keeps track of all transaction sets currently in the pool.
+		broadcastCache transactionCache
+
 		// Utilities.
 		db         *persist.BoltDatabase
 		mu         demotemutex.DemoteMutex
@@ -96,6 +99,8 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 		knownObjects:        make(map[ObjectID]TransactionSetID),
 		transactionSets:     make(map[TransactionSetID][]types.Transaction),
 		transactionSetDiffs: make(map[TransactionSetID]modules.ConsensusChange),
+
+		broadcastCache: newTransactionCache(),
 
 		persistDir: persistDir,
 

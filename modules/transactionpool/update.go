@@ -1,6 +1,7 @@
 package transactionpool
 
 import (
+	"github.com/rivine/rivine/crypto"
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/types"
 
@@ -42,6 +43,14 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	})
 	if err != nil {
 		// TODO: Handle error
+	}
+
+	// Remove all transactions confirmed in the block from the cache
+	for _, block := range cc.AppliedBlocks {
+		for _, txn := range block.Transactions {
+			setID := TransactionSetID(crypto.HashObject([]types.Transaction{txn}))
+			tp.broadcastCache.delete(setID)
+		}
 	}
 
 	// Scan the applied blocks for transactions that got accepted. This will
@@ -107,8 +116,24 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	// Which means that no other modules can require a tpool lock when
 	// processing consensus changes. Overall, the locking is pretty fragile and
 	// more rules need to be put in place.
+	// Accepting the set again will write the current block height in the
+	// broadcast cache. So we copy the cache, clear it, and override it later
 	for _, set := range unconfirmedSets {
-		tp.acceptTransactionSet(set) // Error is not checked.
+		if err := tp.acceptTransactionSet(set); err != nil {
+			// the transaction is now invalid and no longer in the pool,
+			// so remove it from the cache as well
+			setID := TransactionSetID(crypto.HashObject(set))
+			tp.broadcastCache.delete(setID)
+			continue
+		}
+	}
+
+	// If we are synced, try to broadcast again
+	if cc.Synced {
+		currentheight := tp.consensusSet.Height()
+		for _, id := range tp.broadcastCache.getTransactionsToBroadcast(currentheight) {
+			go tp.gateway.Broadcast("RelayTransactionSet", tp.transactionSets[id], tp.gateway.Peers())
+		}
 	}
 
 	// Inform subscribers that an update has executed.
