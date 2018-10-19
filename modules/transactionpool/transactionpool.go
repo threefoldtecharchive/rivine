@@ -68,10 +68,8 @@ type (
 		// subscriber.
 		subscribers []modules.TransactionPoolSubscriber
 
-		// broadcastCache keeps track of all transaction sets currently in the pool,
-		// and the height at which they were added. For every BROADCAST_DELAY blocks
-		// they are not in the pool, broadcast again.
-		broadcastCache map[TransactionSetID]types.BlockHeight
+		// broadcastCache keeps track of all transaction sets currently in the pool.
+		broadcastCache transactionCache
 
 		// Utilities.
 		db         *persist.BoltDatabase
@@ -102,7 +100,7 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 		transactionSets:     make(map[TransactionSetID][]types.Transaction),
 		transactionSetDiffs: make(map[TransactionSetID]modules.ConsensusChange),
 
-		broadcastCache: make(map[TransactionSetID]types.BlockHeight),
+		broadcastCache: newTransactionCache(),
 
 		persistDir: persistDir,
 

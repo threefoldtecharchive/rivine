@@ -45,6 +45,14 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		// TODO: Handle error
 	}
 
+	// Remove all transactions confirmed in the block from the cache
+	for _, block := range cc.AppliedBlocks {
+		for _, txn := range block.Transactions {
+			setID := TransactionSetID(crypto.HashObject([]types.Transaction{txn}))
+			tp.broadcastCache.delete(setID)
+		}
+	}
+
 	// Scan the applied blocks for transactions that got accepted. This will
 	// help to determine which transactions to remove from the transaction
 	// pool. Having this list enables both efficiency improvements and helps to
@@ -110,24 +118,21 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	// more rules need to be put in place.
 	// Accepting the set again will write the current block height in the
 	// broadcast cache. So we copy the cache, clear it, and override it later
-	oldCache := tp.broadcastCache
-	tp.broadcastCache = make(map[TransactionSetID]types.BlockHeight)
-	currentheight := tp.consensusSet.Height()
 	for _, set := range unconfirmedSets {
 		if err := tp.acceptTransactionSet(set); err != nil {
+			// the transaction is now invalid and no longer in the pool,
+			// so remove it from the cache as well
+			setID := TransactionSetID(crypto.HashObject(set))
+			tp.broadcastCache.delete(setID)
 			continue
 		}
+	}
 
-		setID := TransactionSetID(crypto.HashObject(set))
-		if originalSubmit, exists := oldCache[setID]; exists {
-			tp.broadcastCache[setID] = originalSubmit
-			blocksInPool := currentheight - originalSubmit
-			// Broadcast only on the defined interval, only a few times, and only if we are already synced
-			if blocksInPool%modules.TransactionPoolRebroadcastDelay == 0 &&
-				blocksInPool <= modules.TransactionPoolRebroadcastDelay*modules.TransactionPoolMaxRebroadcasts &&
-				cc.Synced {
-				go tp.gateway.Broadcast("RelayTransactionSet", set, tp.gateway.Peers())
-			}
+	// If we are synced, try to broadcast again
+	if cc.Synced {
+		currentheight := tp.consensusSet.Height()
+		for _, id := range tp.broadcastCache.getTransactionsToBroadcast(currentheight) {
+			go tp.gateway.Broadcast("RelayTransactionSet", tp.transactionSets[id], tp.gateway.Peers())
 		}
 	}
 

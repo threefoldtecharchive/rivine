@@ -237,7 +237,7 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 		tp.knownObjects[oid] = setID
 	}
 	// remember when the transaction was added
-	tp.broadcastCache[setID] = tp.consensusSet.Height()
+	tp.broadcastCache.add(setID, tp.consensusSet.Height())
 	tp.transactionSetDiffs[setID] = cc
 	tp.transactionListSize += len(encoding.Marshal(ts))
 	return nil
