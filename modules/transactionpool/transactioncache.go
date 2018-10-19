@@ -38,9 +38,7 @@ func (tc *transactionCache) add(id TransactionSetID, currentHeight types.BlockHe
 // delete ensures the transaction ID is no longer present in the cache. If it is not present in the first place,
 // no action is taken.
 func (tc *transactionCache) delete(id TransactionSetID) {
-	if _, exists := tc.cache[id]; exists {
-		delete(tc.cache, id)
-	}
+	delete(tc.cache, id)
 }
 
 func (tc *transactionCache) getTransactionsToBroadcast(height types.BlockHeight) []TransactionSetID {
