@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // dummy types to test encoding

@@ -7,8 +7,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // Logger is a wrapper for the standard library logger that enforces logging

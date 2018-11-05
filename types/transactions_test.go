@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
 )
 
 // TestTransactionIDs probes all of the ID functions of the Transaction type.

@@ -14,10 +14,10 @@ import (
 	"github.com/bgentry/speakeasy"
 	"github.com/spf13/cobra"
 
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/pkg/api"
-	"github.com/rivine/rivine/pkg/cli"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/api"
+	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/types"
 )
 
 func createWalletCmd(cli *CommandLineClient) *WalletCommand {

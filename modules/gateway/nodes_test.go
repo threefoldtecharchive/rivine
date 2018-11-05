@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
 )
 
 const dummyNode = "111.111.111.111:1111"

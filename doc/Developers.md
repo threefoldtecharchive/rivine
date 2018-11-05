@@ -35,7 +35,7 @@ does not recognize (usually the wrong path, or symbolic links were somehow
 involved).
 
 ```
-consensus/fork.go:4:2: cannot find package "github.com/rivine/rivine/crypto" in any of:
+consensus/fork.go:4:2: cannot find package "github.com/threefoldtech/rivine/crypto" in any of:
     /usr/lib/go/src/github.com/rivine/rivine/crypto (from $GOROOT)
     /home/user/gopath/src/github.com/rivine/rivine/crypto (from $GOPATH)
 ```

@@ -3,8 +3,8 @@ package consensus
 import (
 	"errors"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/modules"
 
 	"github.com/rivine/bbolt"
 )

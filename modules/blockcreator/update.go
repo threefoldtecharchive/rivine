@@ -1,9 +1,9 @@
 package blockcreator
 
 import (
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // ProcessConsensusChange will update the blockcreator's most recent block.

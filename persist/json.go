@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
 )
 
 // readJSON will try to read a persisted json object from a file.

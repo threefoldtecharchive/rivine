@@ -4,7 +4,7 @@ package consensus
 // import (
 // 	"testing"
 //
-// 	"github.com/rivine/rivine/modules"
+// 	"github.com/threefoldtech/rivine/modules"
 // )
 //
 // // TestBacktrackToCurrentPath probes the backtrackToCurrentPath method of the

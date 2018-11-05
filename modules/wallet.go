@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/types"
 	bip39 "github.com/tyler-smith/go-bip39"
 )
 

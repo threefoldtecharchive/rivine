@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 func TestParseCoinStringInvalidStrings(t *testing.T) {

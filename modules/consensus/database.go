@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/persist"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/persist"
 
 	"github.com/rivine/bbolt"
 )

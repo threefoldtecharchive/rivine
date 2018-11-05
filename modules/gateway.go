@@ -3,7 +3,7 @@ package modules
 import (
 	"net"
 
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 const (

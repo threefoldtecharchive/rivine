@@ -7,8 +7,8 @@ import (
 
 	"github.com/rivine/bbolt"
 
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // TestApplyMinerPayouts probes the applyMinerPayouts method of the consensus

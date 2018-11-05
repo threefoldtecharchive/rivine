@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rivine/rivine/persist"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // There's a global lock on cpu and memory profiling, because I'm not sure what

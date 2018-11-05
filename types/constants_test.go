@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // TestCheckBuildConstants checks that the required build constants have been

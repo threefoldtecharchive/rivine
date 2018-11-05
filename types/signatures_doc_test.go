@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 // TestInputSigHash tests the input signature hash algorithm.

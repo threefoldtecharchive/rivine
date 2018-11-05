@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/crypto"
 )
 
 // TestEd25519PublicKey tests the Ed25519PublicKey function.

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // TestSaveLoadJSON creates a simple object and then tries saving and loading

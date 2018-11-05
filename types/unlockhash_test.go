@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/crypto"
 )
 
 // TestUnlockHashJSONMarshalling checks that when an unlock hash is marshalled

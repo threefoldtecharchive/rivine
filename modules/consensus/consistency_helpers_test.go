@@ -1,7 +1,7 @@
 package consensus
 
 import (
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/crypto"
 
 	"github.com/rivine/bbolt"
 )

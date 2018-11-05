@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 func TestLegacyTransactionInputLockProxyBinaryEncoding(t *testing.T) {

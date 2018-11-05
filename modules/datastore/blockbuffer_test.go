@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/modules"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 func TestBlockBuffer(t *testing.T) {

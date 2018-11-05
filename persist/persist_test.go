@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // TestIntegrationRandomSuffix checks that the random suffix creator creates

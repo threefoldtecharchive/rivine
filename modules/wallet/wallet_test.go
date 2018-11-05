@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/modules/consensus"
-	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/transactionpool"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/modules/consensus"
+	"github.com/threefoldtech/rivine/modules/gateway"
+	"github.com/threefoldtech/rivine/modules/transactionpool"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // A Wallet tester contains a ConsensusTester and has a bunch of helpful

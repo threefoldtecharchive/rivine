@@ -3,7 +3,7 @@ package wallet
 import (
 	"testing"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // addBlockNoPayout adds a block to the wallet tester that does not have any

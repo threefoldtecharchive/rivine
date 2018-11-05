@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/errors"
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
 )
 
 // discoverPeerIP is the handler for the discoverPeer RPC. It returns the

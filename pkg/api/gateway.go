@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/modules"
 
 	"github.com/julienschmidt/httprouter"
 )

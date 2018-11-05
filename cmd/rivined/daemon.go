@@ -9,16 +9,16 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/modules/blockcreator"
-	"github.com/rivine/rivine/modules/consensus"
-	"github.com/rivine/rivine/modules/electrum"
-	"github.com/rivine/rivine/modules/explorer"
-	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/transactionpool"
-	"github.com/rivine/rivine/modules/wallet"
-	"github.com/rivine/rivine/pkg/api"
-	"github.com/rivine/rivine/pkg/daemon"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/modules/blockcreator"
+	"github.com/threefoldtech/rivine/modules/consensus"
+	"github.com/threefoldtech/rivine/modules/electrum"
+	"github.com/threefoldtech/rivine/modules/explorer"
+	"github.com/threefoldtech/rivine/modules/gateway"
+	"github.com/threefoldtech/rivine/modules/transactionpool"
+	"github.com/threefoldtech/rivine/modules/wallet"
+	"github.com/threefoldtech/rivine/pkg/api"
+	"github.com/threefoldtech/rivine/pkg/daemon"
 )
 
 func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentifiers daemon.ModuleIdentifierSet) error {

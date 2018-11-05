@@ -3,7 +3,7 @@ package modules
 import (
 	"math/big"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 const (

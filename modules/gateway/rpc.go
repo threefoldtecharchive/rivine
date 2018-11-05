@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
 )
 
 // rpcID is an 8-byte signature that is added to all RPCs to tell the gatway

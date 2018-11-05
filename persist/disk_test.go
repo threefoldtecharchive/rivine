@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // BenchmarkWrite512MiB checks how long it takes to write 512MiB sequentially.

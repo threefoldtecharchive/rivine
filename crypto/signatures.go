@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/encoding"
 
 	"golang.org/x/crypto/ed25519"
 )
