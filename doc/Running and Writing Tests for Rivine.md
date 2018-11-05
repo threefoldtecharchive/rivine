@@ -120,7 +120,7 @@ go test -v -race -tags='testing debug' -timeout=300s ./persist -run=Test
 === RUN   TestRelativePathSafeFile
 --- PASS: TestRelativePathSafeFile (0.00s)
 PASS
-ok  	github.com/rivine/rivine/persist	1.485s
+ok  	github.com/threefoldtech/rivine/persist	1.485s
 $
 ```
 
@@ -230,11 +230,11 @@ Some other useful resources, some of which have been linked to already:
 * [How to Write Benchmarks in Go][cheney-benchmarks]
 
 [pkg/testing]: https://golang.org/pkg/testing/
-[makefile]: https://github.com/rivine/rivine/blob/master/Makefile
-[developers]: https://github.com/rivine/rivine/blob/master/doc/Developers.md
+[makefile]: https://github.com/threefoldtech/rivine/blob/master/Makefile
+[developers]: https://github.com/threefoldtech/rivine/blob/master/doc/Developers.md
 [table]: http://dave.cheney.net/2013/06/09/writing-table-driven-tests-in-go
-[boltdb_test.go]: https://github.com/rivine/rivine/blob/master/persist/boltdb_test.go
+[boltdb_test.go]: https://github.com/threefoldtech/rivine/blob/master/persist/boltdb_test.go
 [cheney-benchmarks]: http://dave.cheney.net/2013/06/30/how-to-write-benchmarks-in-go
 [pkg/testing]: https://golang.org/pkg/testing/
-[parse_test]: https://github.com/rivine/rivine/blob/master/Rivinec/parse_test.go
+[parse_test]: https://github.com/threefoldtech/rivine/blob/master/Rivinec/parse_test.go
 [global]: http://c2.com/cgi/wiki?GlobalVariablesAreBad

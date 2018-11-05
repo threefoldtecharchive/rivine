@@ -2,8 +2,8 @@ Rivine
 ======
 
 [![Build Status](https://travis-ci.org/rivine/rivine.svg?branch=master)](https://travis-ci.org/rivine/rivine)
-[![GoDoc](https://godoc.org/github.com/rivine/rivine?status.svg)](https://godoc.org/github.com/rivine/rivine)
-[![Go Report Card](https://goreportcard.com/badge/github.com/rivine/rivine)](https://goreportcard.com/report/github.com/rivine/rivine)
+[![GoDoc](https://godoc.org/github.com/threefoldtech/rivine/?status.svg)](https://godoc.org/github.com/threefoldtech/rivine/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/threefoldtech/rivine/)](https://goreportcard.com/report/github.com/threefoldtech/rivine/)
 
 Blockchain technology for creating custom chains.
 
@@ -36,7 +36,7 @@ To build from source, [Go 1.9 or higher must be installed](https://golang.org/do
 on the system (older versions of GO might work, but we don't support it). Then simply use `go get`:
 
 ```bash
-go get -u github.com/rivine/rivine/cmd/...
+go get -u github.com/threefoldtech/rivine/cmd/...
 ```
 
 This will download the Rivine repo to your `$GOPATH/src` folder, and install the

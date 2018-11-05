@@ -20,7 +20,7 @@ endif
 
 dockerVersion = $(shell git describe | cut -d '-' -f 1| cut -d 'v' -f 2)
 
-ldflagsversion = -X github.com/rivine/rivine/build.rawVersion=$(fullversion)
+ldflagsversion = -X github.com/threefoldtech/rivine/build.rawVersion=$(fullversion)
 
 stdoutput = $(GOPATH)/bin
 daemonbin = $(stdoutput)/rivined
@@ -61,7 +61,7 @@ release-std:
 # using the standard Golang toolchain.
 xc:
 	docker build -t rivinebuilder -f DockerBuilder .
-	docker run --rm -v $(shell pwd):/go/src/github.com/rivine/rivine rivinebuilder
+	docker run --rm -v $(shell pwd):/go/src/github.com/threefoldtech/rivine/ rivinebuilder
 
 # Release images builds and packages release binaries, and uses the linux based binary to create a minimal docker
 release-images: get_hub_jwt xc

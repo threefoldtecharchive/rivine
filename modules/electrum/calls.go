@@ -3,7 +3,7 @@ package electrum
 import (
 	"encoding/json"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 type (

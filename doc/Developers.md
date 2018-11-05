@@ -13,11 +13,11 @@ you can simply use an official Go distribution (1.5 or above) to crosscompile.
 Rivine has a development build, an automated testing build, and a release
 build. The release build is the only one that can synchronize to the full
 network. To get the release build, it is usually sufficient to run `go get -u
-github.com/rivine/rivine/...`. This will download Rivine and its dependencies
+github.com/threefoldtech/rivine/...`. This will download Rivine and its dependencies
 and install binaries in $GOPATH/bin.
 
 After downloading, you can find the Rivine source code in
-$GOPATH/src/github.com/rivine/rivine. To build the release binary, run
+$GOPATH/src/github.com/threefoldtech/rivine/. To build the release binary, run
 `make release-std` from this directory. To build the release binary with a
 (slow) race detector and an array of debugging asserts, run `make release`. To
 build the developer binary (which has a different genesis block, faster block
@@ -36,8 +36,8 @@ involved).
 
 ```
 consensus/fork.go:4:2: cannot find package "github.com/threefoldtech/rivine/crypto" in any of:
-    /usr/lib/go/src/github.com/rivine/rivine/crypto (from $GOROOT)
-    /home/user/gopath/src/github.com/rivine/rivine/crypto (from $GOPATH)
+    /usr/lib/go/src/github.com/threefoldtech/rivine/crypto (from $GOROOT)
+    /home/user/gopath/src/github.com/threefoldtech/rivine/crypto (from $GOPATH)
 ```
 
 Developer Conventions

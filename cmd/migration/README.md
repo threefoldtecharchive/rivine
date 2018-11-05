@@ -13,7 +13,7 @@ Issues that was fixed:
 > The checksum however was still only done using the the actual hash as input,
 > meaning a typo in the hash type would not get detected by the checksum.
 >
-> Github issue: https://github.com/rivine/rivine/issues/219
+> Github issue: https://github.com/threefoldtech/rivine/issues/219
 
 How it was fixed:
 

@@ -205,7 +205,7 @@ func TestIntegrationSortedOutputsSorting(t *testing.T) {
 
 // Test to confirm that a call with nil outputs (no outputs),
 // results in the ErrNilOutputs error.
-// Tests the solution for: https://github.com/rivine/rivine/issues/327
+// Tests the solution for: https://github.com/threefoldtech/rivine/issues/327
 func TestNilOutputs(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 const (

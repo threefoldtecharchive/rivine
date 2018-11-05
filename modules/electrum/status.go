@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // AddressStatus generates the status for an address as per the

@@ -260,7 +260,7 @@ func TestUnlockHashLoadString(t *testing.T) {
 	}
 }
 
-// test as part of fix for https://github.com/rivine/rivine/issues/273
+// test as part of fix for https://github.com/threefoldtech/rivine/issues/273
 func TestUnlockHashLoadEmptyString(t *testing.T) {
 	var uh UnlockHash
 	err := uh.LoadString("")
@@ -272,7 +272,7 @@ func TestUnlockHashLoadEmptyString(t *testing.T) {
 	}
 }
 
-// test as part of fix for https://github.com/rivine/rivine/issues/273
+// test as part of fix for https://github.com/threefoldtech/rivine/issues/273
 func TestUnlockHashLoadEmptyJSONString(t *testing.T) {
 	var uh UnlockHash
 	err := uh.UnmarshalJSON([]byte(`""`))
@@ -284,7 +284,7 @@ func TestUnlockHashLoadEmptyJSONString(t *testing.T) {
 	}
 }
 
-// test as part of fix for https://github.com/rivine/rivine/issues/410
+// test as part of fix for https://github.com/threefoldtech/rivine/issues/410
 func TestUnlockHashLoadNilUnlockHashString(t *testing.T) {
 	var uh UnlockHash
 	err := uh.LoadString("000000000000000000000000000000000000000000000000000000000000000000000000000000")
@@ -308,7 +308,7 @@ func TestUnlockHashLoadNilUnlockHashStringErrors(t *testing.T) {
 	}
 }
 
-// test as part of fix for https://github.com/rivine/rivine/issues/410
+// test as part of fix for https://github.com/threefoldtech/rivine/issues/410
 func TestUnlockHashLoadNilUnlockHashJSONString(t *testing.T) {
 	var uh UnlockHash
 	err := uh.UnmarshalJSON([]byte(`"000000000000000000000000000000000000000000000000000000000000000000000000000000"`))
