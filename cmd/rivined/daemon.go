@@ -12,6 +12,7 @@ import (
 	"github.com/rivine/rivine/modules"
 	"github.com/rivine/rivine/modules/blockcreator"
 	"github.com/rivine/rivine/modules/consensus"
+	"github.com/rivine/rivine/modules/electrum"
 	"github.com/rivine/rivine/modules/explorer"
 	"github.com/rivine/rivine/modules/gateway"
 	"github.com/rivine/rivine/modules/transactionpool"
@@ -157,6 +158,23 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 			err := e.Close()
 			if err != nil {
 				fmt.Println("Error during explorer shutdown:", err)
+			}
+		}()
+	}
+	var x modules.Electrum
+	if moduleIdentifiers.Contains(daemon.ElectrumModule.Identifier()) {
+		printModuleIsLoading("electrum")
+		x, err = electrum.New(cs, tpool, e, cfg.ElectrumTCPAddr, cfg.ElectrumWSAddr,
+			filepath.Join(cfg.RootPersistentDir, modules.ElectrumDir),
+			cfg.BlockchainInfo, networkCfg.Constants)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			fmt.Println("Closing electrum...")
+			err := x.Close()
+			if err != nil {
+				fmt.Println("Error during electrum shutdown:", err)
 			}
 		}()
 	}

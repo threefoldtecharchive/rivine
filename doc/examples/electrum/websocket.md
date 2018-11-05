@@ -1,0 +1,6 @@
+# Electrum websocket
+
+In the [websocket.html](websocket.html) file you can find an example of a very simplistic client, which talks to the electrum module of a local server. This example assumes a rivine deamon is running localy, with the electrum module enabled, and the electrum modules websocket server listening on port 7002. The example demonstrates pinging the server, using the version negotiation, and subscribing to an address for the status. The address in the example is the address which has the devnet blockstakes. If your local deamon is running the devnet, has a wallet with this genesis seed loaded, and a blockcreator module, unlocking the wallet will cause blocks to get created, which will in turn cause regular updates to be send about the address status (every time a new block is created).
+
+It should be noted that the error handling and keep alive is only basic in this example. To keep the connection open, we ping every 9 minutes (not 10, since latency might cause the ping to be somewhat delayed which would then cause the server to disconnect). Error handling is not extensive, it only shows the basics of checking if there is an error, and closes the connection in case there is.
+In a real situation, there would be further checking to determine the exact error and resolve this situation without having to ask for user interaction.

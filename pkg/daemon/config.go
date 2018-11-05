@@ -53,6 +53,14 @@ type (
 		// the parent directory where the individual module
 		// directories will be created
 		RootPersistentDir string
+
+		// ElectrumTCPAddr is the address on which the electrum
+		// module listens for tcp connections
+		ElectrumTCPAddr string
+
+		// ElectrumWSAddr is the address on which the electrum
+		// module listents to accept websocket connections
+		ElectrumWSAddr string
 	}
 
 	// NetworkConfig are variables for a particular chain. Currently, these are genesis constants and bootstrap peers
@@ -82,6 +90,9 @@ func DefaultConfig() Config {
 		Profile:           false,
 		ProfileDir:        "profiles",
 		RootPersistentDir: "",
+
+		ElectrumTCPAddr: "",
+		ElectrumWSAddr:  "",
 	}
 }
 
@@ -99,6 +110,8 @@ func (cfg *Config) RegisterAsFlags(flagSet *pflag.FlagSet) {
 	flagSet.BoolVarP(&cfg.AuthenticateAPI, "authenticate-api", "", cfg.AuthenticateAPI, "enable API password protection")
 	flagSet.BoolVarP(&cfg.AllowAPIBind, "disable-api-security", "", cfg.AllowAPIBind, fmt.Sprintf("allow the daemon of %s to listen on a non-localhost address (DANGEROUS)", cfg.BlockchainInfo.Name))
 	flagSet.StringVarP(&cfg.BlockchainInfo.NetworkName, "network", "n", cfg.BlockchainInfo.NetworkName, "the name of the network to which the daemon connects")
+	flagSet.StringVarP(&cfg.ElectrumTCPAddr, "electrum-tcp", "", cfg.ElectrumTCPAddr, "address to listen on for tcp connections to the electrum module")
+	flagSet.StringVarP(&cfg.ElectrumWSAddr, "electrum-ws", "", cfg.ElectrumWSAddr, "address to listen on for ws connections to the electrum module")
 }
 
 // ProcessConfig checks the configuration values and performs cleanup on
