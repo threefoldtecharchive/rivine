@@ -27,7 +27,9 @@ Some methods will start a subscription. Subscriptions will send a notification t
 is the same as the `method` of the subscription. The `parameters` are defined in the [methods documentation](Methods.md).
 
 If the client does not send any request for 10 minutes, the connection will be terminated by the server for being idle. If the client only wants to send a request
-to reset the idle timer, the `server.ping` method should be used.
+to reset the idle timer, the `server.ping` method should be used. There are 2 options when pinging the server: Sending a `request`, or sending a `notification`.
+It makes sense to send a notification since no usefull response is ever sent for a ping. However if you want to ensure the server received the ping request (and thus
+extends the lifetime on the connection), a regular `request` can be used, and you can then check to see if the server indeed sent a `response`.
 
 Request structure:
 

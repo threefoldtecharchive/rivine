@@ -40,9 +40,9 @@
     // This means that a synchronous structure would require some kind of controll structure, for instance a queue,
     // which matches requests and responses based on the ID field. Since this is just a small demo, we will not
     // implement such a structure. To ensure some ordering in the requests, We use increasing timeouts, which space out
-    // requests every 1 second. If an error is encountred, close the socket.
-    // We also keep track of the used id's. In the onMessage callback, we verify that if an ID is present in the message (i.e.)
-    // it's not a notification, we indeed have send a request using said ID first
+    // requests every 1 second. If an error is encountered, close the socket.
+    // We also keep track of the used identifiers. In the onMessage callback, we verify that if an ID is present in the message (i.e.)
+    // it's not a notification, we indeed have send a request using said ID first.
     setTimeout(() => {
         if (!websocket) {
             return
