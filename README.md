@@ -1,7 +1,7 @@
 Rivine
 ======
 
-[![Build Status](https://travis-ci.org/rivine/rivine.svg?branch=master)](https://travis-ci.org/rivine/rivine)
+[![Build Status](https://travis-ci.org/threefoldtech/rivine.svg?branch=master)](https://travis-ci.org/threefoldtech/rivine)
 [![GoDoc](https://godoc.org/github.com/threefoldtech/rivine?status.svg)](https://godoc.org/github.com/threefoldtech/rivine)
 [![Go Report Card](https://goreportcard.com/badge/github.com/threefoldtech/rivine)](https://goreportcard.com/report/github.com/threefoldtech/rivine)
 
