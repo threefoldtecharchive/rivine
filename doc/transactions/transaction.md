@@ -33,7 +33,7 @@ One other use case of versions could be to provide the option to have alternativ
 transaction structures, requiring their own requirements, validation and encoding.
 
 Such alternative transactions are however up to blockchains to be implemented using the Rivine protocol,
-(using the [`RegisterTransactionVersion`](https://godoc.org/github.com/rivine/rivine/types#RegisterTransactionVersion))
+(using the [`RegisterTransactionVersion`](https://godoc.org/github.com/threefoldtech/rivine/types#RegisterTransactionVersion))
 as Rivine keeps it at the v0 and v1 transactions for now,
 which are only to be used for coin/blockstake transfers, optionally with some (limited) Arbitrary Data attached to it.
 
@@ -50,13 +50,13 @@ implemented in the Golang reference Rivine implementation, and covers following 
 + [/types/timestamp.go](/types/timestamp.go)
 
 The master version of the (public) Golang documentation for
-the module of these files can be found at: <https://godoc.org/github.com/rivine/rivine/types>
+the module of these files can be found at: <https://godoc.org/github.com/threefoldtech/rivine/types>
 
 > Should you have Rivine cloned onto a Golang-enabled machine available to you,
 > you can render the same godoc information for whatever version you wish (after checking it out using `git checkout`),
 > by running `godoc -http=:6060` in your terminal, after which you should be able to browse to the go documentation
-> of your locally checked out Rivine version at: <http://localhost:6060/pkg/github.com/rivine/rivine/>,
-> making the types module documentation available at: <http://localhost:6060/pkg/github.com/rivine/rivine/types>
+> of your locally checked out Rivine version at: <http://localhost:6060/pkg/github.com/threefoldtech/rivine/>,
+> making the types module documentation available at: <http://localhost:6060/pkg/github.com/threefoldtech/rivine/types>
 
 ## Index
 
@@ -457,7 +457,7 @@ Such condition is to be fulfilled in 2 parts:
 + If the first part has been fulfilled, the internal condition has to be fulfilled explicitly, by giving a fulfillment which is able to fulfill the internal condition, which is part of the TimeLockCondition and encoded as the very last thing;
 
 The constant which defines whether a LockTime is a Block Height or a Unix Epoch Timestamp in seconds,
-is `LockTimeMinTimestampValue` and is documented in <https://godoc.org/github.com/rivine/rivine/types#pkg-constants>.
+is `LockTimeMinTimestampValue` and is documented in <https://godoc.org/github.com/threefoldtech/rivine/types#pkg-constants>.
 
 ##### JSON Encoding of a MultiSignatureCondition
 
@@ -973,9 +973,9 @@ In order to save you some time, it can however be summarized as:
 + Slices (dynamic arrays) are encoded the same way as Arrays, except that they're prefixed with a 64-bit signed integer indicating the length of the slice;
 + Structures are encoded by encoding the public properties one by one, in the order as defined;
 
-The only exception to these rules (when using the Rivine Go Library) is if a type implements [the `SiaMarshaler` interface](https://godoc.org/github.com/rivine/rivine/encoding#SiaMarshaler), it is encoded using the custom defined logic.
+The only exception to these rules (when using the Rivine Go Library) is if a type implements [the `SiaMarshaler` interface](https://godoc.org/github.com/threefoldtech/rivine/encoding#SiaMarshaler), it is encoded using the custom defined logic.
 
-When decoding binary encoded data, it is assumed that you know the structure, and it will use your provided value's type in order to know how to decode it. The exception to this rule again (when using the Rivine Go Library) is that if the given value's type implements [the `SiaUnmarshaler` interface](https://godoc.org/github.com/rivine/rivine/encoding#SiaUnmarshaler), it is decoded using the custom defined logic.
+When decoding binary encoded data, it is assumed that you know the structure, and it will use your provided value's type in order to know how to decode it. The exception to this rule again (when using the Rivine Go Library) is that if the given value's type implements [the `SiaUnmarshaler` interface](https://godoc.org/github.com/threefoldtech/rivine/encoding#SiaUnmarshaler), it is decoded using the custom defined logic.
 
 When you know these rules (and exceptions) it should be trivial to deduce how any given type is encoded,
 given that you know how the type is defined and which interfaces it implements.
@@ -1051,11 +1051,11 @@ if they are defined as part of a v0- or v1- transaction.
 In both versions however it contains a Value, typed as a Currency,
 which we already know how to binary-encode.
 
-[conid]: https://godoc.org/github.com/rivine/rivine/types#CoinOutputID
-[bsoid]: https://godoc.org/github.com/rivine/rivine/types#BlockStakeOutputID
-[outid]: https://godoc.org/github.com/rivine/rivine/types#OutputID
-[txnid]: https://godoc.org/github.com/rivine/rivine/types#TransactionID
-[blkid]: https://godoc.org/github.com/rivine/rivine/types#BlockID
+[conid]: https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutputID
+[bsoid]: https://godoc.org/github.com/threefoldtech/rivine/types#BlockStakeOutputID
+[outid]: https://godoc.org/github.com/threefoldtech/rivine/types#OutputID
+[txnid]: https://godoc.org/github.com/threefoldtech/rivine/types#TransactionID
+[blkid]: https://godoc.org/github.com/threefoldtech/rivine/types#BlockID
 
 ### Binary Encoding of v1 Transactions
 
@@ -1250,7 +1250,7 @@ Such condition is to be fulfilled in 2 parts:
 + If the first part has been fulfilled, the internal condition has to be fulfilled explicitly, by giving a fulfillment which is able to fulfill the internal condition, which is part of the TimeLockCondition and encoded as the very last thing;
 
 The constant which defines whether a LockTime is a Block Height or a Unix Epoch Timestamp in seconds,
-is `LockTimeMinTimestampValue` and is documented in <https://godoc.org/github.com/rivine/rivine/types#pkg-constants>.
+is `LockTimeMinTimestampValue` and is documented in <https://godoc.org/github.com/threefoldtech/rivine/types#pkg-constants>.
 
 ##### Binary Encoding of a MultiSignatureCondition
 

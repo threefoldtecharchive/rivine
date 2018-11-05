@@ -81,7 +81,7 @@ func TestUnitValidateBlock(t *testing.T) {
 }
 
 // TestCheckMinerPayouts probes the checkMinerPayouts function.
-// TODO: CalculateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
+// TODO: CalculateCoinbase has been removed in https://github.com/threefoldtech/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestCheckMinerPayouts(t *testing.T) {
 	// All tests are done at height = 0.
 	coinbase := types.CalculateCoinbase(0)
@@ -141,7 +141,7 @@ func TestCheckMinerPayouts(t *testing.T) {
 }
 
 // TestCheckTarget probes the checkTarget function.
-// TODO: checkTarget has been reworked/implemented in https://github.com/rivine/rivine/commit/473885476ccbcc6c259fa55e3af2aa818fe26db6#diff-11da2ef0bd9f980ccd7eb9dd223b5d98
+// TODO: checkTarget has been reworked/implemented in https://github.com/threefoldtech/rivine/commit/473885476ccbcc6c259fa55e3af2aa818fe26db6#diff-11da2ef0bd9f980ccd7eb9dd223b5d98
 func TestCheckTarget(t *testing.T) {
 	var b types.Block
 	lowTarget := types.RootDepth

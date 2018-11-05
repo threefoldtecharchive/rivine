@@ -11,7 +11,7 @@ import (
 
 // TestBlockHeader checks that BlockHeader returns the correct value, and that
 // the hash is consistent with the old method for obtaining the hash.
-// TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
+// TODO: Nonce has been removed in favour of POBS: https://github.com/threefoldtech/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
 func TestBlockHeader(t *testing.T) {
 	var b Block
 	b.ParentID[1] = 1
@@ -82,8 +82,8 @@ func TestBlockID(t *testing.T) {
 }
 
 // TestHeaderID probes the ID function of the BlockHeader type.
-// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
-// TODO: Nonce has been removed in favour of POBS: https://github.com/rivine/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
+// TODO: CaluclateCoinbase has been removed in https://github.com/threefoldtech/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
+// TODO: Nonce has been removed in favour of POBS: https://github.com/threefoldtech/rivine/commit/8bac48bb38776bbef9ef22956c3b9ae301e25334#diff-fd289e47592d409909487becb9d38925
 func TestHeaderID(t *testing.T) {
 	cts := TestnetChainConstants()
 
@@ -190,7 +190,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 }
 
 // TestBlockMinerPayoutID probes the MinerPayout function of the block type.
-// TODO: CaluclateCoinbase has been removed in https://github.com/rivine/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
+// TODO: CaluclateCoinbase has been removed in https://github.com/threefoldtech/rivine/commit/8675b2afff5f200fe6c7d3fca7c21811e65f446a#diff-fd289e47592d409909487becb9d38925
 func TestBlockMinerPayoutID(t *testing.T) {
 	cts := TestnetChainConstants()
 
@@ -241,7 +241,7 @@ func TestBlockEncoding(t *testing.T) {
 }
 
 // TestBlockIDAfterFixForBug302 ensures that the block ID is correct after all the condition/fulfillment changes
-// part of issue https://github.com/rivine/rivine/issues/302
+// part of issue https://github.com/threefoldtech/rivine/issues/302
 func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 	hbs := func(str string) []byte { // hexStr -> byte slice
 		bs, err := hex.DecodeString(str)

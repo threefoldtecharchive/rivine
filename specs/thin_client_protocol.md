@@ -20,5 +20,5 @@ Another problem consists of packet storms, coming from clients trying to reconne
 
  Instead of reinventing the wheel, The [electrum protocol](https://electrumx.readthedocs.io/en/latest/protocol.html) can be implemented.
 
- Issues: https://github.com/rivine/rivine/issues/385
+ Issues: https://github.com/threefoldtech/rivine/issues/385
 

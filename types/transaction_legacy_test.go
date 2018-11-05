@@ -377,7 +377,7 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 // generated for input's fulfillments, are 100% compatible
 // with the signatures computed in older versions, for
 // transaction v0 (legacy) input(s) (locks).
-// Added as part of https://github.com/rivine/rivine/issues/312
+// Added as part of https://github.com/threefoldtech/rivine/issues/312
 func TestLegacyTransactionSignatures(t *testing.T) {
 	// utility funcs
 	hbs := func(str string) []byte { // hexStr -> byte slice

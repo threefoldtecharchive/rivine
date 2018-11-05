@@ -19,8 +19,8 @@ It can take minutes for a trade to complete.
 the atomic swap tools should be able to use thin clients. Rivine currently has no commandline thin client. For bitcoin, we could use [Electrum](https://electrum.org/).
 
 Issues:
-- Commandline Rivine thin client: https://github.com/rivine/rivine/issues/378
--  Btc atomicSwap for Electrum thin client: https://github.com/rivine/rivine/issues/379
+- Commandline Rivine thin client: https://github.com/threefoldtech/rivine/issues/378
+-  Btc atomicSwap for Electrum thin client: https://github.com/threefoldtech/rivine/issues/379
 
 This would prove the concept, thin client support for other currencies would be trivial after this and can be done in a second phase..
 

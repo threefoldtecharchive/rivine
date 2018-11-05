@@ -1,9 +1,9 @@
 FROM golang:1.9
-MAINTAINER rivine.io
+MAINTAINER  threefold.tech
 
 ENV CGO_ENABLED 0
-COPY . /go/src/github.com/rivine/rivine
-WORKDIR /go/src/github.com/rivine/rivine
+COPY . /go/src/github.com/threefoldtech/rivine
+WORKDIR /go/src/github.com/threefoldtech/rivine
 
 EXPOSE 23110 23112
 

@@ -115,7 +115,7 @@ Where the binary encoded layout of a public key is as follows:
 > as the `NewPubKeyUnlockHash` function in [/types/unlockhash.go](/types/unlockhash.go).
 >
 > Documentation of this function, and reference to its source,
-> is available at <https://godoc.org/github.com/rivine/rivine/types#NewPubKeyUnlockHash>.
+> is available at <https://godoc.org/github.com/threefoldtech/rivine/types#NewPubKeyUnlockHash>.
 
 #### Atomic Swap Unlock Hash
 
@@ -143,7 +143,7 @@ Where the binary encoded layout of an atomic swap's condition is as follows:
 > as the `AtomicSwapCondition`'s `UnlockHash` method in [/types/unlockcondition.go](/types/unlockcondition.go).
 >
 > Documentation of this function, and reference to its source,
-> is available at <https://godoc.org/github.com/rivine/rivine/types#AtomicSwapCondition.UnlockHash>.
+> is available at <https://godoc.org/github.com/threefoldtech/rivine/types#AtomicSwapCondition.UnlockHash>.
 
 #### MultiSignature Unlock Hash
 
@@ -168,7 +168,7 @@ The MinimumSignatureCount property is encoded the same way (as the unlockhashes 
 > as the `MultiSignatureCondition`'s `UnlockHash` method in [/types/unlockcondition.go](/types/unlockcondition.go).
 >
 > Documentation of this function, and reference to its source,
-> is available at <https://godoc.org/github.com/rivine/rivine/types#MultiSignatureCondition.UnlockHash>.
+> is available at <https://godoc.org/github.com/threefoldtech/rivine/types#MultiSignatureCondition.UnlockHash>.
 >
 > The Rivine Golang reference implementation uses
 > <https://github.com/NebulousLabs/merkletree> in order to compute root hashes of merkle trees,

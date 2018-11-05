@@ -1,8 +1,8 @@
 FROM golang:1.11
-MAINTAINER rivine.io
+MAINTAINER threefold.tech
 
 ENV CGO_ENABLED 0
-WORKDIR /go/src/github.com/rivine/rivine
+WORKDIR /go/src/github.com/threefoldtech/rivine
 
 RUN apt-get update && apt-get install -y zip
 

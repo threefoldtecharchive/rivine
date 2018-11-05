@@ -17,13 +17,13 @@ what primitives are made available to each module.
 
 ## Persist Utilities
 
-In the [`/persist`](https://godoc.org/github.com/rivine/rivine/persist) package one can find
+In the [`/persist`](https://godoc.org/github.com/threefoldtech/rivine/persist) package one can find
 common utilities used by the different daemon modules in order to store data to persistent memory.
 
 In it you'll find:
 
-* functions to [Load](https://godoc.org/github.com/rivine/rivine/persist#LoadJSON) and
-  [Save](https://godoc.org/github.com/rivine/rivine/persist#SaveJSON) JSON files;
+* functions to [Load](https://godoc.org/github.com/threefoldtech/rivine/persist#LoadJSON) and
+  [Save](https://godoc.org/github.com/threefoldtech/rivine/persist#SaveJSON) JSON files;
   * Note that prior to writing the given JSON object it will write out 3 lines, each containing a JSON-encoded string:
     1. Metadata header;
     2. Metadata version (the version the persistent data stored in that file changed last,
@@ -33,16 +33,16 @@ In it you'll find:
   * as a result the file content, taken as a whole, is not a valid JSON object,
     but rather a collection of four valid JSON objects
     (one per line for the first 3 objects, and the rest of the lines for the fourth object).
-* [the Logger struct type](https://godoc.org/github.com/rivine/rivine/persist#Logger) type
+* [the Logger struct type](https://godoc.org/github.com/threefoldtech/rivine/persist#Logger) type
   (using the [std Logger type](https://godoc.org/log#Logger)
   with an [OS file](https://godoc.org/os#File) as the [Writer](https://godoc.org/io#Writer)),
   used by all modules for logging purposes;
-* [the Metadata struct type](https://godoc.org/github.com/rivine/rivine/persist#Metadata),
+* [the Metadata struct type](https://godoc.org/github.com/threefoldtech/rivine/persist#Metadata),
   used by modules to store the Header (name) and Version of a module,
   useful to ensure version (backwards) compatibility;
-* [the BoltDatabase struct type](https://godoc.org/github.com/rivine/rivine/persist#BoltDatabase),
+* [the BoltDatabase struct type](https://godoc.org/github.com/threefoldtech/rivine/persist#BoltDatabase),
   wrapping around the default [bbolt.DB](https://godoc.org/github.com/rivine/bbolt#DB),
-  adding the default integration of [the earlier mentioned Metadata struct type](https://godoc.org/github.com/rivine/rivine/persist#Metadata), as a way to identify each DB file by a name and version;
+  adding the default integration of [the earlier mentioned Metadata struct type](https://godoc.org/github.com/threefoldtech/rivine/persist#Metadata), as a way to identify each DB file by a name and version;
 * some other tiny utility functions...
 
 ### Modules
@@ -52,7 +52,7 @@ Each module —defined in the Rivine library— stores data to persistent storag
 - it keeps track of the state, such that an instance can pick up where it left of last time it ran using that data;
 - it ensures that the entire state (based on the blockchain state) does not have to be kept in volatile memory.
 
-Most if this data is managed using [bbolt][bbolt], using our [wrapped `BoltDatabase` struct type](https://godoc.org/github.com/rivine/rivine/persist#BoltDatabase), but some modules might also choose
+Most if this data is managed using [bbolt][bbolt], using our [wrapped `BoltDatabase` struct type](https://godoc.org/github.com/threefoldtech/rivine/persist#BoltDatabase), but some modules might also choose
 to store data to persistent memory directly as a JSON-encoded OS file.
 
 When navigating through the files stored on your file system by a Rivine daemon
@@ -76,9 +76,9 @@ BlockCreatorDir Settings
 Used to keep track of its state and required when subscribing to the ConsensusSet.
 
 Contains:
-* `RecentChange`: the last known [`ConsensusChangeID`](https://godoc.org/github.com/rivine/rivine/modules#ConsensusChangeID);
-* `Height`: the last known [`BlockHeight`](https://godoc.org/github.com/rivine/rivine/types#BlockHeight);
-* `ParentID`: the last known ID of the parent (meaning the [`BlockID`](https://godoc.org/github.com/rivine/rivine/types#BlockHeight) of the block prior to the current Block);
+* `RecentChange`: the last known [`ConsensusChangeID`](https://godoc.org/github.com/threefoldtech/rivine/modules#ConsensusChangeID);
+* `Height`: the last known [`BlockHeight`](https://godoc.org/github.com/threefoldtech/rivine/types#BlockHeight);
+* `ParentID`: the last known ID of the parent (meaning the [`BlockID`](https://godoc.org/github.com/threefoldtech/rivine/types#BlockHeight) of the block prior to the current Block);
 
 > `blockcreator.log`
 
@@ -110,38 +110,38 @@ Contains:
   * information is also cached in volatile memory of a running consensus-enabled daemon;
 * bucket `"BlockMap"`:
   * used to map blocks to their
-    [identifier](https://godoc.org/github.com/rivine/rivine/types#BlockID),
-    storing the blocks themselves as [processed blocks](https://github.com/rivine/rivine/blob/master/modules/consensus/processedblock.go),
+    [identifier](https://godoc.org/github.com/threefoldtech/rivine/types#BlockID),
+    storing the blocks themselves as [processed blocks](https://github.com/threefoldtech/rivine/blob/master/modules/consensus/processedblock.go),
     a type which also stores the depth, height, child target and diffs alongside
-    [the block itself](https://godoc.org/github.com/rivine/rivine/types#Block);
+    [the block itself](https://godoc.org/github.com/threefoldtech/rivine/types#Block);
     * Note that this includes blocks that are not currently in the
       consensus set, and blocks that may not have been fully validated yet.
 * bucket `"BlockPath"`:
-  * maps all [block heights](https://godoc.org/github.com/rivine/rivine/types#BlockHeight) to
-    the [identifier of the block stored at that height](https://godoc.org/github.com/rivine/rivine/types#BlockID);
+  * maps all [block heights](https://godoc.org/github.com/threefoldtech/rivine/types#BlockHeight) to
+    the [identifier of the block stored at that height](https://godoc.org/github.com/threefoldtech/rivine/types#BlockID);
     * Note that this includes blocks only at the current path,
       meaning blocks for the according-to-this-consensus-longest (block) chain;
 * bucket `"Consistency"`:
   * a byte representing whether the ConsensusDB is inconsistent (1) or not (0);
   * used to ensure the data stored in this db can be trusted;
 * bucket `"CoinOutputs"`:
-  * stores all _unused_ [coin outputs](https://godoc.org/github.com/rivine/rivine/types#CoinOutput) using their
-    [coin output identifier](https://godoc.org/github.com/rivine/rivine/types#CoinOutputID);
+  * stores all _unused_ [coin outputs](https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutput) using their
+    [coin output identifier](https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutputID);
   * used to validate transactions that attempt to spend coin outputs;
 * bucket `"BlockStakeOutputs"`:
   * stores all _unused_
-    [block stake outputs](https://godoc.org/github.com/rivine/rivine/types#BlockStakeOutput) using their
-    [block stake output identifier](https://godoc.org/github.com/rivine/rivine/types#BlockStakeOutputID);
+    [block stake outputs](https://godoc.org/github.com/threefoldtech/rivine/types#BlockStakeOutput) using their
+    [block stake output identifier](https://godoc.org/github.com/threefoldtech/rivine/types#BlockStakeOutputID);
   * used to validate transactions that attempt to spend block stake outputs;
 * bucket `"TransactionIDMap"`:
-  * maps all [Tx short identifiers](https://godoc.org/github.com/rivine/rivine/types#TransactionShortID) to
-    their [regular Tx identifier](https://godoc.org/github.com/rivine/rivine/types#TransactionID);
+  * maps all [Tx short identifiers](https://godoc.org/github.com/threefoldtech/rivine/types#TransactionShortID) to
+    their [regular Tx identifier](https://godoc.org/github.com/threefoldtech/rivine/types#TransactionID);
   * used by other modules to be able to fetch a Tx using its (unique) short identifier;
 * bucket `"dco_<height>"`:
     * used to keep track of all delayed coin outputs;
-    * stores all _delayed_ [coin outputs](https://godoc.org/github.com/rivine/rivine/types#CoinOutput)
-      on [the block height](https://godoc.org/github.com/rivine/rivine/types#BlockHeight)
-      as identified by the bucket using their [coin output identifier](https://godoc.org/github.com/rivine/rivine/types#CoinOutputID);
+    * stores all _delayed_ [coin outputs](https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutput)
+      on [the block height](https://godoc.org/github.com/threefoldtech/rivine/types#BlockHeight)
+      as identified by the bucket using their [coin output identifier](https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutputID);
 
 > `consensus.log`
 
@@ -168,29 +168,29 @@ allowing it to swiftly return any requested blockchain-data, directly from disk.
 
 Contains:
 * bucket `"BlockFacts"`:
-  * maps all [block identifiers](https://godoc.org/github.com/rivine/rivine/types#BlockID) to
-    their [facts (a bunch of statistics about the consensus set as they were at a specific block)](https://godoc.org/github.com/rivine/rivine/modules#BlockFacts);
+  * maps all [block identifiers](https://godoc.org/github.com/threefoldtech/rivine/types#BlockID) to
+    their [facts (a bunch of statistics about the consensus set as they were at a specific block)](https://godoc.org/github.com/threefoldtech/rivine/modules#BlockFacts);
 * bucket `"BlocksDifficulty"`: no longer used;
 * bucket `"BlockTargets"`:
-  * maps all [block identifiers](https://godoc.org/github.com/rivine/rivine/types#BlockID) to
-    their [block targets](https://godoc.org/github.com/rivine/rivine/types#Target);
+  * maps all [block identifiers](https://godoc.org/github.com/threefoldtech/rivine/types#BlockID) to
+    their [block targets](https://godoc.org/github.com/threefoldtech/rivine/types#Target);
 * bucket `"Internal"`: stores the internal state of the Explorer Module:
   * `BlockHeight`: the last known block height;
   * `RecentChange`: used to store the last known
-    [`ConsensusChangeID`](https://godoc.org/github.com/rivine/rivine/modules#ConsensusChangeID),
+    [`ConsensusChangeID`](https://godoc.org/github.com/threefoldtech/rivine/modules#ConsensusChangeID),
     needed for subscribing to the ConsensusSet;
 * bucket `"CoinOutputIDs"`:
-  * maps all [coin output identifiers](https://godoc.org/github.com/rivine/rivine/types#CoinOutputID) to
-    the [identifier of the transaction they are part of](https://godoc.org/github.com/rivine/rivine/types#TransactionID);
+  * maps all [coin output identifiers](https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutputID) to
+    the [identifier of the transaction they are part of](https://godoc.org/github.com/threefoldtech/rivine/types#TransactionID);
 * bucket `"CoinOutputs"`:
-  * stores all [coin outputs](https://godoc.org/github.com/rivine/rivine/types#CoinOutput) using their
-    [coin output identifier](https://godoc.org/github.com/rivine/rivine/types#CoinOutputID);
+  * stores all [coin outputs](https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutput) using their
+    [coin output identifier](https://godoc.org/github.com/threefoldtech/rivine/types#CoinOutputID);
 * bucket `"BlockStakeOutputIDs"`:
-  * maps all [block stake output identifiers](https://godoc.org/github.com/rivine/rivine/types#BlockStakeOutputID) to
-    the [identifier of the transaction they are part of](https://godoc.org/github.com/rivine/rivine/types#TransactionID);
+  * maps all [block stake output identifiers](https://godoc.org/github.com/threefoldtech/rivine/types#BlockStakeOutputID) to
+    the [identifier of the transaction they are part of](https://godoc.org/github.com/threefoldtech/rivine/types#TransactionID);
 * bucket `"TransactionIDs"`:
-  * maps all [transaction identifiers](https://godoc.org/github.com/rivine/rivine/types#TransactionID) to
-    the [height of the block they are part of](https://godoc.org/github.com/rivine/rivine/types#BlockHeight);
+  * maps all [transaction identifiers](https://godoc.org/github.com/threefoldtech/rivine/types#TransactionID) to
+    the [height of the block they are part of](https://godoc.org/github.com/threefoldtech/rivine/types#BlockHeight);
 * bucket `"UnlockHashes"`:
   * contains a bucket for each unlock hash (e.g. wallet addresses, contracts, ...);
   * each internal bucket contains all transaction identifiers the unlock hash is referenced by;
@@ -252,7 +252,7 @@ Contains:
 * bucket `"ConfirmedTransactions"`: contains the identifiers of all confirmed transactions
   (confirmed as in part of a block created on the blockchain);
 * bucket `"RecentConsensusChange"`: used to store the last known
-  [`ConsensusChangeID`](https://godoc.org/github.com/rivine/rivine/modules#ConsensusChangeID),
+  [`ConsensusChangeID`](https://godoc.org/github.com/threefoldtech/rivine/modules#ConsensusChangeID),
   needed for subscribing to the ConsensusSet;
 
 #### Wallet
@@ -279,12 +279,12 @@ Contains:
 * `PrimarySeedProgress`: progress counter, identifying how many keys have already been generated for the primary seed, within this wallet;
 * `AuxiliarySeedFiles`: extra (non-primary) seeds, loaded using the `wallet load` command or REST API;
 * `UnseededKeys`: currently not supported by Rivine and always `null`
-  (an issue is open about this: <https://github.com/rivine/rivine/issues/159>).
+  (an issue is open about this: <https://github.com/threefoldtech/rivine/issues/159>).
 
 > Currently the Seed is always encrypted, using the key defined when creating the daemon-hosted wallet,
 > there are however plans to supported unencrypted wallets, meaning the seed would also be stored
 > unencrypted. This is a feature that should be used in secure and isolated environments only.
-> See <https://github.com/rivine/rivine/issues/345> for more information.
+> See <https://github.com/threefoldtech/rivine/issues/345> for more information.
 
 > `<chain_name> Wallet Encrypted Backup Seed - <crypto_random_suffix>.seed`
 
@@ -303,7 +303,7 @@ Contains:
 > Currently the Seed is always encrypted, using the key defined when creating the daemon-hosted wallet,
 > there are however plans to supported unencrypted wallets, meaning the seed would also be stored
 > unencrypted. This is a feature that should be used in secure and isolated environments only.
-> See <https://github.com/rivine/rivine/issues/345> for more information.
+> See <https://github.com/threefoldtech/rivine/issues/345> for more information.
 
 > `wallet.log`
 
