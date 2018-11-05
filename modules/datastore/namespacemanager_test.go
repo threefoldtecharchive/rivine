@@ -3,7 +3,7 @@ package datastore
 import (
 	"testing"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 func TestSerialize(t *testing.T) {

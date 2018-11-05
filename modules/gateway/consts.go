@@ -3,7 +3,7 @@ package gateway
 import (
 	"time"
 
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 const (

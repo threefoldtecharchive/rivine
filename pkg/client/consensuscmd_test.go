@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // TestEstimatedHeightAt tests that the expectedHeightAt function correctly

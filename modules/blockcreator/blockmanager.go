@@ -1,8 +1,8 @@
 package blockcreator
 
 import (
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // submitBlock accepts a block.

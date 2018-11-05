@@ -12,8 +12,8 @@ import (
 
 	"github.com/NebulousLabs/go-upnp"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/modules"
 )
 
 // myExternalIP discovers the gateway's external IP by querying a centralized

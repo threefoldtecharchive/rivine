@@ -4,9 +4,9 @@ package consensus
 // There is an assumption that the transaction has already been verified.
 
 import (
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
 )

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 func Test_parseData(t *testing.T) {

@@ -1,6 +1,6 @@
 package datastore
 
-import "github.com/rivine/rivine/types"
+import "github.com/threefoldtech/rivine/types"
 
 // The actions which can be passed through a channel
 const (

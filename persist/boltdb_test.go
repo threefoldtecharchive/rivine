@@ -9,7 +9,7 @@ import (
 
 	"github.com/NebulousLabs/fastrand"
 	"github.com/rivine/bbolt"
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // testInputs and testFilenames are global variables because most tests require

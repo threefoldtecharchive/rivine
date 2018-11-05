@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // TestDateOnlyLayout tests that our custom DateOnly timestamp Layout

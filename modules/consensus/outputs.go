@@ -2,7 +2,7 @@ package consensus
 
 import (
 	bolt "github.com/rivine/bbolt"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // GetCoinOutput returns the unspent coin output for the given ID

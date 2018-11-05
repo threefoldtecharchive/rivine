@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 // unlockhash.go contains the unlockhash alias along with usability methods

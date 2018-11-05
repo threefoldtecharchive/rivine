@@ -6,7 +6,7 @@ set -e
 #  + integrate gitian (https://gitian.org/)?
 
 # version is supplied as argument
-package="github.com/rivine/rivine"
+package="github.com/threefoldtech/rivine"
 
 
 version="$(git describe | cut -d '-' -f 1)"

@@ -3,9 +3,9 @@ package transactionpool
 import (
 	"fmt"
 
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // ValidateTransactionSet validates that all transacitons of a set follow the

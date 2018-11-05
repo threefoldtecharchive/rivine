@@ -3,11 +3,11 @@ package consensus
 import (
 	"math/big"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
 )

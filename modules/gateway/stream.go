@@ -3,7 +3,7 @@ package gateway
 import (
 	"net"
 
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/rivine/smux"
 )
 

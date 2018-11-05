@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/modules"
 )
 
 // peerConn is a simple type that implements the modules.PeerConn interface.

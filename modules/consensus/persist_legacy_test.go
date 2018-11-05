@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 func TestDecodeLegacyProcessedBlock(t *testing.T) {

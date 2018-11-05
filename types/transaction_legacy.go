@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 // legacy transaction-related types,

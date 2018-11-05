@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // TestLogger checks that the basic functions of the file logger work as

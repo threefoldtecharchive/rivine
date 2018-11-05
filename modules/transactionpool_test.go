@@ -3,8 +3,8 @@ package modules
 import (
 	"testing"
 
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // TestConsensusConflict checks that the consensus conflict type is correctly

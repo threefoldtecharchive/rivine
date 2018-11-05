@@ -7,8 +7,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
 )
 
 type (

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
 )
 
 // TestIpRPC tests the ip discovery RPC.

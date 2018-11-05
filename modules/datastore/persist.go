@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/rivine/rivine/persist"
+	"github.com/threefoldtech/rivine/persist"
 )
 
 const (

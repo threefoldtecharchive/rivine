@@ -4,9 +4,9 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // TestSendCoins probes the SendCoins method of the wallet.

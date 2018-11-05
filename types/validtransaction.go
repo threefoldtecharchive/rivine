@@ -8,7 +8,7 @@ package types
 import (
 	"errors"
 
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 // various errors that can be returned as result of a specific transaction validation

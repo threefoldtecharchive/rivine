@@ -8,11 +8,11 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/pkg/api"
-	"github.com/rivine/rivine/pkg/cli"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/api"
+	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/types"
 	"github.com/spf13/cobra"
 )
 

@@ -4,8 +4,8 @@ package consensus
 // import (
 // 	"testing"
 //
-// 	"github.com/rivine/rivine/modules"
-// 	"github.com/rivine/rivine/types"
+// 	"github.com/threefoldtech/rivine/modules"
+// 	"github.com/threefoldtech/rivine/types"
 // )
 //
 // // reorgSets contains multiple consensus sets that share a genesis block, which

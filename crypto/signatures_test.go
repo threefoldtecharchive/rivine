@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 // TestUnitSignatureEncoding creates and encodes a public key, and verifies

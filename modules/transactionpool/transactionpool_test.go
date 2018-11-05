@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/modules/consensus"
-	"github.com/rivine/rivine/modules/gateway"
-	"github.com/rivine/rivine/modules/wallet"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/modules/consensus"
+	"github.com/threefoldtech/rivine/modules/gateway"
+	"github.com/threefoldtech/rivine/modules/wallet"
 )
 
 // A tpoolTester is used during testing to initialize a transaction pool and

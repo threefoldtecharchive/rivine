@@ -3,8 +3,8 @@ package consensus
 import (
 	"sort"
 
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // blockRuleHelper assists with block validity checks by calculating values

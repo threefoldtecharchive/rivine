@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 const (

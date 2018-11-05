@@ -10,7 +10,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/crypto"
 )
 
 // ChainConstants is a utility struct which groups together the chain configuration

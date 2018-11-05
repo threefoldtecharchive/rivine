@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/rivine/rivine/crypto"
+	"github.com/threefoldtech/rivine/crypto"
 )
 
 // TestTargetAdd probes the Add function of the target type.

@@ -5,8 +5,8 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/rivine/rivine/pkg/api"
-	"github.com/rivine/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/pkg/api"
+	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/spf13/cobra"
 )
 

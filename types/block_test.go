@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/rivine/rivine/crypto"
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 // TestBlockHeader checks that BlockHeader returns the correct value, and that

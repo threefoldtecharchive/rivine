@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rivine/rivine/build"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // TestThreadGroupStopEarly tests that a thread group can correctly interrupt

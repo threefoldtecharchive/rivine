@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/rivine/rivine/encoding"
+	"github.com/threefoldtech/rivine/encoding"
 )
 
 // BenchmarkEncodeEmptyBlock benchmarks encoding an empty block.

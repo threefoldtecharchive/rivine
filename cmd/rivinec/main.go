@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/pkg/cli"
-	"github.com/rivine/rivine/pkg/client"
-	"github.com/rivine/rivine/pkg/daemon"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/pkg/client"
+	"github.com/threefoldtech/rivine/pkg/daemon"
+	"github.com/threefoldtech/rivine/types"
 )
 
 func main() {

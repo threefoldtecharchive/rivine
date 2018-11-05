@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // TestArbDataOnly tries submitting a transaction with only arbitrary data to

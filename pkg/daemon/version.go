@@ -1,6 +1,6 @@
 package daemon
 
-import "github.com/rivine/rivine/build"
+import "github.com/threefoldtech/rivine/build"
 
 // Version defines the version of a daemon.
 type Version struct {

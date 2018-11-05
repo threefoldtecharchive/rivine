@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/bgentry/speakeasy"
-	"github.com/rivine/rivine/pkg/cli"
-	"github.com/rivine/rivine/pkg/daemon"
+	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/pkg/daemon"
 	"github.com/spf13/cobra"
 )
 

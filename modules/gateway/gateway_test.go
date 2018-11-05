@@ -9,10 +9,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/rivine/rivine/build"
-	"github.com/rivine/rivine/modules"
-	siasync "github.com/rivine/rivine/sync"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/modules"
+	siasync "github.com/threefoldtech/rivine/sync"
+	"github.com/threefoldtech/rivine/types"
 )
 
 // newTestingGateway returns a gateway ready to use in a testing environment.

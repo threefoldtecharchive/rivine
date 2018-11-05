@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rivine/rivine/pkg/cli"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/types"
 	"github.com/spf13/cobra"
 )
 

@@ -9,11 +9,11 @@ package consensus
 import (
 	"errors"
 
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/modules"
-	"github.com/rivine/rivine/persist"
-	"github.com/rivine/rivine/sync"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/sync"
+	"github.com/threefoldtech/rivine/types"
 
 	"github.com/NebulousLabs/demotemutex"
 	"github.com/rivine/bbolt"

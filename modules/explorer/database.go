@@ -3,8 +3,8 @@ package explorer
 import (
 	"errors"
 
-	"github.com/rivine/rivine/encoding"
-	"github.com/rivine/rivine/types"
+	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
 )
