@@ -72,12 +72,6 @@ func getBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// transfers, err := client.ERC20Transfers(&contractAddres, nil, nil, nil, 0, 0)
-	// if err != nil {
-	// 	w.WriteHeader(http.StatusBadRequest)
-	// 	return
-	// }
-
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(balance)
 }

@@ -22,7 +22,8 @@ export default {
   data: function() {
       return {
         balance: 0,
-        address: ''
+        address: '',
+        interval: null
       }
   },
   filters: {
@@ -34,8 +35,14 @@ export default {
   },
   methods: {
       getBalance: function() {
+          if (this.interval) {
+              clearInterval(this.interval);
+              this.interval = null;
+          }
           var url = '/tokenbalance?address=' + this.address + '&contractaddress=' + this.contractAddr;
-          axios.get(url).then(response => (this.balance = response.data))
+          axios.get(url).then(response => (this.balance = response.data));
+          // repeat check every second
+          this.interval = setInterval(() => {axios.get(url).then(response => this.balance = response.data)}, 1000);
       }
   }
 };

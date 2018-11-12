@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <TokenBalance name="ERC20-TTFT" contract-addr="0xe392e4dadeef43f326370d9e9b9f4990bf2636f5" />
+    <TokenBalance name="TTFT20" contract-addr="0xd4466DAb724DD9Dc860e08E48a78D20e75361A25" />
   </div>
 </template>
 
