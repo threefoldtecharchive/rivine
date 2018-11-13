@@ -3,6 +3,11 @@
 This is a demo application showing the erc20 (T)TFT to regular (T)TFT conversion. Right now the page
 is only able to show the balance of an address.
 
+## Contract
+
+A test contract has been deployed on the [Rinkeby testnet](https://rinkeby.etherscan.io/). The contract source can
+be found in [testcontract.sol](testcontract.sol).
+
 ## Running
 
 If you want to run this example yourself, simply build the example (`go build`), and run the produced binary
@@ -18,5 +23,5 @@ set as an environment variable.
 
 ## Development
 
-The webpage uses [vue.js](https://vuejs.org). Local development requieres `vue cli` for some necessary tools.
+The webpage uses [vue.js](https://vuejs.org). Local development requires `vue cli` for some necessary tools.
 Further explanation on the web development process can be found on the official vue docs.
