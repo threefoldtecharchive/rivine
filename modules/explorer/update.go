@@ -78,6 +78,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
 					dbRemoveBlockStakeOutputID(tx, sfoid, txid)
+					dbRemoveBlockStakeOutput(tx, sfoid)
 					unmapUnlockConditionHash(tx, sfo.Condition, txid)
 				}
 			}
@@ -126,23 +127,25 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				txid := txn.ID()
 				dbAddTransactionID(tx, txid, blockheight)
 
+				for j, sco := range txn.CoinOutputs {
+					scoid := txn.CoinOutputID(uint64(j))
+					dbAddCoinOutputID(tx, scoid, txid)
+					dbAddCoinOutput(tx, scoid, sco)
+					mapUnlockConditionHash(tx, sco.Condition, txid)
+				}
 				for _, sci := range txn.CoinInputs {
 					dbAddCoinOutputID(tx, sci.ParentID, txid)
 					mapParentUnlockConditionHash(tx, sci.ParentID, txid)
 				}
-				for j, sco := range txn.CoinOutputs {
-					scoid := txn.CoinOutputID(uint64(j))
-					dbAddCoinOutputID(tx, scoid, txid)
-					mapUnlockConditionHash(tx, sco.Condition, txid)
+				for k, sfo := range txn.BlockStakeOutputs {
+					sfoid := txn.BlockStakeOutputID(uint64(k))
+					dbAddBlockStakeOutputID(tx, sfoid, txid)
+					dbAddBlockStakeOutput(tx, sfoid, sfo)
+					mapUnlockConditionHash(tx, sfo.Condition, txid)
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
 					mapParentUnlockConditionHash(tx, sfi.ParentID, txid)
-				}
-				for k, sfo := range txn.BlockStakeOutputs {
-					sfoid := txn.BlockStakeOutputID(uint64(k))
-					dbAddBlockStakeOutputID(tx, sfoid, txid)
-					mapUnlockConditionHash(tx, sfo.Condition, txid)
 				}
 			}
 
@@ -150,20 +153,6 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			if tx.Bucket(bucketBlockFacts).Get(encoding.Marshal(block.ParentID)) != nil {
 				facts := e.dbCalculateBlockFacts(tx, block)
 				dbAddBlockFacts(tx, facts)
-			}
-		}
-
-		// Update stats according to CoinOutputDiffs
-		for _, scod := range cc.CoinOutputDiffs {
-			if scod.Direction == modules.DiffApply {
-				dbAddCoinOutput(tx, scod.ID, scod.CoinOutput)
-			}
-		}
-
-		// Update stats according to BlockStakeOutputDiffs
-		for _, sfod := range cc.BlockStakeOutputDiffs {
-			if sfod.Direction == modules.DiffApply {
-				dbAddBlockStakeOutput(tx, sfod.ID, sfod.BlockStakeOutput)
 			}
 		}
 
