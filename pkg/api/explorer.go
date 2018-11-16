@@ -56,6 +56,18 @@ type (
 // BuildExplorerTransaction takes a transaction and the height + id of the
 // block it appears in an uses that to build an explorer transaction.
 func BuildExplorerTransaction(explorer modules.Explorer, height types.BlockHeight, parent types.BlockID, txn types.Transaction) (et ExplorerTransaction) {
+	spentCoinOutputs := map[types.CoinOutputID]types.CoinOutput{}
+	for _, sci := range txn.CoinInputs {
+		sco, exists := explorer.CoinOutput(sci.ParentID)
+		if build.DEBUG && !exists {
+			panic("could not find corresponding coin output")
+		}
+		spentCoinOutputs[sci.ParentID] = sco
+	}
+	return buildExplorerTransactionWithMappedCoinOutputs(explorer, height, parent, txn, spentCoinOutputs)
+}
+
+func buildExplorerTransactionWithMappedCoinOutputs(explorer modules.Explorer, height types.BlockHeight, parent types.BlockID, txn types.Transaction, spentCoinOutputs map[types.CoinOutputID]types.CoinOutput) (et ExplorerTransaction) {
 	// Get the header information for the transaction.
 	et.ID = txn.ID()
 	et.Height = height
@@ -64,8 +76,8 @@ func BuildExplorerTransaction(explorer modules.Explorer, height types.BlockHeigh
 
 	// Add the siacoin outputs that correspond with each siacoin input.
 	for _, sci := range txn.CoinInputs {
-		sco, exists := explorer.CoinOutput(sci.ParentID)
-		if build.DEBUG && !exists {
+		sco, ok := spentCoinOutputs[sci.ParentID]
+		if build.DEBUG && !ok {
 			panic("could not find corresponding coin output")
 		}
 		et.CoinInputOutputs = append(et.CoinInputOutputs, ExplorerCoinOutput{
@@ -438,6 +450,14 @@ func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.Transac
 	}
 	relatedTxns := []types.Transaction{}
 	unconfirmedTxns := tpool.TransactionList()
+	// make a list of potential unspend coin outputs
+	potentiallySpentCoinOutputs := map[types.CoinOutputID]types.CoinOutput{}
+	for _, txn := range unconfirmedTxns {
+		for idx, sco := range txn.CoinOutputs {
+			potentiallySpentCoinOutputs[txn.CoinOutputID(uint64(idx))] = sco
+		}
+	}
+	// go through all unconfirmed transactions
 	for _, txn := range unconfirmedTxns {
 		related := false
 		// Check if any coin output is related to the hash we currently have
@@ -464,6 +484,14 @@ func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.Transac
 		}
 		// Check the coin inputs
 		for _, ci := range txn.CoinInputs {
+			// check if related to an unconfirmed coin output
+			if sco, ok := potentiallySpentCoinOutputs[ci.ParentID]; ok && sco.Condition.UnlockHash() == addr {
+				// mark related, add tx and stop this coin input loop
+				related = true
+				relatedTxns = append(relatedTxns, txn)
+				break
+			}
+			// check if related to a confirmed coin output
 			co, _ := explorer.CoinOutput(ci.ParentID)
 			if co.Condition.UnlockHash() == addr {
 				related = true
@@ -486,7 +514,22 @@ func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.Transac
 	}
 	explorerTxns := make([]ExplorerTransaction, len(relatedTxns))
 	for i := range relatedTxns {
-		explorerTxns[i] = BuildExplorerTransaction(explorer, 0, types.BlockID{}, relatedTxns[i])
+		relatedTxn := relatedTxns[i]
+		spentCoinOutputs := map[types.CoinOutputID]types.CoinOutput{}
+		for _, sci := range relatedTxn.CoinInputs {
+			// add unconfirmed coin output
+			if sco, ok := potentiallySpentCoinOutputs[sci.ParentID]; ok {
+				spentCoinOutputs[sci.ParentID] = sco
+				continue
+			}
+			// add confirmed coin output
+			sco, exists := explorer.CoinOutput(sci.ParentID)
+			if build.DEBUG && !exists {
+				panic("could not find corresponding coin output")
+			}
+			spentCoinOutputs[sci.ParentID] = sco
+		}
+		explorerTxns[i] = buildExplorerTransactionWithMappedCoinOutputs(explorer, 0, types.BlockID{}, relatedTxn, spentCoinOutputs)
 		explorerTxns[i].Unconfirmed = true
 	}
 	return explorerTxns
