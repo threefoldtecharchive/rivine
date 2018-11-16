@@ -960,7 +960,7 @@ Blocks have no version, instead a block always has a fixed format, no matter the
 
 ### Binary Encoding of Types
 
-The encoding of Primitive types is explained in full in [/doc/Encoding.md](/doc/Encoding.md).
+The encoding of Primitive types is explained in full in [/doc/encoding/SiaEncoding.md](/doc/encoding/SiaEncoding.md).
 With Primitive Types we mean integers, booleans, strings, arrays, slices and structures.
 In order to save you some time, it can however be summarized as:
 
@@ -973,9 +973,9 @@ In order to save you some time, it can however be summarized as:
 + Slices (dynamic arrays) are encoded the same way as Arrays, except that they're prefixed with a 64-bit signed integer indicating the length of the slice;
 + Structures are encoded by encoding the public properties one by one, in the order as defined;
 
-The only exception to these rules (when using the Rivine Go Library) is if a type implements [the `SiaMarshaler` interface](https://godoc.org/github.com/threefoldtech/rivine/encoding#SiaMarshaler), it is encoded using the custom defined logic.
+The only exception to these rules (when using the Rivine Go Library) is if a type implements [the `SiaMarshaler` interface](https://godoc.org/github.com/threefoldtech/rivine/pkg/encoding/siabin#SiaMarshaler), it is encoded using the custom defined logic.
 
-When decoding binary encoded data, it is assumed that you know the structure, and it will use your provided value's type in order to know how to decode it. The exception to this rule again (when using the Rivine Go Library) is that if the given value's type implements [the `SiaUnmarshaler` interface](https://godoc.org/github.com/threefoldtech/rivine/encoding#SiaUnmarshaler), it is decoded using the custom defined logic.
+When decoding binary encoded data, it is assumed that you know the structure, and it will use your provided value's type in order to know how to decode it. The exception to this rule again (when using the Rivine Go Library) is that if the given value's type implements [the `SiaUnmarshaler` interface](https://godoc.org/github.com/threefoldtech/rivine/pkg/encoding/siabin#SiaUnmarshaler), it is decoded using the custom defined logic.
 
 When you know these rules (and exceptions) it should be trivial to deduce how any given type is encoded,
 given that you know how the type is defined and which interfaces it implements.

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/errors"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // discoverPeerIP is the handler for the discoverPeer RPC. It returns the
@@ -18,7 +18,7 @@ func (g *Gateway) discoverPeerIP(conn modules.PeerConn) error {
 	if err != nil {
 		return errors.AddContext(err, "failed to split host from port")
 	}
-	return encoding.WriteObject(conn, host)
+	return siabin.WriteObject(conn, host)
 }
 
 // managedIPFromPeers asks the peers the node is connected to for the node's
@@ -48,7 +48,7 @@ func (g *Gateway) managedIPFromPeers() (string, error) {
 		for _, peer := range peers {
 			go g.RPC(peer.NetAddress, "DiscoverIP", func(conn modules.PeerConn) error {
 				var address string
-				err := encoding.ReadObject(conn, &address, 100)
+				err := siabin.ReadObject(conn, &address, 100)
 				if err != nil {
 					returnChan <- ""
 					g.log.Debugf("DEBUG: failed to receive ip address: %v", err)

@@ -11,8 +11,8 @@ import (
 
 	"github.com/NebulousLabs/fastrand"
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -933,14 +933,14 @@ func legacyConnectHandshake(conn net.Conn, version build.ProtocolVersion) (remot
 	rand.Read(ours.UniqueID[:])
 
 	// Send our version header.
-	if err = encoding.WriteObject(conn, ours); err != nil {
+	if err = siabin.WriteObject(conn, ours); err != nil {
 		err = fmt.Errorf("failed to write version header: %v", err)
 		return
 	}
 
 	var theirs legacyVersionHeader
 	// Read remote version.
-	if err = encoding.ReadObject(conn, &theirs, legacyEncodedVersionHeaderLength); err != nil {
+	if err = siabin.ReadObject(conn, &theirs, legacyEncodedVersionHeaderLength); err != nil {
 		err = fmt.Errorf("failed to read remote version header: %v", err)
 		return
 	}
@@ -962,7 +962,7 @@ func legacyConnectHandshake(conn net.Conn, version build.ProtocolVersion) (remot
 }
 
 func legacyConnectPortHandshake(conn net.Conn, port string) error {
-	err := encoding.WriteObject(conn, port)
+	err := siabin.WriteObject(conn, port)
 	if err != nil {
 		return errors.New("could not write port #: " + err.Error())
 	}

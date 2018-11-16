@@ -1,8 +1,8 @@
 package blockcreator
 
 import (
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -66,7 +66,7 @@ func (bc *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransac
 	var i int
 	remainingSize := int(bc.chainCts.BlockSizeLimit - 5e3) //check this 5k for the first extra
 	for i = range unconfirmedTransactions {
-		remainingSize -= len(encoding.Marshal(unconfirmedTransactions[i]))
+		remainingSize -= len(siabin.Marshal(unconfirmedTransactions[i]))
 		if remainingSize < 0 {
 			break
 		}

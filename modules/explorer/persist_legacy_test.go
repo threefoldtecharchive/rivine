@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 func TestDecodeLegacyCoinOutput(t *testing.T) {
@@ -19,7 +19,7 @@ func TestDecodeLegacyCoinOutput(t *testing.T) {
 			continue
 		}
 		var output legacyOutput
-		err = encoding.Unmarshal(b, &output)
+		err = siabin.Unmarshal(b, &output)
 		if err != nil {
 			t.Error(idx, err)
 		}
@@ -38,7 +38,7 @@ func TestDecodeLegacyBlockStakeOutput(t *testing.T) {
 			continue
 		}
 		var output legacyOutput
-		err = encoding.Unmarshal(b, &output)
+		err = siabin.Unmarshal(b, &output)
 		if err != nil {
 			t.Error(idx, err)
 		}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -72,7 +72,7 @@ func (cs *ConsensusSet) checkBlockStakeCount(tx *bolt.Tx) {
 	var total types.Currency
 	err := tx.Bucket(BlockStakeOutputs).ForEach(func(_, siafundOutputBytes []byte) error {
 		var sfo types.BlockStakeOutput
-		err := encoding.Unmarshal(siafundOutputBytes, &sfo)
+		err := siabin.Unmarshal(siafundOutputBytes, &sfo)
 		if err != nil {
 			manageErr(tx, err)
 		}

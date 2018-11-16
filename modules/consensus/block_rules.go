@@ -3,7 +3,7 @@ package consensus
 import (
 	"sort"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -44,7 +44,7 @@ func (rh stdBlockRuleHelper) minimumValidChildTimestamp(blockMap dbBucket, pb *p
 		// lies at bytes 32-40.
 		parentBytes := blockMap.Get(parent[:])
 		copy(parent[:], parentBytes[:32])
-		windowTimes[i] = types.Timestamp(encoding.DecUint64(parentBytes[32:40]))
+		windowTimes[i] = types.Timestamp(siabin.DecUint64(parentBytes[32:40]))
 	}
 	sort.Sort(windowTimes)
 

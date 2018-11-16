@@ -5,8 +5,8 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -105,7 +105,7 @@ func (cs *ConsensusSet) setChildTarget(blockMap *bolt.Bucket, pb *processedBlock
 	// Fetch the parent block.
 	var parent processedBlock
 	parentBytes := blockMap.Get(pb.Block.ParentID[:])
-	err := encoding.Unmarshal(parentBytes, &parent)
+	err := siabin.Unmarshal(parentBytes, &parent)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -132,7 +132,7 @@ func (cs *ConsensusSet) newChild(tx *bolt.Tx, pb *processedBlock, b types.Block)
 	}
 	blockMap := tx.Bucket(BlockMap)
 	cs.setChildTarget(blockMap, child)
-	err := blockMap.Put(childID[:], encoding.Marshal(*child))
+	err := blockMap.Put(childID[:], siabin.Marshal(*child))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}

@@ -7,11 +7,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-	"github.com/spf13/cobra"
 )
 
 func createConsensusCmd(client *CommandLineClient) (*consensusCmd, *cobra.Command) {
@@ -121,7 +121,7 @@ func (consensusCmd *consensusCmd) transactionCmd(id string) {
 		encode = json.NewEncoder(os.Stdout).Encode
 	case cli.EncodingTypeHex:
 		encode = func(v interface{}) error {
-			b := encoding.Marshal(v)
+			b := siabin.Marshal(v)
 			fmt.Println(hex.EncodeToString(b))
 			return nil
 		}

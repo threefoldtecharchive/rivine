@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 func TestRPCID(t *testing.T) {
@@ -75,12 +75,12 @@ func TestUnregisterRPC(t *testing.T) {
 
 	dummyFunc := func(conn modules.PeerConn) error {
 		var str string
-		return encoding.ReadObject(conn, &str, 11)
+		return siabin.ReadObject(conn, &str, 11)
 	}
 
 	// Register RPC and check that calling it succeeds.
 	g1.RegisterRPC("Foo", func(conn modules.PeerConn) error {
-		return encoding.WriteObject(conn, "foo")
+		return siabin.WriteObject(conn, "foo")
 	})
 	err = g2.RPC(g1.Address(), "Foo", dummyFunc)
 	if err != nil {
@@ -196,23 +196,23 @@ func TestRPC(t *testing.T) {
 
 	g2.RegisterRPC("Foo", func(conn modules.PeerConn) error {
 		var i uint64
-		err := encoding.ReadObject(conn, &i, 8)
+		err := siabin.ReadObject(conn, &i, 8)
 		if err != nil {
 			return err
 		} else if i == 0xdeadbeef {
-			return encoding.WriteObject(conn, "foo")
+			return siabin.WriteObject(conn, "foo")
 		} else {
-			return encoding.WriteObject(conn, "bar")
+			return siabin.WriteObject(conn, "bar")
 		}
 	})
 
 	var foo string
 	err = g1.RPC(g2.Address(), "Foo", func(conn modules.PeerConn) error {
-		err := encoding.WriteObject(conn, 0xdeadbeef)
+		err := siabin.WriteObject(conn, 0xdeadbeef)
 		if err != nil {
 			return err
 		}
-		return encoding.ReadObject(conn, &foo, 11)
+		return siabin.ReadObject(conn, &foo, 11)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -223,11 +223,11 @@ func TestRPC(t *testing.T) {
 
 	// wrong number should produce an error
 	err = g1.RPC(g2.Address(), "Foo", func(conn modules.PeerConn) error {
-		err := encoding.WriteObject(conn, 0xbadbeef)
+		err := siabin.WriteObject(conn, 0xbadbeef)
 		if err != nil {
 			return err
 		}
-		return encoding.ReadObject(conn, &foo, 11)
+		return siabin.ReadObject(conn, &foo, 11)
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -267,13 +267,13 @@ func TestThreadedHandleConn(t *testing.T) {
 
 	g2.RegisterRPC("Foo", func(conn modules.PeerConn) error {
 		var i uint64
-		err := encoding.ReadObject(conn, &i, 8)
+		err := siabin.ReadObject(conn, &i, 8)
 		if err != nil {
 			return err
 		} else if i == 0xdeadbeef {
-			return encoding.WriteObject(conn, "foo")
+			return siabin.WriteObject(conn, "foo")
 		} else {
-			return encoding.WriteObject(conn, "bar")
+			return siabin.WriteObject(conn, "bar")
 		}
 	})
 
@@ -289,7 +289,7 @@ func TestThreadedHandleConn(t *testing.T) {
 
 	// bad rpcID
 	err = rpcFn(func(conn modules.PeerConn) error {
-		return encoding.WriteObject(conn, [3]byte{1, 2, 3})
+		return siabin.WriteObject(conn, [3]byte{1, 2, 3})
 	})
 	if err != nil {
 		t.Fatal("rpcFn failed:", err)
@@ -297,7 +297,7 @@ func TestThreadedHandleConn(t *testing.T) {
 
 	// unknown rpcID
 	err = rpcFn(func(conn modules.PeerConn) error {
-		return encoding.WriteObject(conn, handlerName("bar"))
+		return siabin.WriteObject(conn, handlerName("bar"))
 	})
 	if err != nil {
 		t.Fatal("rpcFn failed:", err)
@@ -305,7 +305,7 @@ func TestThreadedHandleConn(t *testing.T) {
 
 	// valid rpcID
 	err = rpcFn(func(conn modules.PeerConn) error {
-		return encoding.WriteObject(conn, handlerName("Foo"))
+		return siabin.WriteObject(conn, handlerName("Foo"))
 	})
 	if err != nil {
 		t.Fatal("rpcFn failed:", err)
@@ -341,12 +341,12 @@ func TestBroadcast(t *testing.T) {
 	bothDoneChan := make(chan struct{})
 
 	g2.RegisterRPC("Recv", func(conn modules.PeerConn) error {
-		encoding.ReadObject(conn, &g2Payload, 100)
+		siabin.ReadObject(conn, &g2Payload, 100)
 		g2DoneChan <- struct{}{}
 		return nil
 	})
 	g3.RegisterRPC("Recv", func(conn modules.PeerConn) error {
-		encoding.ReadObject(conn, &g3Payload, 100)
+		siabin.ReadObject(conn, &g3Payload, 100)
 		g3DoneChan <- struct{}{}
 		return nil
 	})

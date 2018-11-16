@@ -3,7 +3,7 @@ package modules
 import (
 	"errors"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -126,6 +126,6 @@ func CalculateFee(ts []types.Transaction) types.Currency {
 			sum = sum.Add(fee)
 		}
 	}
-	size := len(encoding.Marshal(ts))
+	size := len(siabin.Marshal(ts))
 	return sum.Div64(uint64(size))
 }

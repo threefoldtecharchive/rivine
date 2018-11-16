@@ -19,8 +19,8 @@ package consensus
 import (
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -58,7 +58,7 @@ func appendChangeLog(tx *bolt.Tx, ce changeEntry) error {
 	cl := tx.Bucket(ChangeLog)
 	ceid := ce.ID()
 	cn := changeNode{Entry: ce, Next: modules.ConsensusChangeID{}}
-	err := cl.Put(ceid[:], encoding.Marshal(cn))
+	err := cl.Put(ceid[:], siabin.Marshal(cn))
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func appendChangeLog(tx *bolt.Tx, ce changeEntry) error {
 		// Get the old tail node.
 		var tailCN changeNode
 		tailCNBytes := cl.Get(tailID[:])
-		err = encoding.Unmarshal(tailCNBytes, &tailCN)
+		err = siabin.Unmarshal(tailCNBytes, &tailCN)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func appendChangeLog(tx *bolt.Tx, ce changeEntry) error {
 		// Point the 'next' of the old tail node to the new tail node and
 		// insert.
 		tailCN.Next = ceid
-		err = cl.Put(tailID[:], encoding.Marshal(tailCN))
+		err = cl.Put(tailID[:], siabin.Marshal(tailCN))
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func getEntry(tx *bolt.Tx, id modules.ConsensusChangeID) (ce changeEntry, exists
 	if changeNodeBytes == nil {
 		return changeEntry{}, false
 	}
-	err := encoding.Unmarshal(changeNodeBytes, &cn)
+	err := siabin.Unmarshal(changeNodeBytes, &cn)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -120,7 +120,7 @@ func (ce *changeEntry) NextEntry(tx *bolt.Tx) (nextEntry changeEntry, exists boo
 	var cn changeNode
 	cl := tx.Bucket(ChangeLog)
 	changeNodeBytes := cl.Get(ceid[:])
-	err := encoding.Unmarshal(changeNodeBytes, &cn)
+	err := siabin.Unmarshal(changeNodeBytes, &cn)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -143,7 +143,7 @@ func (cs *ConsensusSet) createChangeLog(tx *bolt.Tx) error {
 		Entry: ge,
 		Next:  modules.ConsensusChangeID{},
 	}
-	err = cl.Put(geid[:], encoding.Marshal(cn))
+	err = cl.Put(geid[:], siabin.Marshal(cn))
 	if err != nil {
 		return err
 	}

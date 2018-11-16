@@ -11,7 +11,7 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 const (
@@ -173,7 +173,7 @@ func (t Transaction) ID() (id TransactionID) {
 // and output index.
 func (t Transaction) CoinOutputID(i uint64) (id CoinOutputID) {
 	h := crypto.NewHash()
-	e := encoding.NewEncoder(h)
+	e := siabin.NewEncoder(h)
 	e.Encode(SpecifierCoinOutput)
 	t.encodeTransactionDataAsIDInput(h)
 	e.Encode(i)
@@ -187,7 +187,7 @@ func (t Transaction) CoinOutputID(i uint64) (id CoinOutputID) {
 // index.
 func (t Transaction) BlockStakeOutputID(i uint64) (id BlockStakeOutputID) {
 	h := crypto.NewHash()
-	e := encoding.NewEncoder(h)
+	e := siabin.NewEncoder(h)
 	e.Encode(SpecifierBlockStakeOutput)
 	t.encodeTransactionDataAsIDInput(h)
 	e.Encode(i)
@@ -235,7 +235,7 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 	return
 }
 
-// MarshalSia implements the encoding.SiaMarshaler interface.
+// MarshalSia implements the siabin.SiaMarshaler interface.
 func (t Transaction) MarshalSia(w io.Writer) error {
 	// get a controller registered or unknown controller
 	controller, exists := _RegisteredTransactionVersions[t.Version]
@@ -244,7 +244,7 @@ func (t Transaction) MarshalSia(w io.Writer) error {
 	}
 
 	// encode the version already
-	err := encoding.NewEncoder(w).Encode(t.Version)
+	err := siabin.NewEncoder(w).Encode(t.Version)
 	if err != nil {
 		return err
 	}
@@ -260,9 +260,9 @@ func (t Transaction) MarshalSia(w io.Writer) error {
 	})
 }
 
-// UnmarshalSia implements the encoding.SiaUnmarshaler interface.
+// UnmarshalSia implements the siabin.SiaUnmarshaler interface.
 func (t *Transaction) UnmarshalSia(r io.Reader) error {
-	decoder := encoding.NewDecoder(r)
+	decoder := siabin.NewDecoder(r)
 	err := decoder.Decode(&t.Version)
 	if err != nil {
 		return err
@@ -449,8 +449,8 @@ func (v *TransactionVersion) UnmarshalSia(r io.Reader) error {
 }
 
 var (
-	_ encoding.SiaMarshaler   = TransactionVersion(0)
-	_ encoding.SiaUnmarshaler = (*TransactionVersion)(nil)
+	_ siabin.SiaMarshaler   = TransactionVersion(0)
+	_ siabin.SiaUnmarshaler = (*TransactionVersion)(nil)
 )
 
 // IsValidTransactionVersion returns an error in case the
@@ -491,7 +491,7 @@ func (txsid TransactionShortID) TransactionSequenceIndex() uint16 {
 
 // MarshalSia implements SiaMarshaler.SiaMarshaler
 func (txsid TransactionShortID) MarshalSia(w io.Writer) error {
-	b := encoding.EncUint64(uint64(txsid))
+	b := siabin.EncUint64(uint64(txsid))
 	_, err := w.Write(b)
 	return err
 }
@@ -504,7 +504,7 @@ func (txsid *TransactionShortID) UnmarshalSia(r io.Reader) error {
 		return err
 	}
 
-	*txsid = TransactionShortID(encoding.DecUint64(b))
+	*txsid = TransactionShortID(siabin.DecUint64(b))
 	return nil
 }
 

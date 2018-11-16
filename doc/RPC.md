@@ -7,7 +7,7 @@ RPC IDs are always 8 bytes and contain a human-readable name for the RPC. If the
 
 ### Call Listing
 
-Unless otherwise specified, these calls follow a request/response pattern and use the [encoding](./Encoding.md) package to serialize data.
+Unless otherwise specified, these calls follow a request/response pattern and use the [encoding](./encoding/SiaEncoding.md) package to serialize data.
 
 **All data received via RPC should be considered untrusted and potentially malicious.**
 

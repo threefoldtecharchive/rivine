@@ -11,7 +11,7 @@ import (
 	"math/big"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 type (
@@ -82,17 +82,17 @@ func (c *Difficulty) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// MarshalSia implements the encoding.SiaMarshaler interface. It writes the
+// MarshalSia implements the siabin.SiaMarshaler interface. It writes the
 // byte-slice representation of the Difficulty's internal big.Int to w. Note
 // that as the bytes of the big.Int correspond to the absolute value of the
 // integer, there is no way to marshal a negative Difficulty.
 func (c Difficulty) MarshalSia(w io.Writer) error {
-	return encoding.WritePrefix(w, c.i.Bytes())
+	return siabin.WritePrefix(w, c.i.Bytes())
 }
 
-// UnmarshalSia implements the encoding.SiaUnmarshaler interface.
+// UnmarshalSia implements the siabin.SiaUnmarshaler interface.
 func (c *Difficulty) UnmarshalSia(r io.Reader) error {
-	b, err := encoding.ReadPrefix(r, 256)
+	b, err := siabin.ReadPrefix(r, 256)
 	if err != nil {
 		return err
 	}

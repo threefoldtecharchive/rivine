@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 const (
@@ -61,7 +61,7 @@ var (
 // fashion.
 func ReadNegotiationAcceptance(r io.Reader) error {
 	var resp string
-	err := encoding.ReadObject(r, &resp, NegotiateMaxErrorSize)
+	err := siabin.ReadObject(r, &resp, NegotiateMaxErrorSize)
 	if err != nil {
 		return err
 	}
@@ -78,14 +78,14 @@ func ReadNegotiationAcceptance(r io.Reader) error {
 // WriteNegotiationAcceptance writes the 'accept' response to w (usually a
 // net.Conn).
 func WriteNegotiationAcceptance(w io.Writer) error {
-	return encoding.WriteObject(w, AcceptResponse)
+	return siabin.WriteObject(w, AcceptResponse)
 }
 
 // WriteNegotiationRejection will write a rejection response to w (usually a
 // net.Conn) and return the input error. If the write fails, the write error
 // is joined with the input error.
 func WriteNegotiationRejection(w io.Writer, err error) error {
-	writeErr := encoding.WriteObject(w, err.Error())
+	writeErr := siabin.WriteObject(w, err.Error())
 	if writeErr != nil {
 		return build.JoinErrors([]error{err, writeErr}, "; ")
 	}
@@ -95,5 +95,5 @@ func WriteNegotiationRejection(w io.Writer, err error) error {
 // WriteNegotiationStop writes the 'stop' response to w (usually a
 // net.Conn).
 func WriteNegotiationStop(w io.Writer) error {
-	return encoding.WriteObject(w, StopResponse)
+	return siabin.WriteObject(w, StopResponse)
 }

@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -46,7 +46,7 @@ func applyMaturedCoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 	// the bucket (and sometimes not - nondeterministic), so all of the
 	// elements are collected into an array and then deleted after the bucket
 	// scan is complete.
-	bucketID := append(prefixDCO, encoding.Marshal(pb.Height)...)
+	bucketID := append(prefixDCO, siabin.Marshal(pb.Height)...)
 	var scods []modules.CoinOutputDiff
 	var dscods []modules.DelayedCoinOutputDiff
 	bucket := tx.Bucket(bucketID)
@@ -59,7 +59,7 @@ func applyMaturedCoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 		var id types.CoinOutputID
 		var sco types.CoinOutput
 		copy(id[:], idBytes)
-		encErr := encoding.Unmarshal(scoBytes, &sco)
+		encErr := siabin.Unmarshal(scoBytes, &sco)
 		if build.DEBUG && encErr != nil {
 			panic(encErr)
 		}

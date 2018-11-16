@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 func TestLegacyTransactionInputLockProxyBinaryEncoding(t *testing.T) {
@@ -105,12 +105,12 @@ func TestLegacyTransactionBinaryEncoding(t *testing.T) {
 		}
 
 		var ltd legacyTransactionData
-		err = encoding.Unmarshal(binaryInput, &ltd)
+		err = siabin.Unmarshal(binaryInput, &ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
 		}
-		b := encoding.Marshal(ltd)
+		b := siabin.Marshal(ltd)
 
 		output := hex.EncodeToString(b)
 		if output != testCase {
@@ -360,7 +360,7 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 		}
 
 		var ltd legacyTransactionData
-		err = encoding.Unmarshal(binaryInput, &ltd)
+		err = siabin.Unmarshal(binaryInput, &ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue
@@ -710,7 +710,7 @@ func TestLegacyTransactionDataBiDirectional(t *testing.T) {
 		}
 
 		var ltd legacyTransactionData
-		err = encoding.Unmarshal(binaryInput, &ltd)
+		err = siabin.Unmarshal(binaryInput, &ltd)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue

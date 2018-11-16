@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // TestBlockHeader checks that BlockHeader returns the correct value, and that
@@ -26,7 +26,7 @@ func TestBlockHeader(t *testing.T) {
 	}
 
 	id1 := b.ID()
-	id2 := BlockID(crypto.HashBytes(encoding.Marshal(b.Header())))
+	id2 := BlockID(crypto.HashBytes(siabin.Marshal(b.Header())))
 	id3 := BlockID(crypto.HashAll(
 		b.ParentID,
 		b.POBSOutput,
@@ -229,7 +229,7 @@ func TestBlockEncoding(t *testing.T) {
 		},
 	}
 	var decB Block
-	err := encoding.Unmarshal(encoding.Marshal(b), &decB)
+	err := siabin.Unmarshal(siabin.Marshal(b), &decB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +599,7 @@ func TestDecodeLegacyBlockAfterBug305(t *testing.T) {
 			continue
 		}
 		var block Block
-		err = encoding.Unmarshal(b, &block)
+		err = siabin.Unmarshal(b, &block)
 		if err != nil {
 			t.Error(idx, err)
 		}

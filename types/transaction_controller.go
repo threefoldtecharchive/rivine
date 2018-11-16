@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 type (
@@ -150,17 +150,17 @@ var (
 	_RegisteredTransactionVersions = map[TransactionVersion]TransactionController{}
 )
 
-// MarshalSia implements encoding.SiaMarshaller.MarshalSia
+// MarshalSia implements siabin.SiaMarshaller.MarshalSia
 func (td TransactionData) MarshalSia(w io.Writer) error {
-	return encoding.NewEncoder(w).EncodeAll(
+	return siabin.NewEncoder(w).EncodeAll(
 		td.CoinInputs, td.CoinOutputs,
 		td.BlockStakeInputs, td.BlockStakeOutputs,
 		td.MinerFees, td.ArbitraryData)
 }
 
-// UnmarshalSia implements encoding.SiaUnmarshaller.UnmarshalSia
+// UnmarshalSia implements siabin.SiaUnmarshaller.UnmarshalSia
 func (td *TransactionData) UnmarshalSia(r io.Reader) error {
-	return encoding.NewDecoder(r).DecodeAll(
+	return siabin.NewDecoder(r).DecodeAll(
 		&td.CoinInputs, &td.CoinOutputs,
 		&td.BlockStakeInputs, &td.BlockStakeOutputs,
 		&td.MinerFees, &td.ArbitraryData)
@@ -182,21 +182,21 @@ type (
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (dtc DefaultTransactionController) EncodeTransactionData(w io.Writer, td TransactionData) error {
 	// encode to a byte slice first
-	b := encoding.Marshal(td)
+	b := siabin.Marshal(td)
 	// copy those bytes together with its prefixed length, as the final encoding
-	return encoding.NewEncoder(w).Encode(b)
+	return siabin.NewEncoder(w).Encode(b)
 }
 
 // DecodeTransactionData implements TransactionController.DecodeTransactionData
 func (dtc DefaultTransactionController) DecodeTransactionData(r io.Reader) (td TransactionData, err error) {
 	// decode it as a byte slice first
 	var b []byte
-	err = encoding.NewDecoder(r).Decode(&b)
+	err = siabin.NewDecoder(r).Decode(&b)
 	if err != nil {
 		return
 	}
 	// decode
-	err = encoding.Unmarshal(b, &td)
+	err = siabin.Unmarshal(b, &td)
 	return
 }
 
@@ -219,14 +219,14 @@ func (ltc LegacyTransactionController) EncodeTransactionData(w io.Writer, td Tra
 		return err
 	}
 	// and encode its result
-	return encoding.NewEncoder(w).Encode(ltd)
+	return siabin.NewEncoder(w).Encode(ltd)
 }
 
 // DecodeTransactionData implements TransactionController.DecodeTransactionData
 func (ltc LegacyTransactionController) DecodeTransactionData(r io.Reader) (TransactionData, error) {
 	// first decode it as the legacy format
 	var ltd legacyTransactionData
-	err := encoding.NewDecoder(r).Decode(&ltd)
+	err := siabin.NewDecoder(r).Decode(&ltd)
 	if err != nil {
 		return TransactionData{}, err
 	}
@@ -259,7 +259,7 @@ func (ltc LegacyTransactionController) JSONDecodeTransactionData(b []byte) (Tran
 // InputSigHash implements InputSigHasher.InputSigHash
 func (ltc LegacyTransactionController) InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) (crypto.Hash, error) {
 	h := crypto.NewHash()
-	enc := encoding.NewEncoder(h)
+	enc := siabin.NewEncoder(h)
 
 	enc.Encode(inputIndex)
 	if len(extraObjects) > 0 {

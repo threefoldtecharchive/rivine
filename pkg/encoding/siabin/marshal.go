@@ -1,7 +1,7 @@
-// Package encoding converts arbitrary objects into byte slices, and vis
+// Package siabin converts arbitrary objects into byte slices, and visa
 // versa. It also contains helper functions for reading and writing length-
-// prefixed data. See doc/Encoding.md for the full encoding specification.
-package encoding
+// prefixed data. See doc/encoding/SiaEncoding.md for the full encoding specification.
+package siabin
 
 import (
 	"bytes"

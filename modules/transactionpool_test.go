@@ -3,7 +3,7 @@ package modules
 import (
 	"testing"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -63,7 +63,7 @@ func TestCalculateFee(t *testing.T) {
 			baseFee,
 		},
 	}}
-	setLen := uint64(len(encoding.Marshal(txnSet)))
+	setLen := uint64(len(siabin.Marshal(txnSet)))
 	expectedFee := baseFee.Div64(setLen)
 	if CalculateFee(txnSet).Cmp(expectedFee) != 0 {
 		t.Error("CalculateFee doesn't seem to be calculating the correct transaction fee")
@@ -91,7 +91,7 @@ func TestCalculateFee(t *testing.T) {
 			},
 		},
 	}
-	currencyLen := types.NewCurrency64(uint64(len(encoding.Marshal(txnSet))))
+	currencyLen := types.NewCurrency64(uint64(len(siabin.Marshal(txnSet))))
 	multiExpectedFee := fee1.Add(fee2).Add(fee3).Add(fee4).Div(currencyLen)
 	if CalculateFee(txnSet).Cmp(multiExpectedFee) != 0 {
 		t.Error("got the wrong fee for a multi transaction set")

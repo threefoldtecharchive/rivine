@@ -4,9 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -66,8 +66,8 @@ func (e *Explorer) initPersist() error {
 		internalDefaults := []struct {
 			key, val []byte
 		}{
-			{internalBlockHeight, encoding.Marshal(types.BlockHeight(0))},
-			{internalRecentChange, encoding.Marshal(modules.ConsensusChangeID{})},
+			{internalBlockHeight, siabin.Marshal(types.BlockHeight(0))},
+			{internalRecentChange, siabin.Marshal(modules.ConsensusChangeID{})},
 		}
 		b := tx.Bucket(bucketInternal)
 		for _, d := range internalDefaults {

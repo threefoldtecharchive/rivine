@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // TestNewCurrency initializes a standard new currency.
@@ -331,9 +331,9 @@ func TestCurrencyScan(t *testing.T) {
 // error.
 func TestCurrencyEncoding(t *testing.T) {
 	c := NewCurrency64(351)
-	cMar := encoding.Marshal(c)
+	cMar := siabin.Marshal(c)
 	var cUmar Currency
-	err := encoding.Unmarshal(cMar, &cUmar)
+	err := siabin.Unmarshal(cMar, &cUmar)
 	if err != nil {
 		t.Error("Error unmarshalling a currency:", err)
 	}
@@ -466,7 +466,7 @@ func TestCurrencyUnsafeDecode(t *testing.T) {
 
 	// UnmarshalSia
 	c = cts.CurrencyUnits.OneCoin
-	err = encoding.Unmarshal(encoding.Marshal(NewCurrency64(7)), &c)
+	err = siabin.Unmarshal(siabin.Marshal(NewCurrency64(7)), &c)
 	if err != nil {
 		t.Error(err)
 	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {

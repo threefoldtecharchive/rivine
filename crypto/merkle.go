@@ -3,9 +3,8 @@ package crypto
 import (
 	"bytes"
 
-	"github.com/threefoldtech/rivine/encoding"
-
 	"github.com/NebulousLabs/merkletree"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 const (
@@ -32,7 +31,7 @@ func NewTree() *MerkleTree {
 // PushObject encodes and adds the hash of the encoded object to the tree as a
 // leaf.
 func (t *MerkleTree) PushObject(obj interface{}) {
-	t.Push(encoding.Marshal(obj))
+	t.Push(siabin.Marshal(obj))
 }
 
 // Root is a redefinition of merkletree.Tree.Root, returning a Hash instead of

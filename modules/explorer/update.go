@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -150,7 +150,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			}
 
 			// calculate and add new block facts, if possible
-			if tx.Bucket(bucketBlockFacts).Get(encoding.Marshal(block.ParentID)) != nil {
+			if tx.Bucket(bucketBlockFacts).Get(siabin.Marshal(block.ParentID)) != nil {
 				facts := e.dbCalculateBlockFacts(tx, block)
 				dbAddBlockFacts(tx, facts)
 			}
@@ -169,7 +169,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 		var facts blockFacts
 		err = dbGetAndDecode(bucketBlockFacts, currentID, &facts)(tx)
 		if err == nil {
-			err = tx.Bucket(bucketBlockFacts).Put(encoding.Marshal(currentID), encoding.Marshal(facts))
+			err = tx.Bucket(bucketBlockFacts).Put(siabin.Marshal(currentID), siabin.Marshal(facts))
 			if err != nil {
 				return err
 			}
@@ -307,13 +307,13 @@ func assertNil(err error) {
 	}
 }
 func mustPut(bucket *bolt.Bucket, key, val interface{}) {
-	assertNil(bucket.Put(encoding.Marshal(key), encoding.Marshal(val)))
+	assertNil(bucket.Put(siabin.Marshal(key), siabin.Marshal(val)))
 }
 func mustPutSet(bucket *bolt.Bucket, key interface{}) {
-	assertNil(bucket.Put(encoding.Marshal(key), nil))
+	assertNil(bucket.Put(siabin.Marshal(key), nil))
 }
 func mustDelete(bucket *bolt.Bucket, key interface{}) {
-	assertNil(bucket.Delete(encoding.Marshal(key)))
+	assertNil(bucket.Delete(siabin.Marshal(key)))
 }
 func bucketIsEmpty(bucket *bolt.Bucket) bool {
 	k, _ := bucket.Cursor().First()
@@ -357,16 +357,16 @@ func dbRemoveCoinOutput(tx *bolt.Tx, id types.CoinOutputID) {
 
 // Add/Remove txid from siacoin output ID bucket
 func dbAddCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketCoinOutputIDs).CreateBucketIfNotExists(encoding.Marshal(id))
+	b, err := tx.Bucket(bucketCoinOutputIDs).CreateBucketIfNotExists(siabin.Marshal(id))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
 
 func dbRemoveCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
-	bucket := tx.Bucket(bucketCoinOutputIDs).Bucket(encoding.Marshal(id))
+	bucket := tx.Bucket(bucketCoinOutputIDs).Bucket(siabin.Marshal(id))
 	mustDelete(bucket, txid)
 	if bucketIsEmpty(bucket) {
-		tx.Bucket(bucketCoinOutputIDs).DeleteBucket(encoding.Marshal(id))
+		tx.Bucket(bucketCoinOutputIDs).DeleteBucket(siabin.Marshal(id))
 	}
 }
 
@@ -380,16 +380,16 @@ func dbRemoveBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
 
 // Add/Remove txid from blockstake output ID bucket
 func dbAddBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketBlockStakeOutputIDs).CreateBucketIfNotExists(encoding.Marshal(id))
+	b, err := tx.Bucket(bucketBlockStakeOutputIDs).CreateBucketIfNotExists(siabin.Marshal(id))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
 
 func dbRemoveBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
-	bucket := tx.Bucket(bucketBlockStakeOutputIDs).Bucket(encoding.Marshal(id))
+	bucket := tx.Bucket(bucketBlockStakeOutputIDs).Bucket(siabin.Marshal(id))
 	mustDelete(bucket, txid)
 	if bucketIsEmpty(bucket) {
-		tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(encoding.Marshal(id))
+		tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(siabin.Marshal(id))
 	}
 }
 
@@ -530,13 +530,13 @@ func unmapUnlockConditionMultiSigAddress(tx *bolt.Tx, muh types.UnlockHash, cond
 
 // Add/Remove txid from unlock hash bucket
 func dbAddUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketUnlockHashes).CreateBucketIfNotExists(encoding.Marshal(uh))
+	b, err := tx.Bucket(bucketUnlockHashes).CreateBucketIfNotExists(siabin.Marshal(uh))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
 func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
 	uhb := tx.Bucket(bucketUnlockHashes)
-	muh := encoding.Marshal(uh)
+	muh := siabin.Marshal(uh)
 	b := uhb.Bucket(muh)
 	mustDelete(b, txid)
 	if bucketIsEmpty(b) {
@@ -554,9 +554,9 @@ func dbAddWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, mult
 			panic(fmt.Sprintf("multisig address has wrong type: %d", multiSigAddress.Type))
 		}
 	}
-	wab, err := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).CreateBucketIfNotExists(encoding.Marshal(walletAddress))
+	wab, err := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).CreateBucketIfNotExists(siabin.Marshal(walletAddress))
 	assertNil(err)
-	b, err := wab.CreateBucketIfNotExists(encoding.Marshal(multiSigAddress))
+	b, err := wab.CreateBucketIfNotExists(siabin.Marshal(multiSigAddress))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
@@ -570,9 +570,9 @@ func dbRemoveWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, m
 		}
 	}
 	mb := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping)
-	wa := encoding.Marshal(walletAddress)
+	wa := siabin.Marshal(walletAddress)
 	wb := mb.Bucket(wa)
-	msa := encoding.Marshal(multiSigAddress)
+	msa := siabin.Marshal(multiSigAddress)
 	msb := wb.Bucket(msa)
 	mustDelete(msb, txid)
 	if bucketIsEmpty(msb) {

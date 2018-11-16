@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -92,13 +92,13 @@ func (e *Explorer) MultiSigAddresses(uh types.UnlockHash) (uhs []types.UnlockHas
 		return nil
 	}
 	err := e.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).Bucket(encoding.Marshal(uh))
+		b := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).Bucket(siabin.Marshal(uh))
 		if b == nil {
 			return errors.New("not found")
 		}
 		return b.ForEach(func(k, _ []byte) error {
 			var uh types.UnlockHash
-			err := encoding.Unmarshal(k, &uh)
+			err := siabin.Unmarshal(k, &uh)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal unlockhash: %v", err)
 			}

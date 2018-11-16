@@ -8,8 +8,8 @@ package consensus
 
 import (
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -79,7 +79,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 	// Set the block height to -1, so the genesis block is at height 0.
 	blockHeight := tx.Bucket(BlockHeight)
 	underflow := types.BlockHeight(0)
-	err := blockHeight.Put(BlockHeight, encoding.Marshal(underflow-1))
+	err := blockHeight.Put(BlockHeight, siabin.Marshal(underflow-1))
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 // blockHeight returns the height of the blockchain.
 func blockHeight(tx *bolt.Tx) (height types.BlockHeight) {
 	bh := tx.Bucket(BlockHeight)
-	err := encoding.Unmarshal(bh.Get(BlockHeight), &height)
+	err := siabin.Unmarshal(bh.Get(BlockHeight), &height)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -155,7 +155,7 @@ func getBlockMap(tx *bolt.Tx, id types.BlockID) (*processedBlock, error) {
 
 	// Decode the block - should never fail.
 	var pb processedBlock
-	err := encoding.Unmarshal(pbBytes, &pb)
+	err := siabin.Unmarshal(pbBytes, &pb)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -165,7 +165,7 @@ func getBlockMap(tx *bolt.Tx, id types.BlockID) (*processedBlock, error) {
 // addBlockMap adds a processed block to the block map.
 func addBlockMap(tx *bolt.Tx, pb *processedBlock) {
 	id := pb.Block.ID()
-	err := tx.Bucket(BlockMap).Put(id[:], encoding.Marshal(*pb))
+	err := tx.Bucket(BlockMap).Put(id[:], siabin.Marshal(*pb))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -173,12 +173,12 @@ func addBlockMap(tx *bolt.Tx, pb *processedBlock) {
 
 // getPath returns the block id at 'height' in the block path.
 func getPath(tx *bolt.Tx, height types.BlockHeight) (id types.BlockID, err error) {
-	idBytes := tx.Bucket(BlockPath).Get(encoding.Marshal(height))
+	idBytes := tx.Bucket(BlockPath).Get(siabin.Marshal(height))
 	if idBytes == nil {
 		return types.BlockID{}, errNilItem
 	}
 
-	err = encoding.Unmarshal(idBytes, &id)
+	err = siabin.Unmarshal(idBytes, &id)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -191,11 +191,11 @@ func pushPath(tx *bolt.Tx, bid types.BlockID) {
 	bh := tx.Bucket(BlockHeight)
 	heightBytes := bh.Get(BlockHeight)
 	var oldHeight types.BlockHeight
-	err := encoding.Unmarshal(heightBytes, &oldHeight)
+	err := siabin.Unmarshal(heightBytes, &oldHeight)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
-	newHeightBytes := encoding.Marshal(oldHeight + 1)
+	newHeightBytes := siabin.Marshal(oldHeight + 1)
 	err = bh.Put(BlockHeight, newHeightBytes)
 	if build.DEBUG && err != nil {
 		panic(err)
@@ -216,11 +216,11 @@ func popPath(tx *bolt.Tx) {
 	bh := tx.Bucket(BlockHeight)
 	oldHeightBytes := bh.Get(BlockHeight)
 	var oldHeight types.BlockHeight
-	err := encoding.Unmarshal(oldHeightBytes, &oldHeight)
+	err := siabin.Unmarshal(oldHeightBytes, &oldHeight)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
-	newHeightBytes := encoding.Marshal(oldHeight - 1)
+	newHeightBytes := siabin.Marshal(oldHeight - 1)
 	err = bh.Put(BlockHeight, newHeightBytes)
 	if build.DEBUG && err != nil {
 		panic(err)
@@ -251,7 +251,7 @@ func getCoinOutput(tx *bolt.Tx, id types.CoinOutputID) (types.CoinOutput, error)
 		return types.CoinOutput{}, errNilItem
 	}
 	var sco types.CoinOutput
-	err := encoding.Unmarshal(scoBytes, &sco)
+	err := siabin.Unmarshal(scoBytes, &sco)
 	if err != nil {
 		return types.CoinOutput{}, err
 	}
@@ -275,7 +275,7 @@ func addCoinOutput(tx *bolt.Tx, id types.CoinOutputID, sco types.CoinOutput) {
 	if build.DEBUG && coinOutputs.Get(id[:]) != nil {
 		panic("repeat siacoin output")
 	}
-	err := coinOutputs.Put(id[:], encoding.Marshal(sco))
+	err := coinOutputs.Put(id[:], siabin.Marshal(sco))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -303,7 +303,7 @@ func getBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) (types.BlockS
 		return types.BlockStakeOutput{}, errNilItem
 	}
 	var sfo types.BlockStakeOutput
-	err := encoding.Unmarshal(sfoBytes, &sfo)
+	err := siabin.Unmarshal(sfoBytes, &sfo)
 	if err != nil {
 		return types.BlockStakeOutput{}, err
 	}
@@ -323,7 +323,7 @@ func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.Blo
 	if build.DEBUG && blockstakeOutputs.Get(id[:]) != nil {
 		panic("repeat blockstake output")
 	}
-	err := blockstakeOutputs.Put(id[:], encoding.Marshal(sfo))
+	err := blockstakeOutputs.Put(id[:], siabin.Marshal(sfo))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -349,7 +349,7 @@ func addTxnIDMapping(tx *bolt.Tx, longID types.TransactionID, shortID types.Tran
 	if build.DEBUG && txIDMapBucket.Get(longID[:]) != nil {
 		panic("repeat transaction id mapping")
 	}
-	err := txIDMapBucket.Put(longID[:], encoding.Marshal(shortID))
+	err := txIDMapBucket.Put(longID[:], siabin.Marshal(shortID))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -375,7 +375,7 @@ func getTransactionShortID(tx *bolt.Tx, id types.TransactionID) (types.Transacti
 		return types.TransactionShortID(0), errNilItem
 	}
 	var shortID types.TransactionShortID
-	err := encoding.Unmarshal(shortIDBytes, &shortID)
+	err := siabin.Unmarshal(shortIDBytes, &shortID)
 	return shortID, err
 }
 
@@ -389,13 +389,13 @@ func addDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID, sco types.
 	if build.DEBUG && tx.Bucket(CoinOutputs).Get(id[:]) != nil {
 		panic("dco already in output set")
 	}
-	dscoBucketID := append(prefixDCO, encoding.EncUint64(uint64(bh))...)
+	dscoBucketID := append(prefixDCO, siabin.EncUint64(uint64(bh))...)
 	dscoBucket := tx.Bucket(dscoBucketID)
 	// Sanity check - should not be adding an item already in the db.
 	if build.DEBUG && dscoBucket.Get(id[:]) != nil {
 		panic(errRepeatInsert)
 	}
-	err := dscoBucket.Put(id[:], encoding.Marshal(sco))
+	err := dscoBucket.Put(id[:], siabin.Marshal(sco))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -403,7 +403,7 @@ func addDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID, sco types.
 
 // removeDCO removes a delayed siacoin output from the consensus set.
 func removeDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID) {
-	bucketID := append(prefixDCO, encoding.Marshal(bh)...)
+	bucketID := append(prefixDCO, siabin.Marshal(bh)...)
 	// Sanity check - should not remove an item not in the db.
 	dscoBucket := tx.Bucket(bucketID)
 	if build.DEBUG && dscoBucket.Get(id[:]) == nil {
@@ -418,7 +418,7 @@ func removeDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID) {
 // createDCOBucket creates a bucket for the delayed coin outputs at the
 // input height.
 func createDCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
-	bucketID := append(prefixDCO, encoding.Marshal(bh)...)
+	bucketID := append(prefixDCO, siabin.Marshal(bh)...)
 	_, err := tx.CreateBucket(bucketID)
 	if build.DEBUG && err != nil {
 		panic(err)
@@ -428,7 +428,7 @@ func createDCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
 // deleteDCOBucket deletes the bucket that held a set of delayed coin outputs.
 func deleteDCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
 	// Delete the bucket.
-	bucketID := append(prefixDCO, encoding.Marshal(bh)...)
+	bucketID := append(prefixDCO, siabin.Marshal(bh)...)
 	bucket := tx.Bucket(bucketID)
 	if build.DEBUG && bucket == nil {
 		panic(errNilBucket)

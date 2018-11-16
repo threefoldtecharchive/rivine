@@ -9,9 +9,9 @@ package consensus
 import (
 	"errors"
 
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/sync"
 	"github.com/threefoldtech/rivine/types"
 
@@ -31,8 +31,8 @@ type marshaler interface {
 }
 type stdMarshaler struct{}
 
-func (stdMarshaler) Marshal(v interface{}) []byte            { return encoding.Marshal(v) }
-func (stdMarshaler) Unmarshal(b []byte, v interface{}) error { return encoding.Unmarshal(b, v) }
+func (stdMarshaler) Marshal(v interface{}) []byte            { return siabin.Marshal(v) }
+func (stdMarshaler) Unmarshal(b []byte, v interface{}) error { return siabin.Unmarshal(b, v) }
 
 // The ConsensusSet is the object responsible for tracking the current status
 // of the blockchain. Broadly speaking, it is responsible for maintaining
