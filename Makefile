@@ -8,7 +8,7 @@ run = Test
 daemonpkgs = ./cmd/rivined
 clientpkgs = ./cmd/rivinec
 pkgs = ./build ./modules/gateway $(daemonpkgs) $(clientpkgs)
-testpkgs = ./build ./crypto ./pkg/encoding/siabin ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./modules/explorer ./modules/consensus ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types ./pkg/cli ./pkg/client ./pkg/daemon
+testpkgs = ./build ./crypto ./pkg/encoding/siabin ./pkg/encoding/rivbin ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./modules/explorer ./modules/consensus ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types ./pkg/cli ./pkg/client ./pkg/daemon
 
 version = $(shell git describe | cut -d '-' -f 1)
 commit = $(shell git rev-parse --short HEAD)
