@@ -226,6 +226,50 @@ func TestUnlockHashSiaMarshalling(t *testing.T) {
 	}
 }
 
+func TestUnlockHashRivineMarshalling(t *testing.T) {
+	testCases := []struct {
+		UnlockHash UnlockHash
+		Expected   []byte
+	}{
+		{
+			UnlockHash{0, crypto.Hash{}},
+			[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			UnlockHash{4, crypto.Hash{2}},
+			[]byte{4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			UnlockHash{1, crypto.Hash{4, 2}},
+			[]byte{1, 4, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			UnlockHash{1, crypto.Hash{2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3}},
+			[]byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3},
+		},
+	}
+	for idx, testCase := range testCases {
+		buf := bytes.NewBuffer(nil)
+		err := testCase.UnlockHash.MarshalRivine(buf)
+		if err != nil {
+			t.Errorf("error rivine-marshalling #%d: %v", idx, err)
+		}
+		if bytes.Compare(testCase.Expected, buf.Bytes()) != 0 {
+			t.Errorf("unexpected marshalled form of the unlock hash: (%v) != (%v)",
+				testCase.Expected, buf.Bytes())
+		}
+		var uh UnlockHash
+		err = uh.UnmarshalRivine(buf)
+		if err != nil {
+			t.Errorf("error rivine-unmarshalling #%d: %v", idx, err)
+		}
+		if !reflect.DeepEqual(testCase.UnlockHash, uh) {
+			t.Errorf("unexpected unmarshalled form of the unlock hash: (%v) != (%v)",
+				testCase.UnlockHash, uh)
+		}
+	}
+}
+
 func TestUnlockHashLoadString(t *testing.T) {
 	foee := func(_ int, err error) {
 		if err != nil {

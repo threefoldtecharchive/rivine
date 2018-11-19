@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
@@ -161,6 +162,22 @@ func (td TransactionData) MarshalSia(w io.Writer) error {
 // UnmarshalSia implements siabin.SiaUnmarshaller.UnmarshalSia
 func (td *TransactionData) UnmarshalSia(r io.Reader) error {
 	return siabin.NewDecoder(r).DecodeAll(
+		&td.CoinInputs, &td.CoinOutputs,
+		&td.BlockStakeInputs, &td.BlockStakeOutputs,
+		&td.MinerFees, &td.ArbitraryData)
+}
+
+// MarshalRivine implements rivbin.RivineMarshaler.MarshalRivine
+func (td TransactionData) MarshalRivine(w io.Writer) error {
+	return rivbin.NewEncoder(w).EncodeAll(
+		td.CoinInputs, td.CoinOutputs,
+		td.BlockStakeInputs, td.BlockStakeOutputs,
+		td.MinerFees, td.ArbitraryData)
+}
+
+// UnmarshalRivine implements rivbin.RivineMarshaler.UnmarshalRivine
+func (td *TransactionData) UnmarshalRivine(r io.Reader) error {
+	return rivbin.NewDecoder(r).DecodeAll(
 		&td.CoinInputs, &td.CoinOutputs,
 		&td.BlockStakeInputs, &td.BlockStakeOutputs,
 		&td.MinerFees, &td.ArbitraryData)

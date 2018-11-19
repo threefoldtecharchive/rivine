@@ -1,4 +1,4 @@
-package encoding
+package rivbin
 
 import (
 	"bytes"
@@ -6,8 +6,6 @@ import (
 	"math"
 	"reflect"
 	"testing"
-
-	"github.com/threefoldtech/rivine/types"
 )
 
 func TestMarshalUnmarshalTinySlices(t *testing.T) {
@@ -79,41 +77,6 @@ func TestMarshalUnmarshalTinySlices(t *testing.T) {
 			[]uint64{0, math.MaxUint64, 42, 1000},
 			true,
 		},
-		// test composed types
-		{
-			[]types.CoinInput{},
-			true,
-		},
-		/* // TODO, support rivbin for our primitive types
-		{
-			[]types.CoinInput{
-				{
-					ParentID: types.CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
-					Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-						PublicKey: types.SiaPublicKey{
-							Algorithm: types.SignatureEd25519,
-							Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-						},
-						Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-					}),
-				},
-				{
-					ParentID: types.CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
-					Fulfillment: types.NewFulfillment(&types.MultiSignatureFulfillment{
-						Pairs: []types.PublicKeySignaturePair{
-							{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
-									Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-								},
-								Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
-							},
-						},
-					}),
-				},
-			},
-			true,
-		},*/
 	}
 	for idx, testCase := range testCases {
 		b := bytes.NewBuffer(nil)

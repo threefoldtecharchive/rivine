@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
@@ -215,6 +216,75 @@ func (ilp *legacyTransactionInputLockProxy) UnmarshalSia(r io.Reader) (err error
 			return
 		}
 		err = siabin.UnmarshalAll(fb, &as.PublicKey, &as.Signature, &as.Secret)
+		ilp.Fulfillment = as
+		return
+
+	default:
+		err = errors.New("v0 transactions only support single-signature and atomic-swap unlock conditions")
+		return
+	}
+}
+
+// MarshalRivine implements siabin.RivineMarshaler.MarshalRivine
+//
+// Encodes the legacy fulfillment as it used to be done,
+// as a so-called legacy input lock.
+func (ilp legacyTransactionInputLockProxy) MarshalRivine(w io.Writer) error {
+	switch tc := ilp.Fulfillment.(type) {
+	case *SingleSignatureFulfillment:
+		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature,
+			rivbin.Marshal(tc.PublicKey), tc.Signature)
+	case *LegacyAtomicSwapFulfillment:
+		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap,
+			rivbin.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock),
+			rivbin.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret))
+	default:
+		return errors.New("unlock type is invalid in a v0 transaction")
+	}
+}
+
+// UnmarshalRivine implements rivbin.RivineUnmarshaler.UnmarshalRivine
+//
+// Decodes the legacy fulfillment as it used to be done,
+// from a so-called legacy input lock structure.
+func (ilp *legacyTransactionInputLockProxy) UnmarshalRivine(r io.Reader) (err error) {
+	var (
+		unlockType UnlockType
+		decoder    = rivbin.NewDecoder(r)
+	)
+	err = decoder.Decode(&unlockType)
+	if err != nil {
+		return
+	}
+	switch unlockType {
+	case UnlockTypePubKey:
+		var cb []byte
+		err = decoder.Decode(&cb)
+		if err != nil {
+			return
+		}
+
+		ss := new(SingleSignatureFulfillment)
+		err = rivbin.Unmarshal(cb, &ss.PublicKey)
+		if err != nil {
+			return err
+		}
+		err = decoder.Decode(&ss.Signature)
+		ilp.Fulfillment = ss
+		return
+
+	case UnlockTypeAtomicSwap:
+		var cb, fb []byte
+		err = decoder.DecodeAll(&cb, &fb)
+		if err != nil {
+			return
+		}
+		as := new(LegacyAtomicSwapFulfillment)
+		err = rivbin.UnmarshalAll(cb, &as.Sender, &as.Receiver, &as.HashedSecret, &as.TimeLock)
+		if err != nil {
+			return
+		}
+		err = rivbin.UnmarshalAll(fb, &as.PublicKey, &as.Signature, &as.Secret)
 		ilp.Fulfillment = as
 		return
 

@@ -10,6 +10,8 @@ import (
 	"io"
 	"math/big"
 
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
@@ -93,6 +95,24 @@ func (c Difficulty) MarshalSia(w io.Writer) error {
 // UnmarshalSia implements the siabin.SiaUnmarshaler interface.
 func (c *Difficulty) UnmarshalSia(r io.Reader) error {
 	b, err := siabin.ReadPrefix(r, 256)
+	if err != nil {
+		return err
+	}
+	c.i.SetBytes(b)
+	return nil
+}
+
+// MarshalRivine implements the rivbin.RivineMarshaler interface. It writes the
+// byte-slice representation of the Difficulty's internal big.Int to w. Note
+// that as the bytes of the big.Int correspond to the absolute value of the
+// integer, there is no way to marshal a negative Difficulty.
+func (c Difficulty) MarshalRivine(w io.Writer) error {
+	return rivbin.WriteDataSlice(w, c.i.Bytes())
+}
+
+// UnmarshalRivine implements the rivbin.RivineMarshaler interface.
+func (c *Difficulty) UnmarshalRivine(r io.Reader) error {
+	b, err := rivbin.ReadDataSlice(r, 256)
 	if err != nil {
 		return err
 	}

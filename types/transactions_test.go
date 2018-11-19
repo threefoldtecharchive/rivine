@@ -120,7 +120,7 @@ func TestTransactionShortID(t *testing.T) {
 	}
 }
 
-func TestTransactionVersionMarshaling(t *testing.T) {
+func TestTransactionVersionSiaMarshaling(t *testing.T) {
 	testCases := []struct {
 		Version           TransactionVersion
 		HexEncodedVersion string
@@ -144,6 +144,40 @@ func TestTransactionVersionMarshaling(t *testing.T) {
 
 		var txver TransactionVersion
 		err = txver.UnmarshalSia(buf)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+		if txver != testCase.Version {
+			t.Errorf("#%d: %v != %v", idx, txver, testCase.Version)
+		}
+	}
+}
+
+func TestTransactionVersionRivineMarshaling(t *testing.T) {
+	testCases := []struct {
+		Version           TransactionVersion
+		HexEncodedVersion string
+	}{
+		{TransactionVersionZero, "00"},
+		{TransactionVersionOne, "01"},
+	}
+	for idx, testCase := range testCases {
+		buf := bytes.NewBuffer(nil)
+		err := testCase.Version.MarshalRivine(buf)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		hexEncodedVersion := hex.EncodeToString(buf.Bytes())
+		if hexEncodedVersion != testCase.HexEncodedVersion {
+			t.Errorf("#%d: %q != %q", idx, hexEncodedVersion, testCase.HexEncodedVersion)
+			continue
+		}
+
+		var txver TransactionVersion
+		err = txver.UnmarshalRivine(buf)
 		if err != nil {
 			t.Error(idx, err)
 			continue

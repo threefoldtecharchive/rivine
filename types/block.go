@@ -9,6 +9,7 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
@@ -129,6 +130,24 @@ func (b *Block) UnmarshalSia(r io.Reader) error {
 	io.ReadFull(r, tsBytes)
 	b.Timestamp = Timestamp(siabin.DecUint64(tsBytes))
 	return siabin.NewDecoder(r).DecodeAll(&b.POBSOutput, &b.MinerPayouts, &b.Transactions)
+}
+
+// MarshalRivine implements the rivbin.RivineMarshaler interface.
+func (b Block) MarshalRivine(w io.Writer) error {
+	w.Write(b.ParentID[:])
+	rivbin.MarshalUint64(w, uint64(b.Timestamp))
+	return rivbin.NewEncoder(w).EncodeAll(b.POBSOutput, b.MinerPayouts, b.Transactions)
+}
+
+// UnmarshalRivine implements the rivbin.RivineUnmarshaler interface.
+func (b *Block) UnmarshalRivine(r io.Reader) error {
+	io.ReadFull(r, b.ParentID[:])
+	i, err := rivbin.UnmarshalUint64(r)
+	if err != nil {
+		return err
+	}
+	b.Timestamp = Timestamp(i)
+	return rivbin.NewDecoder(r).DecodeAll(&b.POBSOutput, &b.MinerPayouts, &b.Transactions)
 }
 
 // UnmarshalBlockHeadersParentIDAndTS

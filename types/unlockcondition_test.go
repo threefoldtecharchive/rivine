@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
@@ -43,6 +44,48 @@ func TestUnlockConditionSiaEncoding(t *testing.T) {
 
 		buf := bytes.NewBuffer(nil)
 		err = up.MarshalSia(buf)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		out := hex.EncodeToString(buf.Bytes())
+		if out != testCase {
+			t.Error(idx, out, "!=", testCase)
+		}
+	}
+}
+
+func TestUnlockConditionRivineEncoding(t *testing.T) {
+	testCases := []string{
+		// nil condition
+		`0000`,
+		// unlock hash condition
+		`0142016363636363636363636363636363636363636363636363636363636363636363`,
+		// atomic swap condition
+		`02d401454545454545454545454545454545454545454545454545454545454545454501636363636363636363636363636363636363636363636363636363636363636378787878787878787878787878787878787878787878787878787878787878781234567812345678`,
+		// time lock condition
+		`0312111111111111111100`, // using nil condition
+		`0354111111111111111101016363636363636363636363636363636363636363636363636363636363636363`, // using (pubKey) unlock hash condition
+		// MultiSig condition
+		`049602000000000000000401e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f7001a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35`,
+	}
+	for idx, testCase := range testCases {
+		b, err := hex.DecodeString(testCase)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		var up UnlockConditionProxy
+		err = up.UnmarshalRivine(bytes.NewReader(b))
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		buf := bytes.NewBuffer(nil)
+		err = up.MarshalRivine(buf)
 		if err != nil {
 			t.Error(idx, err)
 			continue
@@ -104,6 +147,45 @@ func TestUnlockFulfillmentSiaEncoding(t *testing.T) {
 
 		buf := bytes.NewBuffer(nil)
 		err = uf.MarshalSia(buf)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		out := hex.EncodeToString(buf.Bytes())
+		if out != testCase {
+			t.Error(idx, out, "!=", testCase)
+		}
+	}
+}
+
+func TestUnlockFulfillmentRivineEncoding(t *testing.T) {
+	testCases := []string{
+		// single signature fulfillment
+		`01e4656432353531390000000000000000004035fffffffffffffffffffffffffffffffffffffffffffffffff46fffffffffff80fffffffffffffffffffffffffffff123ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
+		// legacy atomic swap fulfillment
+		`02f103011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a000000006564323535313900000000000000000040abababababababababababababababababababababababababababababababab80dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
+		// atomic swap fulfillment
+		`0249026564323535313900000000000000000040fffffffffffffffffffffffffffffffff04fffffffffffffffffffffffffffff80ffffffffffffffffffffffff56fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffffffffffff123ffffffffffafffffffffffeffffffffffffff`,
+		// MultiSig fulfillment
+		`03e6026564323535313900000000000000000040def123def123def123def123def123def123def123def123def123def123def180ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef`,
+	}
+	for idx, testCase := range testCases {
+		b, err := hex.DecodeString(testCase)
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		var uf UnlockFulfillmentProxy
+		err = uf.UnmarshalRivine(bytes.NewReader(b))
+		if err != nil {
+			t.Error(idx, err)
+			continue
+		}
+
+		buf := bytes.NewBuffer(nil)
+		err = uf.MarshalRivine(buf)
 		if err != nil {
 			t.Error(idx, err)
 			continue
@@ -393,6 +475,9 @@ func TestNilUnlockConditionProxy(t *testing.T) {
 	if b := siabin.Marshal(c); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
 		t.Error("MarshalSia", b)
 	}
+	if b := rivbin.Marshal(c); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+		t.Error("MarshalRivine", b)
+	}
 	if !c.Equal(nil) {
 		t.Error("should equal to nil implicitly")
 	}
@@ -417,6 +502,9 @@ func TestNilUnlockFulfillmentProxy(t *testing.T) {
 	}
 	if b := siabin.Marshal(f); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
 		t.Error("MarshalSia", b)
+	}
+	if b := rivbin.Marshal(f); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+		t.Error("MarshalRivine", b)
 	}
 	if !f.Equal(nil) {
 		t.Error("should equal to nil implicitly")

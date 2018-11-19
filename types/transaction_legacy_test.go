@@ -12,7 +12,7 @@ import (
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
-func TestLegacyTransactionInputLockProxyBinaryEncoding(t *testing.T) {
+func TestLegacyTransactionInputLockProxyBinarySiaEncoding(t *testing.T) {
 	testCases := []string{
 		`013800000000000000656432353531390000000000000000002000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4000000000000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
 		`026a00000000000000011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000a000000000000000656432353531390000000000000000002000000000000000abababababababababababababababababababababababababababababababab4000000000000000dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
@@ -32,6 +32,38 @@ func TestLegacyTransactionInputLockProxyBinaryEncoding(t *testing.T) {
 		}
 		buf := bytes.NewBuffer(nil)
 		err = proxy.MarshalSia(buf)
+		if err != nil {
+			t.Error(testIndex, err)
+			continue
+		}
+
+		output := hex.EncodeToString(buf.Bytes())
+		if output != testCase {
+			t.Error(testIndex, output, "!=", testCase)
+		}
+	}
+}
+
+func TestLegacyTransactionInputLockProxyBinaryRivineEncoding(t *testing.T) {
+	testCases := []string{
+		`01626564323535313900000000000000000040ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
+		`02d4011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a0000000049026564323535313900000000000000000040abababababababababababababababababababababababababababababababab80dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
+	}
+	for testIndex, testCase := range testCases {
+		binaryInput, err := hex.DecodeString(testCase)
+		if err != nil {
+			t.Error(testIndex, err)
+			continue
+		}
+
+		var proxy legacyTransactionInputLockProxy
+		err = proxy.UnmarshalRivine(bytes.NewReader(binaryInput))
+		if err != nil {
+			t.Error(testIndex, err)
+			continue
+		}
+		buf := bytes.NewBuffer(nil)
+		err = proxy.MarshalRivine(buf)
 		if err != nil {
 			t.Error(testIndex, err)
 			continue

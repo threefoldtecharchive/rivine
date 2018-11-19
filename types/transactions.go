@@ -11,6 +11,7 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
@@ -216,6 +217,7 @@ func (t Transaction) encodeTransactionDataAsIDInput(w io.Writer) error {
 	}
 	// use the default binary encoding, if the controller does not require specialized
 	// encoding logic for ID purposes
+	// TODO: (optionally) do this using the RivineEncoder?!
 	return t.MarshalSia(w)
 }
 
@@ -263,6 +265,67 @@ func (t Transaction) MarshalSia(w io.Writer) error {
 // UnmarshalSia implements the siabin.SiaUnmarshaler interface.
 func (t *Transaction) UnmarshalSia(r io.Reader) error {
 	decoder := siabin.NewDecoder(r)
+	err := decoder.Decode(&t.Version)
+	if err != nil {
+		return err
+	}
+	// decode the data using the version's controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		// a controller is required for each version
+		return ErrUnknownTransactionType
+	}
+	td, err := controller.DecodeTransactionData(r)
+	if err != nil {
+		return err
+	}
+
+	// assign all our data variables directly, zero copy
+	t.CoinInputs, t.CoinOutputs = td.CoinInputs, td.CoinOutputs
+	t.BlockStakeInputs = td.BlockStakeInputs
+	t.BlockStakeOutputs = td.BlockStakeOutputs
+	t.MinerFees, t.ArbitraryData = td.MinerFees, td.ArbitraryData
+	t.Extension = td.Extension
+	return nil
+}
+
+// TODO:
+// For now the MarshalRivine/UnmarshalRivine methods
+// of the Transaction are not used, and even if they are,
+// it does not matter as the transaction controllers,
+// still define the encoder themselves.
+// For now this is OK. Later, when we simplified the
+// Rivine codebase, and hopefully got rid of the transaction controller,
+// we can probably fix this, by again letting the transaction be in full control of its encoding.
+
+// MarshalRivine implements the rivbin.RivineMarshaler interface.
+func (t Transaction) MarshalRivine(w io.Writer) error {
+	// get a controller registered or unknown controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return ErrUnknownTransactionType
+	}
+
+	// encode the version already
+	err := rivbin.NewEncoder(w).Encode(t.Version)
+	if err != nil {
+		return err
+	}
+	// encode the data itself using the controller
+	return controller.EncodeTransactionData(w, TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+		Extension:         t.Extension,
+	})
+}
+
+// UnmarshalRivine implements the rivbin.RivineUnmarshaler interface.
+func (t *Transaction) UnmarshalRivine(r io.Reader) error {
+	decoder := rivbin.NewDecoder(r)
 	err := decoder.Decode(&t.Version)
 	if err != nil {
 		return err
@@ -448,9 +511,27 @@ func (v *TransactionVersion) UnmarshalSia(r io.Reader) error {
 	return err
 }
 
+// MarshalRivine implements RivineMarshaler.MarshalRivine
+func (v TransactionVersion) MarshalRivine(w io.Writer) error {
+	return rivbin.MarshalUint8(w, uint8(v))
+}
+
+// UnmarshalRivine implements RivineUnmarshaler.UnmarshalRivine
+func (v *TransactionVersion) UnmarshalRivine(r io.Reader) error {
+	x, err := rivbin.UnmarshalUint8(r)
+	if err != nil {
+		return err
+	}
+	*v = TransactionVersion(x)
+	return err
+}
+
 var (
 	_ siabin.SiaMarshaler   = TransactionVersion(0)
 	_ siabin.SiaUnmarshaler = (*TransactionVersion)(nil)
+
+	_ rivbin.RivineMarshaler   = TransactionVersion(0)
+	_ rivbin.RivineUnmarshaler = (*TransactionVersion)(nil)
 )
 
 // IsValidTransactionVersion returns an error in case the
@@ -505,6 +586,22 @@ func (txsid *TransactionShortID) UnmarshalSia(r io.Reader) error {
 	}
 
 	*txsid = TransactionShortID(siabin.DecUint64(b))
+	return nil
+}
+
+// MarshalRivine implements RivineMarshaler.MarshalRivine
+func (txsid TransactionShortID) MarshalRivine(w io.Writer) error {
+	return rivbin.MarshalUint64(w, uint64(txsid))
+}
+
+// UnmarshalRivine implements RivineUnmarshaler.UnmarshalRivine
+func (txsid *TransactionShortID) UnmarshalRivine(r io.Reader) error {
+	x, err := rivbin.UnmarshalUint64(r)
+	if err != nil {
+		return err
+	}
+
+	*txsid = TransactionShortID(x)
 	return nil
 }
 
