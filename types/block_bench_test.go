@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // BenchmarkEncodeEmptyBlock benchmarks encoding an empty block.
@@ -11,9 +11,9 @@ import (
 // i5-4670K, 9a90f86: 48 MB/s
 func BenchmarkEncodeBlock(b *testing.B) {
 	var block Block
-	b.SetBytes(int64(len(encoding.Marshal(block))))
+	b.SetBytes(int64(len(siabin.Marshal(block))))
 	for i := 0; i < b.N; i++ {
-		encoding.Marshal(block)
+		siabin.Marshal(block)
 	}
 }
 
@@ -23,10 +23,10 @@ func BenchmarkEncodeBlock(b *testing.B) {
 // i5-4670K, 9a90f86: 55 MB/s
 func BenchmarkDecodeEmptyBlock(b *testing.B) {
 	var block Block
-	encodedBlock := encoding.Marshal(block)
+	encodedBlock := siabin.Marshal(block)
 	b.SetBytes(int64(len(encodedBlock)))
 	for i := 0; i < b.N; i++ {
-		err := encoding.Unmarshal(encodedBlock, &block)
+		err := siabin.Unmarshal(encodedBlock, &block)
 		if err != nil {
 			b.Fatal(err)
 		}

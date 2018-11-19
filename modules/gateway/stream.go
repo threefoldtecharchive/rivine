@@ -3,8 +3,8 @@ package gateway
 import (
 	"net"
 
-	"github.com/threefoldtech/rivine/build"
 	"github.com/rivine/smux"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // A streamSession is a multiplexed transport that can accept or initiate

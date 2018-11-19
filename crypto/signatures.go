@@ -6,7 +6,7 @@ import (
 	"io"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 
 	"golang.org/x/crypto/ed25519"
 )
@@ -98,12 +98,12 @@ func GenerateKeyPairDeterministic(entropy [EntropySize]byte) (sk SecretKey, pk P
 func ReadSignedObject(r io.Reader, obj interface{}, maxLen uint64, pk PublicKey) error {
 	// read the signature
 	var sig Signature
-	err := encoding.NewDecoder(r).Decode(&sig)
+	err := siabin.NewDecoder(r).Decode(&sig)
 	if err != nil {
 		return err
 	}
 	// read the encoded object
-	encObj, err := encoding.ReadPrefix(r, maxLen)
+	encObj, err := siabin.ReadPrefix(r, maxLen)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func ReadSignedObject(r io.Reader, obj interface{}, maxLen uint64, pk PublicKey)
 		return err
 	}
 	// decode the object
-	return encoding.Unmarshal(encObj, obj)
+	return siabin.Unmarshal(encObj, obj)
 }
 
 // SignHash signs a message using a secret key.
@@ -132,7 +132,7 @@ func VerifyHash(data Hash, pk PublicKey, sig Signature) error {
 
 // WriteSignedObject writes a length-prefixed object prefixed by its signature.
 func WriteSignedObject(w io.Writer, obj interface{}, sk SecretKey) error {
-	objBytes := encoding.Marshal(obj)
+	objBytes := siabin.Marshal(obj)
 	sig := SignHash(HashBytes(objBytes), sk)
-	return encoding.NewEncoder(w).EncodeAll(sig, objBytes)
+	return siabin.NewEncoder(w).EncodeAll(sig, objBytes)
 }

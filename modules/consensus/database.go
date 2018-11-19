@@ -9,8 +9,8 @@ import (
 	"os"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 
 	"github.com/rivine/bbolt"
 )
@@ -109,7 +109,7 @@ func (cs *ConsensusSet) initDB(tx *bolt.Tx) error {
 
 	// Place a 'false' in the consistency bucket to indicate that no
 	// inconsistencies have been found.
-	err = tx.Bucket(Consistency).Put(Consistency, encoding.Marshal(false))
+	err = tx.Bucket(Consistency).Put(Consistency, siabin.Marshal(false))
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (cs *ConsensusSet) initDB(tx *bolt.Tx) error {
 // within the database.
 func inconsistencyDetected(tx *bolt.Tx) (detected bool) {
 	inconsistencyBytes := tx.Bucket(Consistency).Get(Consistency)
-	err := encoding.Unmarshal(inconsistencyBytes, &detected)
+	err := siabin.Unmarshal(inconsistencyBytes, &detected)
 	if build.DEBUG && err != nil {
 		panic(err)
 	}
@@ -132,7 +132,7 @@ func inconsistencyDetected(tx *bolt.Tx) (detected bool) {
 func markInconsistency(tx *bolt.Tx) {
 	// Place a 'true' in the consistency bucket to indicate that
 	// inconsistencies have been found.
-	err := tx.Bucket(Consistency).Put(Consistency, encoding.Marshal(true))
+	err := tx.Bucket(Consistency).Put(Consistency, siabin.Marshal(true))
 	if build.DEBUG && err != nil {
 		panic(err)
 	}

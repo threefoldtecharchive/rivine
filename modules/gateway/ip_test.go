@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // TestIpRPC tests the ip discovery RPC.
@@ -30,7 +30,7 @@ func TestIpRPC(t *testing.T) {
 	// Call RPC
 	err = g1.RPC(g2.Address(), "DiscoverIP", func(conn modules.PeerConn) error {
 		var address string
-		err := encoding.ReadObject(conn, &address, 100)
+		err := siabin.ReadObject(conn, &address, 100)
 		if err != nil {
 			t.Error("failed to read object from response", err)
 		}

@@ -15,7 +15,7 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 var (
@@ -72,7 +72,7 @@ func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}
 	}
 
 	h := crypto.NewHash()
-	enc := encoding.NewEncoder(h)
+	enc := siabin.NewEncoder(h)
 
 	enc.EncodeAll(
 		t.Version,
@@ -104,7 +104,7 @@ func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}
 
 func (t Transaction) legacyInputSigHash(inputIndex uint64, extraObjects ...interface{}) crypto.Hash {
 	h := crypto.NewHash()
-	enc := encoding.NewEncoder(h)
+	enc := siabin.NewEncoder(h)
 
 	enc.Encode(inputIndex)
 	if len(extraObjects) > 0 {
@@ -157,10 +157,10 @@ func legacyUnlockHashFromFulfillment(uf UnlockFulfillment) UnlockHash {
 	switch tuf := uf.(type) {
 	case *SingleSignatureFulfillment:
 		return NewUnlockHash(UnlockTypePubKey,
-			crypto.HashObject(encoding.Marshal(tuf.PublicKey)))
+			crypto.HashObject(siabin.Marshal(tuf.PublicKey)))
 	case *LegacyAtomicSwapFulfillment:
 		return NewUnlockHash(UnlockTypeAtomicSwap,
-			crypto.HashObject(encoding.MarshalAll(
+			crypto.HashObject(siabin.MarshalAll(
 				tuf.Sender, tuf.Receiver, tuf.HashedSecret, tuf.TimeLock)))
 	default:
 		if build.DEBUG {

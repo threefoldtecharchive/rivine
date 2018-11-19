@@ -8,7 +8,7 @@ package types
 import (
 	"errors"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // various errors that can be returned as result of a specific transaction validation
@@ -47,7 +47,7 @@ func (err MissingBlockStakeOutputError) Error() string {
 func TransactionFitsInABlock(t Transaction, blockSizeLimit uint64) error {
 	// Check that the transaction will fit inside of a block, leaving 5kb for
 	// overhead.
-	if uint64(len(encoding.Marshal(t))) > blockSizeLimit-5e3 {
+	if uint64(len(siabin.Marshal(t))) > blockSizeLimit-5e3 {
 		return ErrTransactionTooLarge
 	}
 	return nil

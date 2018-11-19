@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // TestUnitSignatureEncoding creates and encodes a public key, and verifies
@@ -18,9 +18,9 @@ func TestUnitSignatureEncoding(t *testing.T) {
 	pk := sk.PublicKey()
 
 	// Marshal and unmarshal the public key.
-	marshalledPK := encoding.Marshal(pk)
+	marshalledPK := siabin.Marshal(pk)
 	var unmarshalledPK PublicKey
-	err := encoding.Unmarshal(marshalledPK, &unmarshalledPK)
+	err := siabin.Unmarshal(marshalledPK, &unmarshalledPK)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,9 +36,9 @@ func TestUnitSignatureEncoding(t *testing.T) {
 	sig := SignHash(signedData, sk)
 
 	// Marshal and unmarshal the signature.
-	marshalledSig := encoding.Marshal(sig)
+	marshalledSig := siabin.Marshal(sig)
 	var unmarshalledSig Signature
-	err = encoding.Unmarshal(marshalledSig, &unmarshalledSig)
+	err = siabin.Unmarshal(marshalledSig, &unmarshalledSig)
 	if err != nil {
 		t.Fatal(err)
 	}

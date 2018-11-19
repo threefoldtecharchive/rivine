@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 var (
@@ -127,7 +127,7 @@ func (g *Gateway) shareNodes(conn modules.PeerConn) error {
 			}
 		}
 	}()
-	return encoding.WriteObject(conn, nodes)
+	return siabin.WriteObject(conn, nodes)
 }
 
 // requestNodes is the calling end of the ShareNodes RPC.
@@ -135,7 +135,7 @@ func (g *Gateway) requestNodes(conn modules.PeerConn) error {
 	conn.SetDeadline(time.Now().Add(connStdDeadline))
 
 	var nodes []modules.NetAddress
-	if err := encoding.ReadObject(conn, &nodes, maxSharedNodes*modules.MaxEncodedNetAddressLength); err != nil {
+	if err := siabin.ReadObject(conn, &nodes, maxSharedNodes*modules.MaxEncodedNetAddressLength); err != nil {
 		return err
 	}
 

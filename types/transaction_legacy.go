@@ -5,7 +5,8 @@ import (
 	"errors"
 	"io"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // legacy transaction-related types,
@@ -155,32 +156,32 @@ func (ltd legacyTransactionData) TransactionData() (data TransactionData) {
 	return
 }
 
-// MarshalSia implements encoding.SiaMarshaller.MarshalSia
+// MarshalSia implements siabin.SiaMarshaller.MarshalSia
 //
 // Encodes the legacy fulfillment as it used to be done,
 // as a so-called legacy input lock.
 func (ilp legacyTransactionInputLockProxy) MarshalSia(w io.Writer) error {
 	switch tc := ilp.Fulfillment.(type) {
 	case *SingleSignatureFulfillment:
-		return encoding.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature,
-			encoding.Marshal(tc.PublicKey), tc.Signature)
+		return siabin.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature,
+			siabin.Marshal(tc.PublicKey), tc.Signature)
 	case *LegacyAtomicSwapFulfillment:
-		return encoding.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap,
-			encoding.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock),
-			encoding.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret))
+		return siabin.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap,
+			siabin.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock),
+			siabin.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret))
 	default:
 		return errors.New("unlock type is invalid in a v0 transaction")
 	}
 }
 
-// UnmarshalSia implements encoding.SiaUnmarshaller.UnmarshalSia
+// UnmarshalSia implements siabin.SiaUnmarshaller.UnmarshalSia
 //
 // Decodes the legacy fulfillment as it used to be done,
 // from a so-called legacy input lock structure.
 func (ilp *legacyTransactionInputLockProxy) UnmarshalSia(r io.Reader) (err error) {
 	var (
 		unlockType UnlockType
-		decoder    = encoding.NewDecoder(r)
+		decoder    = siabin.NewDecoder(r)
 	)
 	err = decoder.Decode(&unlockType)
 	if err != nil {
@@ -195,7 +196,7 @@ func (ilp *legacyTransactionInputLockProxy) UnmarshalSia(r io.Reader) (err error
 		}
 
 		ss := new(SingleSignatureFulfillment)
-		err = encoding.Unmarshal(cb, &ss.PublicKey)
+		err = siabin.Unmarshal(cb, &ss.PublicKey)
 		if err != nil {
 			return err
 		}
@@ -210,11 +211,80 @@ func (ilp *legacyTransactionInputLockProxy) UnmarshalSia(r io.Reader) (err error
 			return
 		}
 		as := new(LegacyAtomicSwapFulfillment)
-		err = encoding.UnmarshalAll(cb, &as.Sender, &as.Receiver, &as.HashedSecret, &as.TimeLock)
+		err = siabin.UnmarshalAll(cb, &as.Sender, &as.Receiver, &as.HashedSecret, &as.TimeLock)
 		if err != nil {
 			return
 		}
-		err = encoding.UnmarshalAll(fb, &as.PublicKey, &as.Signature, &as.Secret)
+		err = siabin.UnmarshalAll(fb, &as.PublicKey, &as.Signature, &as.Secret)
+		ilp.Fulfillment = as
+		return
+
+	default:
+		err = errors.New("v0 transactions only support single-signature and atomic-swap unlock conditions")
+		return
+	}
+}
+
+// MarshalRivine implements siabin.RivineMarshaler.MarshalRivine
+//
+// Encodes the legacy fulfillment as it used to be done,
+// as a so-called legacy input lock.
+func (ilp legacyTransactionInputLockProxy) MarshalRivine(w io.Writer) error {
+	switch tc := ilp.Fulfillment.(type) {
+	case *SingleSignatureFulfillment:
+		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature,
+			rivbin.Marshal(tc.PublicKey), tc.Signature)
+	case *LegacyAtomicSwapFulfillment:
+		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap,
+			rivbin.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock),
+			rivbin.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret))
+	default:
+		return errors.New("unlock type is invalid in a v0 transaction")
+	}
+}
+
+// UnmarshalRivine implements rivbin.RivineUnmarshaler.UnmarshalRivine
+//
+// Decodes the legacy fulfillment as it used to be done,
+// from a so-called legacy input lock structure.
+func (ilp *legacyTransactionInputLockProxy) UnmarshalRivine(r io.Reader) (err error) {
+	var (
+		unlockType UnlockType
+		decoder    = rivbin.NewDecoder(r)
+	)
+	err = decoder.Decode(&unlockType)
+	if err != nil {
+		return
+	}
+	switch unlockType {
+	case UnlockTypePubKey:
+		var cb []byte
+		err = decoder.Decode(&cb)
+		if err != nil {
+			return
+		}
+
+		ss := new(SingleSignatureFulfillment)
+		err = rivbin.Unmarshal(cb, &ss.PublicKey)
+		if err != nil {
+			return err
+		}
+		err = decoder.Decode(&ss.Signature)
+		ilp.Fulfillment = ss
+		return
+
+	case UnlockTypeAtomicSwap:
+		var cb, fb []byte
+		err = decoder.DecodeAll(&cb, &fb)
+		if err != nil {
+			return
+		}
+		as := new(LegacyAtomicSwapFulfillment)
+		err = rivbin.UnmarshalAll(cb, &as.Sender, &as.Receiver, &as.HashedSecret, &as.TimeLock)
+		if err != nil {
+			return
+		}
+		err = rivbin.UnmarshalAll(fb, &as.PublicKey, &as.Signature, &as.Secret)
 		ilp.Fulfillment = as
 		return
 

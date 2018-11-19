@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // rpcID is an 8-byte signature that is added to all RPCs to tell the gatway
@@ -58,7 +58,7 @@ func (g *Gateway) managedRPC(addr modules.NetAddress, name string, fn modules.RP
 
 	// write header
 	conn.SetDeadline(time.Now().Add(rpcStdDeadline))
-	if err := encoding.WriteObject(conn, handlerName(name)); err != nil {
+	if err := siabin.WriteObject(conn, handlerName(name)); err != nil {
 		return err
 	}
 	conn.SetDeadline(time.Time{})
@@ -203,7 +203,7 @@ func (g *Gateway) threadedHandleConn(conn modules.PeerConn) {
 	if err != nil {
 		return
 	}
-	if err := encoding.ReadObject(conn, &id, 8); err != nil {
+	if err := siabin.ReadObject(conn, &id, 8); err != nil {
 		return
 	}
 	// call registered handler for this ID
@@ -240,9 +240,9 @@ func (g *Gateway) Broadcast(name string, obj interface{}, peers []modules.Peer) 
 	g.log.Debugf("INFO: broadcasting RPC %q to %v peers", name, len(peers))
 
 	// only encode obj once, instead of using WriteObject
-	enc := encoding.Marshal(obj)
+	enc := siabin.Marshal(obj)
 	fn := func(conn modules.PeerConn) error {
-		return encoding.WritePrefix(conn, enc)
+		return siabin.WritePrefix(conn, enc)
 	}
 
 	var wg sync.WaitGroup

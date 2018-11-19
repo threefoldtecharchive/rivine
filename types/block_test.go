@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // TestBlockHeader checks that BlockHeader returns the correct value, and that
@@ -26,7 +27,7 @@ func TestBlockHeader(t *testing.T) {
 	}
 
 	id1 := b.ID()
-	id2 := BlockID(crypto.HashBytes(encoding.Marshal(b.Header())))
+	id2 := BlockID(crypto.HashBytes(siabin.Marshal(b.Header())))
 	id3 := BlockID(crypto.HashAll(
 		b.ParentID,
 		b.POBSOutput,
@@ -217,9 +218,9 @@ func TestBlockMinerPayoutID(t *testing.T) {
 	}
 }
 
-// TestBlockEncodes probes the MarshalSia and UnmarshalSia methods of the
+// TestBlockSiaEncoding probes the MarshalSia and UnmarshalSia methods of the
 // Block type.
-func TestBlockEncoding(t *testing.T) {
+func TestBlockSiaEncoding(t *testing.T) {
 	cts := TestnetChainConstants()
 
 	b := Block{
@@ -229,7 +230,30 @@ func TestBlockEncoding(t *testing.T) {
 		},
 	}
 	var decB Block
-	err := encoding.Unmarshal(encoding.Marshal(b), &decB)
+	err := siabin.Unmarshal(siabin.Marshal(b), &decB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(decB.MinerPayouts) != len(b.MinerPayouts) ||
+		decB.MinerPayouts[0].Value.Cmp(b.MinerPayouts[0].Value) != 0 ||
+		decB.MinerPayouts[1].Value.Cmp(b.MinerPayouts[1].Value) != 0 {
+		t.Fatal("block changed after encode/decode:", b, decB)
+	}
+}
+
+// TestBlockRivineEncoding probes the MarshalRivine and UnmarshalRivine methods of the
+// Block type.
+func TestBlockRivineEncoding(t *testing.T) {
+	cts := TestnetChainConstants()
+
+	b := Block{
+		MinerPayouts: []MinerPayout{
+			{Value: cts.BlockCreatorFee},
+			{Value: cts.BlockCreatorFee},
+		},
+	}
+	var decB Block
+	err := rivbin.Unmarshal(rivbin.Marshal(b), &decB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -599,7 +623,7 @@ func TestDecodeLegacyBlockAfterBug305(t *testing.T) {
 			continue
 		}
 		var block Block
-		err = encoding.Unmarshal(b, &block)
+		err = siabin.Unmarshal(b, &block)
 		if err != nil {
 			t.Error(idx, err)
 		}

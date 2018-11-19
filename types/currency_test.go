@@ -8,7 +8,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // TestNewCurrency initializes a standard new currency.
@@ -301,6 +302,22 @@ func TestCurrencyMarshalSia(t *testing.T) {
 	}
 }
 
+// TestCurrencyMarshalRivine probes the MarshalRIvine and UnmarshalRivine functions of
+// the currency type.
+func TestCurrencyMarshalRivine(t *testing.T) {
+	c := NewCurrency64(1656)
+	buf := new(bytes.Buffer)
+	err := c.MarshalRivine(buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cUmar Currency
+	cUmar.UnmarshalRivine(buf)
+	if c.Cmp(cUmar) != 0 {
+		t.Error("marshal and unmarshal mismatch for currency type")
+	}
+}
+
 // TestCurrencyString probes the String function of the currency type.
 func TestCurrencyString(t *testing.T) {
 	b := big.NewInt(7135)
@@ -331,9 +348,9 @@ func TestCurrencyScan(t *testing.T) {
 // error.
 func TestCurrencyEncoding(t *testing.T) {
 	c := NewCurrency64(351)
-	cMar := encoding.Marshal(c)
+	cMar := siabin.Marshal(c)
 	var cUmar Currency
-	err := encoding.Unmarshal(cMar, &cUmar)
+	err := siabin.Unmarshal(cMar, &cUmar)
 	if err != nil {
 		t.Error("Error unmarshalling a currency:", err)
 	}
@@ -466,11 +483,36 @@ func TestCurrencyUnsafeDecode(t *testing.T) {
 
 	// UnmarshalSia
 	c = cts.CurrencyUnits.OneCoin
-	err = encoding.Unmarshal(encoding.Marshal(NewCurrency64(7)), &c)
+	err = siabin.Unmarshal(siabin.Marshal(NewCurrency64(7)), &c)
 	if err != nil {
 		t.Error(err)
 	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
 		t.Errorf("UnmarshalSia changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
+	}
+}
+
+// TestCurrencyUnsafeDecode tests that decoding into an existing Currency
+// value does not overwrite its contents.
+func TestCurrencyUnsafeRivineDecode(t *testing.T) {
+	cts := TestnetChainConstants()
+
+	// Scan
+	backup := cts.CurrencyUnits.OneCoin.Mul64(1)
+	c := cts.CurrencyUnits.OneCoin
+	_, err := fmt.Sscan("7", &c)
+	if err != nil {
+		t.Error(err)
+	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
+		t.Errorf("Scan changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
+	}
+
+	// UnmarshalRivine
+	c = cts.CurrencyUnits.OneCoin
+	err = rivbin.Unmarshal(rivbin.Marshal(NewCurrency64(7)), &c)
+	if err != nil {
+		t.Error(err)
+	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
+		t.Errorf("UnmarshalRivine changed value of OneCoin: %v -> %v", backup, cts.CurrencyUnits.OneCoin)
 	}
 }
 

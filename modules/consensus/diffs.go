@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -198,5 +198,5 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 		pb.ConsensusChecksum = consensusChecksum(tx)
 	}
 
-	return blockMap.Put(bid[:], encoding.Marshal(*pb))
+	return blockMap.Put(bid[:], siabin.Marshal(*pb))
 }

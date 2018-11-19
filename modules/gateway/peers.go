@@ -9,8 +9,8 @@ import (
 
 	"github.com/NebulousLabs/fastrand"
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -257,7 +257,7 @@ type remoteInfo struct {
 // on the side making the connection request.
 func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion, uniqueID gatewayID, netAddress modules.NetAddress, wantConn bool) (remoteInfo remoteInfo, err error) {
 	// Send our version header.
-	if err = encoding.WriteObject(conn, version); err != nil {
+	if err = siabin.WriteObject(conn, version); err != nil {
 		err = fmt.Errorf("failed to write version header: %v", err)
 		return
 	}
@@ -267,13 +267,13 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 		UniqueID:  uniqueID,
 		WantConn:  wantConn,
 	}
-	if err = encoding.WriteObject(conn, ourSessionHeader); err != nil {
+	if err = siabin.WriteObject(conn, ourSessionHeader); err != nil {
 		err = fmt.Errorf("failed to write session header: %v", err)
 		return
 	}
 
 	// read their version
-	if err = encoding.ReadObject(conn, &remoteInfo.Version, build.EncodedVersionLength); err != nil {
+	if err = siabin.ReadObject(conn, &remoteInfo.Version, build.EncodedVersionLength); err != nil {
 		err = fmt.Errorf("failed to read remote version header: %v", err)
 		return
 	}
@@ -293,7 +293,7 @@ func (g *Gateway) connectHandshake(conn net.Conn, version build.ProtocolVersion,
 
 	// read their session header.
 	var theirs sessionHeader
-	if err = encoding.ReadObject(conn, &theirs, EncodedSessionHeaderLength); err != nil {
+	if err = siabin.ReadObject(conn, &theirs, EncodedSessionHeaderLength); err != nil {
 		err = fmt.Errorf("failed to read session header: %v", err)
 		return
 	}
@@ -332,7 +332,7 @@ func (g *Gateway) connectSessionHandshakeV100(conn net.Conn, theirs sessionHeade
 	g.mu.RLock()
 	port := g.port
 	g.mu.RUnlock()
-	err = encoding.WriteObject(conn, port)
+	err = siabin.WriteObject(conn, port)
 	if err != nil {
 		err = errors.New("could not write port #: " + err.Error())
 		return
@@ -345,13 +345,13 @@ func (g *Gateway) connectSessionHandshakeV100(conn net.Conn, theirs sessionHeade
 func (g *Gateway) connectSessionHandshakeV102(conn net.Conn, theirs sessionHeader, netAddress modules.NetAddress) (remoteAddress modules.NetAddress, err error) {
 	// send our net address first, as we are the one wanting to connect
 	g.log.Debugln("accept: sending our netaddr:", netAddress, netAddress.IsLocal())
-	err = encoding.WriteObject(conn, netAddress)
+	err = siabin.WriteObject(conn, netAddress)
 	if err != nil {
 		err = errors.New("could not write address: " + err.Error())
 		return
 	}
 	// receive their address
-	err = encoding.ReadObject(conn, &remoteAddress, modules.MaxEncodedNetAddressLength)
+	err = siabin.ReadObject(conn, &remoteAddress, modules.MaxEncodedNetAddressLength)
 	if err != nil {
 		err = errors.New("connect: could not read remote address: " + err.Error())
 		return
@@ -423,7 +423,7 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 	}
 
 	// write our version, as their info checks out
-	err = encoding.WriteObject(conn, version)
+	err = siabin.WriteObject(conn, version)
 	if err != nil {
 		return
 	}
@@ -442,7 +442,7 @@ func (g *Gateway) acceptConnHandshake(conn net.Conn, version build.ProtocolVersi
 		UniqueID:  uniqueID,
 		WantConn:  err == nil,
 	}
-	if e := encoding.WriteObject(conn, ours); e != nil {
+	if e := siabin.WriteObject(conn, ours); e != nil {
 		err = e
 	}
 	if err != nil {
@@ -473,7 +473,7 @@ func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.Protocol
 	if _, err = io.ReadFull(conn, prefix); err != nil {
 		return
 	}
-	dataLen := encoding.DecUint64(prefix)
+	dataLen := siabin.DecUint64(prefix)
 	if dataLen == legacyEncodedVersionHeaderLength {
 		legacy = true
 
@@ -485,7 +485,7 @@ func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.Protocol
 
 		// assume legacy peer
 		var legacyVersionHeader legacyVersionHeader
-		err = encoding.Unmarshal(data, &legacyVersionHeader)
+		err = siabin.Unmarshal(data, &legacyVersionHeader)
 		if err != nil {
 			return
 		}
@@ -509,14 +509,14 @@ func (g *Gateway) readRemoteHeaders(conn net.Conn) (remoteVersion build.Protocol
 		return
 	}
 	// read remote version
-	if err = encoding.Unmarshal(data, &remoteVersion); err != nil {
+	if err = siabin.Unmarshal(data, &remoteVersion); err != nil {
 		err = fmt.Errorf("failed to read remote version header: %v", err)
 		g.writeRejectVersionHeader(conn, err)
 		return
 	}
 
 	// read remote session header,
-	err = encoding.ReadObject(conn, &remoteHeader, EncodedSessionHeaderLength)
+	err = siabin.ReadObject(conn, &remoteHeader, EncodedSessionHeaderLength)
 	return
 }
 
@@ -530,7 +530,7 @@ func (g *Gateway) legacyAcceptConnectHandshake(conn net.Conn, version build.Prot
 		UniqueID:  uniqueID,
 		WantConn:  wantConn,
 	}
-	err = encoding.WriteObject(conn, ours)
+	err = siabin.WriteObject(conn, ours)
 	if err != nil {
 		return
 	}
@@ -559,7 +559,7 @@ func (g *Gateway) acceptConnSessionHandshakeV100(conn net.Conn) (remoteAddress m
 
 	// Read the peer's port that we can dial them back on.
 	var dialbackPort string
-	err = encoding.ReadObject(conn, &dialbackPort, 13) // Max port # is 65535 (5 digits long) + 8 byte string length prefix
+	err = siabin.ReadObject(conn, &dialbackPort, 13) // Max port # is 65535 (5 digits long) + 8 byte string length prefix
 	if err != nil {
 		return "", fmt.Errorf("could not read remote peer's port: %v", err)
 	}
@@ -583,14 +583,14 @@ func (g *Gateway) acceptConnSessionHandshakeV100(conn net.Conn) (remoteAddress m
 
 func (g *Gateway) acceptConnSessionHandshakeV102(conn net.Conn) (remoteAddress modules.NetAddress, err error) {
 	// receive their address first, as we accept
-	err = encoding.ReadObject(conn, &remoteAddress, modules.MaxEncodedNetAddressLength)
+	err = siabin.ReadObject(conn, &remoteAddress, modules.MaxEncodedNetAddressLength)
 	if err != nil {
 		err = errors.New("accept: could not read remote address: " + err.Error())
 	}
 	// validate the address
 	err = remoteAddress.IsStdValid()
 	if err != nil {
-		if err := encoding.WriteObject(conn, "reject"); err != nil {
+		if err := siabin.WriteObject(conn, "reject"); err != nil {
 			g.log.Println("WARN: failed to write reject address:", err)
 		}
 		err = fmt.Errorf("peer's address (%v) is invalid: %v", remoteAddress, err)
@@ -600,7 +600,7 @@ func (g *Gateway) acceptConnSessionHandshakeV102(conn net.Conn) (remoteAddress m
 	gaddr := g.myAddr
 	g.mu.RUnlock()
 	g.log.Debugln("accept: sending our netaddr:", gaddr, gaddr.IsLocal())
-	err = encoding.WriteObject(conn, gaddr)
+	err = siabin.WriteObject(conn, gaddr)
 	if err != nil {
 		err = errors.New("could not write address: " + err.Error())
 		return
@@ -610,7 +610,7 @@ func (g *Gateway) acceptConnSessionHandshakeV102(conn net.Conn) (remoteAddress m
 
 func (g *Gateway) writeRejectVersionHeader(conn net.Conn, reason error) {
 	// write our version
-	err := encoding.WriteObject(conn, rejectedVersion)
+	err := siabin.WriteObject(conn, rejectedVersion)
 	if err != nil {
 		g.log.Printf(`WARN: failed to write rejected version for "%v": %v`, reason, err)
 	}

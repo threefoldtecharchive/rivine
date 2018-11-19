@@ -9,7 +9,8 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 const (
@@ -115,20 +116,38 @@ func (b Block) MinerPayoutID(i uint64) CoinOutputID {
 	))
 }
 
-// MarshalSia implements the encoding.SiaMarshaler interface.
+// MarshalSia implements the siabin.SiaMarshaler interface.
 func (b Block) MarshalSia(w io.Writer) error {
 	w.Write(b.ParentID[:])
-	w.Write(encoding.EncUint64(uint64(b.Timestamp)))
-	return encoding.NewEncoder(w).EncodeAll(b.POBSOutput, b.MinerPayouts, b.Transactions)
+	w.Write(siabin.EncUint64(uint64(b.Timestamp)))
+	return siabin.NewEncoder(w).EncodeAll(b.POBSOutput, b.MinerPayouts, b.Transactions)
 }
 
-// UnmarshalSia implements the encoding.SiaUnmarshaler interface.
+// UnmarshalSia implements the siabin.SiaUnmarshaler interface.
 func (b *Block) UnmarshalSia(r io.Reader) error {
 	io.ReadFull(r, b.ParentID[:])
 	tsBytes := make([]byte, 8)
 	io.ReadFull(r, tsBytes)
-	b.Timestamp = Timestamp(encoding.DecUint64(tsBytes))
-	return encoding.NewDecoder(r).DecodeAll(&b.POBSOutput, &b.MinerPayouts, &b.Transactions)
+	b.Timestamp = Timestamp(siabin.DecUint64(tsBytes))
+	return siabin.NewDecoder(r).DecodeAll(&b.POBSOutput, &b.MinerPayouts, &b.Transactions)
+}
+
+// MarshalRivine implements the rivbin.RivineMarshaler interface.
+func (b Block) MarshalRivine(w io.Writer) error {
+	w.Write(b.ParentID[:])
+	rivbin.MarshalUint64(w, uint64(b.Timestamp))
+	return rivbin.NewEncoder(w).EncodeAll(b.POBSOutput, b.MinerPayouts, b.Transactions)
+}
+
+// UnmarshalRivine implements the rivbin.RivineUnmarshaler interface.
+func (b *Block) UnmarshalRivine(r io.Reader) error {
+	io.ReadFull(r, b.ParentID[:])
+	i, err := rivbin.UnmarshalUint64(r)
+	if err != nil {
+		return err
+	}
+	b.Timestamp = Timestamp(i)
+	return rivbin.NewDecoder(r).DecodeAll(&b.POBSOutput, &b.MinerPayouts, &b.Transactions)
 }
 
 // UnmarshalBlockHeadersParentIDAndTS
@@ -136,7 +155,7 @@ func (b *Block) UnmarshalSia(r io.Reader) error {
 func (b *Block) UnmarshalBlockHeadersParentIDAndTS(raw []byte) (BlockID, Timestamp) {
 	var ParentID BlockID
 	copy(ParentID[:], raw[:32])
-	return ParentID, Timestamp(encoding.DecUint64(raw[32:40]))
+	return ParentID, Timestamp(siabin.DecUint64(raw[32:40]))
 }
 
 // MarshalJSON marshales a block id as a hex string.

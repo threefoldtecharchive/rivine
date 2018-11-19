@@ -3,8 +3,8 @@ package transactionpool
 import (
 	"fmt"
 
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -27,7 +27,7 @@ func (tp *TransactionPool) ValidateTransactionSet(ts []types.Transaction) error 
 	//validate each transaction in the transaction set
 	var err error
 	for _, t := range ts {
-		size := len(encoding.Marshal(t))
+		size := len(siabin.Marshal(t))
 		if size > tp.chainCts.TransactionPool.TransactionSizeLimit {
 			return modules.ErrLargeTransaction
 		}

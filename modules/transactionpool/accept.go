@@ -7,8 +7,8 @@ import (
 	"errors"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -160,7 +160,7 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 	// be removed, they will be overwritten later in the function.
 	for _, conflict := range conflictMap {
 		conflictSet := tp.transactionSets[conflict]
-		tp.transactionListSize -= len(encoding.Marshal(conflictSet))
+		tp.transactionListSize -= len(siabin.Marshal(conflictSet))
 		delete(tp.transactionSets, conflict)
 		delete(tp.transactionSetDiffs, conflict)
 	}
@@ -175,7 +175,7 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 		tp.knownObjects[ObjectID(diff.ID)] = setID
 	}
 	tp.transactionSetDiffs[setID] = cc
-	tp.transactionListSize += len(encoding.Marshal(superset))
+	tp.transactionListSize += len(siabin.Marshal(superset))
 	return nil
 }
 
@@ -239,7 +239,7 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	// remember when the transaction was added
 	tp.broadcastCache.add(setID, tp.consensusSet.Height())
 	tp.transactionSetDiffs[setID] = cc
-	tp.transactionListSize += len(encoding.Marshal(ts))
+	tp.transactionListSize += len(siabin.Marshal(ts))
 	return nil
 }
 
@@ -266,7 +266,7 @@ func (tp *TransactionPool) AcceptTransactionSet(ts []types.Transaction) error {
 // other peers.
 func (tp *TransactionPool) relayTransactionSet(conn modules.PeerConn) error {
 	var ts []types.Transaction
-	err := encoding.ReadObject(conn, &ts, tp.chainCts.BlockSizeLimit)
+	err := siabin.ReadObject(conn, &ts, tp.chainCts.BlockSizeLimit)
 	if err != nil {
 		return err
 	}

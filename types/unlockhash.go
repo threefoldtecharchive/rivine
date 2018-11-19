@@ -7,7 +7,8 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // unlockhash.go contains the unlockhash alias along with usability methods
@@ -88,7 +89,7 @@ func NewEd25519PubKeyUnlockHash(pk crypto.PublicKey) UnlockHash {
 func NewPubKeyUnlockHash(pk SiaPublicKey) UnlockHash {
 	return UnlockHash{
 		Type: UnlockTypePubKey,
-		Hash: crypto.HashObject(encoding.Marshal(pk)),
+		Hash: crypto.HashObject(siabin.Marshal(pk)),
 	}
 }
 
@@ -122,14 +123,39 @@ func (t *UnlockType) UnmarshalSia(r io.Reader) error {
 	return err
 }
 
+// MarshalRivine implements RivineMarshaler.MarshalRivine
+func (t UnlockType) MarshalRivine(w io.Writer) error {
+	return rivbin.MarshalUint8(w, uint8(t))
+}
+
+// UnmarshalRivine implements RivineUnmarshaler.UnmarshalRivine
+func (t *UnlockType) UnmarshalRivine(r io.Reader) error {
+	x, err := rivbin.UnmarshalUint8(r)
+	if err != nil {
+		return err
+	}
+	*t = UnlockType(x)
+	return nil
+}
+
 // MarshalSia implements SiaMarshaler.MarshalSia
 func (uh UnlockHash) MarshalSia(w io.Writer) error {
-	return encoding.NewEncoder(w).EncodeAll(uh.Type, uh.Hash)
+	return siabin.NewEncoder(w).EncodeAll(uh.Type, uh.Hash)
 }
 
 // UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
 func (uh *UnlockHash) UnmarshalSia(r io.Reader) error {
-	return encoding.NewDecoder(r).DecodeAll(&uh.Type, &uh.Hash)
+	return siabin.NewDecoder(r).DecodeAll(&uh.Type, &uh.Hash)
+}
+
+// MarshalRivine implements RivineMarshaler.MarshalRivine
+func (uh UnlockHash) MarshalRivine(w io.Writer) error {
+	return rivbin.NewEncoder(w).EncodeAll(uh.Type, uh.Hash)
+}
+
+// UnmarshalRivine implements RivineUnmarshaler.UnmarshalRivine
+func (uh *UnlockHash) UnmarshalRivine(r io.Reader) error {
+	return rivbin.NewDecoder(r).DecodeAll(&uh.Type, &uh.Hash)
 }
 
 // Cmp compares returns an integer comparing two unlock hashes lexicographically.
@@ -148,10 +174,15 @@ func (uh UnlockHash) Cmp(other UnlockHash) int {
 // TODO: unit test (UnlockHash).Cmp
 
 var (
-	_ encoding.SiaMarshaler   = UnlockType(0)
-	_ encoding.SiaMarshaler   = UnlockHash{}
-	_ encoding.SiaUnmarshaler = (*UnlockType)(nil)
-	_ encoding.SiaUnmarshaler = (*UnlockHash)(nil)
+	_ siabin.SiaMarshaler   = UnlockType(0)
+	_ siabin.SiaMarshaler   = UnlockHash{}
+	_ siabin.SiaUnmarshaler = (*UnlockType)(nil)
+	_ siabin.SiaUnmarshaler = (*UnlockHash)(nil)
+
+	_ rivbin.RivineMarshaler   = UnlockType(0)
+	_ rivbin.RivineMarshaler   = UnlockHash{}
+	_ rivbin.RivineUnmarshaler = (*UnlockType)(nil)
+	_ rivbin.RivineUnmarshaler = (*UnlockHash)(nil)
 )
 
 // MarshalJSON is implemented on the unlock hash to always produce a hex string

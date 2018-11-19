@@ -7,9 +7,9 @@ import (
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -75,11 +75,11 @@ func updateLegacyBlockMapBucket(bucket *bolt.Bucket, log *persist.Logger) error 
 	for k, v := cursor.First(); len(k) != 0; k, v = cursor.Next() {
 		// try to decode the legacy format
 		var legacyBlock legacyProcessedBlock
-		err = encoding.Unmarshal(v, &legacyBlock)
+		err = siabin.Unmarshal(v, &legacyBlock)
 		if err != nil {
 			// ensure it is in the new format already
 			var block processedBlock
-			err = encoding.Unmarshal(v, &block)
+			err = siabin.Unmarshal(v, &block)
 			if err != nil {
 				return err
 			}
@@ -103,11 +103,11 @@ func updateLegacyCoinOutputBucket(bucket *bolt.Bucket, log *persist.Logger) erro
 	for k, v := cursor.First(); len(k) != 0; k, v = cursor.Next() {
 		// try to decode the legacy format
 		var out legacyOutput
-		err = encoding.Unmarshal(v, &out)
+		err = siabin.Unmarshal(v, &out)
 		if err != nil {
 			// ensure it is in the new format already
 			var co types.CoinOutput
-			err = encoding.Unmarshal(v, &co)
+			err = siabin.Unmarshal(v, &co)
 			if err != nil {
 				return err
 			}
@@ -115,7 +115,7 @@ func updateLegacyCoinOutputBucket(bucket *bolt.Bucket, log *persist.Logger) erro
 		log.Printf("overwriting legacy coin output (%s, %s) with binary ID 0x%s to format as known since %v...\n",
 			out.UnlockHash.String(), out.Value.String(), hex.EncodeToString(k), dbMetadata.Version)
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, encoding.Marshal(types.CoinOutput{
+		err = bucket.Put(k, siabin.Marshal(types.CoinOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),
@@ -136,11 +136,11 @@ func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket, log *persist.Logger
 	for k, v := cursor.First(); len(k) != 0; k, v = cursor.Next() {
 		// try to decode the legacy format
 		var out legacyOutput
-		err = encoding.Unmarshal(v, &out)
+		err = siabin.Unmarshal(v, &out)
 		if err != nil {
 			// ensure it is in the new format already
 			var bso types.BlockStakeOutput
-			err = encoding.Unmarshal(v, &bso)
+			err = siabin.Unmarshal(v, &bso)
 			if err != nil {
 				return err
 			}
@@ -148,7 +148,7 @@ func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket, log *persist.Logger
 		log.Printf("overwriting legacy block stake output (%s, %s) with binary ID 0x%s to format as known since %v...\n",
 			out.UnlockHash.String(), out.Value.String(), hex.EncodeToString(k), dbMetadata.Version)
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, encoding.Marshal(types.BlockStakeOutput{
+		err = bucket.Put(k, siabin.Marshal(types.BlockStakeOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),
@@ -269,5 +269,5 @@ func (lpb *legacyProcessedBlock) storeAsNewFormat(bucket *bolt.Bucket, key []byt
 		}
 	}
 
-	return bucket.Put(key, encoding.Marshal(block))
+	return bucket.Put(key, siabin.Marshal(block))
 }

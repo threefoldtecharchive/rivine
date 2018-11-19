@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 // TestInputSigHash tests the input signature hash algorithm.
@@ -79,7 +79,7 @@ import (
 // A future version however might also allow other internal condition,
 // if so, this document will be updated as well to clarify that.
 //
-// See /doc/Encoding.md for more information
+// See /doc/encoding/SiaEncoding.md for more information
 // about the Binary Encoding Algorithm and how each (primitive) type is encoded.
 //
 // ENSURE TO KEEP THIS TEST UP TO DATE WITH BOTH THE IMPLEMENTATION
@@ -279,7 +279,7 @@ func TestInputSigHash(t *testing.T) {
 	expectedSignature = sig(
 		`01` + // transaction version
 			`0100000000000000` + // input index
-			sliceToHex(encoding.Marshal(pk)) + // AS: PublicKey
+			sliceToHex(siabin.Marshal(pk)) + // AS: PublicKey
 			sliceToHex(secret[:]) + // AS: Claim: secret
 			`0200000000000000` + // length(coinInputs), 2
 			`a3331dc5ad8fef504e148e1608db0f05156dc72283dc2b1b083afa8bfdcdb6d9` + // CI#1 - parentid only
@@ -351,7 +351,7 @@ func TestInputSigHash(t *testing.T) {
 // is used as the input to make the crypto hashsum using the blake2b 256bit algorithm,
 // resulting in a 32 bytes fixed-size crypto hash.
 //
-// See /doc/Encoding.md for more information
+// See /doc/encoding/SiaEncoding.md for more information
 // about the Binary Encoding Algorithm and how each (primitive) type is encoded.
 //
 // ENSURE TO KEEP THIS TEST UP TO DATE WITH BOTH THE IMPLEMENTATION
@@ -481,9 +481,9 @@ func TestLegacyInputSigHash(t *testing.T) {
 	expectedSignature = sig(
 		`0000000000000000` + // input index
 			`a3331dc5ad8fef504e148e1608db0f05156dc72283dc2b1b083afa8bfdcdb6d9` + // CI#1
-			`01` + hashToHex(crypto.HashObject(encoding.Marshal(pk))) +
+			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
 			`fd166ead847ae80a5754700980130ee7bd23a94bd2a8fa14807955142719eb05` + // CI#2
-			`02` + hashToHex(crypto.HashObject(encoding.MarshalAll(
+			`02` + hashToHex(crypto.HashObject(siabin.MarshalAll(
 			unlockHashFromHex("01fea3ae2854f6e497c92a1cdd603a0bc92ada717200e74f64731e86a923479883519804b18d9d"),
 			NewPubKeyUnlockHash(pk),
 			hashedSecret,
@@ -495,7 +495,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 			`06000000000000002d79883d2000` + // CO#2
 			`0296551728f6e1a244184dcad09b4e76debf16bd4721acd87b073404eb74d151ae` +
 			`dca04a18b64ba012218d28d265a852625416567932f5eda3bcb0a0bc66da8b09` + // BSI#1
-			`01` + hashToHex(crypto.HashObject(encoding.Marshal(pk))) +
+			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
 			`0100000000000000` + // length(blockStakeOutputs), 1
 			`02000000000000000186` + // BSO#1
 			`01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a` +
@@ -542,12 +542,12 @@ func TestLegacyInputSigHash(t *testing.T) {
 	// decode expected signature
 	expectedSignature = sig(
 		`0100000000000000` + // input index
-			sliceToHex(encoding.Marshal(pk)) + // AS: PublicKey
+			sliceToHex(siabin.Marshal(pk)) + // AS: PublicKey
 			sliceToHex(secret[:]) + // AS: Claim: secret
 			`a3331dc5ad8fef504e148e1608db0f05156dc72283dc2b1b083afa8bfdcdb6d9` + // CI#1
-			`01` + hashToHex(crypto.HashObject(encoding.Marshal(pk))) +
+			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
 			`fd166ead847ae80a5754700980130ee7bd23a94bd2a8fa14807955142719eb05` + // CI#2
-			`02` + hashToHex(crypto.HashObject(encoding.MarshalAll(
+			`02` + hashToHex(crypto.HashObject(siabin.MarshalAll(
 			unlockHashFromHex("01fea3ae2854f6e497c92a1cdd603a0bc92ada717200e74f64731e86a923479883519804b18d9d"),
 			NewPubKeyUnlockHash(pk),
 			hashedSecret,
@@ -559,7 +559,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 			`06000000000000002d79883d2000` + // CO#2
 			`0296551728f6e1a244184dcad09b4e76debf16bd4721acd87b073404eb74d151ae` +
 			`dca04a18b64ba012218d28d265a852625416567932f5eda3bcb0a0bc66da8b09` + // BSI#1
-			`01` + hashToHex(crypto.HashObject(encoding.Marshal(pk))) +
+			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
 			`0100000000000000` + // length(blockStakeOutputs), 1
 			`02000000000000000186` + // BSO#1
 			`01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a` +

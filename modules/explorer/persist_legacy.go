@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -38,7 +38,7 @@ func (e *Explorer) convertLegacyDatabase(filePath string) (db *persist.BoltDatab
 		// fill the mapping
 		return tx.Bucket(bucketUnlockHashes).ForEach(func(key, _ []byte) error {
 			var uh types.UnlockHash
-			err := encoding.Unmarshal(key, &uh)
+			err := siabin.Unmarshal(key, &uh)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal unlockhash from key in bucketUnlockHashes: %v", err)
 			}
@@ -161,17 +161,17 @@ func updateLegacyCoinOutputBucket(bucket *bolt.Bucket) error {
 	for k, v := cursor.First(); len(k) != 0; k, v = cursor.Next() {
 		// try to decode the legacy format
 		var out legacyOutput
-		err = encoding.Unmarshal(v, &out)
+		err = siabin.Unmarshal(v, &out)
 		if err != nil {
 			// ensure it is in the new format already
 			var co types.CoinOutput
-			err = encoding.Unmarshal(v, &co)
+			err = siabin.Unmarshal(v, &co)
 			if err != nil {
 				return err
 			}
 		}
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, encoding.Marshal(types.CoinOutput{
+		err = bucket.Put(k, siabin.Marshal(types.CoinOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),
@@ -192,17 +192,17 @@ func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket) error {
 	for k, v := cursor.First(); len(k) != 0; k, v = cursor.Next() {
 		// try to decode the legacy format
 		var out legacyOutput
-		err = encoding.Unmarshal(v, &out)
+		err = siabin.Unmarshal(v, &out)
 		if err != nil {
 			// ensure it is in the new format already
 			var bso types.BlockStakeOutput
-			err = encoding.Unmarshal(v, &bso)
+			err = siabin.Unmarshal(v, &bso)
 			if err != nil {
 				return err
 			}
 		}
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, encoding.Marshal(types.BlockStakeOutput{
+		err = bucket.Put(k, siabin.Marshal(types.BlockStakeOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),

@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
 )
@@ -110,7 +110,7 @@ func (nsm *namespaceManager) close() {
 func (nsm *namespaceManager) serialize() ([]byte, error) {
 	buffer := bytes.NewBuffer(nil)
 	st := nsm.state
-	err := encoding.NewEncoder(buffer).Encode(st)
+	err := siabin.NewEncoder(buffer).Encode(st)
 	return buffer.Bytes(), err
 }
 
@@ -118,5 +118,5 @@ func (nsm *namespaceManager) serialize() ([]byte, error) {
 func (nsm *namespaceManager) deserialize(state []byte) error {
 	st := &nsm.state
 	buf := bytes.NewBuffer(state)
-	return encoding.NewDecoder(buf).Decode(st)
+	return siabin.NewDecoder(buf).Decode(st)
 }

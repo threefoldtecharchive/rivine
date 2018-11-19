@@ -4,7 +4,7 @@ package consensus
 // compatibility with the test suite.
 
 import (
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -107,7 +107,7 @@ func (cs *ConsensusSet) getArbCoinOutput() (scoid types.CoinOutputID, sco types.
 		cursor := tx.Bucket(CoinOutputs).Cursor()
 		scoidBytes, scoBytes := cursor.First()
 		copy(scoid[:], scoidBytes)
-		return encoding.Unmarshal(scoBytes, &sco)
+		return siabin.Unmarshal(scoBytes, &sco)
 	})
 	if dbErr != nil {
 		panic(dbErr)

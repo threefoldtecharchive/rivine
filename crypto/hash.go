@@ -13,7 +13,7 @@ import (
 	"errors"
 	"hash"
 
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 
 	"golang.org/x/crypto/blake2b"
 )
@@ -47,7 +47,7 @@ func NewHash() hash.Hash {
 // package, and then hashes the result.
 func HashAll(objs ...interface{}) (hash Hash) {
 	h := NewHash()
-	enc := encoding.NewEncoder(h)
+	enc := siabin.NewEncoder(h)
 	for _, obj := range objs {
 		enc.Encode(obj)
 	}
@@ -64,7 +64,7 @@ func HashBytes(data []byte) Hash {
 // and then hashes the result.
 func HashObject(obj interface{}) (hash Hash) {
 	h := NewHash()
-	encoding.NewEncoder(h).Encode(obj)
+	siabin.NewEncoder(h).Encode(obj)
 	h.Sum(hash[:0])
 	return
 }

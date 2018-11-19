@@ -15,8 +15,10 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/encoding"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 type (
@@ -215,17 +217,37 @@ func (c *Currency) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// MarshalSia implements the encoding.SiaMarshaler interface. It writes the
+// MarshalSia implements the siabin.SiaMarshaler interface. It writes the
 // byte-slice representation of the Currency's internal big.Int to w. Note
 // that as the bytes of the big.Int correspond to the absolute value of the
 // integer, there is no way to marshal a negative Currency.
 func (c Currency) MarshalSia(w io.Writer) error {
-	return encoding.WritePrefix(w, c.i.Bytes())
+	return siabin.WritePrefix(w, c.i.Bytes())
 }
 
-// UnmarshalSia implements the encoding.SiaUnmarshaler interface.
+// UnmarshalSia implements the siabin.SiaUnmarshaler interface.
 func (c *Currency) UnmarshalSia(r io.Reader) error {
-	b, err := encoding.ReadPrefix(r, 256)
+	b, err := siabin.ReadPrefix(r, 256)
+	if err != nil {
+		return err
+	}
+	var dec Currency
+	dec.i.SetBytes(b)
+	*c = dec
+	return nil
+}
+
+// MarshalRivine implements the rivbin.MarshalRivine interface. It writes the
+// byte-slice representation of the Currency's internal big.Int to w. Note
+// that as the bytes of the big.Int correspond to the absolute value of the
+// integer, there is no way to marshal a negative Currency.
+func (c Currency) MarshalRivine(w io.Writer) error {
+	return rivbin.WriteDataSlice(w, c.i.Bytes())
+}
+
+// UnmarshalRivine implements the rivbin.RivineMarshaler interface.
+func (c *Currency) UnmarshalRivine(r io.Reader) error {
+	b, err := rivbin.ReadDataSlice(r, 256)
 	if err != nil {
 		return err
 	}

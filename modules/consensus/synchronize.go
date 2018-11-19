@@ -8,8 +8,8 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/encoding"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/rivine/bbolt"
@@ -161,7 +161,7 @@ func (cs *ConsensusSet) managedReceiveBlocks(conn modules.PeerConn) (returnErr e
 	}
 
 	// Send the block ids.
-	if err := encoding.WriteObject(conn, history); err != nil {
+	if err := siabin.WriteObject(conn, history); err != nil {
 		return err
 	}
 
@@ -195,10 +195,10 @@ func (cs *ConsensusSet) managedReceiveBlocks(conn modules.PeerConn) (returnErr e
 		}
 		// Read a slice of blocks from the wire.
 		var newBlocks []types.Block
-		if err := encoding.ReadObject(conn, &newBlocks, uint64(MaxCatchUpBlocks)*cs.chainCts.BlockSizeLimit); err != nil {
+		if err := siabin.ReadObject(conn, &newBlocks, uint64(MaxCatchUpBlocks)*cs.chainCts.BlockSizeLimit); err != nil {
 			return err
 		}
-		if err := encoding.ReadObject(conn, &moreAvailable, 1); err != nil {
+		if err := siabin.ReadObject(conn, &moreAvailable, 1); err != nil {
 			return err
 		}
 
@@ -251,7 +251,7 @@ func (cs *ConsensusSet) rpcSendBlocks(conn modules.PeerConn) error {
 	// Read a list of blocks known to the requester and find the most recent
 	// block from the current path.
 	var knownBlocks [32]types.BlockID
-	err = encoding.ReadObject(conn, &knownBlocks, 32*crypto.HashSize)
+	err = siabin.ReadObject(conn, &knownBlocks, 32*crypto.HashSize)
 	if err != nil {
 		return err
 	}
@@ -294,12 +294,12 @@ func (cs *ConsensusSet) rpcSendBlocks(conn modules.PeerConn) error {
 	// don't send any blocks.
 	if !found {
 		// Send 0 blocks.
-		err = encoding.WriteObject(conn, []types.Block{})
+		err = siabin.WriteObject(conn, []types.Block{})
 		if err != nil {
 			return err
 		}
 		// Indicate that no more blocks are available.
-		return encoding.WriteObject(conn, false)
+		return siabin.WriteObject(conn, false)
 	}
 
 	// Send the caller all of the blocks that they are missing.
@@ -332,10 +332,10 @@ func (cs *ConsensusSet) rpcSendBlocks(conn modules.PeerConn) error {
 
 		// Send a set of blocks to the caller + a flag indicating whether more
 		// are available.
-		if err = encoding.WriteObject(conn, blocks); err != nil {
+		if err = siabin.WriteObject(conn, blocks); err != nil {
 			return err
 		}
-		if err = encoding.WriteObject(conn, moreAvailable); err != nil {
+		if err = siabin.WriteObject(conn, moreAvailable); err != nil {
 			return err
 		}
 	}
@@ -359,7 +359,7 @@ func (cs *ConsensusSet) threadedRPCRelayHeader(conn modules.PeerConn) error {
 
 	// Decode the block header from the connection.
 	var h types.BlockHeader
-	err = encoding.ReadObject(conn, &h, types.BlockHeaderSize)
+	err = siabin.ReadObject(conn, &h, types.BlockHeaderSize)
 	if err != nil {
 		return err
 	}
@@ -426,7 +426,7 @@ func (cs *ConsensusSet) rpcSendBlk(conn modules.PeerConn) error {
 
 	// Decode the block id from the connection.
 	var id types.BlockID
-	err = encoding.ReadObject(conn, &id, crypto.HashSize)
+	err = siabin.ReadObject(conn, &id, crypto.HashSize)
 	if err != nil {
 		return err
 	}
@@ -446,7 +446,7 @@ func (cs *ConsensusSet) rpcSendBlk(conn modules.PeerConn) error {
 		return err
 	}
 	// Encode and send the block to the caller.
-	err = encoding.WriteObject(conn, b)
+	err = siabin.WriteObject(conn, b)
 	if err != nil {
 		return err
 	}
@@ -460,11 +460,11 @@ func (cs *ConsensusSet) rpcSendBlk(conn modules.PeerConn) error {
 // the function it returns calls the exported method AcceptBlock.
 func (cs *ConsensusSet) managedReceiveBlock(id types.BlockID) modules.RPCFunc {
 	return func(conn modules.PeerConn) error {
-		if err := encoding.WriteObject(conn, id); err != nil {
+		if err := siabin.WriteObject(conn, id); err != nil {
 			return err
 		}
 		var block types.Block
-		if err := encoding.ReadObject(conn, &block, cs.chainCts.BlockSizeLimit); err != nil {
+		if err := siabin.ReadObject(conn, &block, cs.chainCts.BlockSizeLimit); err != nil {
 			return err
 		}
 		if err := cs.managedAcceptBlock(block); err != nil {
