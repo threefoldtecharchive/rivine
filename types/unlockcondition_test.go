@@ -162,13 +162,13 @@ func TestUnlockFulfillmentSiaEncoding(t *testing.T) {
 func TestUnlockFulfillmentRivineEncoding(t *testing.T) {
 	testCases := []string{
 		// single signature fulfillment
-		`01e4656432353531390000000000000000004035fffffffffffffffffffffffffffffffffffffffffffffffff46fffffffffff80fffffffffffffffffffffffffffff123ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
+		`01c40135fffffffffffffffffffffffffffffffffffffffffffffffff46fffffffffff80fffffffffffffffffffffffffffff123ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
 		// legacy atomic swap fulfillment
-		`02f103011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a000000006564323535313900000000000000000040abababababababababababababababababababababababababababababababab80dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
+		`02b103011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a0000000001abababababababababababababababababababababababababababababababab80dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
 		// atomic swap fulfillment
-		`0249026564323535313900000000000000000040fffffffffffffffffffffffffffffffff04fffffffffffffffffffffffffffff80ffffffffffffffffffffffff56fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffffffffffff123ffffffffffafffffffffffeffffffffffffff`,
+		`02090201fffffffffffffffffffffffffffffffff04fffffffffffffffffffffffffffff80ffffffffffffffffffffffff56fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2ffffffffffffffffff123ffffffffffafffffffffffeffffffffffffff`,
 		// MultiSig fulfillment
-		`03e6026564323535313900000000000000000040def123def123def123def123def123def123def123def123def123def123def180ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef`,
+		`03c60201def123def123def123def123def123def123def123def123def123def123def180ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef`,
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -906,37 +906,37 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		{&SingleSignatureFulfillment{}, &SingleSignatureFulfillment{}, ""},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 			},
 			&SingleSignatureFulfillment{}, "different pub-key algorithm",
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 			},
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 			},
 			"different pub-key key",
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 2},
 			},
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 			},
@@ -944,15 +944,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 2},
 			},
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 2},
@@ -966,8 +966,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		{&AtomicSwapFulfillment{}, &AtomicSwapFulfillment{}, ""},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 			},
 			&AtomicSwapFulfillment{},
@@ -975,29 +975,29 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 			},
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 			},
 			"different pub-key key",
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 			},
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 			},
@@ -1005,16 +1005,16 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 				Secret:    AtomicSwapSecret{7, 8, 9},
 			},
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1023,15 +1023,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 			},
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1040,16 +1040,16 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 				Secret:    AtomicSwapSecret{7, 8, 9},
 			},
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1064,8 +1064,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		{&LegacyAtomicSwapFulfillment{}, &LegacyAtomicSwapFulfillment{}, ""},
 		{
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 			},
 			&LegacyAtomicSwapFulfillment{},
@@ -1073,29 +1073,29 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 			},
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 			},
 			"different pub-key key",
 		},
 		{
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 			},
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 			},
@@ -1103,16 +1103,16 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 				Secret:    AtomicSwapSecret{7, 8, 9},
 			},
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1121,15 +1121,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 			},
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1138,43 +1138,16 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 		},
 		{
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
 				Secret:    AtomicSwapSecret{7, 8, 9},
 			},
 			&LegacyAtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
-					Key:       ByteSlice{1, 2, 3},
-				},
-				Signature: ByteSlice{4, 5, 6},
-				Secret:    AtomicSwapSecret{7, 8, 9},
-			},
-			"",
-		},
-		{
-			&LegacyAtomicSwapFulfillment{
-				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
-				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
-				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
-					Key:       ByteSlice{1, 2, 3},
-				},
-				Signature: ByteSlice{4, 5, 6},
-				Secret:    AtomicSwapSecret{7, 8, 9},
-			},
-			&LegacyAtomicSwapFulfillment{
-				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
-				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
-				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
-				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1188,8 +1161,35 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
+					Key:       ByteSlice{1, 2, 3},
+				},
+				Signature: ByteSlice{4, 5, 6},
+				Secret:    AtomicSwapSecret{7, 8, 9},
+			},
+			&LegacyAtomicSwapFulfillment{
+				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
+					Key:       ByteSlice{1, 2, 3},
+				},
+				Signature: ByteSlice{4, 5, 6},
+				Secret:    AtomicSwapSecret{7, 8, 9},
+			},
+			"",
+		},
+		{
+			&LegacyAtomicSwapFulfillment{
+				Sender:       unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
+				TimeLock:     TestnetChainConstants().GenesisTimestamp,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1200,8 +1200,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1215,8 +1215,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1227,8 +1227,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1242,8 +1242,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1254,8 +1254,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
 				TimeLock:     0,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1269,8 +1269,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 2},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1281,8 +1281,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{1, 2, 3},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{4, 5, 6},
@@ -1301,15 +1301,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1319,8 +1319,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
@@ -1333,15 +1333,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 50},
@@ -1351,15 +1351,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1372,15 +1372,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1390,15 +1390,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 10, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1411,15 +1411,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1429,22 +1429,22 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1457,22 +1457,22 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1482,22 +1482,22 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1511,15 +1511,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1529,15 +1529,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1550,15 +1550,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1568,15 +1568,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
@@ -1589,8 +1589,8 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
@@ -1600,15 +1600,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
@@ -1621,15 +1621,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1639,15 +1639,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
@@ -1660,15 +1660,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
@@ -1678,15 +1678,15 @@ func TestUnlockFulfillmentEqual(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{1, 2, 3},
 						},
 						Signature: ByteSlice{4, 5, 6},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key:       ByteSlice{7, 1, 8},
 						},
 						Signature: ByteSlice{0, 45, 9},
@@ -1738,8 +1738,8 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 					{
 						ParentID: BlockStakeOutputID(hs("a4292b24a9868649efa7ec49221b97043554eefb4be92de8d6ac885c2fa533c4")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("8d368f6c457f1f7f49f4cb32636c1d34197c046f5398ea6661b0b4ecfe36a3cd"),
 							},
 							Signature: hbs("248fce862f030e5e98962b43cb437a809aa30ba99367db018e410c8a6854be88a03c07c9f788fe75d0f12af9ddc39f9c9508aa55283a6ac02c41e8cc7be8f303"),
@@ -1777,8 +1777,8 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("9a3b7ea912f6438eec826b49b71876e92b09624621a51c8f1ca76645a54cab4a")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("07fa00de51b678926885e96fb1904d3eebca2c283dee40e975871ed6109f7f4b"),
 							},
 							Signature: hbs("ae8e2891033e260bf35f7c340823818a46cb6240aac8aa4bcdadecf30604b54d339ec9930b8be95a9a779bb48027e6314d8b2f701809cd352b1d14753a145f01"),
@@ -2458,16 +2458,16 @@ func TestIsStandardFulfillment(t *testing.T) {
 		{&SingleSignatureFulfillment{}, "nil single signature fulfillment is not allowed"},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 			},
 			"nil pub-key + signature is not allowed for single-signature fulfilment",
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 				},
 				Signature: ByteSlice{
 					1, 2, 3, 4, 5, 6, 7, 8,
@@ -2484,8 +2484,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2498,8 +2498,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2522,8 +2522,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2537,8 +2537,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 		{
 			&SingleSignatureFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{
@@ -2558,8 +2558,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		{&AtomicSwapFulfillment{}, "nil atomic swap fulfillment not allowed"},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{
@@ -2577,8 +2577,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2592,8 +2592,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2616,8 +2616,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 		},
 		{
 			&AtomicSwapFulfillment{
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2647,8 +2647,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2675,8 +2675,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Receiver:     UnlockHash{},
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2703,8 +2703,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2731,8 +2731,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key:       ByteSlice{1, 2, 3},
 				},
 				Signature: ByteSlice{
@@ -2754,8 +2754,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2773,8 +2773,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2801,8 +2801,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 				Receiver:     unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
 				HashedSecret: AtomicSwapHashedSecret{4, 5, 6},
 				TimeLock:     TestnetChainConstants().GenesisTimestamp,
-				PublicKey: SiaPublicKey{
-					Algorithm: SignatureEd25519,
+				PublicKey: PublicKey{
+					Algorithm: SignatureAlgoEd25519,
 					Key: ByteSlice{
 						1, 2, 3, 4, 5, 6, 7, 8,
 						1, 2, 3, 4, 5, 6, 7, 8,
@@ -2832,8 +2832,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key: ByteSlice{
 								1, 2, 3, 4, 5, 6, 7, 8,
 								1, 2, 3, 4, 5, 6, 7, 8,
@@ -2853,8 +2853,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 						},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key: ByteSlice{
 								1, 2, 3, 4, 5, 6, 7, 8,
 								1, 2, 3, 4, 5, 6, 7, 8,
@@ -2881,8 +2881,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key: ByteSlice{
 								1, 2, 3, 4, 5, 6, 7, 8,
 								1, 2, 3, 4, 5, 6, 7, 8,
@@ -2901,8 +2901,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 						},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key: ByteSlice{
 								1, 2, 3, 4, 5, 6, 7, 8,
 								1, 2, 3, 4, 5, 6, 7, 8,
@@ -2929,8 +2929,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 			&MultiSignatureFulfillment{
 				Pairs: []PublicKeySignaturePair{
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key: ByteSlice{
 								1, 2, 3, 4, 5, 6, 7, 8,
 								1, 2, 3, 4, 5, 6, 7, 8,
@@ -2950,8 +2950,8 @@ func TestIsStandardFulfillment(t *testing.T) {
 						},
 					},
 					{
-						PublicKey: SiaPublicKey{
-							Algorithm: SignatureEd25519,
+						PublicKey: PublicKey{
+							Algorithm: SignatureAlgoEd25519,
 							Key: ByteSlice{
 								1, 2, 3, 4, 5, 6, 7, 8,
 								1, 2, 3, 4, 5, 6, 7, 8,

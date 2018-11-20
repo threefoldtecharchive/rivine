@@ -119,8 +119,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.CoinOutputID{},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -132,8 +132,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.BlockStakeOutputID{},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -152,8 +152,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.CoinOutputID{},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -165,8 +165,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.BlockStakeOutputID{},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -188,8 +188,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.CoinOutputID{},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -201,8 +201,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.BlockStakeOutputID{},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -221,8 +221,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.CoinOutputID{},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -234,8 +234,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 						{
 							ParentID: types.BlockStakeOutputID{4, 2},
 							Fulfillment: types.NewFulfillment(&types.SingleSignatureFulfillment{
-								PublicKey: types.SiaPublicKey{
-									Algorithm: types.SignatureEd25519,
+								PublicKey: types.PublicKey{
+									Algorithm: types.SignatureAlgoEd25519,
 									Key:       types.ByteSlice{},
 								},
 								Signature: types.ByteSlice{},
@@ -263,8 +263,8 @@ func TestCompareNonMergeableTransactionData(t *testing.T) {
 func TestCompareAndMergeFulfillmentsIfNeeded(t *testing.T) {
 	var (
 		testPairA = types.PublicKeySignaturePair{
-			PublicKey: types.SiaPublicKey{
-				Algorithm: types.SignatureEd25519,
+			PublicKey: types.PublicKey{
+				Algorithm: types.SignatureAlgoEd25519,
 				Key: types.ByteSlice{
 					1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 				},
@@ -275,8 +275,8 @@ func TestCompareAndMergeFulfillmentsIfNeeded(t *testing.T) {
 			},
 		}
 		testPairB = types.PublicKeySignaturePair{
-			PublicKey: types.SiaPublicKey{
-				Algorithm: types.SignatureEd25519,
+			PublicKey: types.PublicKey{
+				Algorithm: types.SignatureAlgoEd25519,
 				Key: types.ByteSlice{
 					2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
 				},
@@ -287,8 +287,8 @@ func TestCompareAndMergeFulfillmentsIfNeeded(t *testing.T) {
 			},
 		}
 		testPairC = types.PublicKeySignaturePair{
-			PublicKey: types.SiaPublicKey{
-				Algorithm: types.SignatureEd25519,
+			PublicKey: types.PublicKey{
+				Algorithm: types.SignatureAlgoEd25519,
 				Key: types.ByteSlice{
 					3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 				},

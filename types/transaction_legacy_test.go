@@ -46,8 +46,8 @@ func TestLegacyTransactionInputLockProxyBinarySiaEncoding(t *testing.T) {
 
 func TestLegacyTransactionInputLockProxyBinaryRivineEncoding(t *testing.T) {
 	testCases := []string{
-		`01626564323535313900000000000000000040ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
-		`02d4011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a0000000049026564323535313900000000000000000040abababababababababababababababababababababababababababababababab80dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
+		`014201ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff80ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff`,
+		`02d4011234567891234567891234567891234567891234567891234567891234567891016363636363636363636363636363636363636363636363636363636363636363bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb07edb85a00000000090201abababababababababababababababababababababababababababababababab80dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededabadabadabadabadabadabadabadabadabadabadabadabadabadabadabadaba`,
 	}
 	for testIndex, testCase := range testCases {
 		binaryInput, err := hex.DecodeString(testCase)
@@ -295,8 +295,8 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -313,8 +313,8 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -333,8 +333,8 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 							},
 							HashedSecret: AtomicSwapHashedSecret(hs("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")),
 							TimeLock:     1522068743,
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("abababababababababababababababababababababababababababababababab"),
 							},
 							Signature: hbs("dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededede"),
@@ -362,8 +362,8 @@ func TestLegacyTransactionToTransaction(t *testing.T) {
 					{
 						ParentID: BlockStakeOutputID(hs("4400000000000000000000000000000000000000000000000000000000000044")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
 							},
 							Signature: hbs("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),

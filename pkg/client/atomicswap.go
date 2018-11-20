@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/types"
-	"github.com/spf13/cobra"
 )
 
 func createAtomicSwapCmd(client *CommandLineClient) *cobra.Command {
@@ -1015,7 +1015,7 @@ func (atomicSwapCmd *atomicSwapCmd) spendAtomicSwapContract(outputID types.CoinO
 }
 
 // get public- and private key from wallet module
-func (atomicSwapCmd *atomicSwapCmd) getSpendableKey(unlockHash types.UnlockHash) (types.SiaPublicKey, types.ByteSlice) {
+func (atomicSwapCmd *atomicSwapCmd) getSpendableKey(unlockHash types.UnlockHash) (types.PublicKey, types.ByteSlice) {
 	resp := new(api.WalletKeyGet)
 	err := atomicSwapCmd.cli.GetAPI("/wallet/key/"+unlockHash.String(), resp)
 	if err != nil {
@@ -1027,10 +1027,14 @@ func (atomicSwapCmd *atomicSwapCmd) getSpendableKey(unlockHash types.UnlockHash)
 	if isNilByteSlice(resp.SecretKey) {
 		cli.Die("received matching public key, but no secret key was returned")
 	}
-	return types.SiaPublicKey{
-		Algorithm: resp.AlgorithmSpecifier,
-		Key:       resp.PublicKey,
-	}, resp.SecretKey
+	pk := types.PublicKey{
+		Key: resp.PublicKey,
+	}
+	err = pk.Algorithm.LoadSpecifier(resp.AlgorithmSpecifier)
+	if err != nil {
+		cli.DieWithError("invalid public key algorithm specifier loaded:", err)
+	}
+	return pk, resp.SecretKey
 }
 
 func isNilByteSlice(bs types.ByteSlice) bool {

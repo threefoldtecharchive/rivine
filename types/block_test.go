@@ -349,8 +349,8 @@ func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 								ParentID: BlockStakeOutputID(hs("4cd0ec4f270ac5fe50ec3a4008ff652754400aff02af1caa8d1b5889ffa61292")),
 								Fulfillment: UnlockFulfillmentProxy{
 									Fulfillment: &SingleSignatureFulfillment{
-										PublicKey: SiaPublicKey{
-											Algorithm: SignatureEd25519,
+										PublicKey: PublicKey{
+											Algorithm: SignatureAlgoEd25519,
 											Key:       hbs("47c54e33cdfa770f2180af660d27881d1dbc544b37a4233390af603162c7433d"),
 										},
 										Signature: hbs("a17970cbf50fe1f9929f2dec6c60994f2ea9e6c30af1ae84e5a496171d86584c944853edab70b15a423d64857d62f96b21fa263c338c966dd9a1e4bdf6725d04"),

@@ -301,7 +301,7 @@ type (
 		Fulfillment json.RawMessage `json:"fulfillment,omitempty"`
 	}
 	legacyJSONSingleSignatureCondition struct {
-		PublicKey SiaPublicKey `json:"publickey"`
+		PublicKey PublicKey `json:"publickey"`
 	}
 	legacyJSONSingleSignatureFulfillment struct {
 		Signature ByteSlice `json:"signature"`

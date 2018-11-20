@@ -13,11 +13,11 @@ import (
 // TestEd25519PublicKey tests the Ed25519PublicKey function.
 func TestEd25519PublicKey(t *testing.T) {
 	_, pk := crypto.GenerateKeyPair()
-	spk := Ed25519PublicKey(pk)
-	if spk.Algorithm != SignatureEd25519 {
-		t.Error("Ed25519PublicKey created key with wrong algorithm specifier:", spk.Algorithm)
+	epk := Ed25519PublicKey(pk)
+	if epk.Algorithm != SignatureAlgoEd25519 {
+		t.Error("epk created key with wrong algorithm specifier:", epk.Algorithm)
 	}
-	if !bytes.Equal(spk.Key, pk[:]) {
+	if !bytes.Equal(epk.Key, pk[:]) {
 		t.Error("Ed25519PublicKey created key with wrong data")
 	}
 }
@@ -95,43 +95,43 @@ func TestByteSliceStringify(t *testing.T) {
 	}
 }
 
-// TestSiaPublicKeyLoadString checks that the LoadString method is the proper
+// TestPublicKeyLoadString checks that the LoadString method is the proper
 // inverse of the String() method, also checks that there are no stupid panics
 // or severe errors.
-func TestSiaPublicKeyLoadString(t *testing.T) {
-	spk := SiaPublicKey{
-		Algorithm: SignatureEd25519,
+func TestPublicKeyLoadString(t *testing.T) {
+	pk := PublicKey{
+		Algorithm: SignatureAlgoEd25519,
 		Key:       fastrand.Bytes(32),
 	}
 
-	spkString := spk.String()
-	var loadedSPK SiaPublicKey
-	loadedSPK.LoadString(spkString)
-	if !bytes.Equal(loadedSPK.Algorithm[:], spk.Algorithm[:]) {
-		t.Error("SiaPublicKey is not loading correctly")
+	pkStr := pk.String()
+	var loadedPK PublicKey
+	loadedPK.LoadString(pkStr)
+	if loadedPK.Algorithm != pk.Algorithm {
+		t.Errorf("PublicKey (as %q) is not loading correctly", pkStr)
 	}
-	if !bytes.Equal(loadedSPK.Key, spk.Key) {
-		t.Log(loadedSPK.Key, spk.Key)
-		t.Error("SiaPublicKey is not loading correctly")
+	if !bytes.Equal(loadedPK.Key, pk.Key) {
+		t.Log(loadedPK.Key, pk.Key)
+		t.Error("PublicKey is not loading correctly")
 	}
 
 	// Try loading crappy strings.
-	parts := strings.Split(spkString, ":")
-	spk.LoadString(parts[0])
-	spk.LoadString(parts[0][1:])
-	spk.LoadString(parts[0][:1])
-	spk.LoadString(parts[1])
-	spk.LoadString(parts[1][1:])
-	spk.LoadString(parts[1][:1])
-	spk.LoadString(parts[0] + parts[1])
+	parts := strings.Split(pkStr, ":")
+	pk.LoadString(parts[0])
+	pk.LoadString(parts[0][1:])
+	pk.LoadString(parts[0][:1])
+	pk.LoadString(parts[1])
+	pk.LoadString(parts[1][1:])
+	pk.LoadString(parts[1][:1])
+	pk.LoadString(parts[0] + parts[1])
 
 }
 
-// TestSiaPublicKeyString does a quick check to verify that the String method
-// on the SiaPublicKey is producing the expected output.
-func TestSiaPublicKeyString(t *testing.T) {
-	spk := SiaPublicKey{
-		Algorithm: SignatureEd25519,
+// TestPublicKeyString does a quick check to verify that the String method
+// on the PublicKey is producing the expected output.
+func TestPublicKeyString(t *testing.T) {
+	spk := PublicKey{
+		Algorithm: SignatureAlgoEd25519,
 		Key:       make([]byte, 32),
 	}
 

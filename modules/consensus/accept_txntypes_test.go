@@ -300,7 +300,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 		return err
 // 	}
 // 	uc := types.UnlockConditions{
-// 		PublicKeys: []types.SiaPublicKey{
+// 		PublicKeys: []types.PublicKey{
 // 			{
 // 				Algorithm: types.SignatureEd25519,
 // 				Key:       pk1[:],
@@ -324,7 +324,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 		return err
 // 	}
 // 	channelFundingUC := types.UnlockConditions{
-// 		PublicKeys: []types.SiaPublicKey{{
+// 		PublicKeys: []types.PublicKey{{
 // 			Algorithm: types.SignatureEd25519,
 // 			Key:       channelFundingPK[:],
 // 		}},
@@ -504,7 +504,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 			return err
 // 		}
 // 		channelFundingUC := types.UnlockConditions{
-// 			PublicKeys: []types.SiaPublicKey{{
+// 			PublicKeys: []types.PublicKey{{
 // 				Algorithm: types.SignatureEd25519,
 // 				Key:       channelFundingPK[:],
 // 			}},
@@ -625,7 +625,7 @@ func (cst *consensusSetTester) testBlockSuite() {
 // 			return err
 // 		}
 // 		channelFundingUC := types.UnlockConditions{
-// 			PublicKeys: []types.SiaPublicKey{{
+// 			PublicKeys: []types.PublicKey{{
 // 				Algorithm: types.SignatureEd25519,
 // 				Key:       channelFundingPK[:],
 // 			}},

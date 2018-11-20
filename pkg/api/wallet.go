@@ -486,7 +486,7 @@ func NewWalletKeyHandler(wallet modules.Wallet) httprouter.Handle {
 			return
 		}
 		WriteJSON(w, WalletKeyGet{
-			AlgorithmSpecifier: pk.Algorithm,
+			AlgorithmSpecifier: pk.Algorithm.Specifier(),
 			PublicKey:          pk.Key,
 			SecretKey:          sk,
 		})

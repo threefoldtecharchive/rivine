@@ -218,19 +218,19 @@ func (w *Wallet) AllAddresses() ([]types.UnlockHash, error) {
 
 // GetKey gets the pub/priv key pair,
 // which is linked to the given unlock hash (address).
-func (w *Wallet) GetKey(address types.UnlockHash) (pk types.SiaPublicKey, sk types.ByteSlice, err error) {
+func (w *Wallet) GetKey(address types.UnlockHash) (pk types.PublicKey, sk types.ByteSlice, err error) {
 	w.mu.RLock()
 	pk, sk, err = w.getKey(address)
 	w.mu.RUnlock()
 	return
 }
-func (w *Wallet) getKey(address types.UnlockHash) (types.SiaPublicKey, types.ByteSlice, error) {
+func (w *Wallet) getKey(address types.UnlockHash) (types.PublicKey, types.ByteSlice, error) {
 	if !w.unlocked {
-		return types.SiaPublicKey{}, types.ByteSlice{}, modules.ErrLockedWallet
+		return types.PublicKey{}, types.ByteSlice{}, modules.ErrLockedWallet
 	}
 	sp, found := w.keys[address]
 	if !found {
-		return types.SiaPublicKey{}, types.ByteSlice{}, errUnknownAddress
+		return types.PublicKey{}, types.ByteSlice{}, errUnknownAddress
 	}
 	return types.Ed25519PublicKey(sp.PublicKey), types.ByteSlice(sp.SecretKey[:]), nil
 }

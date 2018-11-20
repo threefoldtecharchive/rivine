@@ -213,8 +213,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -232,8 +232,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -267,8 +267,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -287,8 +287,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 							},
 							HashedSecret: AtomicSwapHashedSecret(hs("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")),
 							TimeLock:     1522068743,
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("abababababababababababababababababababababababababababababababab"),
 							},
 							Signature: hbs("dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededede"),
@@ -316,8 +316,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: BlockStakeOutputID(hs("4400000000000000000000000000000000000000000000000000000000000044")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
 							},
 							Signature: hbs("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
@@ -367,8 +367,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -386,8 +386,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -411,8 +411,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -446,8 +446,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("2200000000000000000000000000000000000000000000000000000000000022")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -457,8 +457,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 						ParentID: CoinOutputID(hs("3300000000000000000000000000000000000000000000000000000000000033")),
 						Fulfillment: NewFulfillment(&anyAtomicSwapFulfillment{
 							atomicSwapFulfillment: &AtomicSwapFulfillment{
-								PublicKey: SiaPublicKey{
-									Algorithm: SignatureEd25519,
+								PublicKey: PublicKey{
+									Algorithm: SignatureAlgoEd25519,
 									Key:       hbs("abababababababababababababababababababababababababababababababab"),
 								},
 								Signature: hbs("dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededede"),
@@ -480,8 +480,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 								},
 								HashedSecret: AtomicSwapHashedSecret(hs("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")),
 								TimeLock:     1522068743,
-								PublicKey: SiaPublicKey{
-									Algorithm: SignatureEd25519,
+								PublicKey: PublicKey{
+									Algorithm: SignatureAlgoEd25519,
 									Key:       hbs("abababababababababababababababababababababababababababababababab"),
 								},
 								Signature: hbs("dededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededededede"),
@@ -525,8 +525,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: BlockStakeOutputID(hs("4400000000000000000000000000000000000000000000000000000000000044")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
 							},
 							Signature: hbs("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"),
@@ -554,8 +554,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -582,8 +582,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -615,8 +615,8 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 						Fulfillment: NewFulfillment(&MultiSignatureFulfillment{
 							Pairs: []PublicKeySignaturePair{
 								{
-									PublicKey: SiaPublicKey{
-										Algorithm: SignatureEd25519,
+									PublicKey: PublicKey{
+										Algorithm: SignatureAlgoEd25519,
 										Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 									},
 									Signature: hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
@@ -761,8 +761,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 							},
 							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
@@ -856,8 +856,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("abcdef012345abcdef012345abcdef012345abcdef012345abcdef012345abcd")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
@@ -876,8 +876,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 							},
 							HashedSecret: AtomicSwapHashedSecret(hs("abc543defabc543defabc543defabc543defabc543defabc543defabc543defa")),
 							TimeLock:     1522068743,
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
@@ -912,8 +912,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: BlockStakeOutputID(hs("dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfde")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef12"),
 							},
 							Signature: hbs("01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def"),
@@ -1013,8 +1013,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 							},
 							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
@@ -1056,8 +1056,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 							},
 							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
@@ -1193,8 +1193,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("abcdef012345abcdef012345abcdef012345abcdef012345abcdef012345abcd")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 							},
 							Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
@@ -1204,8 +1204,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 						ParentID: CoinOutputID(hs("012345defabc012345defabc012345defabc012345defabc012345defabc0123")),
 						Fulfillment: NewFulfillment(&anyAtomicSwapFulfillment{
 							atomicSwapFulfillment: &AtomicSwapFulfillment{
-								PublicKey: SiaPublicKey{
-									Algorithm: SignatureEd25519,
+								PublicKey: PublicKey{
+									Algorithm: SignatureAlgoEd25519,
 									Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 								},
 								Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
@@ -1227,8 +1227,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 								},
 								HashedSecret: AtomicSwapHashedSecret(hs("abc543defabc543defabc543defabc543defabc543defabc543defabc543defa")),
 								TimeLock:     1522068743,
-								PublicKey: SiaPublicKey{
-									Algorithm: SignatureEd25519,
+								PublicKey: PublicKey{
+									Algorithm: SignatureAlgoEd25519,
 									Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 								},
 								Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),
@@ -1279,8 +1279,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: BlockStakeOutputID(hs("dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfd23dfde")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef1234ef12"),
 							},
 							Signature: hbs("01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def01234def"),
@@ -1348,8 +1348,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 							},
 							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
@@ -1412,8 +1412,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 							},
 							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
@@ -1479,8 +1479,8 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					{
 						ParentID: CoinOutputID(hs("1100000000000000000000000000000000000000000000000000000000000011")),
 						Fulfillment: NewFulfillment(&SingleSignatureFulfillment{
-							PublicKey: SiaPublicKey{
-								Algorithm: SignatureEd25519,
+							PublicKey: PublicKey{
+								Algorithm: SignatureAlgoEd25519,
 								Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 							},
 							Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
@@ -1562,15 +1562,15 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 						Fulfillment: NewFulfillment(&MultiSignatureFulfillment{
 							Pairs: []PublicKeySignaturePair{
 								{
-									PublicKey: SiaPublicKey{
-										Algorithm: SignatureEd25519,
+									PublicKey: PublicKey{
+										Algorithm: SignatureAlgoEd25519,
 										Key:       hbs("def123def123def123def123def123def123def123def123def123def123def1"),
 									},
 									Signature: hbs("ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"),
 								},
 								{
-									PublicKey: SiaPublicKey{
-										Algorithm: SignatureEd25519,
+									PublicKey: PublicKey{
+										Algorithm: SignatureAlgoEd25519,
 										Key:       hbs("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"),
 									},
 									Signature: hbs("abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefab"),

@@ -11,35 +11,93 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
-var (
-	// These Specifiers enumerate the types of signatures that are recognized
-	// by this implementation. see Consensus.md for more details.
-	SignatureEd25519 = Specifier{'e', 'd', '2', '5', '5', '1', '9'}
+// SignatureAlgoType identifies a signature algorithm as a single byte.
+type SignatureAlgoType uint8
 
-	ErrFrivolousSignature        = errors.New("transaction contains a frivolous signature")
-	ErrInvalidPubKeyIndex        = errors.New("transaction contains a signature that points to a nonexistent public key")
+const (
+	// SignatureAlgoNil identifies a nil SignatureAlgoType value.
+	SignatureAlgoNil SignatureAlgoType = iota
+	// SignatureAlgoEd25519 identifies the Ed25519 signature Algorithm,
+	// the default (and only) algorithm supported by this chain.
+	SignatureAlgoEd25519
+)
+
+// These Specifiers enumerate the string versions of the types of signatures that are recognized
+// by this implementation. see Consensus.md for more details.
+var (
+	SignatureAlgoNilSpecifier     = Specifier{}
+	SignatureAlgoEd25519Specifier = Specifier{'e', 'd', '2', '5', '5', '1', '9'}
+)
+
+func (sat SignatureAlgoType) String() string {
+	return sat.Specifier().String()
+}
+
+// Specifier returns the specifier linked to this Signature Algorithm Type,
+// returns the SignatureAlgoNilSpecifier if the algorithm type is unknown.
+func (sat SignatureAlgoType) Specifier() Specifier {
+	switch sat {
+	case SignatureAlgoEd25519:
+		return SignatureAlgoEd25519Specifier
+	default:
+		return SignatureAlgoNilSpecifier
+	}
+}
+
+// LoadString loads the stringified algo type as its single byte representation.
+func (sat *SignatureAlgoType) LoadString(str string) error {
+	switch str {
+	case SignatureAlgoEd25519Specifier.String():
+		*sat = SignatureAlgoEd25519
+	case SignatureAlgoNilSpecifier.String():
+		*sat = SignatureAlgoNil
+	default:
+		return fmt.Errorf("unknown SignatureAlgoType string: %s", str)
+	}
+	return nil
+}
+
+// LoadSpecifier loads the algorithm type in specifier-format.
+func (sat *SignatureAlgoType) LoadSpecifier(specifier Specifier) error {
+	switch specifier {
+	case SignatureAlgoEd25519Specifier:
+		*sat = SignatureAlgoEd25519
+	case SignatureAlgoNilSpecifier:
+		*sat = SignatureAlgoNil
+	default:
+		return fmt.Errorf("unknown SignatureAlgoType specifier: %s", specifier.String())
+	}
+	return nil
+}
+
+// Signature-related errors
+var (
+	//ErrFrivolousSignature        = errors.New("transaction contains a frivolous signature")
+	//ErrInvalidPubKeyIndex        = errors.New("transaction contains a signature that points to a nonexistent public key")
 	ErrInvalidUnlockHashChecksum = errors.New("provided unlock hash has an invalid checksum")
-	ErrMissingSignatures         = errors.New("transaction has inputs with missing signatures")
-	ErrPrematureSignature        = errors.New("timelock on signature has not expired")
-	ErrPublicKeyOveruse          = errors.New("public key was used multiple times while signing transaction")
-	ErrSortedUniqueViolation     = errors.New("sorted unique violation")
-	ErrUnlockHashWrongLen        = errors.New("marshalled unlock hash is the wrong length")
+	//ErrMissingSignatures         = errors.New("transaction has inputs with missing signatures")
+	//ErrPrematureSignature        = errors.New("timelock on signature has not expired")
+	//ErrPublicKeyOveruse          = errors.New("public key was used multiple times while signing transaction")
+	//ErrSortedUniqueViolation     = errors.New("sorted unique violation")
+	ErrUnlockHashWrongLen = errors.New("marshalled unlock hash is the wrong length")
 )
 
 type (
-	// A SiaPublicKey is a public key prefixed by a Specifier. The Specifier
+	// A PublicKey is a public key prefixed by a Specifier. The Specifier
 	// indicates the algorithm used for signing and verification. Unrecognized
 	// algorithms will always verify, which allows new algorithms to be added to
 	// the protocol via a soft-fork.
-	SiaPublicKey struct {
-		Algorithm Specifier
+	PublicKey struct {
+		Algorithm SignatureAlgoType
 		Key       ByteSlice
 	}
 
@@ -49,11 +107,11 @@ type (
 	ByteSlice []byte
 )
 
-// Ed25519PublicKey returns pk as a SiaPublicKey, denoting its algorithm as
+// Ed25519PublicKey returns pk as a PublicKey, denoting its algorithm as
 // Ed25519.
-func Ed25519PublicKey(pk crypto.PublicKey) SiaPublicKey {
-	return SiaPublicKey{
-		Algorithm: SignatureEd25519,
+func Ed25519PublicKey(pk crypto.PublicKey) PublicKey {
+	return PublicKey{
+		Algorithm: SignatureAlgoEd25519,
 		Key:       pk[:],
 	}
 }
@@ -190,39 +248,96 @@ func sortedUnique(elems []uint64, max int) bool {
 	return true
 }
 
-// LoadString is the inverse of SiaPublicKey.String().
-func (spk *SiaPublicKey) LoadString(s string) error {
+// MarshalSia implements SiaMarshaler.MarshalSia
+func (pk PublicKey) MarshalSia(w io.Writer) error {
+	return siabin.NewEncoder(w).EncodeAll(
+		pk.Algorithm.Specifier(),
+		pk.Key,
+	)
+}
+
+// UnmarshalSia implements SiaUnmarshaler.UnmarshalSia
+func (pk *PublicKey) UnmarshalSia(r io.Reader) error {
+	// decode the algorithm type, required to know
+	// what length of byte slice to expect
+	var algoSpecifier Specifier
+	err := siabin.NewDecoder(r).DecodeAll(&algoSpecifier, &pk.Key)
+	if err != nil {
+		return err
+	}
+	return pk.Algorithm.LoadSpecifier(algoSpecifier)
+}
+
+// MarshalRivine implements RivineMarshaler.MarshalRivine
+func (pk PublicKey) MarshalRivine(w io.Writer) error {
+	err := rivbin.NewEncoder(w).Encode(pk.Algorithm)
+	if err != nil || pk.Algorithm == SignatureAlgoNil {
+		return err // nil if pk.Algorithm == SignatureAlgoNil
+	}
+	l, err := w.Write([]byte(pk.Key))
+	if err != nil {
+		return err
+	}
+	if l != len(pk.Key) {
+		return io.ErrShortWrite
+	}
+	return nil
+}
+
+// UnmarshalRivine implements RivineUnmarshaler.UnmarshalRivine
+func (pk *PublicKey) UnmarshalRivine(r io.Reader) error {
+	// decode the algorithm type, required to know
+	// what length of byte slice to expect
+	err := rivbin.NewDecoder(r).Decode(&pk.Algorithm)
+	if err != nil {
+		return err
+	}
+	// create the expected sized byte slice, depending on the algorithm type
+	switch pk.Algorithm {
+	case SignatureAlgoEd25519:
+		pk.Key = make(ByteSlice, crypto.PublicKeySize)
+	case SignatureAlgoNil:
+		pk.Key = nil
+	default:
+		return fmt.Errorf("unknown SignatureAlgoType %d", pk.Algorithm)
+	}
+	// read byte slice
+	_, err = io.ReadFull(r, pk.Key[:])
+	return err
+}
+
+// LoadString is the inverse of PublicKey.String().
+func (pk *PublicKey) LoadString(s string) error {
 	parts := strings.SplitN(s, ":", 2)
 	if len(parts) != 2 {
 		return errors.New("invalid public key string")
 	}
-	err := spk.Key.LoadString(parts[1])
+	err := pk.Key.LoadString(parts[1])
 	if err != nil {
 		return err
 	}
-	copy(spk.Algorithm[:], []byte(parts[0]))
-	return nil
+	return pk.Algorithm.LoadString(parts[0])
 }
 
-// String defines how to print a SiaPublicKey - hex is used to keep things
+// String defines how to print a PublicKey - hex is used to keep things
 // compact during logging. The key type prefix and lack of a checksum help to
 // separate it from a sia address.
-func (spk *SiaPublicKey) String() string {
-	return spk.Algorithm.String() + ":" + spk.Key.String()
+func (pk *PublicKey) String() string {
+	return pk.Algorithm.String() + ":" + pk.Key.String()
 }
 
 // MarshalJSON marshals a byte slice as a hex string.
-func (spk SiaPublicKey) MarshalJSON() ([]byte, error) {
-	return json.Marshal(spk.String())
+func (pk PublicKey) MarshalJSON() ([]byte, error) {
+	return json.Marshal(pk.String())
 }
 
 // UnmarshalJSON decodes the json string of the byte slice.
-func (spk *SiaPublicKey) UnmarshalJSON(b []byte) error {
+func (pk *PublicKey) UnmarshalJSON(b []byte) error {
 	var str string
 	if err := json.Unmarshal(b, &str); err != nil {
 		return err
 	}
-	return spk.LoadString(str)
+	return pk.LoadString(str)
 }
 
 // String turns this byte slice into a hex-formatted string.

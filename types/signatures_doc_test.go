@@ -19,7 +19,7 @@ import (
 //      - inputIndex: int64 (8 bytes, little endian),
 //      extraObjects:
 //        if atomicSwap:
-//          SiaPublicKey:
+//          PublicKey:
 //            - Algorithm: 16 bytes fixed-size array
 //            - Key: 8 bytes length + n bytes
 //        if atomicSwap as claimer (owner of receiver pub key):
@@ -320,7 +320,7 @@ func TestInputSigHash(t *testing.T) {
 //      - inputIndex: int64 (8 bytes, little endian),
 //      extraObjects:
 //        if atomicSwap:
-//          SiaPublicKey:
+//          PublicKey:
 //            - Algorithm: 16 bytes fixed-size array
 //            - Key: 8 bytes length + n bytes
 //        if atomicSwap as claimer (owner of receiver pub key):

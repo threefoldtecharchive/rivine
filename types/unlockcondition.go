@@ -483,8 +483,8 @@ type (
 	// SingleSignatureFulfillment implements the FulfillmentTypeSingleSignature (unlock) FulfillmentType.
 	// See FulfillmentTypeSingleSignature for more information.
 	SingleSignatureFulfillment struct {
-		PublicKey SiaPublicKey `json:"publickey"`
-		Signature ByteSlice    `json:"signature"`
+		PublicKey PublicKey `json:"publickey"`
+		Signature ByteSlice `json:"signature"`
 	}
 
 	// AtomicSwapCondition implements the ConditionTypeSingleSignature (unlock) ConditionType.
@@ -498,7 +498,7 @@ type (
 	// AtomicSwapFulfillment implements the (new) FulfillmentTypeAtomicSwap (unlock) FulfillmentType.
 	// See FulfillmentTypeAtomicSwap for more information.
 	AtomicSwapFulfillment struct {
-		PublicKey SiaPublicKey     `json:"publickey"`
+		PublicKey PublicKey        `json:"publickey"`
 		Signature ByteSlice        `json:"signature"`
 		Secret    AtomicSwapSecret `json:"secret,omitempty"`
 	}
@@ -509,7 +509,7 @@ type (
 		Receiver     UnlockHash             `json:"receiver"`
 		HashedSecret AtomicSwapHashedSecret `json:"hashedsecret"`
 		TimeLock     Timestamp              `json:"timelock"`
-		PublicKey    SiaPublicKey           `json:"publickey"`
+		PublicKey    PublicKey              `json:"publickey"`
 		Signature    ByteSlice              `json:"signature"`
 		Secret       AtomicSwapSecret       `json:"secret,omitempty"`
 	}
@@ -550,13 +550,13 @@ type (
 	// PublicKeySignaturePair is a public key and a signature created from the corresponding
 	// private key
 	PublicKeySignaturePair struct {
-		PublicKey SiaPublicKey `json:"publickey"`
-		Signature ByteSlice    `json:"signature"`
+		PublicKey PublicKey `json:"publickey"`
+		Signature ByteSlice `json:"signature"`
 	}
 
 	// KeyPair is a matching public and private key
 	KeyPair struct {
-		PublicKey  SiaPublicKey
+		PublicKey  PublicKey
 		PrivateKey ByteSlice
 	}
 )
@@ -597,7 +597,7 @@ var (
 func (n *NilCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
 	switch tf := fulfillment.(type) {
 	case *SingleSignatureFulfillment:
-		return verifyHashUsingSiaPublicKey(tf.PublicKey,
+		return verifyHashUsingPublicKey(tf.PublicKey,
 			ctx.InputIndex, ctx.Transaction, tf.Signature)
 	default:
 		return ErrUnexpectedUnlockFulfillment
@@ -685,7 +685,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		if euh != uh.TargetUnlockHash {
 			return errors.New("single signature fulfillment provides wrong public key")
 		}
-		return verifyHashUsingSiaPublicKey(tf.PublicKey,
+		return verifyHashUsingPublicKey(tf.PublicKey,
 			ctx.InputIndex, ctx.Transaction, tf.Signature)
 
 	case *LegacyAtomicSwapFulfillment:
@@ -713,7 +713,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			}
 
 			// verify signature
-			err := verifyHashUsingSiaPublicKey(
+			err := verifyHashUsingPublicKey(
 				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
 				tf.PublicKey, tf.Secret)
 			if err != nil {
@@ -737,7 +737,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 
 		// after the deadline (timelock),
 		// only the original sender can reclaim the unspend output
-		return verifyHashUsingSiaPublicKey(
+		return verifyHashUsingPublicKey(
 			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
 			tf.PublicKey)
 
@@ -793,7 +793,7 @@ func (uh *UnlockHashCondition) Unmarshal(b []byte, f UnmarshalFunc) error {
 // NewSingleSignatureFulfillment creates an unsigned SingleSignatureFulfillment,
 // using the given Public Key, which is to be matched with the private key given
 // as part of the later sign call to the returned instance.
-func NewSingleSignatureFulfillment(pk SiaPublicKey) *SingleSignatureFulfillment {
+func NewSingleSignatureFulfillment(pk PublicKey) *SingleSignatureFulfillment {
 	return &SingleSignatureFulfillment{PublicKey: pk}
 }
 
@@ -803,7 +803,7 @@ func (ss *SingleSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err erro
 		return ErrFulfillmentDoubleSign
 	}
 
-	ss.Signature, err = signHashUsingSiaPublicKey(
+	ss.Signature, err = signHashUsingPublicKey(
 		ss.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key)
 	return
 }
@@ -871,7 +871,7 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			}
 
 			// verify signature
-			return verifyHashUsingSiaPublicKey(
+			return verifyHashUsingPublicKey(
 				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
 				tf.PublicKey, tf.Secret)
 		}
@@ -888,7 +888,7 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			return ErrInvalidRedeemer
 		}
 		// verify the signature is indeed done by
-		return verifyHashUsingSiaPublicKey(
+		return verifyHashUsingPublicKey(
 			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
 			tf.PublicKey)
 
@@ -989,7 +989,7 @@ func (as *AtomicSwapCondition) Unmarshal(b []byte, f UnmarshalFunc) error {
 //
 // Note that this fulfillment will fail if the current time is
 // equal to or past the timestamp specified as time lock in the parent output.
-func NewAtomicSwapClaimFulfillment(pk SiaPublicKey, secret AtomicSwapSecret) *AtomicSwapFulfillment {
+func NewAtomicSwapClaimFulfillment(pk PublicKey, secret AtomicSwapSecret) *AtomicSwapFulfillment {
 	return &AtomicSwapFulfillment{
 		PublicKey: pk,
 		Secret:    secret,
@@ -1004,7 +1004,7 @@ func NewAtomicSwapClaimFulfillment(pk SiaPublicKey, secret AtomicSwapSecret) *At
 //
 // Note that this fulfillment will fail if the current time is
 // prior to the timestamp specified as time lock in the parent output.
-func NewAtomicSwapRefundFulfillment(pk SiaPublicKey) *AtomicSwapFulfillment {
+func NewAtomicSwapRefundFulfillment(pk PublicKey) *AtomicSwapFulfillment {
 	return &AtomicSwapFulfillment{PublicKey: pk}
 }
 
@@ -1017,7 +1017,7 @@ func (as *AtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 	if as.Secret != (AtomicSwapSecret{}) {
 		// sign as claimer
 		var err error
-		as.Signature, err = signHashUsingSiaPublicKey(
+		as.Signature, err = signHashUsingPublicKey(
 			as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
 			as.PublicKey, as.Secret)
 		return err
@@ -1025,7 +1025,7 @@ func (as *AtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 
 	// sign as refunder
 	var err error
-	as.Signature, err = signHashUsingSiaPublicKey(
+	as.Signature, err = signHashUsingPublicKey(
 		as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
 		as.PublicKey)
 	return err
@@ -1080,7 +1080,7 @@ func (as *LegacyAtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 	if as.Secret != (AtomicSwapSecret{}) {
 		// sign as claimer
 		var err error
-		as.Signature, err = signHashUsingSiaPublicKey(
+		as.Signature, err = signHashUsingPublicKey(
 			as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
 			as.PublicKey, as.Secret)
 		return err
@@ -1088,7 +1088,7 @@ func (as *LegacyAtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 
 	// sign as refunder
 	var err error
-	as.Signature, err = signHashUsingSiaPublicKey(
+	as.Signature, err = signHashUsingPublicKey(
 		as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
 		as.PublicKey)
 	return err
@@ -1556,7 +1556,7 @@ func (ms *MultiSignatureCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fu
 
 	// Finally verify all the signatures
 	for _, pks := range tf.Pairs {
-		if err := verifyHashUsingSiaPublicKey(
+		if err := verifyHashUsingPublicKey(
 			pks.PublicKey, ctx.InputIndex, ctx.Transaction, pks.Signature, pks.PublicKey,
 		); err != nil {
 			return err
@@ -1749,7 +1749,7 @@ func (ms *MultiSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err error
 		return errors.New("Invalid keypair to sign this input")
 	}
 
-	signature, err := signHashUsingSiaPublicKey(
+	signature, err := signHashUsingPublicKey(
 		keypair.PublicKey, ctx.InputIndex, ctx.Transaction, keypair.PrivateKey, keypair.PublicKey,
 	)
 	if err != nil {
@@ -2308,9 +2308,9 @@ var (
 // strictSignatureCheck is used as part of the IsStandardFulfillment
 // check of any Fulfillment which has a signature as part of its body.
 // It ensures that the given public key and signature are a valid pair.
-func strictSignatureCheck(pk SiaPublicKey, signature ByteSlice) error {
+func strictSignatureCheck(pk PublicKey, signature ByteSlice) error {
 	switch pk.Algorithm {
-	case SignatureEd25519:
+	case SignatureAlgoEd25519:
 		if len(pk.Key) != crypto.PublicKeySize {
 			return errors.New("invalid public key size in transaction")
 		}
@@ -2323,14 +2323,14 @@ func strictSignatureCheck(pk SiaPublicKey, signature ByteSlice) error {
 	}
 }
 
-// signHashUsingSiaPublicKey produces a signature,
+// signHashUsingPublicKey produces a signature,
 // for a given input, which is located within the given (parent) transaction,
 // using the given (optional private) key, and using any extra objects (on top of the normal properties).
 // The public key is to be given, as based on that the function can figure out what algorithm to use,
 // and this also allows the function to know how to interpret the given (private) key.
-func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, key interface{}, extraObjects ...interface{}) ([]byte, error) {
+func signHashUsingPublicKey(pk PublicKey, inputIndex uint64, tx Transaction, key interface{}, extraObjects ...interface{}) ([]byte, error) {
 	switch pk.Algorithm {
-	case SignatureEd25519:
+	case SignatureAlgoEd25519:
 		// decode the ed-secretKey
 		var edSK crypto.SecretKey
 		switch k := key.(type) {
@@ -2364,7 +2364,7 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 	}
 }
 
-// verifyHashUsingSiaPublicKey verfies the given signature.
+// verifyHashUsingPublicKey verfies the given signature.
 // It does so by:
 //
 // 1. producing the hash used to create the signature,
@@ -2373,9 +2373,9 @@ func signHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transactio
 // 2. using the algorithm type of the given public key,
 //    as to figure out what signature algorithm is used,
 //    and thus being able to know how to verify the given signature;
-func verifyHashUsingSiaPublicKey(pk SiaPublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) (err error) {
+func verifyHashUsingPublicKey(pk PublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) (err error) {
 	switch pk.Algorithm {
-	case SignatureEd25519:
+	case SignatureAlgoEd25519:
 		// Decode the public key and signature.
 		var (
 			edPK  crypto.PublicKey

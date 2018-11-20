@@ -86,7 +86,7 @@ func NewEd25519PubKeyUnlockHash(pk crypto.PublicKey) UnlockHash {
 
 // NewPubKeyUnlockHash creates a new unlock hash of type UnlockTypePubKey,
 // using a given Sia-standard Public key.
-func NewPubKeyUnlockHash(pk SiaPublicKey) UnlockHash {
+func NewPubKeyUnlockHash(pk PublicKey) UnlockHash {
 	return UnlockHash{
 		Type: UnlockTypePubKey,
 		Hash: crypto.HashObject(siabin.Marshal(pk)),

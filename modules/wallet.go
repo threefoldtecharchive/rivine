@@ -272,7 +272,7 @@ type (
 
 		// GetKey allows you to fetch the Public/Private key pair,
 		// which is linked to the given unlock hash (assumed to be the address a user).
-		GetKey(address types.UnlockHash) (types.SiaPublicKey, types.ByteSlice, error)
+		GetKey(address types.UnlockHash) (types.PublicKey, types.ByteSlice, error)
 
 		// PrimarySeed returns the current primary seed of the wallet,
 		// unencrypted, with an int indicating how many addresses have been
