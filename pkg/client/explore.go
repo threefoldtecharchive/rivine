@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
 
 func createExploreCmd(client *CommandLineClient) *cobra.Command {
@@ -38,8 +40,8 @@ func createExploreCmd(client *CommandLineClient) *cobra.Command {
 
 	// create flags
 	blockCmd.Flags().Var(
-		cli.NewEncodingTypeFlag(0, &exploreCmd.blockCfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON), "encoding",
-		cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON))
+		cli.NewEncodingTypeFlag(0, &exploreCmd.blockCfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON|cli.EncodingTypeHex), "encoding",
+		cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON|cli.EncodingTypeHex))
 	blockCmd.Flags().BoolVar(
 		&exploreCmd.blockCfg.BlockOnly, "block-only", false, "print the raw block only")
 
@@ -81,6 +83,10 @@ func (cmd *exploreCmd) blockCmd(blockHeightStr string) {
 
 	// print depending on the encoding type
 	switch cmd.blockCfg.EncodingType {
+	case cli.EncodingTypeHex:
+		enc := siabin.NewEncoder(hex.NewEncoder(os.Stdout))
+		enc.Encode(value)
+		fmt.Println()
 	case cli.EncodingTypeJSON:
 		json.NewEncoder(os.Stdout).Encode(value)
 	default:
