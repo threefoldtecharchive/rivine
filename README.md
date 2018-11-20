@@ -32,8 +32,8 @@ rivined.
 Building From Source
 --------------------
 
-To build from source, [Go 1.9 or higher must be installed](https://golang.org/doc/install)
-on the system (older versions of GO might work, but we don't support it). Then simply use `go get`:
+To build from source, [Go 1.10 or higher must be installed](https://golang.org/doc/install)
+on the system (older versions of GO might work, with some work, but we don't support it). Then simply use `go get`:
 
 ```bash
 go get -u github.com/threefoldtech/rivine/cmd/...
