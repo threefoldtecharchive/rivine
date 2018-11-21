@@ -84,6 +84,7 @@ type (
 	// to indicate to where to send how much coins
 	WalletCoinsPOST struct {
 		CoinOutputs []types.CoinOutput `json:"coinoutputs`
+		Data        []byte             `json:"data,omitempty"`
 	}
 	// WalletCoinsPOSTResp Resp contains the ID of the transaction
 	// that was created as a result of a POST call to /wallet/coins.
@@ -95,6 +96,7 @@ type (
 	// to indicate to where to send how much blockstakes
 	WalletBlockStakesPOST struct {
 		BlockStakeOutputs []types.BlockStakeOutput `json:"blockstakeoutputs`
+		Data              []byte                   `json:"data,omitempty"`
 	}
 	// WalletBlockStakesPOSTResp Resp contains the ID of the transaction
 	// that was created as a result of a POST call to /wallet/blockstakes.
@@ -521,7 +523,7 @@ func NewWalletCoinsHandler(wallet modules.Wallet) httprouter.Handle {
 			WriteError(w, Error{"error decoding the supplied coin outputs: " + err.Error()}, http.StatusBadRequest)
 			return
 		}
-		tx, err := wallet.SendOutputs(body.CoinOutputs, nil, nil)
+		tx, err := wallet.SendOutputs(body.CoinOutputs, nil, body.Data)
 		if err != nil {
 			WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, walletErrorToHTTPStatus(err))
 			return
@@ -540,7 +542,7 @@ func NewWalletBlockStakesHandler(wallet modules.Wallet) httprouter.Handle {
 			WriteError(w, Error{"error decoding the supplied blockstake outputs: " + err.Error()}, http.StatusBadRequest)
 			return
 		}
-		tx, err := wallet.SendOutputs(nil, body.BlockStakeOutputs, nil)
+		tx, err := wallet.SendOutputs(nil, body.BlockStakeOutputs, body.Data)
 		if err != nil {
 			WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, walletErrorToHTTPStatus(err))
 			return

@@ -273,6 +273,14 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 		createCoinTxCmd,
 		createBlockStakeTxCmd)
 
+	// define config of commands that have a config
+	sendCoinsCmd.Flags().StringVar(
+		&walletCmd.sendCoinsCfg.Data,
+		"data", "", "optional arbitrary data (or description) to attach to transaction")
+	sendBlockStakesCmd.Flags().StringVar(
+		&walletCmd.sendBlockStakesCfg.Data,
+		"data", "", "optional arbitrary data (or description) to attach to transaction")
+
 	// return root command
 	return &WalletCommand{
 		Command:       rootCmd,
@@ -295,7 +303,13 @@ type WalletCommand struct {
 }
 
 type walletCmd struct {
-	cli *CommandLineClient
+	cli          *CommandLineClient
+	sendCoinsCfg struct {
+		Data string
+	}
+	sendBlockStakesCfg struct {
+		Data string
+	}
 }
 
 // addressCmd fetches a new address from the wallet that will be able to
@@ -458,6 +472,7 @@ func (walletCmd *walletCmd) sendCoinsCmd(cmd *cobra.Command, args []string) {
 
 	body := api.WalletCoinsPOST{
 		CoinOutputs: make([]types.CoinOutput, len(pairs)),
+		Data:        []byte(walletCmd.sendCoinsCfg.Data),
 	}
 	for i, pair := range pairs {
 		body.CoinOutputs[i] = types.CoinOutput{
@@ -493,6 +508,7 @@ func (walletCmd *walletCmd) sendBlockStakesCmd(cmd *cobra.Command, args []string
 
 	body := api.WalletBlockStakesPOST{
 		BlockStakeOutputs: make([]types.BlockStakeOutput, len(pairs)),
+		Data:              []byte(walletCmd.sendBlockStakesCfg.Data),
 	}
 	for i, pair := range pairs {
 		body.BlockStakeOutputs[i] = types.BlockStakeOutput{
