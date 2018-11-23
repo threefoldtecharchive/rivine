@@ -188,6 +188,9 @@ type (
 		// AddArbitraryData sets the arbitrary data of the transaction.
 		SetArbitraryData(arb []byte)
 
+		// AddArbitraryData sets the arbitrary data of the transaction with a type of choice.
+		SetArbitraryDataWithType(arb []byte, arbtype types.ArbitraryDataType)
+
 		// Sign will sign any inputs added by 'FundCoins' or 'FundBlockStakes'
 		// and return a transaction set that contains all parents prepended to
 		// the transaction. If more fields need to be added, a new transaction
@@ -369,7 +372,7 @@ type (
 		// SendCoins is a tool for sending coins from the wallet to anyone who can fulfill the
 		// given condition (can be nil). The transaction is automatically given to the transaction pool, and
 		// are also returned to the caller.
-		SendCoins(amount types.Currency, cond types.UnlockConditionProxy, data []byte) (types.Transaction, error)
+		SendCoins(amount types.Currency, cond types.UnlockConditionProxy, data types.ArbitraryData) (types.Transaction, error)
 
 		// SendBlockStakes is a tool for sending blockstakes from the wallet to anyone who can fulfill the
 		// given condition (can be nil). Sending money usually results in multiple transactions. The
@@ -379,7 +382,7 @@ type (
 
 		// SendOutputs is a tool for sending coins and/or block stakes from the wallet, to one or multiple addreses.
 		// The transaction is automatically given to the transaction pool, and is also returned to the caller.
-		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte) (types.Transaction, error)
+		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data types.ArbitraryData) (types.Transaction, error)
 
 		// BlockStakeStats returns the blockstake statistical information of
 		// this wallet of the last 1000 blocks. If the blockcount is less than

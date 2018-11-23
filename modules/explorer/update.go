@@ -258,7 +258,7 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 		bf.BlockStakeInputCount += uint64(len(txn.BlockStakeInputs))
 		bf.BlockStakeOutputCount += uint64(len(txn.BlockStakeOutputs))
 		bf.MinerFeeCount += uint64(len(txn.MinerFees))
-		if size := len(txn.ArbitraryData); size > 0 {
+		if size := len(txn.ArbitraryData.Data); size > 0 {
 			bf.ArbitraryDataTotalSize += uint64(size)
 			bf.ArbitraryDataCount++
 		}

@@ -114,7 +114,11 @@ func DefaultTransactionValidation(t Transaction, ctx ValidationContext, constant
 	if err != nil {
 		return
 	}
-	err = ArbitraryDataFits(t.ArbitraryData, constants.ArbitraryDataSizeLimit)
+	err = ArbitraryDataFits(t.ArbitraryData.Data, constants.ArbitraryDataSizeLimit)
+	if err != nil {
+		return
+	}
+	err = t.ArbitraryData.Validate()
 	if err != nil {
 		return
 	}

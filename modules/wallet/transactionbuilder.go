@@ -351,7 +351,15 @@ func (tb *transactionBuilder) AddBlockStakeOutput(output types.BlockStakeOutput)
 
 // AddArbitraryData sets the arbitrary data of the transaction.
 func (tb *transactionBuilder) SetArbitraryData(arb []byte) {
-	tb.transaction.ArbitraryData = arb
+	tb.SetArbitraryDataWithType(arb, types.ArbitraryDataTypeBinary)
+}
+
+// AddArbitraryDataWithType sets the arbitrary data of the transaction with a type of choice.
+func (tb *transactionBuilder) SetArbitraryDataWithType(arb []byte, arbtype types.ArbitraryDataType) {
+	tb.transaction.ArbitraryData = types.ArbitraryData{
+		Data: arb,
+		Type: arbtype,
+	}
 }
 
 // Drop discards all of the outputs in a transaction, returning them to the
