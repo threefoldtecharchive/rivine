@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts"
+
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -87,12 +89,43 @@ func main() {
 		}
 	}
 
+	if accPassFlag == nil || *accPassFlag == "" {
+		log.Crit("Account password must be provided")
+	}
+	pass := *accPassFlag
+
+	var acc accounts.Account
+	// load account
+	ks := keystore.NewKeyStore(filepath.Join(os.Getenv("HOME"), ".oracle-proto", "keys"), keystore.StandardScryptN, keystore.StandardScryptP)
+
+	// If the accJSONFlag is provided try to import the account
+	if accJSONFlag != nil && *accJSONFlag != "" {
+		blob, err := ioutil.ReadFile(*accJSONFlag)
+		if err != nil {
+			log.Crit("Failed to read account key contents", "file", *accJSONFlag, "err", err)
+		}
+		// Import the account
+		acc, err = ks.Import(blob, pass, pass)
+		if err != nil {
+			log.Crit("Failed to import faucet signer account", "err", err)
+		}
+	} else {
+		// check if there are accounts already loaded
+		if len(ks.Accounts()) == 0 {
+			log.Crit("Failed to find any existing account")
+		}
+		acc = ks.Accounts()[0]
+	}
+	ks.Unlock(acc, pass)
+
 	// Assemble and start the oracle light service
-	oracle, err := newOracleProto(genesis, *ethPortFlag, enodes, *netFlag, *statsFlag, nil)
+	oracle, err := newOracleProto(genesis, *ethPortFlag, enodes, *netFlag, *statsFlag, ks)
 	if err != nil {
 		log.Crit("Failed to start oracle", "err", err)
 	}
 	defer oracle.close()
+
+	closeChan := make(chan struct{})
 
 	// Do your business until we send ctrl-c
 	var hold sync.WaitGroup
@@ -101,6 +134,7 @@ func main() {
 	signal.Notify(sc, os.Interrupt)
 	go func() {
 		<-sc
+		close(closeChan)
 		hold.Done()
 	}()
 
@@ -143,6 +177,7 @@ func newOracleProto(genesis *core.Genesis, port int, enodes []*discv5.Node, netw
 	// Assemble the Ethereum light client protocol
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg := eth.DefaultConfig
+		cfg.Ethash.DatasetDir = filepath.Join(os.Getenv("HOME"), ".oracle-proto", "ethash")
 		cfg.SyncMode = downloader.LightSync
 		cfg.NetworkId = network
 		cfg.Genesis = genesis
