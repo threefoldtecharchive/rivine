@@ -138,6 +138,8 @@ func main() {
 		hold.Done()
 	}()
 
+	go oracle.loop()
+
 	hold.Wait()
 }
 
@@ -148,7 +150,10 @@ type oracleProto struct {
 	stack  *node.Node          // Ethereum protocol stack
 	client *ethclient.Client   // Client connection to the Ethereum chain
 
-	head *types.Header // Current head header of the oracle
+	keystore *keystore.KeyStore // Keystore containing the signing info
+	account  accounts.Account   // Account funding the oracle requests
+	head     *types.Header      // Current head header of the oracle
+	balance  *big.Int           // The current balance of the oracle
 
 	nonce uint64   // Current pending nonce of the oracle
 	price *big.Int // Current gas price to issue funds with
@@ -214,9 +219,11 @@ func newOracleProto(genesis *core.Genesis, port int, enodes []*discv5.Node, netw
 	client := ethclient.NewClient(api)
 
 	return &oracleProto{
-		config: genesis.Config,
-		stack:  stack,
-		client: client,
+		config:   genesis.Config,
+		stack:    stack,
+		client:   client,
+		keystore: ks,
+		account:  ks.Accounts()[0],
 	}, nil
 }
 
@@ -241,19 +248,56 @@ func (f *oracleProto) refresh(head *types.Header) error {
 	}
 	// Retrieve the balance, nonce and gas price from the current head
 	var (
-		nonce uint64
-		price *big.Int
+		nonce   uint64
+		price   *big.Int
+		balance *big.Int
 	)
 
 	if price, err = f.client.SuggestGasPrice(ctx); err != nil {
 		return err
 	}
+	if balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number); err != nil {
+		return err
+	}
+
 	// Everything succeeded, update the cached
 	f.lock.Lock()
-	f.head = head
+	f.head, f.balance = head, balance
 	f.price, f.nonce = price, nonce
 
 	f.lock.Unlock()
 
 	return nil
+}
+
+func (f *oracleProto) loop() {
+	// channel to receive head updates from client on
+	heads := make(chan *types.Header, 16)
+	// subscribe to head upates
+	sub, err := f.client.SubscribeNewHead(context.Background(), heads)
+	if err != nil {
+		log.Crit("Failed to subscribe to head events", "err", err)
+	}
+	defer sub.Unsubscribe()
+
+	// channel so we can update the internal state from the heads
+	update := make(chan *types.Header)
+
+	go func() {
+		for head := range update {
+			// old heads should be ignored during a chain sync after some downtime
+			if err := f.refresh(head); err != nil {
+				log.Warn("Failed to update state", "block", head.Number, "err", err)
+			}
+			log.Info("Internal stats updated", "block", head.Number, "account balance", f.balance, "gas price", f.price, "nonce", f.nonce)
+		}
+	}()
+
+	for head := range heads {
+		select {
+		// only process new head if another isn't being processed yet
+		case update <- head:
+		default:
+		}
+	}
 }
