@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
@@ -138,15 +139,25 @@ func BuildExplorerBlock(explorer modules.Explorer, height types.BlockHeight, blo
 	}
 }
 
+// TransactionSetFilters is used to filter a transaction seto to be build.
+type TransactionSetFilters struct {
+	MinBlockHeight types.BlockHeight
+}
+
 // BuildTransactionSet returns the blocks and transactions that are associated
 // with a set of transaction ids.
-func BuildTransactionSet(explorer modules.Explorer, txids []types.TransactionID) (txns []ExplorerTransaction, blocks []ExplorerBlock) {
+func BuildTransactionSet(explorer modules.Explorer, txids []types.TransactionID, filters TransactionSetFilters) (txns []ExplorerTransaction, blocks []ExplorerBlock) {
 	for _, txid := range txids {
 		// Get the block containing the transaction - in the case of miner
 		// payouts, the block might be the transaction.
 		block, height, exists := explorer.Transaction(txid)
 		if !exists && build.DEBUG {
 			panic("explorer pointing to nonexistent txn")
+		}
+
+		// ensure the height is within the minimum range
+		if height < filters.MinBlockHeight {
+			continue // skip this block
 		}
 
 		// Check if the block is the transaction.
@@ -280,7 +291,19 @@ func NewExplorerHashHandler(explorer modules.Explorer, tpool modules.Transaction
 				blocks []ExplorerBlock
 			)
 			if txids := explorer.UnlockHash(addr); len(txids) != 0 {
-				txns, blocks = BuildTransactionSet(explorer, txids)
+				// parse the optional filters for the unlockhash request
+				var filters TransactionSetFilters
+				if str := req.FormValue("minheight"); str != "" {
+					n, err := strconv.ParseUint(str, 10, 64)
+					if err != nil {
+						WriteError(w, Error{"invalid minheight filter: " + err.Error()}, http.StatusBadRequest)
+						return
+					}
+					filters.MinBlockHeight = types.BlockHeight(n)
+				}
+				// build the transaction set for all transactions for the given unlock hash,
+				// taking into account the given filters
+				txns, blocks = BuildTransactionSet(explorer, txids, filters)
 			}
 			txns = append(txns, getUnconfirmedTransactions(explorer, tpool, addr)...)
 			multiSigAddresses := explorer.MultiSigAddresses(addr)
@@ -295,7 +318,7 @@ func NewExplorerHashHandler(explorer modules.Explorer, tpool modules.Transaction
 			}
 
 			// Hash not found, return an error.
-			WriteError(w, Error{"unrecognized hash used as input to /explorer/hash"}, http.StatusBadRequest)
+			WriteError(w, Error{"no transactions or blocks found for given address"}, http.StatusNoContent)
 			return
 		}
 
@@ -335,7 +358,7 @@ func NewExplorerHashHandler(explorer modules.Explorer, tpool modules.Transaction
 		// Try the hash as a siacoin output id.
 		txids := explorer.CoinOutputID(types.CoinOutputID(hash))
 		if len(txids) != 0 {
-			txns, blocks := BuildTransactionSet(explorer, txids)
+			txns, blocks := BuildTransactionSet(explorer, txids, TransactionSetFilters{})
 			WriteJSON(w, ExplorerHashGET{
 				HashType:     HashTypeCoinOutputIDStr,
 				Blocks:       blocks,
@@ -347,7 +370,7 @@ func NewExplorerHashHandler(explorer modules.Explorer, tpool modules.Transaction
 		// Try the hash as a siafund output id.
 		txids = explorer.BlockStakeOutputID(types.BlockStakeOutputID(hash))
 		if len(txids) != 0 {
-			txns, blocks := BuildTransactionSet(explorer, txids)
+			txns, blocks := BuildTransactionSet(explorer, txids, TransactionSetFilters{})
 			WriteJSON(w, ExplorerHashGET{
 				HashType:     HashTypeBlockStakeOutputIDStr,
 				Blocks:       blocks,

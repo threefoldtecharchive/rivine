@@ -48,6 +48,9 @@ func createExploreCmd(client *CommandLineClient) *cobra.Command {
 	hashCmd.Flags().Var(
 		cli.NewEncodingTypeFlag(0, &exploreCmd.hashCfg.EncodingType, cli.EncodingTypeHuman|cli.EncodingTypeJSON), "encoding",
 		cli.EncodingTypeFlagDescription(cli.EncodingTypeHuman|cli.EncodingTypeJSON))
+	hashCmd.Flags().Uint64Var(
+		&exploreCmd.hashCfg.MinHeight, "min-height", 0,
+		"when looking up the transactions linked to an unlockhash, only show transactions since a given height")
 
 	// return root command
 	return rootCmd
@@ -61,6 +64,7 @@ type exploreCmd struct {
 	}
 	hashCfg struct {
 		EncodingType cli.EncodingType
+		MinHeight    uint64
 	}
 }
 
@@ -102,7 +106,11 @@ func (cmd *exploreCmd) blockCmd(blockHeightStr string) {
 func (cmd *exploreCmd) hashCmd(hash string) {
 	// get the block on the given height, using the daemon's explorer module
 	var resp api.ExplorerHashGET
-	err := cmd.cli.GetAPI("/explorer/hashes/"+hash, &resp)
+	url := "/explorer/hashes/" + hash
+	if cmd.hashCfg.MinHeight > 0 {
+		url += fmt.Sprintf("?minheight=%d", cmd.hashCfg.MinHeight)
+	}
+	err := cmd.cli.GetAPI(url, &resp)
 	if err != nil {
 		cli.Die(fmt.Sprintf("Could not get an item using the hash %q: %v", hash, err))
 	}
