@@ -1,8 +1,6 @@
  # webshop for rivine based tokens  using bitcoin
 
- Payment process using the  [BIP-70] (https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki) standard.
-
-
+ Payment process using the [BIP-70](https://github.com/bitcoin/bips/blob/master/bip-0070.mediawiki) standard.
 
  ## Bitcoin wallets
 
