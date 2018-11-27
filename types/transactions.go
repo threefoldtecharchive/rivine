@@ -89,7 +89,7 @@ type (
 		BlockStakeInputs  []BlockStakeInput
 		BlockStakeOutputs []BlockStakeOutput
 		MinerFees         []Currency
-		ArbitraryData     []byte
+		ArbitraryData     ArbitraryData
 
 		// can adhere any (at once) of {TransactionDataEncoder, TransactionValidator, InputSigHasher},
 		// or simply be nil.

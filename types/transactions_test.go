@@ -334,7 +334,7 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					},
 				},
 				MinerFees:     []Currency{NewCurrency64(1)},
-				ArbitraryData: []byte("42"),
+				ArbitraryData: ArbitraryData{Data: []byte("42")},
 			},
 		},
 		// v0 @ v1.0.3
@@ -543,7 +543,7 @@ func TestTransactionEncodingDocExamples(t *testing.T) {
 					},
 				},
 				MinerFees:     []Currency{NewCurrency64(1)},
-				ArbitraryData: []byte("42"),
+				ArbitraryData: ArbitraryData{Data: []byte("42")},
 			},
 		},
 		{
@@ -770,7 +770,7 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					},
 				},
 				MinerFees:     []Currency{NewCurrency64(1)},
-				ArbitraryData: []byte("Hello, World!"),
+				ArbitraryData: ArbitraryData{Data: []byte("Hello, World!")},
 			},
 		},
 		{
@@ -939,7 +939,7 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 				MinerFees: []Currency{
 					NewCurrency64(1), NewCurrency64(2), NewCurrency64(3),
 				},
-				ArbitraryData: []byte("data"),
+				ArbitraryData: ArbitraryData{Data: []byte("data")},
 			},
 		},
 		// v0 @ v1.0.3
@@ -1065,7 +1065,7 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 					},
 				},
 				MinerFees:     []Currency{NewCurrency64(1)},
-				ArbitraryData: []byte("Hello, World!"),
+				ArbitraryData: ArbitraryData{Data: []byte("Hello, World!")},
 			},
 		},
 		{
@@ -1306,7 +1306,7 @@ func TestTransactionJSONEncodingExamples(t *testing.T) {
 				MinerFees: []Currency{
 					NewCurrency64(1), NewCurrency64(2), NewCurrency64(3),
 				},
-				ArbitraryData: []byte("data"),
+				ArbitraryData: ArbitraryData{Data: []byte("data")},
 			},
 		},
 		{

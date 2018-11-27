@@ -109,7 +109,7 @@ func newLegacyTransactionData(data TransactionData) (ltd legacyTransactionData, 
 		}
 	}
 
-	ltd.MinerFees, ltd.ArbitraryData = data.MinerFees, data.ArbitraryData
+	ltd.MinerFees, ltd.ArbitraryData = data.MinerFees, data.ArbitraryData.Data
 	return
 }
 
@@ -152,7 +152,8 @@ func (ltd legacyTransactionData) TransactionData() (data TransactionData) {
 		}
 	}
 
-	data.MinerFees, data.ArbitraryData = ltd.MinerFees, ltd.ArbitraryData
+	data.MinerFees = ltd.MinerFees
+	data.ArbitraryData.Data, data.ArbitraryData.Type = ltd.ArbitraryData, ArbitraryDataTypeBinary
 	return
 }
 
