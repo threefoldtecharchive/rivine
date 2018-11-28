@@ -14,7 +14,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/core"
@@ -298,6 +301,30 @@ func (op *oracleProto) loop() {
 		// only process new head if another isn't being processed yet
 		case update <- head:
 		default:
+		}
+	}
+}
+
+// SubscribeTransfers subscribes to new Transfer events on the given contract. This call blocks
+// and prints out info about any transfer as it happened
+func (op *oracleProto) SubscribeTransfers(contractAddress common.Address) error {
+	filter, err := NewTTFT20Filterer(contractAddress, op.client)
+	if err != nil {
+		return err
+	}
+	sink := make(chan *TTFT20Transfer)
+	opts := &bind.WatchOpts{Context: context.Background(), Start: nil}
+	sub, err := filter.WatchTransfer(opts, sink, nil, nil)
+	if err != nil {
+		return err
+	}
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case err = <-sub.Err():
+			return err
+		case transfer := <-sink:
+			log.Info("Noticed transfer event", "from", transfer.From, "to", transfer.To, "amount", transfer.Tokens)
 		}
 	}
 }
