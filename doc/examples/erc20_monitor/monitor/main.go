@@ -228,13 +228,13 @@ func newOracleProto(genesis *core.Genesis, port int, enodes []*discv5.Node, netw
 }
 
 // close terminates the Ethereum connection and tears down the oracle proto.
-func (f *oracleProto) close() error {
-	return f.stack.Stop()
+func (op *oracleProto) close() error {
+	return op.stack.Stop()
 }
 
 // refresh attempts to retrieve the latest header from the chain and extract the
 // associated oracle balance and nonce for connectivity caching.
-func (f *oracleProto) refresh(head *types.Header) error {
+func (op *oracleProto) refresh(head *types.Header) error {
 	// Ensure a state update does not run for too long
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -242,7 +242,7 @@ func (f *oracleProto) refresh(head *types.Header) error {
 	// If no header was specified, use the current chain head
 	var err error
 	if head == nil {
-		if head, err = f.client.HeaderByNumber(ctx, nil); err != nil {
+		if head, err = op.client.HeaderByNumber(ctx, nil); err != nil {
 			return err
 		}
 	}
@@ -253,28 +253,28 @@ func (f *oracleProto) refresh(head *types.Header) error {
 		balance *big.Int
 	)
 
-	if price, err = f.client.SuggestGasPrice(ctx); err != nil {
+	if price, err = op.client.SuggestGasPrice(ctx); err != nil {
 		return err
 	}
-	if balance, err = f.client.BalanceAt(ctx, f.account.Address, head.Number); err != nil {
+	if balance, err = op.client.BalanceAt(ctx, op.account.Address, head.Number); err != nil {
 		return err
 	}
 
 	// Everything succeeded, update the cached
-	f.lock.Lock()
-	f.head, f.balance = head, balance
-	f.price, f.nonce = price, nonce
+	op.lock.Lock()
+	op.head, op.balance = head, balance
+	op.price, op.nonce = price, nonce
 
-	f.lock.Unlock()
+	op.lock.Unlock()
 
 	return nil
 }
 
-func (f *oracleProto) loop() {
+func (op *oracleProto) loop() {
 	// channel to receive head updates from client on
 	heads := make(chan *types.Header, 16)
 	// subscribe to head upates
-	sub, err := f.client.SubscribeNewHead(context.Background(), heads)
+	sub, err := op.client.SubscribeNewHead(context.Background(), heads)
 	if err != nil {
 		log.Crit("Failed to subscribe to head events", "err", err)
 	}
@@ -286,10 +286,10 @@ func (f *oracleProto) loop() {
 	go func() {
 		for head := range update {
 			// old heads should be ignored during a chain sync after some downtime
-			if err := f.refresh(head); err != nil {
+			if err := op.refresh(head); err != nil {
 				log.Warn("Failed to update state", "block", head.Number, "err", err)
 			}
-			log.Info("Internal stats updated", "block", head.Number, "account balance", f.balance, "gas price", f.price, "nonce", f.nonce)
+			log.Info("Internal stats updated", "block", head.Number, "account balance", op.balance, "gas price", op.price, "nonce", op.nonce)
 		}
 	}()
 
