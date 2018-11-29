@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -326,5 +327,39 @@ func (op *oracleProto) SubscribeTransfers(contractAddress common.Address) error 
 		case transfer := <-sink:
 			log.Info("Noticed transfer event", "from", transfer.From, "to", transfer.To, "amount", transfer.Tokens)
 		}
+	}
+}
+
+//
+func (op *oracleProto) TransferFunds(contractAddress common.Address, recipient common.Address, amount *big.Int) error {
+	if amount == nil || amount.Int64() <= 0 {
+		return errors.New("invalid amount")
+	}
+
+	tr, err := NewTTFT20Transactor(contractAddress, op.client)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	opts := &bind.TransactOpts{Context: ctx, From: op.account.Address, Signer: op.GetSignerFunc(), Value: nil, Nonce: nil, GasLimit: 0, GasPrice: nil}
+
+	_, err = tr.Transfer(opts, recipient, amount)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (op *oracleProto) GetSignerFunc() bind.SignerFn {
+	return func(signer types.Signer, address common.Address, tx *types.Transaction) (*types.Transaction, error) {
+		if address != op.account.Address {
+			return nil, errors.New("not authorized to sign this account")
+		}
+		return op.keystore.SignTx(op.account, tx, big.NewInt(RinkebyNetworkID))
+
 	}
 }
