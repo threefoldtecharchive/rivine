@@ -40,11 +40,17 @@ import (
 const (
 	// RinkebyNetworkID is the network ID for the rinkeby network
 	RinkebyNetworkID = 4
+	// ContractAddressString is the hex string address of the contract to monitor
+	ContractAddressString = "0xd4466DAb724DD9Dc860e08E48a78D20e75361A25"
 )
 
 var (
 	// RinkebyGenesisBlock is the genesis block used by the Rinkeby test network
 	RinkebyGenesisBlock = core.DefaultRinkebyGenesisBlock()
+	// ContractAddress is the address of the contract to monitor
+	ContractAddress = common.HexToAddress(ContractAddressString)
+	// OneToken is the exact value of one token
+	OneToken = new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 )
 
 var (
@@ -53,6 +59,8 @@ var (
 	bootFlag    = flag.String("bootnodes", strings.Join(params.RinkebyBootnodes, ","), "Comma separated bootnode enode URLs to seed with") // default to rinkeby boot nodes
 	netFlag     = flag.Uint64("network", RinkebyNetworkID, "Network ID to use for the Ethereum protocol")
 	statsFlag   = flag.String("ethstats", "", "Ethstats network monitoring auth string")
+
+	transferFlag = flag.String("transferTo", "", "Address in hex form to transfer 10 Tokens to, if not set then no transfer is done")
 
 	accJSONFlag = flag.String("account.json", "", "Key json file to fund user requests with")
 	accPassFlag = flag.String("account.pass", "", "Decryption password to access oracle funds")
@@ -143,6 +151,22 @@ func main() {
 	}()
 
 	go oracle.loop()
+	go oracle.SubscribeTransfers(ContractAddress)
+
+	if *transferFlag != "" {
+		toAddr := common.HexToAddress(*transferFlag)
+		go func() {
+			// sleep 30 secs then transfer
+			time.Sleep(time.Second * 30)
+
+			if err := oracle.TransferFunds(ContractAddress, toAddr, new(big.Int).Mul(big.NewInt(10), OneToken)); err != nil {
+				log.Warn("Failed to send tokens", "err", err)
+				return
+			}
+			log.Warn("tranfered tokens successfully", "recipient", *transferFlag)
+		}()
+
+	}
 
 	hold.Wait()
 }
@@ -157,7 +181,7 @@ type oracleProto struct {
 	keystore *keystore.KeyStore // Keystore containing the signing info
 	account  accounts.Account   // Account funding the oracle requests
 	head     *types.Header      // Current head header of the oracle
-	balance  *big.Int           // The current balance of the oracle
+	balance  *big.Int           // The current balance of the oracle (note: ethers only!)
 
 	nonce uint64   // Current pending nonce of the oracle
 	price *big.Int // Current gas price to issue funds with
@@ -240,7 +264,7 @@ func (op *oracleProto) close() error {
 // associated oracle balance and nonce for connectivity caching.
 func (op *oracleProto) refresh(head *types.Header) error {
 	// Ensure a state update does not run for too long
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	// If no header was specified, use the current chain head
@@ -264,7 +288,7 @@ func (op *oracleProto) refresh(head *types.Header) error {
 		return err
 	}
 
-	// Everything succeeded, update the cached
+	// Everything succeeded, update the cached stats
 	op.lock.Lock()
 	op.head, op.balance = head, balance
 	op.price, op.nonce = price, nonce
@@ -332,7 +356,7 @@ func (op *oracleProto) SubscribeTransfers(contractAddress common.Address) error 
 
 //
 func (op *oracleProto) TransferFunds(contractAddress common.Address, recipient common.Address, amount *big.Int) error {
-	if amount == nil || amount.Int64() <= 0 {
+	if amount == nil {
 		return errors.New("invalid amount")
 	}
 
@@ -341,7 +365,7 @@ func (op *oracleProto) TransferFunds(contractAddress common.Address, recipient c
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	opts := &bind.TransactOpts{Context: ctx, From: op.account.Address, Signer: op.GetSignerFunc(), Value: nil, Nonce: nil, GasLimit: 0, GasPrice: nil}
