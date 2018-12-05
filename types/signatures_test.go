@@ -33,7 +33,7 @@ func TestSigHash(t *testing.T) {
 		MinerFees:         []Currency{{}},
 		ArbitraryData:     ArbitraryData{Data: []byte{'o', 't'}},
 	}
-	txn.InputSigHash(0)
+	txn.SignatureHash(0)
 }
 
 // TestSortedUnique probes the sortedUnique function.

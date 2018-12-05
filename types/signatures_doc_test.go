@@ -206,9 +206,9 @@ func TestInputSigHash(t *testing.T) {
 
 	// BlockStake Fulfillment, input #0: SingleSignature
 	err = txn.BlockStakeInputs[0].Fulfillment.Sign(FulfillmentSignContext{
-		InputIndex:  0,
-		Transaction: txn,
-		Key:         sk,
+		ExtraObjects: []interface{}{uint64(0)},
+		Transaction:  txn,
+		Key:          sk,
 	})
 	if err != nil {
 		t.Error(err)
@@ -249,9 +249,9 @@ func TestInputSigHash(t *testing.T) {
 
 	// Coin Fulfillment, input #0: SingleSignature
 	err = txn.CoinInputs[0].Fulfillment.Sign(FulfillmentSignContext{
-		InputIndex:  0,
-		Transaction: txn,
-		Key:         sk,
+		ExtraObjects: []interface{}{uint64(0)},
+		Transaction:  txn,
+		Key:          sk,
 	})
 
 	if err != nil {
@@ -267,9 +267,9 @@ func TestInputSigHash(t *testing.T) {
 
 	// Coin Fulfillment, input #1: AtomicSwapFulfillment
 	err = txn.CoinInputs[1].Fulfillment.Sign(FulfillmentSignContext{
-		InputIndex:  1,
-		Transaction: txn,
-		Key:         sk,
+		ExtraObjects: []interface{}{uint64(1)},
+		Transaction:  txn,
+		Key:          sk,
 	})
 	if err != nil {
 		t.Error(err)
@@ -470,9 +470,9 @@ func TestLegacyInputSigHash(t *testing.T) {
 
 	// BlockStake Fulfillment, input #0: SingleSignature
 	err = txn.BlockStakeInputs[0].Fulfillment.Sign(FulfillmentSignContext{
-		InputIndex:  0,
-		Transaction: txn,
-		Key:         sk,
+		ExtraObjects: []interface{}{uint64(0)},
+		Transaction:  txn,
+		Key:          sk,
 	})
 	if err != nil {
 		t.Error(err)
@@ -513,9 +513,9 @@ func TestLegacyInputSigHash(t *testing.T) {
 
 	// Coin Fulfillment, input #0: SingleSignature
 	err = txn.CoinInputs[0].Fulfillment.Sign(FulfillmentSignContext{
-		InputIndex:  0,
-		Transaction: txn,
-		Key:         sk,
+		ExtraObjects: []interface{}{uint64(0)},
+		Transaction:  txn,
+		Key:          sk,
 	})
 
 	if err != nil {
@@ -531,9 +531,9 @@ func TestLegacyInputSigHash(t *testing.T) {
 
 	// Coin Fulfillment, input #1: SingleSignature
 	err = txn.CoinInputs[1].Fulfillment.Sign(FulfillmentSignContext{
-		InputIndex:  1,
-		Transaction: txn,
-		Key:         sk,
+		ExtraObjects: []interface{}{uint64(1)},
+		Transaction:  txn,
+		Key:          sk,
 	})
 	if err != nil {
 		t.Error(err)

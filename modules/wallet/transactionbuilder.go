@@ -423,9 +423,9 @@ func (tb *transactionBuilder) Sign() ([]types.Transaction, error) {
 			return nil, err
 		}
 		err = input.Fulfillment.Sign(types.FulfillmentSignContext{
-			InputIndex:  uint64(ctx.InputIndex),
-			Transaction: tb.transaction,
-			Key:         sk,
+			ExtraObjects: []interface{}{uint64(ctx.InputIndex)},
+			Transaction:  tb.transaction,
+			Key:          sk,
 		})
 		if err != nil {
 			return nil, err
@@ -439,9 +439,9 @@ func (tb *transactionBuilder) Sign() ([]types.Transaction, error) {
 			return nil, err
 		}
 		err = input.Fulfillment.Sign(types.FulfillmentSignContext{
-			InputIndex:  uint64(ctx.InputIndex),
-			Transaction: tb.transaction,
-			Key:         sk,
+			ExtraObjects: []interface{}{uint64(ctx.InputIndex)},
+			Transaction:  tb.transaction,
+			Key:          sk,
 		})
 		if err != nil {
 			return nil, err
@@ -494,14 +494,14 @@ func (tb *transactionBuilder) SignAllPossible() error {
 	}
 
 	// sign the extension if required
-	err := tb.transaction.SignExtension(func(fulfillment *types.UnlockFulfillmentProxy, condition types.UnlockConditionProxy) error {
+	err := tb.transaction.SignExtension(func(fulfillment *types.UnlockFulfillmentProxy, condition types.UnlockConditionProxy, extraObjects ...interface{}) error {
 		if fulfillment == nil {
 			return errors.New("failed to sign extension: nil fulfillment proxy cannot be signed")
 		}
 		if condition.ConditionType() == types.ConditionTypeNil {
-			return tb.signFulfillment(0, fulfillment, &types.NilCondition{})
+			return tb.signFulfillment(fulfillment, &types.NilCondition{}, extraObjects...)
 		}
-		return tb.signFulfillment(0, fulfillment, condition.Condition)
+		return tb.signFulfillment(fulfillment, condition.Condition, extraObjects...)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to sign extension, using tx-defined logic: %v", err)
@@ -512,15 +512,15 @@ func (tb *transactionBuilder) SignAllPossible() error {
 
 // signCoinInput attempts to sign a coin input with a key from the wallet
 func (tb *transactionBuilder) signCoinInput(idx int, ci *types.CoinInput, cond types.MarshalableUnlockCondition) error {
-	return tb.signFulfillment(idx, &ci.Fulfillment, cond)
+	return tb.signFulfillment(&ci.Fulfillment, cond, uint64(idx))
 }
 
 // signBlockStakeInput attempts to sign a blockstake input with a key from the wallet
 func (tb *transactionBuilder) signBlockStakeInput(idx int, bsi *types.BlockStakeInput, cond types.MarshalableUnlockCondition) error {
-	return tb.signFulfillment(idx, &bsi.Fulfillment, cond)
+	return tb.signFulfillment(&bsi.Fulfillment, cond, uint64(idx))
 }
 
-func (tb *transactionBuilder) signFulfillment(idx int, fulfillment *types.UnlockFulfillmentProxy, cond types.MarshalableUnlockCondition) error {
+func (tb *transactionBuilder) signFulfillment(fulfillment *types.UnlockFulfillmentProxy, cond types.MarshalableUnlockCondition, extraObjects ...interface{}) error {
 	var err error
 	switch uh := cond.UnlockHash(); uh.Type {
 	case types.UnlockTypeNil:
@@ -537,9 +537,9 @@ func (tb *transactionBuilder) signFulfillment(idx int, fulfillment *types.Unlock
 		if key, exists := tb.wallet.keys[uh]; exists {
 			fulfillment.Fulfillment = types.NewSingleSignatureFulfillment(types.Ed25519PublicKey(key.PublicKey))
 			err := fulfillment.Fulfillment.Sign(types.FulfillmentSignContext{
-				InputIndex:  uint64(idx),
-				Transaction: tb.transaction,
-				Key:         key.SecretKey,
+				ExtraObjects: extraObjects,
+				Transaction:  tb.transaction,
+				Key:          key.SecretKey,
 			})
 			if err != nil {
 				return err
@@ -558,8 +558,8 @@ func (tb *transactionBuilder) signFulfillment(idx int, fulfillment *types.Unlock
 		for _, uh := range uhs {
 			if key, exists := tb.wallet.keys[uh]; exists {
 				err := fulfillment.Sign(types.FulfillmentSignContext{
-					InputIndex:  uint64(idx),
-					Transaction: tb.transaction,
+					ExtraObjects: extraObjects,
+					Transaction:  tb.transaction,
 					Key: types.KeyPair{
 						PublicKey:  types.Ed25519PublicKey(key.PublicKey),
 						PrivateKey: types.ByteSlice(key.SecretKey[:]),

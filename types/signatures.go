@@ -116,27 +116,23 @@ func Ed25519PublicKey(pk crypto.PublicKey) PublicKey {
 	}
 }
 
-// InputSigHash returns the hash of all fields in a transaction,
-// relevant to an input sig.
-func (t Transaction) InputSigHash(inputIndex uint64, extraObjects ...interface{}) (crypto.Hash, error) {
+// SignatureHash returns the hash of all fields in a transaction,
+// relevant to a Tx sig.
+func (t Transaction) SignatureHash(extraObjects ...interface{}) (crypto.Hash, error) {
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
 		return crypto.Hash{}, ErrUnknownTransactionType
 	}
-	if hasher, ok := controller.(InputSigHasher); ok {
-		// if extension implements InputSigHasher,
+	if hasher, ok := controller.(TransactionSignatureHasher); ok {
+		// if extension implements TransactionSignatureHasher,
 		// use it here to sign the input with it
-		return hasher.InputSigHash(t, inputIndex, extraObjects...)
+		return hasher.SignatureHash(t, extraObjects...)
 	}
 
 	h := crypto.NewHash()
 	enc := siabin.NewEncoder(h)
 
-	enc.EncodeAll(
-		t.Version,
-		inputIndex,
-	)
-
+	enc.Encode(t.Version)
 	if len(extraObjects) > 0 {
 		enc.EncodeAll(extraObjects...)
 	}

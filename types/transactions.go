@@ -480,7 +480,7 @@ func (t Transaction) ValidateBlockStakeOutputs(ctx FundValidationContext, blockS
 
 // SignExtension allows the transaction to sign —using the given sign callback—
 // any fulfillment defined within the extension data of the transaction that has to be signed.
-func (t *Transaction) SignExtension(sign func(*UnlockFulfillmentProxy, UnlockConditionProxy) error) error {
+func (t *Transaction) SignExtension(sign func(*UnlockFulfillmentProxy, UnlockConditionProxy, ...interface{}) error) error {
 	controller, exists := _RegisteredTransactionVersions[t.Version]
 	if !exists {
 		return ErrUnknownTransactionType

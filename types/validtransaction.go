@@ -171,10 +171,10 @@ func DefaultCoinOutputValidation(t Transaction, ctx FundValidationContext, coinI
 		}
 		// check if the referenced output's condition has been fulfilled
 		err = sco.Condition.Fulfill(sci.Fulfillment, FulfillContext{
-			InputIndex:  uint64(index),
-			BlockHeight: ctx.BlockHeight,
-			BlockTime:   ctx.BlockTime,
-			Transaction: t,
+			ExtraObjects: []interface{}{uint64(index)},
+			BlockHeight:  ctx.BlockHeight,
+			BlockTime:    ctx.BlockTime,
+			Transaction:  t,
 		})
 		if err != nil {
 			return
@@ -198,10 +198,10 @@ func DefaultBlockStakeOutputValidation(t Transaction, ctx FundValidationContext,
 		}
 		// check if the referenced output's condition has been fulfilled
 		err = bso.Condition.Fulfill(bsi.Fulfillment, FulfillContext{
-			InputIndex:  uint64(index),
-			BlockHeight: ctx.BlockHeight,
-			BlockTime:   ctx.BlockTime,
-			Transaction: t,
+			ExtraObjects: []interface{}{uint64(index)},
+			BlockHeight:  ctx.BlockHeight,
+			BlockTime:    ctx.BlockTime,
+			Transaction:  t,
 		})
 		if err != nil {
 			return

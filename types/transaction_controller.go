@@ -74,11 +74,11 @@ type (
 		ValidateTransaction(t Transaction, ctx ValidationContext, constants TransactionValidationConstants) error
 	}
 
-	// InputSigHasher defines the interface a transaction controller
-	// can optionally implement, in order to define custom Input signatures,
-	// overwriting the default input sig hash logic.
-	InputSigHasher interface {
-		InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) (crypto.Hash, error)
+	// TransactionSignatureHasher defines the interface a transaction controller
+	// can optionally implement, in order to define custom Tx signatures,
+	// overwriting the default Tx sig hash logic.
+	TransactionSignatureHasher interface {
+		SignatureHash(t Transaction, extraObjects ...interface{}) (crypto.Hash, error)
 	}
 
 	// TransactionIDEncoder is an optional interface a transaction controller
@@ -123,7 +123,7 @@ type (
 	TransactionExtensionSigner interface {
 		// SignExtension allows the transaction to sign —using the given sign callback—
 		// any fulfillment (giving its condition as reference) that has to be signed.
-		SignExtension(extension interface{}, sign func(*UnlockFulfillmentProxy, UnlockConditionProxy) error) (interface{}, error)
+		SignExtension(extension interface{}, sign func(*UnlockFulfillmentProxy, UnlockConditionProxy, ...interface{}) error) (interface{}, error)
 	}
 )
 
@@ -316,12 +316,11 @@ func (ltc LegacyTransactionController) JSONDecodeTransactionData(b []byte) (Tran
 	return ltd.TransactionData(), nil
 }
 
-// InputSigHash implements InputSigHasher.InputSigHash
-func (ltc LegacyTransactionController) InputSigHash(t Transaction, inputIndex uint64, extraObjects ...interface{}) (crypto.Hash, error) {
+// SignatureHash implements TransactionSignatureHasher.SignatureHash
+func (ltc LegacyTransactionController) SignatureHash(t Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
 	h := crypto.NewHash()
 	enc := siabin.NewEncoder(h)
 
-	enc.Encode(inputIndex)
 	if len(extraObjects) > 0 {
 		enc.EncodeAll(extraObjects...)
 	}

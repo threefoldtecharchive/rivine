@@ -981,9 +981,9 @@ func (atomicSwapCmd *atomicSwapCmd) spendAtomicSwapContract(outputID types.CoinO
 
 	// step 5: sign transaction's only input
 	err = txn.CoinInputs[0].Fulfillment.Sign(types.FulfillmentSignContext{
-		InputIndex:  0,
-		Transaction: txn,
-		Key:         sk,
+		ExtraObjects: []interface{}{uint64(0)},
+		Transaction:  txn,
+		Key:          sk,
 	})
 	if err != nil {
 		cli.Die("failed to "+keyWord+" atomic swap's locked coins, couldn't sign transaction:", err)

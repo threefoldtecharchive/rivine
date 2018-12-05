@@ -680,9 +680,9 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 	for idx, testCase := range testCases {
 		for i, ci := range testCase.Transaction.CoinInputs {
 			err := ci.Fulfillment.Sign(FulfillmentSignContext{
-				InputIndex:  uint64(i),
-				Transaction: testCase.Transaction,
-				Key:         sk,
+				ExtraObjects: []interface{}{uint64(i)},
+				Transaction:  testCase.Transaction,
+				Key:          sk,
 			})
 			if err != nil {
 				t.Error(idx, i, err)
@@ -704,9 +704,9 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 		}
 		for i, bsi := range testCase.Transaction.BlockStakeInputs {
 			err := bsi.Fulfillment.Sign(FulfillmentSignContext{
-				InputIndex:  uint64(i),
-				Transaction: testCase.Transaction,
-				Key:         sk,
+				ExtraObjects: []interface{}{uint64(i)},
+				Transaction:  testCase.Transaction,
+				Key:          sk,
 			})
 			if err != nil {
 				t.Error(idx, i, err)

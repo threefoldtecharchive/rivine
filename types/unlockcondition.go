@@ -178,9 +178,9 @@ type (
 	// FulfillmentSignContext is given as part of the sign call of an UnlockFullment,
 	// as to provide the necessary context required for signing a fulfillment.
 	FulfillmentSignContext struct {
-		// Index of the input that is to be signed,
-		// whether that input is a coin- or blockStake- input is of no importance.
-		InputIndex uint64
+		// ExtraObjects are objects to be hashed together with the Tx, in order
+		// to get the input hash that will be signed for this fulfillment.
+		ExtraObjects []interface{}
 		// (Parent) transaction the fulfillment belongs to.
 		//
 		// It is expected that all properties of this transactions
@@ -195,9 +195,9 @@ type (
 	// FulfillContext is given as part of the fulfill call of an UnlockCondition,
 	// as to provide the necessary context required for fulfilling a fulfillment.
 	FulfillContext struct {
-		// Index of the input that is to be fulfilled,
-		// whether that input is a coin- or blockStake- input is of no importance.
-		InputIndex uint64
+		// ExtraObjects are objects to be hashed together with the Tx, in order
+		// to get the input hash that will be signed for this fulfillment.
+		ExtraObjects []interface{}
 		// BlockHeight of the currently last registered block.
 		BlockHeight BlockHeight
 		// BlockTime defines the time of the currently last registered block,
@@ -598,7 +598,7 @@ func (n *NilCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext
 	switch tf := fulfillment.(type) {
 	case *SingleSignatureFulfillment:
 		return verifyHashUsingPublicKey(tf.PublicKey,
-			ctx.InputIndex, ctx.Transaction, tf.Signature)
+			ctx.Transaction, tf.Signature, ctx.ExtraObjects)
 	default:
 		return ErrUnexpectedUnlockFulfillment
 	}
@@ -685,8 +685,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		if euh != uh.TargetUnlockHash {
 			return errors.New("single signature fulfillment provides wrong public key")
 		}
-		return verifyHashUsingPublicKey(tf.PublicKey,
-			ctx.InputIndex, ctx.Transaction, tf.Signature)
+		return verifyHashUsingPublicKey(tf.PublicKey, ctx.Transaction, tf.Signature, ctx.ExtraObjects)
 
 	case *LegacyAtomicSwapFulfillment:
 		// only UnlockTypeAtomicSwap is supported when fulfilling using a LegacyAtomicSwapFulfillment
@@ -714,8 +713,8 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 
 			// verify signature
 			err := verifyHashUsingPublicKey(
-				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
-				tf.PublicKey, tf.Secret)
+				tf.PublicKey, ctx.Transaction, tf.Signature,
+				mergeExtraObjects(ctx.ExtraObjects, tf.PublicKey, tf.Secret))
 			if err != nil {
 				return err
 			}
@@ -738,8 +737,8 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		// after the deadline (timelock),
 		// only the original sender can reclaim the unspend output
 		return verifyHashUsingPublicKey(
-			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
-			tf.PublicKey)
+			tf.PublicKey, ctx.Transaction, tf.Signature,
+			mergeExtraObjects(ctx.ExtraObjects, tf.PublicKey))
 
 	case *anyAtomicSwapFulfillment:
 		return uh.Fulfill(tf.atomicSwapFulfillment, ctx)
@@ -803,8 +802,7 @@ func (ss *SingleSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err erro
 		return ErrFulfillmentDoubleSign
 	}
 
-	ss.Signature, err = signHashUsingPublicKey(
-		ss.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key)
+	ss.Signature, err = signHashUsingPublicKey(ss.PublicKey, ctx.Transaction, ctx.Key, ctx.ExtraObjects)
 	return
 }
 
@@ -872,8 +870,8 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 
 			// verify signature
 			return verifyHashUsingPublicKey(
-				tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
-				tf.PublicKey, tf.Secret)
+				tf.PublicKey, ctx.Transaction, tf.Signature,
+				mergeExtraObjects(ctx.ExtraObjects, tf.PublicKey, tf.Secret))
 		}
 
 		// if no secret is given, we'll assume that the initiator wants to refund,
@@ -889,8 +887,8 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		}
 		// verify the signature is indeed done by
 		return verifyHashUsingPublicKey(
-			tf.PublicKey, ctx.InputIndex, ctx.Transaction, tf.Signature,
-			tf.PublicKey)
+			tf.PublicKey, ctx.Transaction, tf.Signature,
+			mergeExtraObjects(ctx.ExtraObjects, tf.PublicKey))
 
 	case *LegacyAtomicSwapFulfillment:
 		// it's perfectly fine to unlock an atomic swap condition
@@ -1018,16 +1016,16 @@ func (as *AtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 		// sign as claimer
 		var err error
 		as.Signature, err = signHashUsingPublicKey(
-			as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
-			as.PublicKey, as.Secret)
+			as.PublicKey, ctx.Transaction, ctx.Key,
+			mergeExtraObjects(ctx.ExtraObjects, as.PublicKey, as.Secret))
 		return err
 	}
 
 	// sign as refunder
 	var err error
 	as.Signature, err = signHashUsingPublicKey(
-		as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
-		as.PublicKey)
+		as.PublicKey, ctx.Transaction, ctx.Key,
+		mergeExtraObjects(ctx.ExtraObjects, as.PublicKey))
 	return err
 }
 
@@ -1081,16 +1079,16 @@ func (as *LegacyAtomicSwapFulfillment) Sign(ctx FulfillmentSignContext) error {
 		// sign as claimer
 		var err error
 		as.Signature, err = signHashUsingPublicKey(
-			as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
-			as.PublicKey, as.Secret)
+			as.PublicKey, ctx.Transaction, ctx.Key,
+			mergeExtraObjects(ctx.ExtraObjects, as.PublicKey, as.Secret))
 		return err
 	}
 
 	// sign as refunder
 	var err error
 	as.Signature, err = signHashUsingPublicKey(
-		as.PublicKey, ctx.InputIndex, ctx.Transaction, ctx.Key,
-		as.PublicKey)
+		as.PublicKey, ctx.Transaction, ctx.Key,
+		mergeExtraObjects(ctx.ExtraObjects, as.PublicKey))
 	return err
 }
 
@@ -1557,7 +1555,8 @@ func (ms *MultiSignatureCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fu
 	// Finally verify all the signatures
 	for _, pks := range tf.Pairs {
 		if err := verifyHashUsingPublicKey(
-			pks.PublicKey, ctx.InputIndex, ctx.Transaction, pks.Signature, pks.PublicKey,
+			pks.PublicKey, ctx.Transaction, pks.Signature,
+			mergeExtraObjects(ctx.ExtraObjects, pks.PublicKey),
 		); err != nil {
 			return err
 		}
@@ -1750,8 +1749,8 @@ func (ms *MultiSignatureFulfillment) Sign(ctx FulfillmentSignContext) (err error
 	}
 
 	signature, err := signHashUsingPublicKey(
-		keypair.PublicKey, ctx.InputIndex, ctx.Transaction, keypair.PrivateKey, keypair.PublicKey,
-	)
+		keypair.PublicKey, ctx.Transaction, keypair.PrivateKey,
+		mergeExtraObjects(ctx.ExtraObjects, keypair.PublicKey))
 	if err != nil {
 		return
 	}
@@ -2323,12 +2322,23 @@ func strictSignatureCheck(pk PublicKey, signature ByteSlice) error {
 	}
 }
 
+func mergeExtraObjects(extraObjects []interface{}, fulfillmentDefinedObjects ...interface{}) []interface{} {
+	objectsOffset := len(extraObjects)
+	if objectsOffset == 0 {
+		return fulfillmentDefinedObjects
+	}
+	objects := make([]interface{}, objectsOffset+len(fulfillmentDefinedObjects))
+	copy(objects[:], extraObjects[:])
+	copy(objects[objectsOffset:], fulfillmentDefinedObjects)
+	return objects
+}
+
 // signHashUsingPublicKey produces a signature,
 // for a given input, which is located within the given (parent) transaction,
 // using the given (optional private) key, and using any extra objects (on top of the normal properties).
 // The public key is to be given, as based on that the function can figure out what algorithm to use,
 // and this also allows the function to know how to interpret the given (private) key.
-func signHashUsingPublicKey(pk PublicKey, inputIndex uint64, tx Transaction, key interface{}, extraObjects ...interface{}) ([]byte, error) {
+func signHashUsingPublicKey(pk PublicKey, tx Transaction, key interface{}, extraObjects []interface{}) ([]byte, error) {
 	switch pk.Algorithm {
 	case SignatureAlgoEd25519:
 		// decode the ed-secretKey
@@ -2352,7 +2362,7 @@ func signHashUsingPublicKey(pk PublicKey, inputIndex uint64, tx Transaction, key
 		if edSK.IsNil() {
 			return nil, crypto.ErrSecretNilKey
 		}
-		sigHash, err := tx.InputSigHash(inputIndex, extraObjects...)
+		sigHash, err := tx.SignatureHash(extraObjects...)
 		if err != nil {
 			return nil, err
 		}
@@ -2368,12 +2378,12 @@ func signHashUsingPublicKey(pk PublicKey, inputIndex uint64, tx Transaction, key
 // It does so by:
 //
 // 1. producing the hash used to create the signature,
-//    using the given inputIndex, (parent) transaction and any extra Objects to include
+//    using the given (parent) transaction and any extra Objects to include
 //    together with the normal transaction properties;
 // 2. using the algorithm type of the given public key,
 //    as to figure out what signature algorithm is used,
 //    and thus being able to know how to verify the given signature;
-func verifyHashUsingPublicKey(pk PublicKey, inputIndex uint64, tx Transaction, sig []byte, extraObjects ...interface{}) (err error) {
+func verifyHashUsingPublicKey(pk PublicKey, tx Transaction, sig []byte, extraObjects []interface{}) (err error) {
 	switch pk.Algorithm {
 	case SignatureAlgoEd25519:
 		// Decode the public key and signature.
@@ -2388,7 +2398,7 @@ func verifyHashUsingPublicKey(pk PublicKey, inputIndex uint64, tx Transaction, s
 		}
 		cryptoSig := crypto.Signature(edSig)
 		var sigHash crypto.Hash
-		sigHash, err = tx.InputSigHash(inputIndex, extraObjects...)
+		sigHash, err = tx.SignatureHash(extraObjects...)
 		if err == nil {
 			err = crypto.VerifyHash(sigHash, edPK, cryptoSig)
 		}

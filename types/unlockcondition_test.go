@@ -1821,7 +1821,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 	}
 	for tidx, testCase := range testCases {
 		for idx, ci := range testCase.Transaction.CoinInputs {
-			sigHash, err := testCase.Transaction.InputSigHash(uint64(idx))
+			sigHash, err := testCase.Transaction.SignatureHash(uint64(idx))
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1836,15 +1836,15 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			}
 
 			err = (UnlockConditionProxy{testCase.CoinConditions[idx]}).Fulfill(ci.Fulfillment, FulfillContext{
-				InputIndex:  uint64(idx),
-				Transaction: testCase.Transaction,
+				ExtraObjects: []interface{}{uint64(idx)},
+				Transaction:  testCase.Transaction,
 			})
 			if err != nil {
 				t.Error(tidx, idx, err)
 			}
 		}
 		for idx, bsi := range testCase.Transaction.BlockStakeInputs {
-			sigHash, err := testCase.Transaction.InputSigHash(uint64(idx))
+			sigHash, err := testCase.Transaction.SignatureHash(uint64(idx))
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
@@ -1859,8 +1859,8 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			}
 
 			err = (UnlockConditionProxy{testCase.BlockStakeConditions[idx]}).Fulfill(bsi.Fulfillment, FulfillContext{
-				InputIndex:  uint64(idx),
-				Transaction: testCase.Transaction,
+				ExtraObjects: []interface{}{uint64(idx)},
+				Transaction:  testCase.Transaction,
 			})
 			if err != nil {
 				t.Error(tidx, idx, err)
@@ -2197,9 +2197,9 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 	for idx, input := range inputs {
 		if fulfillmentCanBeSigned(txn.CoinInputs[idx].Fulfillment.Fulfillment) {
 			signContext := FulfillmentSignContext{
-				InputIndex:  uint64(idx),
-				Transaction: txn,
-				Key:         input.SignKey,
+				ExtraObjects: []interface{}{uint64(idx)},
+				Transaction:  txn,
+				Key:          input.SignKey,
 			}
 			err := txn.CoinInputs[idx].Fulfillment.Sign(signContext)
 			if err != nil {
@@ -2215,10 +2215,10 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 	// fulfill all inputs
 	for idx := range inputs {
 		fulfillContext := FulfillContext{
-			InputIndex:  uint64(idx),
-			BlockHeight: 0,                  // not important for now
-			BlockTime:   CurrentTimestamp(), // not important for now,
-			Transaction: txn,
+			ExtraObjects: []interface{}{uint64(idx)},
+			BlockHeight:  0,                  // not important for now
+			BlockTime:    CurrentTimestamp(), // not important for now,
+			Transaction:  txn,
 		}
 		err := (UnlockConditionProxy{inputs[idx].Condition}).Fulfill(txn.CoinInputs[idx].Fulfillment, fulfillContext)
 		if err != nil {
