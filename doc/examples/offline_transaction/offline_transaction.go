@@ -196,9 +196,9 @@ func (w *MyWallet) signTxn(txn types.Transaction) error {
 		// hence we no longer need to check it here
 		key := w.keys[w.unspentCoinOutputs[input.ParentID].Condition.UnlockHash()]
 		err := input.Fulfillment.Sign(types.FulfillmentSignContext{
-			InputIndex:  uint64(idx),
-			Transaction: txn,
-			Key:         key.SecretKey,
+			ExtraObjects: []interface{}{uint64(idx)},
+			Transaction:  txn,
+			Key:          key.SecretKey,
 		})
 		if err != nil {
 			return err
