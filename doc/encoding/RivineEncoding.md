@@ -3,7 +3,20 @@
 The main goal of the rivine (binary) encoding library is to achieve the smallest byte footprint for encoded content.
 This encoding library is heavily inspired upon the initial Sia (binary) encoding library.
 
-## Standard Encoding
+## Why
+
+You may wonder why Rivine uses a custom binary encoding library, instead of an Industry standard. The most obvious reason is that Rivine was already using a custom Encoding library, now called [siabin][siabin], as Rivine started as a fork from [sia][sia]. That does not entirely explain however why, when looking for binary encoding library that results in a compacter binary format than [siabin][siabin], that we choose to write our own encoding library.
+
+[siabin][siabin], developed by the [sia][sia] developers, is already a very compact binary format. Most encoding formats, and even more so for industry-standards, have to be generic. Even more, it is a _de facto standard_ to encode the type (as simplistic as it may be) together with the encoded data. This is great as it allows anyone to decode the data without having to know the structure of the data upfront. It does however mean that no matter how clever the encoding algorithm is, it will produce overhead for each data it encodes, being the type information.
+
+[siabin][siabin], and as a consequence this encoding library (`rivbin`), turns it upside down. With these encoding libraries the one that decodes is expected to know the exact structure that is to be decoded, with the exception of dynamically sized strings and slices. Because of this the type information can be omitted, with the length of dynamically sized strings and slices as exceptions, resulting in the most (non-compressed) compact binary format you can get.
+
+The reason this encoding library was developed, as a successor of [siabin][siabin], was because [siabin][siabin] made the unfortunate choice to encode Integers (and the length of dynamically sized strings and slices as a consequence) _always_ as 8 bytes, no matter the actual underlying integral type or value range. On top of that it didn't take into account that most lists (within the context of blockchain data) are small, while only sometimes you require a big list, giving waste when encoding always in a way which allows for big lists.
+
+[siabin]: ./SiaEncoding.md
+[sia]: https://www.sia.tech
+
+## How it works
 
 All integers are little-endian, encoded as unsigned integers, but the amount of types depend on the exact integral type:
 
@@ -15,11 +28,11 @@ All integers are little-endian, encoded as unsigned integers, but the amount of 
 | 4 | uint32, int32 |
 | 8 | uint64, int64, uint, int |
 
-> (1) `uint24` is not a standard type, but the tfchain encoding lib does allow to encode uint32 integers that fit in 3 bytes, as 3 bytes.
+> <sup>(1)</sup> `uint24` is not a standard type, but this encoding lib does allow to encode uint32 integers as 3 bytes, on the condition that its value fits in 3 bytes.
 
 Booleans are encoded as a single byte, `0x00` for `False` and `0x01` for `True`.
 
-Nil pointers are equivalent to "False", i.e. a single zero byte. Valid pointers are represented by a "True" byte (0x01) followed by the encoding of the dereferenced value.
+Nil pointers are equivalent to "False", encoded as a single zero byte. Valid pointers are represented by a "True" byte (0x01) followed by the encoding of the dereferenced value.
 
 Variable-length types, such as strings and slices, are represented by a length prefix followed by the encoded value. Strings are encoded as their literal UTF-8 bytes. Slices are encoded as the concatenation of their encoded elements. The length prefix can be one, two, three or four bytes:
 
