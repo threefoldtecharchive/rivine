@@ -85,6 +85,11 @@ func (d *Decoder) decode(val reflect.Value) error {
 		if err != nil || !isDefined {
 			return err // nil in case !isDefined
 		}
+		// make sure we aren't decoding into nil
+		if val.IsNil() {
+			val.Set(reflect.New(val.Type().Elem()))
+		}
+		// decode the actual value
 		return d.decode(val.Elem())
 
 	case reflect.Bool:
