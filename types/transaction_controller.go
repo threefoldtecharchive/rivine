@@ -125,6 +125,17 @@ type (
 		// any fulfillment (giving its condition as reference) that has to be signed.
 		SignExtension(extension interface{}, sign func(*UnlockFulfillmentProxy, UnlockConditionProxy, ...interface{}) error) (interface{}, error)
 	}
+
+	// TransactionCustomMinerPayoutGetter defines an interface for transactions which have
+	// custom MinerPayouts, stored in its extension data, that are not seen as regular Miner Fees.
+	TransactionCustomMinerPayoutGetter interface {
+		// GetCustomMinerPayouts allows a transaction controller to extract
+		// MinerPayouts orginating from the transaction's extension data,
+		// for any miner payouts to be added to the parent block,
+		// which is not considered as regular MinerFees
+		// (and thus is not simply defined in the Transaction's MinerFees property).
+		GetCustomMinerPayouts(extension interface{}) ([]MinerPayout, error)
+	}
 )
 
 // RegisterTransactionVersion registers or unregisters a given transaction version,

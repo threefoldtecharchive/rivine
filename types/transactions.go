@@ -234,7 +234,28 @@ func (t Transaction) CoinOutputSum() (sum Currency) {
 		sum = sum.Add(fee)
 	}
 
+	// add any custom miner payouts
+	mps, _ := t.CustomMinerPayouts()
+	for _, mp := range mps {
+		sum = sum.Add(mp.Value)
+	}
+
 	return
+}
+
+// CustomMinerPayouts returns any miner payouts originating from this transaction,
+// that are not registered as regular MinerFees.
+func (t Transaction) CustomMinerPayouts() ([]MinerPayout, error) {
+	// get a controller registered or unknown controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return nil, ErrUnknownTransactionType
+	}
+	if cmpGetter, ok := controller.(TransactionCustomMinerPayoutGetter); ok {
+		return cmpGetter.GetCustomMinerPayouts(t.Extension)
+	}
+	// nothing to do
+	return nil, nil
 }
 
 // MarshalSia implements the siabin.SiaMarshaler interface.

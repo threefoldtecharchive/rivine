@@ -202,6 +202,23 @@ func (bv stdBlockValidator) checkMinerPayouts(b types.Block) bool {
 			return false
 		}
 	}
+	// also take into account any custom miner fee payouts in total miner fees sum
+	var (
+		err error
+		mps []types.MinerPayout
+	)
+	for _, txn := range b.Transactions {
+		mps, err = txn.CustomMinerPayouts()
+		if err != nil {
+			// ignore here, as the block creator does so as well,
+			// but do log as an error
+			bv.cs.log.Printf("error occured while fetching custom miner payouts from txn v%v: %v", txn.Version, err)
+			continue
+		}
+		for _, mp := range mps {
+			totalMinerFees = totalMinerFees.Add(mp.Value)
+		}
+	}
 	// ensure total sum is correct
 	return totalMinerFees.Add(bv.cs.chainCts.BlockCreatorFee).Equals(sumBC.Add(sumTFP))
 }

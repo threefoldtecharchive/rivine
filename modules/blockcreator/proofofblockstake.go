@@ -113,6 +113,7 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.MinerPayout{
 						Value: bc.chainCts.BlockCreatorFee, UnlockHash: ubso.Condition.UnlockHash()})
 				}
+				// Collect the summed miner fee of all transactions
 				collectedMinerFees := blockToSubmit.CalculateTotalMinerFees()
 				if !collectedMinerFees.IsZero() {
 					condition := bc.chainCts.TransactionFeeCondition
@@ -121,6 +122,17 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 					}
 					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.MinerPayout{
 						Value: collectedMinerFees, UnlockHash: condition.UnlockHash()})
+				}
+				// Add any transaction-specific Custom "Miner" payouts
+				var mps []types.MinerPayout
+				for _, txn := range blockToSubmit.Transactions {
+					mps, err = txn.CustomMinerPayouts()
+					if err != nil {
+						// ignore here, not critical, but do log
+						bc.log.Printf("error occured while fetching custom miner payouts from txn v%v: %v", txn.Version, err)
+						continue
+					}
+					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, mps...)
 				}
 
 				return &blockToSubmit
