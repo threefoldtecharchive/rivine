@@ -136,6 +136,15 @@ type (
 		// (and thus is not simply defined in the Transaction's MinerFees property).
 		GetCustomMinerPayouts(extension interface{}) ([]MinerPayout, error)
 	}
+
+	// TransactionCommonExtensionDataGetter defines an interface for transactions which have
+	// common-understood data in the Extension data, allowing Rivine code to extract this generic extension data,
+	// without having to know about the actual format/structure of this Tx.
+	TransactionCommonExtensionDataGetter interface {
+		// GetCommonExtensionData allows a transaction controllor to extract
+		// the common-understood data from the Extension data for consumption by the callee.
+		GetCommonExtensionData(extension interface{}) (CommonTransactionExtensionData, error)
+	}
 )
 
 // RegisterTransactionVersion registers or unregisters a given transaction version,

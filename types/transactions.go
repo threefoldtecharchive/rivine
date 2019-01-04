@@ -258,6 +258,26 @@ func (t Transaction) CustomMinerPayouts() ([]MinerPayout, error) {
 	return nil, nil
 }
 
+// CommonTransactionExtensionData collects the common-understood
+// Tx Extension data as a single struct.
+type CommonTransactionExtensionData struct {
+	UnlockConditions []UnlockConditionProxy
+}
+
+// CommonExtensionData returns the common-understood Extension data.
+func (t Transaction) CommonExtensionData() (CommonTransactionExtensionData, error) {
+	// get a controller registered or unknown controller
+	controller, exists := _RegisteredTransactionVersions[t.Version]
+	if !exists {
+		return CommonTransactionExtensionData{}, ErrUnknownTransactionType
+	}
+	if cedGetter, ok := controller.(TransactionCommonExtensionDataGetter); ok {
+		return cedGetter.GetCommonExtensionData(t.Extension)
+	}
+	// nothing to do
+	return CommonTransactionExtensionData{}, nil
+}
+
 // MarshalSia implements the siabin.SiaMarshaler interface.
 func (t Transaction) MarshalSia(w io.Writer) error {
 	// get a controller registered or unknown controller
