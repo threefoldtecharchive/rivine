@@ -2166,10 +2166,10 @@ func testValidSignAndFulfill(t *testing.T, testIndex int, inputs []signAndFulfil
 	txn := Transaction{
 		Version:   TransactionVersionOne,
 		MinerFees: []Currency{NewCurrency64(1000 * 1000 * 100 * uint64(mrand.Int31n(100)+20))},
-		ArbitraryData: func() ArbitraryData {
+		ArbitraryData: func() []byte {
 			b := make([]byte, mrand.Int31n(242)+14)
 			rand.Read(b[:])
-			return ArbitraryData{Data: b}
+			return b
 		}(),
 	}
 

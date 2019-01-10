@@ -11,13 +11,13 @@ func TestTransactionFitsInABlock_V0(t *testing.T) {
 	data := make([]byte, blockSizeLimit/2)
 	txn := Transaction{
 		Version:       TransactionVersionZero,
-		ArbitraryData: ArbitraryData{Data: data}}
+		ArbitraryData: data}
 	err := TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != nil {
 		t.Error(err)
 	}
 	data = make([]byte, blockSizeLimit)
-	txn.ArbitraryData = ArbitraryData{Data: data}
+	txn.ArbitraryData = data
 	err = TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != ErrTransactionTooLarge {
 		t.Error(err)
@@ -31,13 +31,13 @@ func TestTransactionFitsInABlock_Vd(t *testing.T) {
 	data := make([]byte, blockSizeLimit/2)
 	txn := Transaction{
 		Version:       TestnetChainConstants().DefaultTransactionVersion,
-		ArbitraryData: ArbitraryData{Data: data}}
+		ArbitraryData: data}
 	err := TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != nil {
 		t.Error(err)
 	}
 	data = make([]byte, blockSizeLimit)
-	txn.ArbitraryData = ArbitraryData{Data: data}
+	txn.ArbitraryData = data
 	err = TransactionFitsInABlock(txn, blockSizeLimit)
 	if err != ErrTransactionTooLarge {
 		t.Error(err)
@@ -172,9 +172,9 @@ func TestValidateNoDoubleSpendsWithinTransaction_Vd(t *testing.T) {
 
 func TestTransactionArbitraryDataFits_Vd(t *testing.T) {
 	txn := Transaction{
-		ArbitraryData: ArbitraryData{Data: []byte{4, 2}},
+		ArbitraryData: []byte{4, 2},
 	}
-	err := ArbitraryDataFits(txn.ArbitraryData.Data, 1)
+	err := ArbitraryDataFits(txn.ArbitraryData, 1)
 	if err != ErrArbitraryDataTooLarge {
 		t.Fatal("expected ErrArbitraryDataTooLarge, but received: ", err)
 	}
@@ -218,7 +218,7 @@ func TestLegacyTransactionValidation(t *testing.T) {
 
 	// Violate fitsInABlock.
 	data := make([]byte, cts.BlockSizeLimit)
-	txn.ArbitraryData = ArbitraryData{Data: data}
+	txn.ArbitraryData = data
 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
 		BlockSizeLimit:         cts.BlockSizeLimit,
 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
@@ -228,7 +228,7 @@ func TestLegacyTransactionValidation(t *testing.T) {
 	}
 	// Violate arbitraryDataFits
 	data = make([]byte, cts.ArbitraryDataSizeLimit+1)
-	txn.ArbitraryData = ArbitraryData{Data: data}
+	txn.ArbitraryData = data
 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
 		BlockSizeLimit:         cts.BlockSizeLimit,
 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
@@ -236,7 +236,7 @@ func TestLegacyTransactionValidation(t *testing.T) {
 	if err == nil {
 		t.Error("failed to trigger arbitraryDataFits error")
 	}
-	txn.ArbitraryData = ArbitraryData{}
+	txn.ArbitraryData = nil
 
 	// ensure we still validate just fine
 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{

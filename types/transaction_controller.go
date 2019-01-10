@@ -46,7 +46,7 @@ type (
 		BlockStakeInputs  []BlockStakeInput  `json:"blockstakeinputs,omitempty"`
 		BlockStakeOutputs []BlockStakeOutput `json:"blockstakeoutputs,omitempty"`
 		MinerFees         []Currency         `json:"minerfees"` // required
-		ArbitraryData     ArbitraryData      `json:"arbitrarydata,omitempty"`
+		ArbitraryData     []byte             `json:"arbitrarydata,omitempty"`
 
 		// Extension is an optional field that can be used,
 		// in order to attach non-standard state to a transaction.
@@ -170,49 +170,6 @@ var (
 var (
 	_RegisteredTransactionVersions = map[TransactionVersion]TransactionController{}
 )
-
-// a structure defining the JSON-structure of the TransactionData,
-// defined as to preserve compatibility with the existing JSON-structure,
-// prior to that the ArbitraryData received support for optional typing.
-type jsonTransactionData struct {
-	CoinInputs        []CoinInput        `json:"coininputs"` // required
-	CoinOutputs       []CoinOutput       `json:"coinoutputs,omitempty"`
-	BlockStakeInputs  []BlockStakeInput  `json:"blockstakeinputs,omitempty"`
-	BlockStakeOutputs []BlockStakeOutput `json:"blockstakeoutputs,omitempty"`
-	MinerFees         []Currency         `json:"minerfees"` // required
-	ArbitraryData     []byte             `json:"arbitrarydata,omitempty"`
-	ArbitraryDataType ArbitraryDataType  `json:"arbitrarydatatype,omitempty"`
-}
-
-// MarshalJSON implements json.Marshaler.MarshalJSON
-func (td TransactionData) MarshalJSON() ([]byte, error) {
-	return json.Marshal(jsonTransactionData{
-		CoinInputs:        td.CoinInputs,
-		CoinOutputs:       td.CoinOutputs,
-		BlockStakeInputs:  td.BlockStakeInputs,
-		BlockStakeOutputs: td.BlockStakeOutputs,
-		MinerFees:         td.MinerFees,
-		ArbitraryData:     td.ArbitraryData.Data,
-		ArbitraryDataType: td.ArbitraryData.Type,
-	})
-}
-
-// UnmarshalJSON implements json.Marshaler.UnmarshalJSON
-func (td *TransactionData) UnmarshalJSON(b []byte) error {
-	var jtd jsonTransactionData
-	err := json.Unmarshal(b, &jtd)
-	if err != nil {
-		return err
-	}
-	td.CoinInputs = jtd.CoinInputs
-	td.CoinOutputs = jtd.CoinOutputs
-	td.BlockStakeInputs = jtd.BlockStakeInputs
-	td.BlockStakeOutputs = jtd.BlockStakeOutputs
-	td.MinerFees = jtd.MinerFees
-	td.ArbitraryData.Data = jtd.ArbitraryData
-	td.ArbitraryData.Type = jtd.ArbitraryDataType
-	return nil
-}
 
 // MarshalSia implements siabin.SiaMarshaller.MarshalSia
 func (td TransactionData) MarshalSia(w io.Writer) error {
