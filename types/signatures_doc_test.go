@@ -196,7 +196,7 @@ func TestInputSigHash(t *testing.T) {
 		MinerFees: []Currency{
 			NewCurrency64(100000000),
 		},
-		ArbitraryData: ArbitraryData{Data: []byte("All Creatures Great and Small Will Get Stuck at Brexit’s Border, 08/05/2018 06:00 CEST")},
+		ArbitraryData: []byte("All Creatures Great and Small Will Get Stuck at Brexit’s Border, 08/05/2018 06:00 CEST"),
 	}
 
 	var (
@@ -460,7 +460,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 		MinerFees: []Currency{
 			NewCurrency64(100000000),
 		},
-		ArbitraryData: ArbitraryData{Data: []byte("Nestle Pays $7.2 Billion to Sell Coffee With Starbucks Brand, 07/05/2018 07:13 CEST")},
+		ArbitraryData: []byte("Nestle Pays $7.2 Billion to Sell Coffee With Starbucks Brand, 07/05/2018 07:13 CEST"),
 	}
 
 	var (

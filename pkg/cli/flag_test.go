@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"bytes"
-	"encoding/hex"
 	"testing"
 	"time"
 
@@ -291,43 +289,6 @@ func TestInvalidEncodingTypeSetAsFlag(t *testing.T) {
 	}
 	if et != EncodingTypeHuman {
 		t.Fatal("et was supposed to still be EncodingTypeHuman, but was instead:", et)
-	}
-}
-
-func TestArbitraryDataFlag(t *testing.T) {
-	testCases := []struct {
-		Input            string
-		ExpectedData     []byte
-		ExpectedDataType types.ArbitraryDataType
-	}{
-		{},
-		{"0402", []byte{4, 2}, types.ArbitraryDataTypeBinary},
-		{"2dc6a90e21552bb63f51eb52e635f7e4bcec312ae604c438439f57087d92b2fd", []byte{45, 198, 169, 14, 33, 85, 43, 182, 63, 81, 235, 82, 230, 53, 247, 228, 188, 236, 49, 42, 230, 4, 196, 56, 67, 159, 87, 8, 125, 146, 178, 253}, types.ArbitraryDataTypeBinary},
-		{"UTF—8 Dätä", []byte("UTF—8 Dätä"), types.ArbitraryDataTypeUTF8},
-		{"你好，世界", []byte("你好，世界"), types.ArbitraryDataTypeUTF8},
-	}
-	for idx, testCase := range testCases {
-		var adf ArbitraryDataFlag
-		// try to set the flag using the given input, should succeed
-		err := adf.Set(testCase.Input)
-		if err != nil {
-			t.Error(idx, err)
-			continue
-		}
-		// ensure the flag data is as expected
-		if testCase.ExpectedDataType != adf.DataType {
-			t.Error(idx, testCase.ExpectedDataType, "!=", adf.DataType)
-			continue
-		}
-		if bytes.Compare(testCase.ExpectedData, adf.Data) != 0 {
-			t.Error(idx, hex.EncodeToString(testCase.ExpectedData), "!=", hex.EncodeToString(adf.Data))
-			continue
-		}
-		// ensure the string output is correct
-		output := adf.String()
-		if testCase.Input != output {
-			t.Error(idx, testCase.Input, "!=", output)
-		}
 	}
 }
 

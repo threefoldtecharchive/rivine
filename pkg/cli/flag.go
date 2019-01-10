@@ -1,16 +1,13 @@
 package cli
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/spf13/pflag"
-	"github.com/threefoldtech/rivine/types"
 )
 
 const (
@@ -228,53 +225,3 @@ var (
 	_ pflag.Value = (*LockTimeFlag)(nil)
 	_ pflag.Value = StringLoaderFlag{}
 )
-
-// ArbitraryDataFlag can be used as to allow arbitrary data to be
-// given by the user as a flag.
-// By default it assumes an UTF-8 encoded string,
-// if binary data is desired, it has to be given in hex-encoded format.
-type ArbitraryDataFlag struct {
-	Data     []byte
-	DataType types.ArbitraryDataType
-}
-
-// String implements pflag.Value.String,
-// returning the selected enum option as a lower-case string.
-func (adf ArbitraryDataFlag) String() string {
-	if len(adf.Data) == 0 {
-		return ""
-	}
-	if adf.DataType == types.ArbitraryDataTypeUTF8 {
-		return string(adf.Data)
-	}
-	return hex.EncodeToString(adf.Data)
-}
-
-// Set implements pflag.Value.Set,
-// only the options as defind by the mask are allowed,
-// and the given string is interpreted in a case insensitive manner.
-func (adf *ArbitraryDataFlag) Set(s string) error {
-	if s == "" {
-		adf.Data, adf.DataType = nil, types.ArbitraryDataTypeBinary
-		return nil
-	}
-	// try to decode it as an hexadecimal string
-	b, err := hex.DecodeString(s)
-	if err == nil {
-		adf.Data, adf.DataType = b, types.ArbitraryDataTypeBinary
-		return nil
-	}
-	// ensure the string is UTF-8 valid
-	b = []byte(s)
-	if !utf8.Valid(b) {
-		return errors.New("given arbitrary data is not a valid UTF-8 string")
-	}
-	// all good, setting it as UTF-8 typed Arbitrary Data
-	adf.Data, adf.DataType = b, types.ArbitraryDataTypeUTF8
-	return nil
-}
-
-// Type implements pflag.Value.Type
-func (adf ArbitraryDataFlag) Type() string {
-	return "ArbitraryData"
-}

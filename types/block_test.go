@@ -22,7 +22,7 @@ func TestBlockHeader(t *testing.T) {
 	b.Transactions = []Transaction{
 		{
 			Version:       TestnetChainConstants().DefaultTransactionVersion,
-			ArbitraryData: ArbitraryData{Data: []byte{'5'}},
+			ArbitraryData: []byte{'5'},
 		},
 	}
 
@@ -157,7 +157,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 	// Add a single no-fee transaction and check again.
 	txn = Transaction{
 		Version:       TestnetChainConstants().DefaultTransactionVersion,
-		ArbitraryData: ArbitraryData{Data: []byte{'6'}},
+		ArbitraryData: []byte{'6'},
 	}
 	b.Transactions = append(b.Transactions, txn)
 	if b.CalculateTotalMinerFees().Cmp(expected) != 0 {
@@ -182,7 +182,7 @@ func TestBlockCalculateTotalMinerFees(t *testing.T) {
 	// Add an empty transaction to the beginning.
 	txn = Transaction{
 		Version:       TestnetChainConstants().DefaultTransactionVersion,
-		ArbitraryData: ArbitraryData{Data: []byte{'7'}},
+		ArbitraryData: []byte{'7'},
 	}
 	b.Transactions = append([]Transaction{txn}, b.Transactions...)
 	if b.CalculateTotalMinerFees().Cmp(expected) != 0 {
@@ -318,7 +318,7 @@ func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 							},
 						},
 						MinerFees:     nil,
-						ArbitraryData: ArbitraryData{},
+						ArbitraryData: nil,
 					},
 				},
 			},
@@ -368,7 +368,7 @@ func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 							},
 						},
 						MinerFees:     nil,
-						ArbitraryData: ArbitraryData{},
+						ArbitraryData: nil,
 					},
 				},
 			},

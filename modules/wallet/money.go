@@ -238,13 +238,13 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 // SendCoins creates a transaction sending 'amount' to whoever can fulfill the condition. If data is provided,
 // it is added as arbitrary data to the transaction. The transaction
 // is submitted to the transaction pool and is also returned.
-func (w *Wallet) SendCoins(amount types.Currency, cond types.UnlockConditionProxy, data types.ArbitraryData) (types.Transaction, error) {
+func (w *Wallet) SendCoins(amount types.Currency, cond types.UnlockConditionProxy, data []byte) (types.Transaction, error) {
 	return w.SendOutputs([]types.CoinOutput{
 		{
 			Condition: cond,
 			Value:     amount,
 		},
-	}, nil, data)
+	}, nil, nil)
 }
 
 // SendBlockStakes creates a transaction sending 'amount' to whoever can fulfill the condition. The transaction
@@ -255,12 +255,12 @@ func (w *Wallet) SendBlockStakes(amount types.Currency, cond types.UnlockConditi
 			Condition: cond,
 			Value:     amount,
 		},
-	}, types.ArbitraryData{})
+	}, nil)
 }
 
 // SendOutputs is a tool for sending coins and block stakes from the wallet, to one or multiple addreses.
 // The transaction is automatically given to the transaction pool, and is also returned to the caller.
-func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data types.ArbitraryData) (types.Transaction, error) {
+func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte) (types.Transaction, error) {
 	if len(coinOutputs) == 0 && len(blockstakeOutputs) == 0 {
 		// at least one coin output OR one block stake output has to be send
 		return types.Transaction{}, ErrNilOutputs
@@ -294,8 +294,8 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 			return types.Transaction{}, err
 		}
 	}
-	if len(data.Data) != 0 {
-		txnBuilder.SetArbitraryDataWithType(data.Data, data.Type)
+	if len(data) != 0 {
+		txnBuilder.SetArbitraryData(data)
 	}
 	txnSet, err := txnBuilder.Sign()
 	if err != nil {

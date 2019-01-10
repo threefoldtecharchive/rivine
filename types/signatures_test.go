@@ -31,7 +31,7 @@ func TestSigHash(t *testing.T) {
 		BlockStakeInputs:  []BlockStakeInput{{}},
 		BlockStakeOutputs: []BlockStakeOutput{{}},
 		MinerFees:         []Currency{{}},
-		ArbitraryData:     ArbitraryData{Data: []byte{'o', 't'}},
+		ArbitraryData:     []byte{'o', 't'},
 	}
 	txn.SignatureHash(0)
 }
