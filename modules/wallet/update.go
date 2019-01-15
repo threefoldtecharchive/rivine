@@ -1,13 +1,41 @@
 package wallet
 
 import (
+	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
 )
+
+func (w *Wallet) subscribeWallet() error {
+	// During rescan, print height every 3 seconds.
+	if build.Release != "testing" {
+		go func() {
+			println("Rescanning consensus set...")
+			for range time.Tick(time.Second * 3) {
+				w.mu.RLock()
+				height := w.consensusSetHeight
+				done := w.subscribed
+				w.mu.RUnlock()
+				if done {
+					println("\nDone!")
+					break
+				}
+				print("\rScanned to height ", height, "...")
+			}
+		}()
+	}
+	err := w.cs.ConsensusSetSubscribe(w, modules.ConsensusChangeBeginning, w.tg.StopChan())
+	if err != nil {
+		return errors.New("wallet subscription failed: " + err.Error())
+	}
+	w.tpool.TransactionPoolSubscribe(w)
+	return nil
+}
 
 // updateConfirmedSet uses a consensus change to update the confirmed set of
 // outputs as understood by the wallet.

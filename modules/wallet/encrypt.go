@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"errors"
-	"time"
 
-	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
@@ -15,7 +13,7 @@ import (
 var (
 	errAlreadyUnlocked   = errors.New("wallet has already been unlocked")
 	errReencrypt         = errors.New("wallet is already encrypted, cannot encrypt again")
-	errUnencryptedWallet = errors.New("wallet has not been encrypted yet")
+	errUnencryptedWallet = errors.New("wallet has not been encrypted")
 
 	unlockModifier = types.Specifier{'u', 'n', 'l', 'o', 'c', 'k'}
 )
@@ -62,6 +60,11 @@ func (w *Wallet) initEncryption(masterKey crypto.TwofishKey, seed modules.Seed) 
 		return modules.Seed{}, errReencrypt
 	}
 
+	// Check if the wallet has already been created as a plain wallet.
+	if w.persist.PrimarySeedFile.UID != (UniqueID{}) {
+		return modules.Seed{}, errors.New("wallet has already been created as a plain wallet")
+	}
+
 	// If no primary seed is given, create a random seed insead.
 	// Existing seeds get the full initial seed depth (PublicKeysPerSeed) (resulting in more addresses up front),
 	// compared to a new seed. This because an existing seed probably might have already addresses,
@@ -77,7 +80,7 @@ func (w *Wallet) initEncryption(masterKey crypto.TwofishKey, seed modules.Seed) 
 
 	// If the input key is blank, use the seed to create the master key.
 	// Otherwise, use the input key.
-	err := w.createSeed(masterKey, seed, preloadDepth)
+	err := w.createEncryptedSeed(masterKey, seed, preloadDepth)
 	if err != nil {
 		return modules.Seed{}, err
 	}
@@ -121,13 +124,13 @@ func (w *Wallet) managedUnlock(masterKey crypto.TwofishKey) error {
 		}
 
 		// Load the wallet seed that is used to generate new addresses.
-		err = w.initPrimarySeed(masterKey)
+		err = w.initEncryptedPrimarySeed(masterKey)
 		if err != nil {
 			return err
 		}
 
 		// Load all wallet seeds that are not used to generate new addresses.
-		return w.initAuxiliarySeeds(masterKey)
+		return w.initEncryptedAuxiliarySeeds(masterKey)
 	}()
 	if err != nil {
 		return err
@@ -136,28 +139,10 @@ func (w *Wallet) managedUnlock(masterKey crypto.TwofishKey) error {
 	// Subscribe to the consensus set if this is the first unlock for the
 	// wallet object.
 	if !subscribed {
-		// During rescan, print height every 3 seconds.
-		if build.Release != "testing" {
-			go func() {
-				println("Rescanning consensus set...")
-				for range time.Tick(time.Second * 3) {
-					w.mu.RLock()
-					height := w.consensusSetHeight
-					done := w.subscribed
-					w.mu.RUnlock()
-					if done {
-						println("\nDone!")
-						break
-					}
-					print("\rScanned to height ", height, "...")
-				}
-			}()
-		}
-		err = w.cs.ConsensusSetSubscribe(w, modules.ConsensusChangeBeginning, w.tg.StopChan())
+		err = w.subscribeWallet()
 		if err != nil {
-			return errors.New("wallet subscription failed: " + err.Error())
+			return err
 		}
-		w.tpool.TransactionPoolSubscribe(w)
 		w.mu.Lock()
 		w.subscribed = true
 		w.mu.Unlock()
@@ -187,9 +172,6 @@ func (w *Wallet) wipeSecrets() {
 func (w *Wallet) Encrypted() bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if build.DEBUG && w.unlocked && len(w.persist.EncryptionVerification) == 0 {
-		panic("wallet is both unlocked and unencrypted")
-	}
 	return len(w.persist.EncryptionVerification) != 0
 }
 
@@ -229,6 +211,9 @@ func (w *Wallet) Lock() error {
 	defer w.mu.Unlock()
 	if !w.unlocked {
 		return modules.ErrLockedWallet
+	}
+	if w.persist.EncryptionVerification == nil {
+		return errors.New("cannot lock an unencrypted wallet")
 	}
 	w.log.Println("INFO: Locking wallet.")
 

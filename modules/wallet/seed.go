@@ -49,18 +49,40 @@ func generateSpendableKey(seed modules.Seed, index uint64) spendableKey {
 
 // encryptAndSaveSeedFile encrypts and saves a seed file.
 func (w *Wallet) encryptAndSaveSeedFile(masterKey crypto.TwofishKey, seed modules.Seed) (SeedFile, error) {
-	var sf SeedFile
-	_, err := rand.Read(sf.UID[:])
+	var uid UniqueID
+	_, err := rand.Read(uid[:])
 	if err != nil {
 		return SeedFile{}, err
 	}
-	sek := uidEncryptionKey(masterKey, sf.UID)
+	sek := uidEncryptionKey(masterKey, uid)
 	plaintextVerification := make([]byte, encryptionVerificationLen)
-	sf.EncryptionVerification = sek.EncryptBytes(plaintextVerification)
-	sf.Seed = sek.EncryptBytes(seed[:])
+	verification := sek.EncryptBytes(plaintextVerification)
+	encryptedSeed := sek.EncryptBytes(seed[:])
+	return w.saveSeedFile(uid, encryptedSeed, verification)
+}
+
+// savePlainSeedFile saves the seed directly into the file without encrypting it.
+func (w *Wallet) savePlainSeedFile(seed modules.Seed) (SeedFile, error) {
+	if w.persist.EncryptionVerification != nil {
+		return SeedFile{}, modules.ErrEncryptedWallet
+	}
+	var uid UniqueID
+	_, err := rand.Read(uid[:])
+	if err != nil {
+		return SeedFile{}, err
+	}
+	return w.saveSeedFile(uid, crypto.Ciphertext(seed[:]), crypto.Ciphertext{})
+}
+
+// saveSeedFile defines the common logic to define and JSON-store the seed file.
+func (w *Wallet) saveSeedFile(uid UniqueID, seed, verification crypto.Ciphertext) (SeedFile, error) {
+	var sf SeedFile
+	sf.UID = uid
+	sf.Seed = seed
+	sf.EncryptionVerification = verification
 	seedFilename := filepath.Join(w.persistDir,
 		w.bcInfo.Name+seedFilePartialPrefix+persist.RandomSuffix()+seedFileSuffix)
-	err = persist.SaveJSON(seedMetadata, sf, seedFilename)
+	err := persist.SaveJSON(seedMetadata, sf, seedFilename)
 	if err != nil {
 		return SeedFile{}, err
 	}
@@ -89,6 +111,16 @@ func decryptSeedFile(masterKey crypto.TwofishKey, sf SeedFile) (seed modules.See
 	return seed, nil
 }
 
+// loadPlainSeedFile loads a plain seed file directly as is.
+func loadPlainSeedFile(sf SeedFile) (modules.Seed, error) {
+	if len(sf.EncryptionVerification) != 0 {
+		return modules.Seed{}, errors.New("unexpected encryption verification in plain seed file")
+	}
+	var seed modules.Seed
+	copy(seed[:], sf.Seed[:])
+	return seed, nil
+}
+
 // integrateSeed takes an address seed as input and from that generates
 // 'publicKeysPerSeed' addresses that the wallet is able to spend.
 // integrateSeed should not be called with the primary seed.
@@ -102,7 +134,21 @@ func (w *Wallet) integrateSeed(seed modules.Seed) {
 }
 
 // recoverSeed integrates a recovery seed into the wallet.
-func (w *Wallet) recoverSeed(masterKey crypto.TwofishKey, seed modules.Seed) error {
+func (w *Wallet) recoverEncryptedSeed(masterKey crypto.TwofishKey, seed modules.Seed) error {
+	return w.recoverSeed(seed, func(modules.Seed) (SeedFile, error) {
+		return w.encryptAndSaveSeedFile(masterKey, seed)
+	})
+}
+
+// recoverPlainSeed integrates a recovery seed into the wallet, without encrypting it.
+func (w *Wallet) recoverPlainSeed(seed modules.Seed) error {
+	if w.persist.EncryptionVerification != nil {
+		return modules.ErrEncryptedWallet
+	}
+	return w.recoverSeed(seed, w.savePlainSeedFile)
+}
+
+func (w *Wallet) recoverSeed(seed modules.Seed, fs func(modules.Seed) (SeedFile, error)) error {
 	// Because the recovery seed does not have a UID, duplication must be
 	// prevented by comparing with the list of decrypted seeds. This can only
 	// occur while the wallet is unlocked.
@@ -119,7 +165,7 @@ func (w *Wallet) recoverSeed(masterKey crypto.TwofishKey, seed modules.Seed) err
 	if seed == w.primarySeed {
 		return errKnownSeed
 	}
-	seedFile, err := w.encryptAndSaveSeedFile(masterKey, seed)
+	seedFile, err := fs(seed)
 	if err != nil {
 		return err
 	}
@@ -133,14 +179,28 @@ func (w *Wallet) recoverSeed(masterKey crypto.TwofishKey, seed modules.Seed) err
 	}
 	w.integrateSeed(seed)
 	return nil
-
 }
 
-// createSeed creates a wallet seed and encrypts it using a key derived from
+// createEncryptedSeed creates a wallet seed and encrypts it using a key derived from
 // the master key, then addds it to the wallet as the primary seed, while
 // making a disk backup.
-func (w *Wallet) createSeed(masterKey crypto.TwofishKey, seed modules.Seed, depth uint64) error {
-	seedFile, err := w.encryptAndSaveSeedFile(masterKey, seed)
+func (w *Wallet) createEncryptedSeed(masterKey crypto.TwofishKey, seed modules.Seed, depth uint64) error {
+	return w.createSeed(seed, depth, func(seed modules.Seed) (SeedFile, error) {
+		return w.encryptAndSaveSeedFile(masterKey, seed)
+	})
+}
+
+// createPlainSeed creates a wallet seed,
+// then addds it to the wallet as the primary seed, while making a disk backup.
+func (w *Wallet) createPlainSeed(seed modules.Seed, depth uint64) error {
+	if w.persist.EncryptionVerification != nil {
+		return modules.ErrEncryptedWallet
+	}
+	return w.createSeed(seed, depth, w.savePlainSeedFile)
+}
+
+func (w *Wallet) createSeed(seed modules.Seed, depth uint64, fs func(modules.Seed) (SeedFile, error)) error {
+	seedFile, err := fs(seed)
 	if err != nil {
 		return err
 	}
@@ -156,9 +216,23 @@ func (w *Wallet) createSeed(masterKey crypto.TwofishKey, seed modules.Seed, dept
 	return w.saveSettingsSync()
 }
 
-// initPrimarySeed loads the primary seed into the wallet.
-func (w *Wallet) initPrimarySeed(masterKey crypto.TwofishKey) error {
-	seed, err := decryptSeedFile(masterKey, w.persist.PrimarySeedFile)
+// initEncryptedPrimarySeed loads the primary seed into the wallet.
+func (w *Wallet) initEncryptedPrimarySeed(masterKey crypto.TwofishKey) error {
+	return w.initPrimarySeed(func(file SeedFile) (modules.Seed, error) {
+		return decryptSeedFile(masterKey, file)
+	})
+}
+
+// initPlainPrimarySeed loads the primary seed into the wallet.
+func (w *Wallet) initPlainPrimarySeed() error {
+	if w.persist.EncryptionVerification != nil {
+		return modules.ErrEncryptedWallet
+	}
+	return w.initPrimarySeed(loadPlainSeedFile)
+}
+
+func (w *Wallet) initPrimarySeed(sf func(SeedFile) (modules.Seed, error)) error {
+	seed, err := sf(w.persist.PrimarySeedFile)
 	if err != nil {
 		return err
 	}
@@ -173,10 +247,24 @@ func (w *Wallet) initPrimarySeed(masterKey crypto.TwofishKey) error {
 	return nil
 }
 
-// initAuxiliarySeeds scans the wallet folder for wallet seeds.
-func (w *Wallet) initAuxiliarySeeds(masterKey crypto.TwofishKey) error {
+// initEncryptedAuxiliarySeeds scans the wallet folder for wallet seeds.
+func (w *Wallet) initEncryptedAuxiliarySeeds(masterKey crypto.TwofishKey) error {
+	return w.initAuxiliarySeeds(func(file SeedFile) (modules.Seed, error) {
+		return decryptSeedFile(masterKey, file)
+	})
+}
+
+// initPlainAuxiliarySeeds scans the wallet folder for wallet seeds.
+func (w *Wallet) initPlainAuxiliarySeeds() error {
+	if w.persist.EncryptionVerification != nil {
+		return modules.ErrEncryptedWallet
+	}
+	return w.initAuxiliarySeeds(loadPlainSeedFile)
+}
+
+func (w *Wallet) initAuxiliarySeeds(sf func(SeedFile) (modules.Seed, error)) error {
 	for _, seedFile := range w.persist.AuxiliarySeedFiles {
-		seed, err := decryptSeedFile(masterKey, seedFile)
+		seed, err := sf(seedFile)
 		if build.DEBUG && err != nil {
 			panic(err)
 		}
@@ -256,5 +344,18 @@ func (w *Wallet) LoadSeed(masterKey crypto.TwofishKey, seed modules.Seed) error 
 	if err != nil {
 		return err
 	}
-	return w.recoverSeed(masterKey, seed)
+	return w.recoverEncryptedSeed(masterKey, seed)
+}
+
+// LoadPlainSeed will track all of the addresses generated by the input seed,
+// reclaiming any funds that were lost due to a deleted/lost file.
+// An error will be returned if the seed has already been integrated with the wallet.
+func (w *Wallet) LoadPlainSeed(seed modules.Seed) error {
+	if err := w.tg.Add(); err != nil {
+		return err
+	}
+	defer w.tg.Done()
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.recoverPlainSeed(seed)
 }

@@ -44,6 +44,10 @@ var (
 	// ErrLockedWallet is returned when an action cannot be performed due to
 	// the wallet being locked.
 	ErrLockedWallet = errors.New("wallet must be unlocked before it can be used")
+
+	// ErrEncryptedWallet is returned in case the wallet is encrypted, preventing it from being
+	// used for plain purposes.
+	ErrEncryptedWallet = errors.New("wallet is encrypted and cannot use plain functionality")
 )
 
 type (
@@ -297,6 +301,10 @@ type (
 		// encryption password was lost. The master key is used to encrypt the
 		// recovery seed before saving it to disk.
 		LoadSeed(crypto.TwofishKey, Seed) error
+
+		// LoadPlainSeed will recreate a wallet file using the recovery phrase.
+		// LoadPlainSeed only needs to be called if the original seed file was lost.
+		LoadPlainSeed(Seed) error
 	}
 
 	// Wallet stores and manages siacoins and siafunds. The wallet file is
@@ -305,6 +313,21 @@ type (
 	Wallet interface {
 		EncryptionManager
 		KeyManager
+
+		// Init will create the PLAIN wallet using the primary seed,
+		// or creating a seed for you if none is given.
+		//
+		// Init can only be called once throughout the life of the wallet
+		// and will return an error on subsequent calls (even after restarting
+		// the wallet). To reset the wallet, the wallet files must be moved to
+		// a different directory or deleted.
+		//
+		// NOTE: the seed is stored in a plain text file on the local FS.
+		// This is not recommended, unless you are working in an isolated and controlled environment.
+		// Please use the Encrypt method instead, in order to create the wallet using a master key,
+		// the generated adddresses will be the same either way, but the seed will be encrypted
+		// prior to being stored on the local FS.
+		Init(primarySeed Seed) (Seed, error)
 
 		// Close permits clean shutdown during testing and serving.
 		Close() error
