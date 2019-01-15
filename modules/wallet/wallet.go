@@ -181,8 +181,13 @@ func (w *Wallet) Close() error {
 	// unexported unlock method (w.Unlock returns an error if the wallet's
 	// ThreadGroup is stopped).
 	if w.Unlocked() {
-		if err := w.Lock(); err != nil {
-			errs = append(errs, err)
+		w.mu.RLock()
+		encrypted := w.persist.EncryptionVerification != nil
+		w.mu.RUnlock()
+		if encrypted {
+			if err := w.Lock(); err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 

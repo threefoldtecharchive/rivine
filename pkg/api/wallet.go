@@ -353,11 +353,6 @@ func NewWalletBackupHandler(wallet modules.Wallet) httprouter.Handle {
 func NewWalletInitHandler(wallet modules.Wallet) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		passphrase := req.FormValue("passphrase")
-		if passphrase == "" {
-			WriteError(w, Error{"error when calling /wallet/init: passphrase is required"},
-				http.StatusUnauthorized)
-			return
-		}
 
 		seedStr := req.FormValue("seed")
 		var seed modules.Seed
@@ -371,11 +366,20 @@ func NewWalletInitHandler(wallet modules.Wallet) httprouter.Handle {
 			}
 		}
 
-		encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
-		seed, err := wallet.Encrypt(encryptionKey, seed)
-		if err != nil {
-			WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
-			return
+		var err error
+		if passphrase == "" {
+			seed, err = wallet.Init(seed)
+			if err != nil {
+				WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
+				return
+			}
+		} else {
+			encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
+			seed, err = wallet.Encrypt(encryptionKey, seed)
+			if err != nil {
+				WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
+				return
+			}
 		}
 
 		mnemonic, err := modules.NewMnemonic(seed)
@@ -394,11 +398,6 @@ func NewWalletSeedHandler(wallet modules.Wallet) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		menmonic := req.FormValue("mnemonic")
 		passphrase := req.FormValue("passphrase")
-		if passphrase == "" {
-			WriteError(w, Error{"error when calling /wallet/seed: passphrase is required"},
-				http.StatusUnauthorized)
-			return
-		}
 
 		seed, err := modules.InitialSeedFromMnemonic(menmonic)
 		if err != nil {
@@ -406,17 +405,27 @@ func NewWalletSeedHandler(wallet modules.Wallet) httprouter.Handle {
 			return
 		}
 
-		encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
-		err = wallet.LoadSeed(encryptionKey, seed)
-		if err == nil {
-			WriteSuccess(w)
-			return
+		if passphrase == "" {
+			err = wallet.LoadPlainSeed(seed)
+			if err != nil {
+				WriteError(w, Error{"error when calling /wallet/seed: " +
+					modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+			}
+		} else {
+			encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
+			err = wallet.LoadSeed(encryptionKey, seed)
+			if err == modules.ErrBadEncryptionKey {
+				WriteError(w, Error{"error when calling /wallet/seed: " +
+					modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+			}
+			if err != nil {
+				WriteError(w, Error{"error when calling /wallet/seed: " +
+					err.Error()}, http.StatusBadRequest)
+				return
+			}
 		}
-		if err != modules.ErrBadEncryptionKey {
-			WriteError(w, Error{"error when calling /wallet/seed: " + err.Error()}, http.StatusBadRequest)
-			return
-		}
-		WriteError(w, Error{"error when calling /wallet/seed: " + modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+
+		WriteSuccess(w)
 	}
 }
 

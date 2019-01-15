@@ -100,7 +100,29 @@ func (w *Wallet) initSettings() error {
 	}
 
 	// Load the settings file if it does exist.
-	return w.loadSettings()
+	err = w.loadSettings()
+	if err != nil {
+		return err
+	}
+	// unlock by default if the file is unencrypted,
+	// load the primary and aux seeds already as well and subscribe the wallet
+	if w.persist.PrimarySeedFile.UID != (UniqueID{}) && len(w.persist.EncryptionVerification) == 0 {
+		w.unlocked = true
+		err = w.initPlainPrimarySeed()
+		if err != nil {
+			return err
+		}
+		err = w.initPlainAuxiliarySeeds()
+		if err != nil {
+			return err
+		}
+		err = w.subscribeWallet()
+		if err != nil {
+			return err
+		}
+		w.subscribed = true
+	}
+	return nil
 }
 
 // initPersist loads all of the wallet's persistence files into memory,

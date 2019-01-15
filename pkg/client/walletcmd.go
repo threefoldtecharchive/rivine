@@ -280,6 +280,21 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 	sendBlockStakesCmd.Flags().StringVar(
 		&walletCmd.sendBlockStakesCfg.Data,
 		"data", "", "optional arbitrary data (or description) to attach to transaction")
+	initCmd.Flags().BoolVar(
+		&walletCmd.walletInitCfg.Plain,
+		"plain", false, "create a plain wallet, requiring no passphrase")
+	recoverCmd.Flags().BoolVar(
+		&walletCmd.walletRecoverCfg.Plain,
+		"plain", false, "Recover seed as a plain wallet, requiring no passphrase")
+	recoverCmd.Flags().StringVar(
+		&walletCmd.walletRecoverCfg.Seed,
+		"seed", "", "define the seed to be recovered as a flag instead of the STDIN")
+	loadSeedCmd.Flags().BoolVar(
+		&walletCmd.walletLoadSeedCfg.Plain,
+		"plain", false, "Load seed into a plain wallet, requiring no passphrase")
+	loadSeedCmd.Flags().StringVar(
+		&walletCmd.walletLoadSeedCfg.Seed,
+		"seed", "", "define the seed to be loaded as a flag instead of the STDIN")
 
 	// return root command
 	return &WalletCommand{
@@ -310,6 +325,17 @@ type walletCmd struct {
 	sendBlockStakesCfg struct {
 		Data string
 	}
+	walletInitCfg struct {
+		Plain bool
+	}
+	walletRecoverCfg struct {
+		Plain bool
+		Seed  string
+	}
+	walletLoadSeedCfg struct {
+		Plain bool
+		Seed  string
+	}
 }
 
 // addressCmd fetches a new address from the wallet that will be able to
@@ -339,35 +365,44 @@ func (walletCmd *walletCmd) addressesCmd() {
 func (walletCmd *walletCmd) initCmd() {
 	var er api.WalletInitPOST
 
-	fmt.Println("You have to provide a passphrase!")
-	fmt.Println("If you have an existing mnemonic you can use the recover wallet command instead.")
+	var data string
+	if !walletCmd.walletInitCfg.Plain {
+		fmt.Println("You have to provide a passphrase!")
+		fmt.Println("If you have an existing mnemonic you can use the recover wallet command instead.")
 
-	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
+		passphrase, err := speakeasy.Ask("Wallet passphrase: ")
+		if err != nil {
+			cli.Die("Reading passphrase failed:", err)
+		}
+		if passphrase == "" {
+			cli.Die("passphrase is required and cannot be empty")
+		}
+
+		repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
+		if err != nil {
+			cli.Die("Reading passphrase failed:", err)
+		}
+
+		if repassphrase != passphrase {
+			cli.Die("Given passphrases do not match !!")
+		}
+
+		data = fmt.Sprintf("passphrase=%s", passphrase)
+	}
+
+	err := walletCmd.cli.PostResp("/wallet/init", data, &er)
 	if err != nil {
-		cli.Die("Reading passphrase failed:", err)
-	}
-	if passphrase == "" {
-		cli.Die("passphrase is required and cannot be empty")
-	}
-
-	repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
-	if err != nil {
-		cli.Die("Reading passphrase failed:", err)
-	}
-
-	if repassphrase != passphrase {
-		cli.Die("Given passphrases do not match !!")
-	}
-
-	qs := fmt.Sprintf("passphrase=%s", passphrase)
-
-	err = walletCmd.cli.PostResp("/wallet/init", qs, &er)
-	if err != nil {
-		cli.DieWithError("Error when encrypting wallet:", err)
+		if walletCmd.walletInitCfg.Plain {
+			cli.DieWithError("Error when creating plain wallet:", err)
+		} else {
+			cli.DieWithError("Error when creating encrypted wallet:", err)
+		}
 	}
 
 	fmt.Printf("Mnemonic of primary seed:\n%s\n\n", er.PrimarySeed)
-	fmt.Printf("Wallet encrypted with given passphrase\n")
+	if !walletCmd.walletInitCfg.Plain {
+		fmt.Printf("Wallet encrypted with given passphrase\n")
+	}
 }
 
 // recoverCmd encrypts the wallet with the given password,
@@ -375,41 +410,52 @@ func (walletCmd *walletCmd) initCmd() {
 func (walletCmd *walletCmd) recoverCmd() {
 	var er api.WalletInitPOST
 
-	fmt.Println("You have to provide a passphrase and existing mnemonic!")
-	fmt.Println("If you have no existing mnemonic use the init wallet command instead!")
+	var data string
+	if !walletCmd.walletRecoverCfg.Plain {
+		fmt.Println("You have to provide a passphrase and existing mnemonic!")
+		fmt.Println("If you have no existing mnemonic use the init wallet command instead!")
 
-	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
-	if err != nil {
-		cli.Die("Reading passphrase failed:", err)
-	}
-	if passphrase == "" {
-		cli.Die("passphrase is required and cannot be empty")
+		passphrase, err := speakeasy.Ask("Wallet passphrase: ")
+		if err != nil {
+			cli.Die("Reading passphrase failed:", err)
+		}
+		if passphrase == "" {
+			cli.Die("passphrase is required and cannot be empty")
+		}
+
+		repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
+		if err != nil {
+			cli.Die("Reading passphrase failed:", err)
+		}
+
+		if repassphrase != passphrase {
+			cli.Die("Given passphrases do not match !!")
+		}
+
+		data = fmt.Sprintf("passphrase=%s&", passphrase)
 	}
 
-	repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
-	if err != nil {
-		cli.Die("Reading passphrase failed:", err)
+	mnemonic := walletCmd.walletRecoverCfg.Seed
+	if mnemonic == "" {
+		var err error
+		mnemonic, err = speakeasy.Ask("Enter existing mnemonic to be used as primary seed: ")
+		if err != nil {
+			cli.Die("Reading mnemonic failed:", err)
+		}
 	}
-
-	if repassphrase != passphrase {
-		cli.Die("Given passphrases do not match !!")
-	}
-
-	mnemonic, err := speakeasy.Ask("Enter existing mnemonic to be used as primary seed: ")
-	if err != nil {
-		cli.Die("Reading mnemonic failed:", err)
-	}
-
 	seed, err := modules.InitialSeedFromMnemonic(mnemonic)
 	if err != nil {
 		cli.Die("Invalid mnemonic given:", err)
 	}
+	data += fmt.Sprintf("seed=%s", seed.String())
 
-	qs := fmt.Sprintf("passphrase=%s&seed=%s", passphrase, seed)
-
-	err = walletCmd.cli.PostResp("/wallet/init", qs, &er)
+	err = walletCmd.cli.PostResp("/wallet/init", data, &er)
 	if err != nil {
-		cli.DieWithError("Error when encrypting wallet:", err)
+		if walletCmd.walletRecoverCfg.Plain {
+			cli.DieWithError("Error when creating plain wallet:", err)
+		} else {
+			cli.DieWithError("Error when creating encrypted wallet:", err)
+		}
 	}
 
 	if er.PrimarySeed != mnemonic {
@@ -417,21 +463,31 @@ func (walletCmd *walletCmd) recoverCmd() {
 	}
 
 	fmt.Printf("Mnemonic of primary seed:\n%s\n\n", er.PrimarySeed)
-	fmt.Printf("Wallet encrypted with given passphrase\n")
+	if !walletCmd.walletRecoverCfg.Plain {
+		fmt.Printf("Wallet encrypted with given passphrase\n")
+	}
 }
 
 // loadSeedCmd adds a seed to the wallet's list of seeds
 func (walletCmd *walletCmd) loadSeedCmd() {
-	passphrase, err := speakeasy.Ask("Wallet passphrase: ")
-	if err != nil {
-		cli.Die("Reading passphrase failed:", err)
+	var data string
+	if !walletCmd.walletLoadSeedCfg.Plain {
+		passphrase, err := speakeasy.Ask("Wallet passphrase: ")
+		if err != nil {
+			cli.Die("Reading passphrase failed:", err)
+		}
+		data = fmt.Sprintf("passphrase=%s&", passphrase)
 	}
-	mnemonic, err := speakeasy.Ask("New Mnemonic: ")
-	if err != nil {
-		cli.Die("Reading seed failed:", err)
+	seed := walletCmd.walletLoadSeedCfg.Seed
+	if seed == "" {
+		var err error
+		seed, err = speakeasy.Ask("Existing Mnemonic: ")
+		if err != nil {
+			cli.Die("Reading seed failed:", err)
+		}
 	}
-	qs := fmt.Sprintf("passphrase=%s&mnemonic=%s", passphrase, mnemonic)
-	err = walletCmd.cli.Post("/wallet/seed", qs)
+	data += fmt.Sprintf("mnemonic=%s", seed)
+	err := walletCmd.cli.Post("/wallet/seed", data)
 	if err != nil {
 		cli.DieWithError("Could not add seed:", err)
 	}
