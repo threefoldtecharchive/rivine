@@ -198,7 +198,7 @@ func (c *HTTPClient) apiPost(call, data string) (*http.Response, error) {
 }
 
 func (c *HTTPClient) apiPassword() (string, error) {
-	if c.Password == "" {
+	if c.Password != "" {
 		return c.Password, nil
 	}
 	var err error
