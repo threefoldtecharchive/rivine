@@ -194,7 +194,7 @@ func RegisterWalletHTTPHandlers(router Router, wallet modules.Wallet, requiredPa
 	router.GET("/wallet", NewWalletRootHandler(wallet))
 	router.GET("/wallet/blockstakestats", RequirePasswordHandler(NewWalletBlockStakeStatsHandler(wallet), requiredPassword))
 	router.GET("/wallet/address", RequirePasswordHandler(NewWalletAddressHandler(wallet), requiredPassword))
-	router.GET("/wallet/addresses", NewWalletAddressesHandler(wallet))
+	router.GET("/wallet/addresses", RequirePasswordHandler(NewWalletAddressesHandler(wallet), requiredPassword))
 	router.GET("/wallet/backup", RequirePasswordHandler(NewWalletBackupHandler(wallet), requiredPassword))
 	router.POST("/wallet/init", RequirePasswordHandler(NewWalletInitHandler(wallet), requiredPassword))
 	router.POST("/wallet/lock", RequirePasswordHandler(NewWalletLockHandler(wallet), requiredPassword))
