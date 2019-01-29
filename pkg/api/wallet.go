@@ -191,7 +191,7 @@ func RegisterWalletHTTPHandlers(router Router, wallet modules.Wallet, requiredPa
 		panic("no httprouter Router given")
 	}
 
-	router.GET("/wallet", NewWalletRootHandler(wallet))
+	router.GET("/wallet", RequirePasswordHandler(NewWalletRootHandler(wallet), requiredPassword))
 	router.GET("/wallet/blockstakestats", RequirePasswordHandler(NewWalletBlockStakeStatsHandler(wallet), requiredPassword))
 	router.GET("/wallet/address", RequirePasswordHandler(NewWalletAddressHandler(wallet), requiredPassword))
 	router.GET("/wallet/addresses", RequirePasswordHandler(NewWalletAddressesHandler(wallet), requiredPassword))
