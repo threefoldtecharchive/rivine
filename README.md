@@ -99,3 +99,9 @@ Troubleshooting
   
   If not already, you will run into problems sooner or later when running multiple nodes
   using the same external IP address and RPC address port within the same blockchain network.
+
+## Repository Owners
+
+* Rob Van Mieghem ([@robvanmieghem](https://github.com/robvanmieghem))
+* Lee Smet ([@leesmet](https://github.com/leesmet))
+* Glen De Cauwsemaecker ([@glendc](https://github.com/glendc))
