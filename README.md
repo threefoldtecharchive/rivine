@@ -11,6 +11,51 @@ Blockchain technology for creating custom chains.
 
 You can reach out to us for any development-related questions on [our public Telegram group](https://t.me/rivine).
 
+Product owners
+--------------
+
+* Rob Van Mieghem ([@robvanmieghem](https://github.com/robvanmieghem))
+* Lee Smet ([@leesmet](https://github.com/leesmet))
+* Glen De Cauwsemaecker ([@glendc](https://github.com/glendc))
+  
+Main Repositories
+-----------------
+
+- [rivine](https://github.com/threefoldtech/rivine)
+    Core rivine software
+- [rivine-explorer](https://github.com/threefoldtech/rivine-explorer)
+    Rivine block explorer
+- [atomicswap](https://github.com/threefoldtech/atomicswap)
+    Ethereum and bitcoin light client atomic swap support
+- [rivine-UI](https://github.com/threefoldtech/rivine-UI)
+        Desktop UI for a rivine full node and wallet
+        
+Releases
+--------
+
+- 1.1.5 kanban
+    - Full Electrum protocol 
+    - Zero-Db support for the storage
+    - Change  explorer storage
+
+- 1.1.4
+    - Freeflow token
+    - better container support:
+        - unencrypted wallets
+        - delegated staking
+
+- 1.1.3
+    - ~tfchain Farmer registration~
+    - Ethereum erc20 tokens and bridge
+    - Automated Tfchain shop with bitcoin and ethereum
+    - Rework deployment templates
+    - Electrum module with support for address notifications
+    - More commercial rivine documentation and slides
+  
+- 1.1.2 (<https://github.com/orgs/threefoldtech/projects/1>):
+    - digitalme (3Bot) support (<https://github.com/threefoldtech/home/issues/42>);
+    - testnet faucet (<https://github.com/threefoldtech/home/issues/36>);
+  
 Usage
 -----
 
@@ -49,7 +94,7 @@ Running the client can be done with `docker run -it rivine rivinec`.
 Add client commands just like you would calling rivinec normally (like `docker run -it rivine rivinec wallet transactions`).
 
 Supporting a Rivine Wallet in a Light Client
---------------------
+--------------------------------------------
 
 Should you wish to support Rivine, or more likely a Rivine-based wallet in a(n) existing/new **light** client,
 it is recommended that you read [/doc/transactions/light_wallet.md](/doc/transactions/light_wallet.md) as a starting point.
@@ -100,8 +145,4 @@ Troubleshooting
   If not already, you will run into problems sooner or later when running multiple nodes
   using the same external IP address and RPC address port within the same blockchain network.
 
-## Repository Owners
 
-* Rob Van Mieghem ([@robvanmieghem](https://github.com/robvanmieghem))
-* Lee Smet ([@leesmet](https://github.com/leesmet))
-* Glen De Cauwsemaecker ([@glendc](https://github.com/glendc))
