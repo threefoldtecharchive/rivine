@@ -59,3 +59,9 @@ for any signature algorithm, we only support ed25519 for now.
 This is important to take into account when developing your own (light) clients,
 as your wallet will have to use the ed25519 algo as well,
 in order to be able to sign and verify transactions.
+
+## private key generation
+
+The default Rivine wallet is a deterministical wallet meaning it derives keys from a single starting point known as a seed. The seed allows a user to easily back up and restore a wallet without needing any other information.
+
+Seeds are  serialized into human-readable words in a seed phrase or mnemonic using [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) with the default [bip39 spec wordlist](https://github.com/bitcoin/bips/tree/master/bip-0039).
