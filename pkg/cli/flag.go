@@ -143,9 +143,11 @@ func NewEncodingTypeFlag(def EncodingType, ref *EncodingType, mask EncodingType)
 		mask = defaultEncodingTypeMask()
 	}
 	*ref = def
+	// sanity checks
 	if mask&def == 0 {
-		// sanity check
 		panic(fmt.Sprintf("given default encoding type %d is not covered by given encoding type mask %b", def, mask))
+	} else if def != EncodingTypeHuman && def != EncodingTypeJSON && def != EncodingTypeHuman {
+		panic(fmt.Sprintf("given default encoding type %d is not a valid encoding type", def))
 	}
 	return EncodingTypeFlag{
 		et:   ref,
