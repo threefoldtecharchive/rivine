@@ -52,14 +52,14 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 		}
 		initCmd = &cobra.Command{
 			Use:   "init",
-			Short: "Initialize and encrypt a new wallet",
-			Long:  `Generate a new wallet from a randomly generated seed, and encrypt it.`,
+			Short: "Initialize a new wallet",
+			Long:  `Generate a new wallet from a randomly generated seed and by default encrypt it.`,
 			Run:   Wrap(walletCmd.initCmd),
 		}
 		recoverCmd = &cobra.Command{
 			Use:   "recover",
-			Short: "Recover and encrypt a new wallet",
-			Long:  `Recover a wallet from the given mnemonic, to be used as primary seed, and encrypt it.`,
+			Short: "Recover a wallet",
+			Long:  `Recover a wallet from the given mnemonic, to be used as primary seed and by default encrypt it.`,
 			Run:   Wrap(walletCmd.recoverCmd),
 		}
 		lockCmd = &cobra.Command{
