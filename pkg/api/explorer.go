@@ -240,6 +240,7 @@ func RegisterExplorerHTTPHandlers(router Router, cs modules.ConsensusSet, explor
 	router.GET("/explorer/stats/history", NewExplorerHistoryStatsHandler(explorer))
 	router.GET("/explorer/stats/range", NewExplorerRangeStatsHandler(explorer))
 	router.GET("/explorer/constants", NewExplorerConstantsHandler(explorer))
+	router.GET("/explorer/downloader/status", NewConsensusRootHandler(cs))
 }
 
 // NewExplorerBlocksHandler creates a handler to handle API calls to /explorer/blocks/:height.
