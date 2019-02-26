@@ -54,7 +54,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("gateway")
 		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap,
 			filepath.Join(cfg.RootPersistentDir, modules.GatewayDir),
-			cfg.BlockchainInfo, networkCfg.Constants, networkCfg.BootstrapPeers)
+			cfg.BlockchainInfo, networkCfg.Constants, networkCfg.BootstrapPeers, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}
@@ -73,7 +73,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("consensus")
 		cs, err = consensus.New(g, !cfg.NoBootstrap,
 			filepath.Join(cfg.RootPersistentDir, modules.ConsensusDir),
-			cfg.BlockchainInfo, networkCfg.Constants)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}
@@ -110,7 +110,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("wallet")
 		w, err = wallet.New(cs, tpool,
 			filepath.Join(cfg.RootPersistentDir, modules.WalletDir),
-			cfg.BlockchainInfo, networkCfg.Constants)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("block creator")
 		b, err = blockcreator.New(cs, tpool, w,
 			filepath.Join(cfg.RootPersistentDir, modules.BlockCreatorDir),
-			cfg.BlockchainInfo, networkCfg.Constants)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}

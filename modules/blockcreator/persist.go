@@ -44,7 +44,7 @@ func (b *BlockCreator) initSettings() error {
 }
 
 // initPersist initializes the persistence of the block creator.
-func (b *BlockCreator) initPersist() error {
+func (b *BlockCreator) initPersist(verbose bool) error {
 	// Create the miner directory.
 	err := os.MkdirAll(b.persistDir, 0700)
 	if err != nil {
@@ -53,7 +53,7 @@ func (b *BlockCreator) initPersist() error {
 
 	// Add a logger.
 	b.log, err = persist.NewFileLogger(b.bcInfo,
-		filepath.Join(b.persistDir, logFile))
+		filepath.Join(b.persistDir, logFile), verbose)
 	if err != nil {
 		return err
 	}

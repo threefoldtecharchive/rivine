@@ -127,7 +127,7 @@ func (w *Wallet) initSettings() error {
 
 // initPersist loads all of the wallet's persistence files into memory,
 // creating them if they do not exist.
-func (w *Wallet) initPersist() error {
+func (w *Wallet) initPersist(verboseLogging bool) error {
 	// Create a directory for the wallet without overwriting an existing
 	// directory.
 	err := os.MkdirAll(w.persistDir, 0700)
@@ -137,7 +137,7 @@ func (w *Wallet) initPersist() error {
 
 	// Start logging.
 	w.log, err = persist.NewFileLogger(w.bcInfo,
-		filepath.Join(w.persistDir, logFile))
+		filepath.Join(w.persistDir, logFile), verboseLogging)
 	if err != nil {
 		return err
 	}

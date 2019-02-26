@@ -191,7 +191,7 @@ func (g *Gateway) Close() error {
 }
 
 // New returns an initialized Gateway.
-func New(addr string, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress) (*Gateway, error) {
+func New(addr string, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress, verboseLogging bool) (*Gateway, error) {
 	// Create the directory if it doesn't exist.
 	err := os.MkdirAll(persistDir, 0700)
 	if err != nil {
@@ -217,7 +217,7 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 
 	// Create the logger.
 	g.log, err = persist.NewFileLogger(bcInfo,
-		filepath.Join(g.persistDir, logFile))
+		filepath.Join(g.persistDir, logFile), verboseLogging)
 	if err != nil {
 		return nil, err
 	}

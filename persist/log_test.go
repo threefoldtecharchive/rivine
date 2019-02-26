@@ -27,7 +27,7 @@ func TestLogger(t *testing.T) {
 
 	// Create the logger.
 	logFilename := filepath.Join(testdir, "test.log")
-	fl, err := NewFileLogger(types.DefaultBlockchainInfo(), logFilename)
+	fl, err := NewFileLogger(types.DefaultBlockchainInfo(), logFilename, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,19 +42,8 @@ func TestLogger(t *testing.T) {
 	// Check that data was written to the log file. There should be three
 	// lines, one for startup, the example line, and one to close the logger.
 	expectedSubstring := []string{"STARTUP", "TEST", "SHUTDOWN", ""} // file ends with a newline
-	fileData, err := ioutil.ReadFile(logFilename)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fileLines := strings.Split(string(fileData), "\n")
-	for i, line := range fileLines {
-		if !strings.Contains(string(line), expectedSubstring[i]) {
-			t.Error("did not find the expected message in the logger")
-		}
-	}
-	if len(fileLines) != 4 { // file ends with a newline
-		t.Error("logger did not create the correct number of lines:", len(fileLines))
-	}
+	validatelogfile(t, logFilename, expectedSubstring, 4)
+
 }
 
 // TestLoggerCritical prints a critical message from the logger.
@@ -72,7 +61,7 @@ func TestLoggerCritical(t *testing.T) {
 
 	// Create the logger.
 	logFilename := filepath.Join(testdir, "test.log")
-	fl, err := NewFileLogger(types.DefaultBlockchainInfo(), logFilename)
+	fl, err := NewFileLogger(types.DefaultBlockchainInfo(), logFilename, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,4 +81,71 @@ func TestLoggerCritical(t *testing.T) {
 		}
 	}()
 	fl.Critical("a critical message")
+}
+
+func TestVerboseLogger(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+
+	// Create a folder for the log file.
+	testdir := build.TempDir(persistDir, t.Name())
+	err := os.MkdirAll(testdir, 0700)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the logger.
+	logFilename := filepath.Join(testdir, "test.log")
+	fl, err := NewFileLogger(types.DefaultBlockchainInfo(), logFilename, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write an example statement, and then close the logger.
+	fl.Debugln("ROBTEST: this should get written to the logfile")
+	err = fl.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that data was written to the log file. There should be three
+	// lines, one for startup, the example line, and one to close the logger.
+	expectedSubstring := []string{"STARTUP", "ROBTEST", "SHUTDOWN", ""} // file ends with a newline
+	validatelogfile(t, logFilename, expectedSubstring, 4)
+
+	// Create the logger.
+	logFilename = filepath.Join(testdir, "test.log2")
+	fl, err = NewFileLogger(types.DefaultBlockchainInfo(), logFilename, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Write an example statement, and then close the logger.
+	fl.Debugln("ROBTEST: this should not get written to the logfile")
+	err = fl.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that data was written to the log file. There should be three
+	// lines, one for startup, the example line, and one to close the logger.
+	expectedSubstring = []string{"STARTUP", "SHUTDOWN", ""} // file ends with a newline
+	validatelogfile(t, logFilename, expectedSubstring, 3)
+
+}
+func validatelogfile(t *testing.T, logFilename string, expectedSubstrings []string, numberOfLines int) {
+	fileData, err := ioutil.ReadFile(logFilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fileLines := strings.Split(string(fileData), "\n")
+	for i, line := range fileLines {
+		if !strings.Contains(string(line), expectedSubstrings[i]) {
+			t.Error("did not find the expected message in the logger")
+		}
+	}
+	if len(fileLines) != numberOfLines {
+		t.Error("logger did not create the correct number of lines:", len(fileLines))
+	}
 }
