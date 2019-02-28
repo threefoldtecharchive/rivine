@@ -131,7 +131,7 @@ type historicOutput struct {
 // name and then using the file to save in the future. Keys and addresses are
 // not loaded into the wallet during the call to 'new', but rather during the
 // call to 'Unlock'.
-func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*Wallet, error) {
+func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verboseLogging bool) (*Wallet, error) {
 	// Check for nil dependencies.
 	if cs == nil {
 		return nil, errNilConsensusSet
@@ -162,7 +162,7 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, persistDir stri
 		bcInfo:   bcInfo,
 		chainCts: chainCts,
 	}
-	err := w.initPersist()
+	err := w.initPersist(verboseLogging)
 	if err != nil {
 		return nil, err
 	}

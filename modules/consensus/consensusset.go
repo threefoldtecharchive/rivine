@@ -101,7 +101,7 @@ type ConsensusSet struct {
 // New returns a new ConsensusSet, containing at least the genesis block. If
 // there is an existing block database present in the persist directory, it
 // will be loaded.
-func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*ConsensusSet, error) {
+func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verboseLogging bool) (*ConsensusSet, error) {
 	// Check for nil dependencies.
 	if gateway == nil {
 		return nil, errNilGateway
@@ -156,7 +156,7 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 	}
 
 	// Initialize the consensus persistence structures.
-	err := cs.initPersist()
+	err := cs.initPersist(verboseLogging)
 	if err != nil {
 		return nil, err
 	}

@@ -53,6 +53,9 @@ type (
 		// the parent directory where the individual module
 		// directories will be created
 		RootPersistentDir string
+
+		//Verbose (debug) logging
+		VerboseLogging bool
 	}
 
 	// NetworkConfig are variables for a particular chain. Currently, these are genesis constants and bootstrap peers
@@ -82,6 +85,7 @@ func DefaultConfig() Config {
 		Profile:           false,
 		ProfileDir:        "profiles",
 		RootPersistentDir: "",
+		VerboseLogging:    false,
 	}
 }
 
@@ -93,6 +97,8 @@ func (cfg *Config) RegisterAsFlags(flagSet *pflag.FlagSet) {
 	flagSet.StringVarP(&cfg.RootPersistentDir, "persistent-directory", "d", cfg.RootPersistentDir,
 		"location of the root diretory used to store persistent data of the daemon of"+
 			cfg.BlockchainInfo.Name)
+
+	flagSet.BoolVarP(&cfg.VerboseLogging, "verboselogging", "v", false, "enable logging of debug information in the logfiles of the modules")
 	flagSet.BoolVarP(&cfg.NoBootstrap, "no-bootstrap", "", cfg.NoBootstrap, "disable bootstrapping on this run")
 	flagSet.BoolVarP(&cfg.Profile, "profile", "", cfg.Profile, "enable profiling")
 	flagSet.StringVarP(&cfg.RPCaddr, "rpc-addr", "", cfg.RPCaddr, "which port the gateway listens on")

@@ -22,7 +22,7 @@ func newTestingGateway(t *testing.T) *Gateway {
 	}
 
 	g, err := New("localhost:0", false, build.TempDir("gateway", t.Name()),
-		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil)
+		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
 	if err != nil {
 		panic(err)
 	}
@@ -37,7 +37,7 @@ func newNamedTestingGateway(t *testing.T, suffix string) *Gateway {
 	}
 
 	g, err := New("localhost:0", false, build.TempDir("gateway", t.Name()+suffix),
-		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil)
+		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
 	if err != nil {
 		panic(err)
 	}
@@ -132,13 +132,13 @@ func TestNew(t *testing.T) {
 
 	bcInfo := types.DefaultBlockchainInfo()
 	cts := types.TestnetChainConstants()
-	if _, err := New("", false, "", bcInfo, cts, nil); err == nil {
+	if _, err := New("", false, "", bcInfo, cts, nil, false); err == nil {
 		t.Fatal("expecting persistDir error, got nil")
 	}
-	if _, err := New("localhost:0", false, "", bcInfo, cts, nil); err == nil {
+	if _, err := New("localhost:0", false, "", bcInfo, cts, nil, false); err == nil {
 		t.Fatal("expecting persistDir error, got nil")
 	}
-	if g, err := New("foo", false, build.TempDir("gateway", t.Name()+"1"), bcInfo, cts, nil); err == nil {
+	if g, err := New("foo", false, build.TempDir("gateway", t.Name()+"1"), bcInfo, cts, nil, false); err == nil {
 		t.Fatal("expecting listener error, got nil", g.myAddr)
 	}
 	// create corrupted nodes.json
@@ -148,7 +148,7 @@ func TestNew(t *testing.T) {
 	if err != nil {
 		t.Fatal("couldn't create corrupted file:", err)
 	}
-	if _, err := New("localhost:0", false, dir, bcInfo, cts, nil); err == nil {
+	if _, err := New("localhost:0", false, dir, bcInfo, cts, nil, false); err == nil {
 		t.Fatal("expected load error, got nil")
 	}
 }

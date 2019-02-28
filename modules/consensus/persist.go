@@ -56,7 +56,7 @@ func (cs *ConsensusSet) loadDB() error {
 
 // initPersist initializes the persistence structures of the consensus set, in
 // particular loading the database and preparing to manage subscribers.
-func (cs *ConsensusSet) initPersist() error {
+func (cs *ConsensusSet) initPersist(verbose bool) error {
 	// Create the consensus directory.
 	err := os.MkdirAll(cs.persistDir, 0700)
 	if err != nil {
@@ -65,7 +65,7 @@ func (cs *ConsensusSet) initPersist() error {
 
 	// Initialize the logger.
 	cs.log, err = persist.NewFileLogger(cs.bcInfo,
-		filepath.Join(cs.persistDir, logFile))
+		filepath.Join(cs.persistDir, logFile), verbose)
 	if err != nil {
 		return err
 	}
