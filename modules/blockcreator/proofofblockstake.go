@@ -27,7 +27,7 @@ func (bc *BlockCreator) SolveBlocks() {
 		// after some downtime
 		if !bc.csSynced {
 			if !bc.cs.Synced() {
-				bc.log.Debugln("Consensus set is not synced, don't create blocks")
+				bc.log.Debugln("Consensus set is not synced, don't create blocks yet")
 				time.Sleep(8 * time.Second)
 				continue
 			}
@@ -40,7 +40,7 @@ func (bc *BlockCreator) SolveBlocks() {
 		b := bc.solveBlock(uint64(now), 10)
 		if b != nil {
 			bjson, _ := json.Marshal(b)
-			bc.log.Debugln("Solved block:", string(bjson))
+			bc.log.Println("Solved block:", string(bjson))
 
 			err := bc.submitBlock(*b)
 			if err != nil {
