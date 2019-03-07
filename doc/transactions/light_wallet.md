@@ -17,33 +17,13 @@ explaining all you need in order to add support for a Rivine wallet,
 to your light client.
 
 ## Key Pairs
-
 A wallet is identified by one or multiple private keys. Each private key is linked to a public key.
 The public key is used to generate a wallet address, and thus a wallet can have multiple addresses,
 as many as there are private-public key pairs.
-
-All private keys of a single wallet are generated using the same seed,
-that seed should be backed up by the user as to be able to recover the wallet
-at any time, or even have multiple wallets using the same seed.
-
-> In the standard Rivine CLI Wallet a [blake2b][blake2b] checksum is generated using
-> the seed and the key (integral) index as input.
-> This checksum (32 bytes) is used as the entropy for the generation of
-> a [Ed25519][ed25519] private-public key pair.
-
-The [Ed25519][ed25519] signature algorithm is the only algorithm currently supported by
-the Rivine Protocol, for signatures provides as part of an input (spending an unspent output).
-This means that the public keys of your wallet have to have a size of 32 bytes,
-and the private keys (from which the public keys are derived)
-have to have a size of 64 bytes. The produced signatures will have a size of 64 bytes as well.
+More information can be found in the [wallet documentation](../wallet.md)
 
 > (!) Your wallet won't work if your public-private key pairs
-> aren't [Ed25519][ed25519]-compatible !!!
-
-In Rivine we use [BIP-39][bip39] to generate 24-word mnemonics from a seed,
-and go back from such a mnemonic to such a seed. The 24-word count mentioned before,
-means we expect random seeds of 32 bytes. This because of the assumption that it is easier
-for humans to communicate and remember words, rather than 32 random hexadecimal characters.
+> are not [Ed25519][ed25519]-compatible !!!
 
 Your wallet does not need to support [BIP-39][bip39], nor do your seeds need to be 32 bytes
 in order to be compatible with the Rivine Protocol. We do however recommend that you
