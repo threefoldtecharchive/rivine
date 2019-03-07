@@ -1,8 +1,38 @@
 # Wallet
 
+## Key Pairs
+
+A wallet is identified by one or multiple private keys. Each private key is linked to a public key.
+The public key is used to generate a wallet address, and thus a wallet can have multiple addresses,
+as many as there are private-public key pairs.
+
+All private keys of a single wallet are generated using the same seed,
+that seed should be backed up by the user as to be able to recover the wallet
+at any time, or even have multiple wallets using the same seed.
+
+> In the standard Rivine CLI Wallet a [blake2b][blake2b] checksum is generated using
+> the seed and the key (integral) index as input.
+> This checksum (32 bytes) is used as the entropy for the generation of
+> a [Ed25519][ed25519] private-public key pair.
+
+The [Ed25519][ed25519] signature algorithm is the only algorithm currently supported by
+the Rivine Protocol, for signatures provides as part of an input (spending an unspent output).
+This means that the public keys of your wallet have to have a size of 32 bytes,
+and the private keys (from which the public keys are derived)
+have to have a size of 64 bytes. The produced signatures will have a size of 64 bytes as well.
+
+### private key generation
+
+The default Rivine wallet is a deterministical wallet meaning it derives keys from a single starting point known as a seed. The seed allows a user to easily back up and restore a wallet without needing any other information.
+In Rivine we use [BIP39](bip39) with the default [bip39 spec wordlist](https://github.com/bitcoin/bips/tree/master/bip-0039) to generate 24-word mnemonics from a seed and go back from such a mnemonic to such a seed.
+The 24-word count mentioned before,
+means we expect random seeds of 32 bytes. This because of the assumption that it is easier
+for humans to communicate and remember words, rather than 32 random hexadecimal characters
+Seeds are  serialized into human-readable words in a seed phrase or mnemonic using [BIP39]
 A wallet allows you to identify yourself by means of addresses,
 using your private key(s) as proof of ownership.
 
+## addresses and unlockhashes
 An address is represented in Rivine as an unlock hash.
 But just so we're clear, not all unlock hashes are wallet addresses.
 Each unlock hash is prefixed with 2 bytes, indicating the type of hash (address) it represents.
@@ -60,32 +90,7 @@ This is important to take into account when developing your own (light) clients,
 as your wallet will have to use the ed25519 algo as well,
 in order to be able to sign and verify transactions.
  
-## Key Pairs
 
-A wallet is identified by one or multiple private keys. Each private key is linked to a public key.
-The public key is used to generate a wallet address, and thus a wallet can have multiple addresses,
-as many as there are private-public key pairs.
-
-All private keys of a single wallet are generated using the same seed,
-that seed should be backed up by the user as to be able to recover the wallet
-at any time, or even have multiple wallets using the same seed.
-
-> In the standard Rivine CLI Wallet a [blake2b][blake2b] checksum is generated using
-> the seed and the key (integral) index as input.
-> This checksum (32 bytes) is used as the entropy for the generation of
-> a [Ed25519][ed25519] private-public key pair.
-
-The [Ed25519][ed25519] signature algorithm is the only algorithm currently supported by
-the Rivine Protocol, for signatures provides as part of an input (spending an unspent output).
-This means that the public keys of your wallet have to have a size of 32 bytes,
-and the private keys (from which the public keys are derived)
-have to have a size of 64 bytes. The produced signatures will have a size of 64 bytes as well.
-
-### private key generation
-
-The default Rivine wallet is a deterministical wallet meaning it derives keys from a single starting point known as a seed. The seed allows a user to easily back up and restore a wallet without needing any other information.
-In Rivine we use [BIP39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) with the default [bip39 spec wordlist](https://github.com/bitcoin/bips/tree/master/bip-0039) to generate 24-word mnemonics from a seed and go back from such a mnemonic to such a seed.
-The 24-word count mentioned before,
-means we expect random seeds of 32 bytes. This because of the assumption that it is easier
-for humans to communicate and remember words, rather than 32 random hexadecimal characters
-Seeds are  serialized into human-readable words in a seed phrase or mnemonic using [BIP39]
+[bip39]: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
+[Ed25519]: https://tools.ietf.org/html/rfc8032#section-5.1
+[blake2b]: https://blake2.net
