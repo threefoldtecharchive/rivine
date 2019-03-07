@@ -9,6 +9,7 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
@@ -16,7 +17,6 @@ import (
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/NebulousLabs/demotemutex"
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -76,6 +76,9 @@ type ConsensusSet struct {
 	// performed after a full reorg, but now they are performed after every
 	// block.
 	checkingConsistency bool
+
+	// bootstrap is a bool indicating wether we should do an IBD
+	bootstrap bool
 
 	// synced is true if initial blockchain download has finished. It indicates
 	// whether the consensus set is synced with the network.
@@ -161,14 +164,19 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		return nil, err
 	}
 
+	return cs, nil
+}
+
+// Start the consensusset
+func (cs *ConsensusSet) Start() {
 	go func() {
 		// Sync with the network. Don't sync if we are testing because
 		// typically we don't have any mock peers to synchronize with in
 		// testing.
-		if bootstrap {
+		if cs.bootstrap {
 			// We are in a virgin goroutine right now, so calling the threaded
 			// function without a goroutine is okay.
-			err = cs.threadedInitialBlockchainDownload()
+			err := cs.threadedInitialBlockchainDownload()
 			if err != nil {
 				return
 			}
@@ -177,17 +185,17 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		// threadedInitialBlockchainDownload will release the threadgroup 'Add'
 		// it was holding, so another needs to be grabbed to finish off this
 		// goroutine.
-		err = cs.tg.Add()
+		err := cs.tg.Add()
 		if err != nil {
 			return
 		}
 		defer cs.tg.Done()
 
 		// Register RPCs
-		gateway.RegisterRPC("SendBlocks", cs.rpcSendBlocks)
-		gateway.RegisterRPC("RelayHeader", cs.threadedRPCRelayHeader)
-		gateway.RegisterRPC("SendBlk", cs.rpcSendBlk)
-		gateway.RegisterConnectCall("SendBlocks", cs.threadedReceiveBlocks)
+		cs.gateway.RegisterRPC("SendBlocks", cs.rpcSendBlocks)
+		cs.gateway.RegisterRPC("RelayHeader", cs.threadedRPCRelayHeader)
+		cs.gateway.RegisterRPC("SendBlk", cs.rpcSendBlk)
+		cs.gateway.RegisterConnectCall("SendBlocks", cs.threadedReceiveBlocks)
 		cs.tg.OnStop(func() {
 			cs.gateway.UnregisterRPC("SendBlocks")
 			cs.gateway.UnregisterRPC("RelayHeader")
@@ -200,8 +208,6 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		cs.synced = true
 		cs.mu.Unlock()
 	}()
-
-	return cs, nil
 }
 
 // BlockAtHeight returns the block at a given height.

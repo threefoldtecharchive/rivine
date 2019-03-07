@@ -150,6 +150,10 @@ type (
 	// A ConsensusSet accepts blocks and builds an understanding of network
 	// consensus.
 	ConsensusSet interface {
+		// Start the consensusset
+		// this function starts a new goroutine and then returns immediately
+		Start()
+
 		// AcceptBlock adds a block to consensus. An error will be returned if the
 		// block is invalid, has been seen before, is an orphan, or doesn't
 		// contribute to the heaviest fork known to the consensus set. If the block

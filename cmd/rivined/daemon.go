@@ -58,7 +58,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err != nil {
 			return err
 		}
-		api.RegisterGatewayHTTPHandlers(router, g, cfg.APIPassword)
 		defer func() {
 			fmt.Println("Closing gateway...")
 			err := g.Close()
@@ -77,7 +76,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err != nil {
 			return err
 		}
-		api.RegisterConsensusHTTPHandlers(router, cs)
 		defer func() {
 			fmt.Println("Closing consensus set...")
 			err := cs.Close()
@@ -96,7 +94,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err != nil {
 			return err
 		}
-		api.RegisterTransactionPoolHTTPHandlers(router, cs, tpool, cfg.APIPassword)
 		defer func() {
 			fmt.Println("Closing transaction pool...")
 			err := tpool.Close()
@@ -114,7 +111,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err != nil {
 			return err
 		}
-		api.RegisterWalletHTTPHandlers(router, w, cfg.APIPassword)
 		defer func() {
 			fmt.Println("Closing wallet...")
 			err := w.Close()
@@ -151,7 +147,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err != nil {
 			return err
 		}
-		api.RegisterExplorerHTTPHandlers(router, cs, e, tpool)
 		defer func() {
 			fmt.Println("Closing explorer...")
 			err := e.Close()
@@ -190,9 +185,31 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		}
 	})
 
+	if g != nil {
+		api.RegisterGatewayHTTPHandlers(router, g, cfg.APIPassword)
+	}
+	if cs != nil {
+		api.RegisterConsensusHTTPHandlers(router, cs)
+	}
+	if tpool != nil {
+		api.RegisterTransactionPoolHTTPHandlers(router, cs, tpool, cfg.APIPassword)
+	}
+	if w != nil {
+		api.RegisterWalletHTTPHandlers(router, w, cfg.APIPassword)
+	}
+	if e != nil {
+		api.RegisterExplorerHTTPHandlers(router, cs, e, tpool)
+	}
+
 	// handle all our endpoints over a router,
 	// which requires a user agent should one be configured
 	srv.Handle("/", api.RequireUserAgentHandler(router, cfg.RequiredUserAgent))
+
+	// If there are any long running operations that need to happen first (e.g. for some extension code)
+	// You can do that first before starting the cs syncing
+	if cs != nil {
+		cs.Start()
+	}
 
 	// stop the server if a kill signal is caught
 	sigChan := make(chan os.Signal, 1)
