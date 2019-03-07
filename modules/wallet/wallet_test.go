@@ -342,6 +342,10 @@ type consensusSetStub struct {
 	subscribers map[modules.ConsensusSetSubscriber]struct{}
 }
 
+func (css *consensusSetStub) Start() {
+	// For testing we don't have any syncing logic
+}
+
 func (css *consensusSetStub) addTransactionAsBlock(unlockHash types.UnlockHash, value types.Currency) error {
 	l := len(css.blocks)
 	if l == 0 {

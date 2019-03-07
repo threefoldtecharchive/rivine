@@ -138,7 +138,7 @@ func New(cs modules.ConsensusSet, tpool modules.TransactionPool, w modules.Walle
 		return nil, errors.New("block creator could not save during startup: " + err.Error())
 	}
 
-	//Start the proof of block stake protocol
+	// Start the proof of block stake protocol
 	go b.SolveBlocks()
 
 	return b, nil
