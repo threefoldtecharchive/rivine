@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
@@ -300,6 +301,44 @@ func testPanic(t *testing.T, label string, f func()) {
 		}
 	}()
 	f()
+}
+
+func Test_arbitraryDataFlag(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		output []byte
+	}{
+		{
+			"1",
+			`\x00\x01\x02`,
+			[]byte{0, 1, 2},
+		}, {
+			"2",
+			`\x00\x05\x13`,
+			[]byte{0, 5, 19},
+		}, {
+			"3",
+			`\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`,
+			[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var value []byte
+			flag := ArbitraryDataFlag{arbitraryData: &value}
+			err := flag.Set(tt.input)
+			if err != nil {
+				t.Errorf("error parsing")
+			}
+			if bytes.Compare(value, tt.output) != 0 {
+				t.Errorf("Set() = %v (%s) is not %v", value, string(value), tt.output)
+			}
+			if got := flag.String(); got != tt.input {
+				t.Errorf("String() = %v, want %v", got, tt.input)
+			}
+		})
+	}
 }
 
 const testTimeNow = 1525600388
