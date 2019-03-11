@@ -63,6 +63,12 @@ const (
 	// be spent after at least the specified amount of identities have agreed,
 	// by means of providing their signature.
 	UnlockTypeMultiSig
+
+	// UnlockTypeDelegate provides a condition in which a party can "delegate"
+	// the use of an asset to another party, without giving that other party
+	// full controll over the asset. In practice, it is only usefull for
+	// blockstakes
+	UnlockTypeDelegate
 )
 
 var (

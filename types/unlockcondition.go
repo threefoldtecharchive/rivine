@@ -293,6 +293,18 @@ const (
 	//
 	// Implemented by the MultiSignatureCondition type
 	ConditionTypeMultiSignature
+
+	// ConditionTypeDelegate defines an unlock condition which `delegates` an
+	// asset to another party. The condition keeps track of the original owner
+	// and the receiving party of the delegation. In order to fulfill the
+	// condition, a SingleSignatureFulfillment can be given by either the
+	// owner, or the delegee. This condition has first class support in the
+	// consensus rules, and currently only makes sense in the context of a
+	// blockstake output. This ouptut can then be used to allow some party
+	// to create blocks, without giving them actual ownership of the asset.
+	//
+	// Implemented by the DelegateCondition type
+	ConditionTypeDelegate
 )
 
 // The following enumeration defines the different possible and standard
@@ -444,6 +456,7 @@ var (
 		ConditionTypeAtomicSwap:     func() MarshalableUnlockCondition { return &AtomicSwapCondition{} },
 		ConditionTypeTimeLock:       func() MarshalableUnlockCondition { return &TimeLockCondition{} },
 		ConditionTypeMultiSignature: func() MarshalableUnlockCondition { return &MultiSignatureCondition{} },
+		ConditionTypeDelegate:       func() MarshalableUnlockCondition { return &DelegateCondition{} },
 	}
 	// Manipulated by the RegisterUnlockFulfillmentType function,
 	// and used by the UnlockFulfillmentProxy.
@@ -545,6 +558,13 @@ type (
 	// See FulfillmentTypeMultiSignature for more information.
 	MultiSignatureFulfillment struct {
 		Pairs []PublicKeySignaturePair `json:"pairs"`
+	}
+
+	// DelegateCondition implements the ConditionTypeDelegate ConditionType.
+	// See ConditionTypeDelegate for more information
+	DelegateCondition struct {
+		Owner    UnlockHash `json:"owner"`
+		Delegate UnlockHash `json:"owner"`
 	}
 
 	// PublicKeySignaturePair is a public key and a signature created from the corresponding
@@ -1768,6 +1788,108 @@ func (ms *MultiSignatureFulfillment) Marshal(f MarshalFunc) []byte {
 // Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
 func (ms *MultiSignatureFulfillment) Unmarshal(b []byte, f UnmarshalFunc) error {
 	return f(b, &ms.Pairs)
+}
+
+// NewDelegateCondition creates a new delegate unlock condition,
+// using the given unlockhashes as a representation of the identities
+// who can unlock the output
+func NewDelegateCondition(owner UnlockHash, delegate UnlockHash) *DelegateCondition {
+	if build.DEBUG && (owner.Type != UnlockTypePubKey || delegate.Type != UnlockTypePubKey) {
+		panic("Owner and delegate unlock hashes in delegate condition must have the UnlockTypePubKey type")
+	}
+
+	return &DelegateCondition{Owner: owner, Delegate: delegate}
+}
+
+// Fulfill implements UnlockFulfillment.Fulfill
+func (d *DelegateCondition) Fulfill(fulfillment UnlockFulfillment, ctx FulfillContext) error {
+	tf, ok := fulfillment.(*SingleSignatureFulfillment)
+	if !ok {
+		return ErrUnexpectedUnlockFulfillment
+	}
+
+	euh := NewPubKeyUnlockHash(tf.PublicKey)
+
+	// First check if the UnlockHashTypes are correct
+	if d.Delegate.Type != UnlockTypePubKey || d.Owner.Type != UnlockTypePubKey {
+		return ErrUnexpectedUnlockType
+	}
+
+	// If UnlockHashTypes are correct and one of the listed addresses matches
+	// the public key, verify
+	if euh == d.Delegate || euh == d.Owner {
+		return verifyHashUsingPublicKey(tf.PublicKey, ctx.Transaction, tf.Signature, ctx.ExtraObjects)
+	}
+
+	// It was not a listed address, return err
+	return ErrUnauthorizedPubKey
+}
+
+// ConditionType implements UnlockCondition.ConditionType
+func (d *DelegateCondition) ConditionType() ConditionType { return ConditionTypeDelegate }
+
+// IsStandardCondition implements UnlockCondition.IsStandardCondition
+func (d *DelegateCondition) IsStandardCondition(ValidationContext) error {
+	if d.Owner.Type != UnlockTypePubKey {
+		return fmt.Errorf("unsupported owner unlock hash type: %d", d.Owner.Type)
+	}
+
+	if d.Delegate.Type != UnlockTypePubKey {
+		return fmt.Errorf("unsupported delegate unlock hash type: %d", d.Delegate.Type)
+	}
+
+	return nil
+}
+
+// UnlockHash implements UnlockCondition.UnlockHash
+//
+// UnlockHash calculates the root hash of a Merkle tree of the
+// DelegateCondition object. The leaves of this tree are formed by taking the
+// delegate, followed by the owner
+func (d *DelegateCondition) UnlockHash() UnlockHash {
+	var buf bytes.Buffer
+	e := encoder(&buf)
+	tree := crypto.NewTree()
+
+	d.Delegate.MarshalSia(e)
+	tree.Push(buf.Bytes())
+
+	buf.Reset()
+	d.Owner.MarshalSia(e)
+	tree.Push(buf.Bytes())
+
+	return NewUnlockHash(UnlockTypeDelegate, tree.Root())
+}
+
+// UnlockHashSlice implements UnlockHashSliceGetter.UnlockHashSlice
+func (d *DelegateCondition) UnlockHashSlice() []UnlockHash {
+	return UnlockHashSlice{d.Delegate, d.Owner}
+}
+
+// Equal implements UnlockCondition.Equal
+func (d *DelegateCondition) Equal(c UnlockCondition) bool {
+	od, ok := c.(*DelegateCondition)
+	if !ok {
+		// Different type
+		return false
+	}
+
+	return d.Owner == od.Owner && d.Delegate == od.Delegate
+}
+
+// Fulfillable implements UnlockCondition.Fulfillable
+func (d *DelegateCondition) Fulfillable(ctx FulfillableContext) bool {
+	return true
+}
+
+// Marshal implements MarshalableUnlockCondition.Marshal
+func (d *DelegateCondition) Marshal(f MarshalFunc) []byte {
+	return f(d.Delegate, d.Owner)
+}
+
+// Unmarshal implements MarshalableUnlockCondition.Unmarshal
+func (d *DelegateCondition) Unmarshal(b []byte, f UnmarshalFunc) error {
+	return f(b, &d.Delegate, &d.Owner)
 }
 
 // MarshalSia implements siabin.SiaMarshaler.MarshalSia
