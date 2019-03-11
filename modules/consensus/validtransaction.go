@@ -3,12 +3,11 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 // validCoins checks that the coin inputs and outputs are valid in the
@@ -26,8 +25,8 @@ func validCoins(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockHeight,
 		// unmarshall the output bytes
 		var sco types.CoinOutput
 		err = siabin.Unmarshal(scoBytes, &sco)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		coinInputs[sci.ParentID] = sco
 	}

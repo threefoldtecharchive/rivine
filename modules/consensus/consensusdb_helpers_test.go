@@ -4,10 +4,10 @@ package consensus
 // compatibility with the test suite.
 
 import (
+	bolt "github.com/rivine/bbolt"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 // dbBlockHeight is a convenience function allowing blockHeight to be called
@@ -18,7 +18,7 @@ func (cs *ConsensusSet) dbBlockHeight() (bh types.BlockHeight) {
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	return bh
 }
@@ -31,7 +31,7 @@ func (cs *ConsensusSet) dbCurrentBlockID() (id types.BlockID) {
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	return id
 }
@@ -44,7 +44,7 @@ func (cs *ConsensusSet) dbCurrentProcessedBlock() (pb *processedBlock) {
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	return pb
 }
@@ -57,7 +57,7 @@ func (cs *ConsensusSet) dbGetPath(bh types.BlockHeight) (id types.BlockID, err e
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	return id, err
 }
@@ -70,7 +70,7 @@ func (cs *ConsensusSet) dbPushPath(bid types.BlockID) {
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 }
 
@@ -82,7 +82,7 @@ func (cs *ConsensusSet) dbGetBlockMap(id types.BlockID) (pb *processedBlock, err
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	return pb, err
 }
@@ -95,7 +95,7 @@ func (cs *ConsensusSet) dbGetCoinOutput(id types.CoinOutputID) (sco types.CoinOu
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	return sco, err
 }
@@ -110,7 +110,7 @@ func (cs *ConsensusSet) getArbCoinOutput() (scoid types.CoinOutputID, sco types.
 		return siabin.Unmarshal(scoBytes, &sco)
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	if err != nil {
 		return types.CoinOutputID{}, types.CoinOutput{}, err
@@ -126,7 +126,7 @@ func (cs *ConsensusSet) dbGetBlockStakeOutput(id types.BlockStakeOutputID) (sfo 
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 	return sfo, err
 }
@@ -139,6 +139,6 @@ func (cs *ConsensusSet) dbAddBlockStakeOutput(id types.BlockStakeOutputID, sfo t
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Severe(dbErr)
 	}
 }

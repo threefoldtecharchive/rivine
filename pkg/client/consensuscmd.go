@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
@@ -82,7 +83,7 @@ Progress (estimated): %.2f%%
 // the past and dividing by 10 minutes (the block time).
 func (consensusCmd *consensusCmd) estimatedHeightAt(t time.Time) types.BlockHeight {
 	if consensusCmd.cli.Config.GenesisBlockTimestamp == 0 {
-		panic("GenesisBlockTimestamp is undefined")
+		build.Severe("GenesisBlockTimestamp is undefined")
 	}
 	return estimatedHeightBetween(
 		int64(consensusCmd.cli.Config.GenesisBlockTimestamp),

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
 
@@ -26,13 +27,13 @@ type (
 // RegisterTransactionPoolHTTPHandlers registers the default Rivine handlers for all default Rivine TransactionPool HTTP endpoints.
 func RegisterTransactionPoolHTTPHandlers(router Router, cs modules.ConsensusSet, tpool modules.TransactionPool, requiredPassword string) {
 	if cs == nil {
-		panic("no consensus set module given")
+		build.Severe("no consensus set module given")
 	}
 	if tpool == nil {
-		panic("no transaction pool module given")
+		build.Severe("no transaction pool module given")
 	}
 	if router == nil {
-		panic("no httprouter Router given")
+		build.Severe("no httprouter Router given")
 	}
 	router.GET("/transactionpool/transactions", NewTransactionPoolGetTransactionsHandler(cs, tpool))
 	router.POST("/transactionpool/transactions", RequirePasswordHandler(NewTransactionPoolPostTransactionHandler(tpool), requiredPassword))

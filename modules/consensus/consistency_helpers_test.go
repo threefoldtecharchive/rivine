@@ -1,9 +1,9 @@
 package consensus
 
 import (
+	bolt "github.com/rivine/bbolt"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
-
-	"github.com/rivine/bbolt"
 )
 
 // dbConsensusChecksum is a convenience function to call consensusChecksum
@@ -14,7 +14,7 @@ func (cs *ConsensusSet) dbConsensusChecksum() (checksum crypto.Hash) {
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		build.Severe(err)
 	}
 	return checksum
 }

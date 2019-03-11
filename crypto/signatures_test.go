@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/NebulousLabs/fastrand"
@@ -171,7 +172,9 @@ func TestReadWriteSignedObject(t *testing.T) {
 
 	// Disrupt the decoding to get coverage on the failure branch.
 	err = ReadSignedObject(b, &read, 11, pk)
-	if err == nil || err.Error() != "could not decode type crypto.Signature: unexpected EOF" {
+	contains := strings.Contains(err.Error(), "could not decode type crypto.Signature: Severe")
+
+	if err == nil || !contains {
 		t.Fatal(err)
 	}
 

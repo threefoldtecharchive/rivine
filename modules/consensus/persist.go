@@ -6,11 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
-
-	"github.com/rivine/bbolt"
 )
 
 const (
@@ -44,8 +43,8 @@ func (cs *ConsensusSet) loadDB() error {
 		// Check that the genesis block is correct - typically only incorrect
 		// in the event of developer binaries vs. release binaires.
 		genesisID, err := getPath(tx, 0)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		if genesisID != cs.blockRoot.Block.ID() {
 			return errors.New("Blockchain has wrong genesis block, exiting.")

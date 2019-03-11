@@ -3,12 +3,11 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -28,22 +27,22 @@ func commitDiffSetSanity(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirect
 
 	// Diffs should have already been generated for this node.
 	if !pb.DiffsGenerated {
-		panic(errDiffsNotGenerated)
+		build.Severe(errDiffsNotGenerated)
 	}
 
 	// Current node must be the input node's parent if applying, and
 	// current node must be the input node if reverting.
 	if dir == modules.DiffApply {
 		parent, err := getBlockMap(tx, pb.Block.ParentID)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		if parent.Block.ID() != currentBlockID(tx) {
-			panic(errWrongAppliedDiffSet)
+			build.Severe(errWrongAppliedDiffSet)
 		}
 	} else {
 		if pb.Block.ID() != currentBlockID(tx) {
-			panic(errWrongRevertDiffSet)
+			build.Severe(errWrongRevertDiffSet)
 		}
 	}
 }
@@ -145,7 +144,7 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	// Sanity check - the block being applied should have the current block as
 	// a parent.
 	if build.DEBUG && pb.Block.ParentID != currentBlockID(tx) {
-		panic(errInvalidSuccessor)
+		build.Severe(errInvalidSuccessor)
 	}
 
 	// Create the bucket to hold all of the delayed siacoin outputs created by

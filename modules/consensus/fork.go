@@ -3,10 +3,9 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -28,15 +27,15 @@ func backtrackToCurrentPath(tx *bolt.Tx, pb *processedBlock) []*processedBlock {
 		}
 		// Sanity check - an error should only indicate that pb.Height >
 		// blockHeight(tx).
-		if build.DEBUG && err != nil && pb.Height <= blockHeight(tx) {
-			panic(err)
+		if err != nil && pb.Height <= blockHeight(tx) {
+			build.Severe(err)
 		}
 
 		// Prepend the next block to the list of blocks leading from the
 		// current path to the input block.
 		pb, err = getBlockMap(tx, pb.Block.ParentID)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		path = append([]*processedBlock{pb}, path...)
 	}
@@ -49,8 +48,8 @@ func backtrackToCurrentPath(tx *bolt.Tx, pb *processedBlock) []*processedBlock {
 func (cs *ConsensusSet) revertToBlock(tx *bolt.Tx, pb *processedBlock) (revertedBlocks []*processedBlock) {
 	// Sanity check - make sure that pb is in the current path.
 	currentPathID, err := getPath(tx, pb.Height)
-	if build.DEBUG && (err != nil || currentPathID != pb.Block.ID()) {
-		panic(errExternalRevert)
+	if err != nil || currentPathID != pb.Block.ID() {
+		build.Severe(errExternalRevert)
 	}
 
 	// Rewind blocks until 'pb' is the current block.

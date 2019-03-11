@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
+	"github.com/threefoldtech/rivine/build"
 )
 
 const (
@@ -133,7 +134,7 @@ func defaultEncodingTypeMask() EncodingType {
 // and optionally allowing you to mask
 func NewEncodingTypeFlag(def EncodingType, ref *EncodingType, mask EncodingType) EncodingTypeFlag {
 	if ref == nil {
-		panic("no encoding type reference given")
+		build.Severe("no encoding type reference given")
 	}
 	if def == 0 {
 		// default to human encoding
@@ -145,9 +146,9 @@ func NewEncodingTypeFlag(def EncodingType, ref *EncodingType, mask EncodingType)
 	*ref = def
 	// sanity checks
 	if mask&def == 0 {
-		panic(fmt.Sprintf("given default encoding type %d is not covered by given encoding type mask %b", def, mask))
+		build.Severe(fmt.Sprintf("given default encoding type %d is not covered by given encoding type mask %b", def, mask))
 	} else if def != EncodingTypeHuman && def != EncodingTypeJSON && def != EncodingTypeHex {
-		panic(fmt.Sprintf("given default encoding type %d is not a valid encoding type", def))
+		build.Severe(fmt.Sprintf("given default encoding type %d is not a valid encoding type", def))
 	}
 	return EncodingTypeFlag{
 		et:   ref,

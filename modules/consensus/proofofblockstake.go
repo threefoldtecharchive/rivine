@@ -44,8 +44,8 @@ func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight, block t
 		if signedHeight >= 0 {
 			var exist bool
 			block, exist = cs.FindParentBlock(block, 1)
-			if build.DEBUG && !exist {
-				panic("block to be used for stakemodifier does not yet exist")
+			if !exist {
+				build.Severe("block to be used for stakemodifier does not yet exist")
 			}
 			hashof := block.ID()
 			BlockIDHash = big.NewInt(0).SetBytes(hashof[:])

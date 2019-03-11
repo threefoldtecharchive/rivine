@@ -4,11 +4,10 @@ package consensus
 // There is an assumption that the transaction has already been verified.
 
 import (
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 // applyCoinInputs takes all of the coin inputs in a transaction and
@@ -17,8 +16,8 @@ func applyCoinInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 	// Remove all coin inputs from the unspent siacoin outputs list.
 	for _, sci := range t.CoinInputs {
 		sco, err := getCoinOutput(tx, sci.ParentID)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		scod := modules.CoinOutputDiff{
 			Direction:  modules.DiffRevert,
@@ -52,8 +51,8 @@ func applyBlockStakeInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction)
 	for _, sfi := range t.BlockStakeInputs {
 		// Calculate the volume of siacoins to put in the claim output.
 		sfo, err := getBlockStakeOutput(tx, sfi.ParentID)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 
 		// Create the siafund output diff and remove the output from the

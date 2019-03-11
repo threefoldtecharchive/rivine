@@ -26,7 +26,9 @@ func DefaultNetworkName() string {
 	case "dev":
 		return "devnet"
 	default:
-		panic("unknown build.Release tag: " + build.Release)
+		err := "unknown build.Release tag: " + build.Release
+		build.Severe("unknown build.Release tag: " + build.Release)
+		return err
 	}
 }
 

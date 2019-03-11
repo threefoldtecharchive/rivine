@@ -7,12 +7,11 @@ package consensus
 // ignored otherwise, which is suboptimal.
 
 import (
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -108,8 +107,8 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 func blockHeight(tx *bolt.Tx) (height types.BlockHeight) {
 	bh := tx.Bucket(BlockHeight)
 	err := siabin.Unmarshal(bh.Get(BlockHeight), &height)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return
 }
@@ -130,8 +129,8 @@ func blockTimeStamp(tx *bolt.Tx, height types.BlockHeight) (types.Timestamp, err
 // currentBlockID returns the id of the most recent block in the consensus set.
 func currentBlockID(tx *bolt.Tx) types.BlockID {
 	id, err := getPath(tx, blockHeight(tx))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return id
 }
@@ -139,8 +138,8 @@ func currentBlockID(tx *bolt.Tx) types.BlockID {
 // currentProcessedBlock returns the most recent block in the consensus set.
 func currentProcessedBlock(tx *bolt.Tx) *processedBlock {
 	pb, err := getBlockMap(tx, currentBlockID(tx))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return pb
 }
@@ -156,8 +155,8 @@ func getBlockMap(tx *bolt.Tx, id types.BlockID) (*processedBlock, error) {
 	// Decode the block - should never fail.
 	var pb processedBlock
 	err := siabin.Unmarshal(pbBytes, &pb)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return &pb, nil
 }
@@ -166,8 +165,8 @@ func getBlockMap(tx *bolt.Tx, id types.BlockID) (*processedBlock, error) {
 func addBlockMap(tx *bolt.Tx, pb *processedBlock) {
 	id := pb.Block.ID()
 	err := tx.Bucket(BlockMap).Put(id[:], siabin.Marshal(*pb))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -179,8 +178,8 @@ func getPath(tx *bolt.Tx, height types.BlockHeight) (id types.BlockID, err error
 	}
 
 	err = siabin.Unmarshal(idBytes, &id)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return id, nil
 }
@@ -192,20 +191,20 @@ func pushPath(tx *bolt.Tx, bid types.BlockID) {
 	heightBytes := bh.Get(BlockHeight)
 	var oldHeight types.BlockHeight
 	err := siabin.Unmarshal(heightBytes, &oldHeight)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	newHeightBytes := siabin.Marshal(oldHeight + 1)
 	err = bh.Put(BlockHeight, newHeightBytes)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 
 	// Add the block to the block path.
 	bp := tx.Bucket(BlockPath)
 	err = bp.Put(newHeightBytes, bid[:])
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -217,21 +216,21 @@ func popPath(tx *bolt.Tx) {
 	oldHeightBytes := bh.Get(BlockHeight)
 	var oldHeight types.BlockHeight
 	err := siabin.Unmarshal(oldHeightBytes, &oldHeight)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	newHeightBytes := siabin.Marshal(oldHeight - 1)
 	err = bh.Put(BlockHeight, newHeightBytes)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 
 	// Remove the block from the path - make sure to remove the block at
 	// oldHeight.
 	bp := tx.Bucket(BlockPath)
 	err = bp.Delete(oldHeightBytes)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -272,12 +271,12 @@ func addCoinOutput(tx *bolt.Tx, id types.CoinOutputID, sco types.CoinOutput) {
 	*/
 	coinOutputs := tx.Bucket(CoinOutputs)
 	// Sanity check - should not be adding an item that exists.
-	if build.DEBUG && coinOutputs.Get(id[:]) != nil {
-		panic("repeat siacoin output")
+	if coinOutputs.Get(id[:]) != nil {
+		build.Severe("repeat siacoin output")
 	}
 	err := coinOutputs.Put(id[:], siabin.Marshal(sco))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -286,12 +285,12 @@ func addCoinOutput(tx *bolt.Tx, id types.CoinOutputID, sco types.CoinOutput) {
 func removeCoinOutput(tx *bolt.Tx, id types.CoinOutputID) {
 	scoBucket := tx.Bucket(CoinOutputs)
 	// Sanity check - should not be removing an item that is not in the db.
-	if build.DEBUG && scoBucket.Get(id[:]) == nil {
-		panic("nil siacoin output")
+	if scoBucket.Get(id[:]) == nil {
+		build.Severe("nil siacoin output")
 	}
 	err := scoBucket.Delete(id[:])
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -317,15 +316,15 @@ func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.Blo
 	// Sanity check - should not be adding a blockstake output with a value of
 	// zero.
 	if build.DEBUG && sfo.Value.IsZero() {
-		panic("zero value blockstake being added")
+		build.Severe("zero value blockstake being added")
 	}
 	// Sanity check - should not be adding an item already in the db.
 	if build.DEBUG && blockstakeOutputs.Get(id[:]) != nil {
-		panic("repeat blockstake output")
+		build.Severe("repeat blockstake output")
 	}
 	err := blockstakeOutputs.Put(id[:], siabin.Marshal(sfo))
 	if build.DEBUG && err != nil {
-		panic(err)
+		build.Severe(err)
 	}
 }
 
@@ -333,12 +332,12 @@ func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.Blo
 // returned if the blockstake output is not in the database prior to removal.
 func removeBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
 	sfoBucket := tx.Bucket(BlockStakeOutputs)
-	if build.DEBUG && sfoBucket.Get(id[:]) == nil {
-		panic("nil blockstake output")
+	if sfoBucket.Get(id[:]) == nil {
+		build.Severe("nil blockstake output")
 	}
 	err := sfoBucket.Delete(id[:])
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -346,24 +345,24 @@ func removeBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
 func addTxnIDMapping(tx *bolt.Tx, longID types.TransactionID, shortID types.TransactionShortID) {
 	txIDMapBucket := tx.Bucket(TransactionIDMap)
 	// Sanity check - should not be adding an item already in the db.
-	if build.DEBUG && txIDMapBucket.Get(longID[:]) != nil {
-		panic("repeat transaction id mapping")
+	if txIDMapBucket.Get(longID[:]) != nil {
+		build.Severe("repeat transaction id mapping")
 	}
 	err := txIDMapBucket.Put(longID[:], siabin.Marshal(shortID))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
 // removeTxnIDMappng removes a transaction ID mapping from the database.
 func removeTxnIDMapping(tx *bolt.Tx, longID types.TransactionID) {
 	txIDMapBucket := tx.Bucket(TransactionIDMap)
-	if build.DEBUG && txIDMapBucket.Get(longID[:]) == nil {
-		panic("nil txID mapping")
+	if txIDMapBucket.Get(longID[:]) == nil {
+		build.Severe("nil txID mapping")
 	}
 	err := txIDMapBucket.Delete(longID[:])
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -382,22 +381,22 @@ func getTransactionShortID(tx *bolt.Tx, id types.TransactionID) (types.Transacti
 // addDCO adds a delayed coin output to the consensus set.
 func addDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID, sco types.CoinOutput) {
 	// Sanity check - dco should never have a value of zero.
-	if build.DEBUG && sco.Value.IsZero() {
-		panic("zero-value dco being added")
+	if sco.Value.IsZero() {
+		build.Severe("zero-value dco being added")
 	}
 	// Sanity check - output should not already be in the full set of outputs.
-	if build.DEBUG && tx.Bucket(CoinOutputs).Get(id[:]) != nil {
-		panic("dco already in output set")
+	if tx.Bucket(CoinOutputs).Get(id[:]) != nil {
+		build.Severe("dco already in output set")
 	}
 	dscoBucketID := append(prefixDCO, siabin.EncUint64(uint64(bh))...)
 	dscoBucket := tx.Bucket(dscoBucketID)
 	// Sanity check - should not be adding an item already in the db.
-	if build.DEBUG && dscoBucket.Get(id[:]) != nil {
-		panic(errRepeatInsert)
+	if dscoBucket.Get(id[:]) != nil {
+		build.Severe(errRepeatInsert)
 	}
 	err := dscoBucket.Put(id[:], siabin.Marshal(sco))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -406,12 +405,12 @@ func removeDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID) {
 	bucketID := append(prefixDCO, siabin.Marshal(bh)...)
 	// Sanity check - should not remove an item not in the db.
 	dscoBucket := tx.Bucket(bucketID)
-	if build.DEBUG && dscoBucket.Get(id[:]) == nil {
-		panic("nil dco")
+	if dscoBucket.Get(id[:]) == nil {
+		build.Severe("nil dco")
 	}
 	err := dscoBucket.Delete(id[:])
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -420,8 +419,8 @@ func removeDCO(tx *bolt.Tx, bh types.BlockHeight, id types.CoinOutputID) {
 func createDCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
 	bucketID := append(prefixDCO, siabin.Marshal(bh)...)
 	_, err := tx.CreateBucket(bucketID)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }
 
@@ -430,15 +429,15 @@ func deleteDCOBucket(tx *bolt.Tx, bh types.BlockHeight) {
 	// Delete the bucket.
 	bucketID := append(prefixDCO, siabin.Marshal(bh)...)
 	bucket := tx.Bucket(bucketID)
-	if build.DEBUG && bucket == nil {
-		panic(errNilBucket)
+	if bucket == nil {
+		build.Severe(errNilBucket)
 	}
 
 	// TODO: Check that the bucket is empty. Using Stats() does not work at the
 	// moment, as there is an error in the boltdb code.
 
 	err := tx.DeleteBucket(bucketID)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 }

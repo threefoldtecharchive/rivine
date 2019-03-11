@@ -60,8 +60,8 @@ func convertLegacyDatabase(filePath string, log *persist.Logger) (db *persist.Bo
 	}
 	if err != nil {
 		err := db.Close()
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 	}
 	return

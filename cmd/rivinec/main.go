@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/pkg/client"
@@ -16,7 +17,7 @@ func main() {
 	bchainInfo := types.DefaultBlockchainInfo()
 	cliClient, err := client.NewCommandLineClient("", bchainInfo.Name, daemon.RivineUserAgent)
 	if err != nil {
-		panic(err)
+		build.Severe(err)
 	}
 	// define preRunE, as to ensure we go to a default config should it be required
 	cliClient.PreRunE = func(cfg *client.Config) (*client.Config, error) {

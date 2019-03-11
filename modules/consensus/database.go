@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"os"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -121,8 +120,8 @@ func (cs *ConsensusSet) initDB(tx *bolt.Tx) error {
 func inconsistencyDetected(tx *bolt.Tx) (detected bool) {
 	inconsistencyBytes := tx.Bucket(Consistency).Get(Consistency)
 	err := siabin.Unmarshal(inconsistencyBytes, &detected)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return detected
 }
@@ -133,8 +132,8 @@ func markInconsistency(tx *bolt.Tx) {
 	// Place a 'true' in the consistency bucket to indicate that
 	// inconsistencies have been found.
 	err := tx.Bucket(Consistency).Put(Consistency, siabin.Marshal(true))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 
 }

@@ -199,9 +199,7 @@ func (t Transaction) legacyInputSigHash(inputIndex uint64, extraObjects ...inter
 func legacyUnlockHashCondition(uc UnlockCondition) UnlockHash {
 	uhc, ok := uc.(*UnlockHashCondition)
 	if !ok {
-		if build.DEBUG {
-			panic(fmt.Sprintf("unexpected condition %[1]v (%[1]T) encountered", uc))
-		}
+		build.Severe(fmt.Sprintf("unexpected condition %[1]v (%[1]T) encountered", uc))
 		return NilUnlockHash
 	}
 	return uhc.TargetUnlockHash
@@ -217,9 +215,7 @@ func legacyUnlockHashFromFulfillment(uf UnlockFulfillment) UnlockHash {
 			crypto.HashObject(siabin.MarshalAll(
 				tuf.Sender, tuf.Receiver, tuf.HashedSecret, tuf.TimeLock)))
 	default:
-		if build.DEBUG {
-			panic(fmt.Sprintf("unexpected fulfillment %[1]v (%[1]T) encountered", uf))
-		}
+		build.Severe(fmt.Sprintf("unexpected fulfillment %[1]v (%[1]T) encountered", uf))
 		return NilUnlockHash
 	}
 }

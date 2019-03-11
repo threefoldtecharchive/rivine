@@ -3,24 +3,18 @@ package consensus
 import (
 	"bytes"
 	"errors"
-	"fmt"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 // manageErr handles an error detected by the consistency checks.
 func manageErr(tx *bolt.Tx, err error) {
 	markInconsistency(tx)
-	if build.DEBUG {
-		panic(err)
-	} else {
-		fmt.Println(err)
-	}
+	build.Severe(err)
 }
 
 // consensusChecksum grabs a checksum of the consensus set by pushing all of

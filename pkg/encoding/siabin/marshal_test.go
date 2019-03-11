@@ -116,6 +116,9 @@ func TestEncode(t *testing.T) {
 
 // TestDecode tests the Decode function.
 func TestDecode(t *testing.T) {
+	// set contains default false
+	contains := false
+
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -130,7 +133,9 @@ func TestDecode(t *testing.T) {
 
 	// bad boolean
 	err := Unmarshal([]byte{3}, new(bool))
-	if err == nil || err.Error() != "could not decode type bool: boolean value was not 0 or 1" {
+	contains = strings.Contains(err.Error(), "could not decode type bool: Severe")
+
+	if err == nil || !contains {
 		t.Error("expected bool error, got", err)
 	}
 
@@ -142,26 +147,34 @@ func TestDecode(t *testing.T) {
 
 	// unknown type
 	err = Unmarshal([]byte{1, 2, 3}, new(map[int]int))
-	if err == nil || err.Error() != "could not decode type map[int]int: unknown type" {
+	contains = strings.Contains(err.Error(), "could not decode type map[int]int:")
+
+	if err == nil || !contains {
 		t.Error("expected unknown type error, got", err)
 	}
 
 	// big slice (larger than MaxSliceSize)
 	err = Unmarshal(EncUint64(MaxSliceSize+1), new([]byte))
-	if err == nil || err.Error() != "could not decode type []uint8: encoded slice is too large" {
+	contains = strings.Contains(err.Error(), "could not decode type []uint8: Severe error")
+
+	if err == nil || !contains {
 		t.Error("expected large slice error, got", err)
 	}
 
 	// massive slice (larger than MaxInt32)
 	err = Unmarshal(EncUint64(1<<32), new([]byte))
-	if err == nil || err.Error() != "could not decode type []uint8: encoded slice is too large" {
+	contains = strings.Contains(err.Error(), "could not decode type []uint8: Severe error")
+
+	if err == nil || !contains {
 		t.Error("expected large slice error, got", err)
 	}
 
 	// many small slices (total larger than maxDecodeLen)
 	bigSlice := strings.Split(strings.Repeat("0123456789abcdefghijklmnopqrstuvwxyz", (MaxSliceSize/16)-1), "0")
 	err = Unmarshal(Marshal(bigSlice), new([]string))
-	if err == nil || err.Error() != "could not decode type []string: encoded object exceeds size limit" {
+	contains = strings.Contains(err.Error(), "could not decode type []string:")
+
+	if err == nil || !contains {
 		t.Error("expected size limit error, got", err)
 	}
 
@@ -175,7 +188,9 @@ func TestDecode(t *testing.T) {
 	}
 	// special case, not covered by testStructs
 	err = dec.Decode(new([3]byte))
-	if err == nil || err.Error() != "could not decode type [3]uint8: EOF" {
+	contains = strings.Contains(err.Error(), "could not decode type [3]uint8")
+
+	if err == nil || !contains {
 		t.Error("expected EOF error, got", err)
 	}
 

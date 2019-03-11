@@ -8,12 +8,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/types"
-	"github.com/spf13/cobra"
 )
 
 // ConfigFromDaemonConstants returns CLI constants using
@@ -57,11 +57,11 @@ type Config struct {
 func Wrap(fn interface{}) func(*cobra.Command, []string) {
 	fnVal, fnType := reflect.ValueOf(fn), reflect.TypeOf(fn)
 	if fnType.Kind() != reflect.Func {
-		panic("wrapped function has wrong type signature")
+		build.Severe("wrapped function has wrong type signature")
 	}
 	for i := 0; i < fnType.NumIn(); i++ {
 		if fnType.In(i).Kind() != reflect.String {
-			panic("wrapped function has wrong type signature")
+			build.Severe("wrapped function has wrong type signature")
 		}
 	}
 
@@ -84,18 +84,18 @@ func Wrap(fn interface{}) func(*cobra.Command, []string) {
 func WrapWithConfig(config *Config, fn interface{}) func(*cobra.Command, []string) {
 	fnVal, fnType := reflect.ValueOf(fn), reflect.TypeOf(fn)
 	if fnType.Kind() != reflect.Func {
-		panic("wrapped function has wrong type signature")
+		build.Severe("wrapped function has wrong type signature")
 	}
 	numIn := fnType.NumIn()
 	if numIn < 1 {
-		panic("wrapped function has insufficient amount of arguments")
+		build.Severe("wrapped function has insufficient amount of arguments")
 	}
 	if fnType.In(0).Elem() != reflect.TypeOf(config) {
-		panic("wrapped function should have a *Config param as first argument")
+		build.Severe("wrapped function should have a *Config param as first argument")
 	}
 	for i := 1; i < numIn; i++ {
 		if fnType.In(i).Kind() != reflect.String {
-			panic("wrapped function has wrong type signature")
+			build.Severe("wrapped function has wrong type signature")
 		}
 	}
 

@@ -1,7 +1,9 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/threefoldtech/rivine/crypto"
@@ -176,7 +178,8 @@ func TestTargetNegativeIntToTarget(t *testing.T) {
 	// panic.
 	defer func() {
 		r := recover()
-		if r != ErrNegativeTarget {
+		contains := strings.Contains(fmt.Sprintf("%v", r), "Severe error: Severe error: negative")
+		if !contains {
 			t.Error("no panic occurred when trying to create a negative target")
 		}
 	}()
@@ -195,7 +198,8 @@ func TestTargetNegativeRatToTarget(t *testing.T) {
 	// panic.
 	defer func() {
 		r := recover()
-		if r != ErrNegativeTarget {
+		contains := strings.Contains(fmt.Sprintf("%v", r), "Severe error: Severe error: negative")
+		if !contains {
 			t.Error("no panic occurred when trying to create a negative target")
 		}
 	}()

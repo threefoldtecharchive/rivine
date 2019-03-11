@@ -18,13 +18,13 @@ import (
 // newTestingGateway returns a gateway ready to use in a testing environment.
 func newTestingGateway(t *testing.T) *Gateway {
 	if testing.Short() {
-		panic("newTestingGateway called during short test")
+		build.Severe("newTestingGateway called during short test")
 	}
 
 	g, err := New("localhost:0", false, build.TempDir("gateway", t.Name()),
 		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
 	if err != nil {
-		panic(err)
+		build.Severe(err)
 	}
 	return g
 }
@@ -33,13 +33,13 @@ func newTestingGateway(t *testing.T) *Gateway {
 // environment. The gateway's persist folder will have the specified suffix.
 func newNamedTestingGateway(t *testing.T, suffix string) *Gateway {
 	if testing.Short() {
-		panic("newTestingGateway called during short test")
+		build.Severe("newTestingGateway called during short test")
 	}
 
 	g, err := New("localhost:0", false, build.TempDir("gateway", t.Name()+suffix),
 		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
 	if err != nil {
-		panic(err)
+		build.Severe(err)
 	}
 	return g
 }
@@ -194,7 +194,7 @@ func TestParallelClose(t *testing.T) {
 		go func(i int) {
 			err := gs[i].Connect(gs[i+1].myAddr)
 			if err != nil {
-				panic(err)
+				build.Severe(err)
 			}
 			wg.Done()
 		}(i)
@@ -207,7 +207,7 @@ func TestParallelClose(t *testing.T) {
 		go func(i int) {
 			err := gs[i].Close()
 			if err != nil {
-				panic(err)
+				build.Severe(err)
 			}
 			wg.Done()
 		}(i)
