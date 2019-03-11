@@ -223,15 +223,15 @@ func EncodingTypeFlagDescription(mask EncodingType) string {
 	return "enum flag to define how to encode the output, options: " + strings.Join(options, "|")
 }
 
-// ArbitraryDataFlagVar defines a []modules.NetAddress flag with specified name and usage string.
-// The argument s points to a []modules.NetAddress variable in which to store the validated values of the flags.
+// ArbitraryDataFlagVar defines a ArbitraryData flag with specified name and usage string.
+// The argument s points to an array of bytes variable in which to store the validated values of the flags.
 // The value of each argument will not try to be separated by comma, each value has to be defined as a separate flag (using the same name).
 func ArbitraryDataFlagVar(f *pflag.FlagSet, s *[]byte, name string, usage string) {
 	f.Var(&ArbitraryDataFlag{arbitraryData: s}, name, usage)
 }
 
-// ArbitraryDataFlagVarP defines a []modules.NetAddress flag with specified name, shorthand and usage string.
-// The argument s points to a []modules.NetAddress variable in which to store the validated values of the flags.
+// ArbitraryDataFlagVarP defines a ArbitraryData flag with specified name, shorthand and usage string.
+// The argument s points to an array of bytes variable in which to store the validated values of the flags.
 // The value of each argument will not try to be separated by comma, each value has to be defined as a separate flag (using the same name or shorthand).
 func ArbitraryDataFlagVarP(f *pflag.FlagSet, s *[]byte, name, shorthand string, usage string) {
 	f.VarP(&ArbitraryDataFlag{arbitraryData: s}, name, shorthand, usage)
@@ -260,10 +260,6 @@ func (flag *ArbitraryDataFlag) String() string {
 	}
 
 	s := strconv.Quote(string(byteArray[:]))
-
-	if s == "" {
-		return ""
-	}
 	return strings.Trim(s, "\"")
 }
 

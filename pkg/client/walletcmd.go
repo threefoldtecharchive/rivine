@@ -294,7 +294,7 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 	// custom arbitrarydata flag
 	clipkg.ArbitraryDataFlagVar(sendCoinsCmd.Flags(), &walletCmd.sendCoinsCfg.Data,
 		"data", "optional arbitrary data (or description) to attach to transaction")
-	clipkg.ArbitraryDataFlagVar(sendCoinsCmd.Flags(), &walletCmd.sendBlockStakesCfg.Data,
+	clipkg.ArbitraryDataFlagVar(sendBlockStakesCmd.Flags(), &walletCmd.sendBlockStakesCfg.Data,
 		"data", "optional arbitrary data (or description) to attach to transaction")
 
 	// return root command
