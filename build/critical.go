@@ -14,9 +14,7 @@ func Critical(v ...interface{}) {
 	s := "Critical error: " + fmt.Sprintln(v...) + "Please submit a bug report here: https://github.com/threefoldtech/rivine/issues\n"
 	debug.PrintStack()
 	os.Stderr.WriteString(s)
-	if DEBUG {
-		panic(s)
-	}
+	panic(s)
 }
 
 // Severe will print a message to os.Stderr. If DEBUG has been set panic will

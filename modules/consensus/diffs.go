@@ -27,7 +27,7 @@ func commitDiffSetSanity(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirect
 
 	// Diffs should have already been generated for this node.
 	if !pb.DiffsGenerated {
-		build.Severe(errDiffsNotGenerated)
+		build.Critical(errDiffsNotGenerated)
 	}
 
 	// Current node must be the input node's parent if applying, and
@@ -38,11 +38,11 @@ func commitDiffSetSanity(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirect
 			build.Severe(err)
 		}
 		if parent.Block.ID() != currentBlockID(tx) {
-			build.Severe(errWrongAppliedDiffSet)
+			build.Critical(errWrongAppliedDiffSet)
 		}
 	} else {
 		if pb.Block.ID() != currentBlockID(tx) {
-			build.Severe(errWrongRevertDiffSet)
+			build.Critical(errWrongRevertDiffSet)
 		}
 	}
 }

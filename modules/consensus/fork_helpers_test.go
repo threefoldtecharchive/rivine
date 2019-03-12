@@ -33,7 +33,7 @@ func (cs *ConsensusSet) dbForkBlockchain(pb *processedBlock) (revertedBlocks, ap
 		return nil
 	})
 	if updateErr != nil {
-		build.Severe(updateErr)
+		build.Critical(updateErr)
 	}
 	return revertedBlocks, appliedBlocks, err
 }

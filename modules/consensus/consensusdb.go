@@ -272,7 +272,7 @@ func addCoinOutput(tx *bolt.Tx, id types.CoinOutputID, sco types.CoinOutput) {
 	coinOutputs := tx.Bucket(CoinOutputs)
 	// Sanity check - should not be adding an item that exists.
 	if coinOutputs.Get(id[:]) != nil {
-		build.Severe("repeat siacoin output")
+		build.Severe("repeat coin output")
 	}
 	err := coinOutputs.Put(id[:], siabin.Marshal(sco))
 	if err != nil {
@@ -286,7 +286,7 @@ func removeCoinOutput(tx *bolt.Tx, id types.CoinOutputID) {
 	scoBucket := tx.Bucket(CoinOutputs)
 	// Sanity check - should not be removing an item that is not in the db.
 	if scoBucket.Get(id[:]) == nil {
-		build.Severe("nil siacoin output")
+		build.Severe("nil coin output")
 	}
 	err := scoBucket.Delete(id[:])
 	if err != nil {
@@ -315,15 +315,15 @@ func addBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID, sfo types.Blo
 	blockstakeOutputs := tx.Bucket(BlockStakeOutputs)
 	// Sanity check - should not be adding a blockstake output with a value of
 	// zero.
-	if build.DEBUG && sfo.Value.IsZero() {
+	if sfo.Value.IsZero() {
 		build.Severe("zero value blockstake being added")
 	}
 	// Sanity check - should not be adding an item already in the db.
-	if build.DEBUG && blockstakeOutputs.Get(id[:]) != nil {
+	if blockstakeOutputs.Get(id[:]) != nil {
 		build.Severe("repeat blockstake output")
 	}
 	err := blockstakeOutputs.Put(id[:], siabin.Marshal(sfo))
-	if build.DEBUG && err != nil {
+	if err != nil {
 		build.Severe(err)
 	}
 }

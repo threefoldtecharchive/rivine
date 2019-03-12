@@ -17,7 +17,7 @@ func main() {
 	bchainInfo := types.DefaultBlockchainInfo()
 	cliClient, err := client.NewCommandLineClient("", bchainInfo.Name, daemon.RivineUserAgent)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	// define preRunE, as to ensure we go to a default config should it be required
 	cliClient.PreRunE = func(cfg *client.Config) (*client.Config, error) {

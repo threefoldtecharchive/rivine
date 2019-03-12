@@ -257,7 +257,7 @@ func (cs *ConsensusSet) managedAcceptBlock(b types.Block) error {
 		return err
 	}
 	// If appliedBlocks is 0, revertedBlocks will also be 0.
-	if build.DEBUG && len(changeEntry.AppliedBlocks) == 0 && len(changeEntry.RevertedBlocks) != 0 {
+	if len(changeEntry.AppliedBlocks) == 0 && len(changeEntry.RevertedBlocks) != 0 {
 		build.Severe("appliedBlocks and revertedBlocks are mismatched!")
 	}
 	// Updates complete, demote the lock.

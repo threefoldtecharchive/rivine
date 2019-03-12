@@ -183,7 +183,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		// need to flush the response before shutting down the server
 		f, ok := w.(http.Flusher)
 		if !ok {
-			err := errors.New("cannot revert to block outside of current path")
+			err := errors.New("Server does not support flushing")
 			build.Severe(err)
 		}
 		f.Flush()

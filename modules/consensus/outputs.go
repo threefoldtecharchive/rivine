@@ -13,7 +13,7 @@ func (cs *ConsensusSet) GetCoinOutput(id types.CoinOutputID) (co types.CoinOutpu
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return co, err
 }
