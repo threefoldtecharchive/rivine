@@ -27,6 +27,8 @@ func TestUnlockConditionSiaEncoding(t *testing.T) {
 		`032a00000000000000111111111111111101016363636363636363636363636363636363636363636363636363636363636363`, // using (pubKey) unlock hash condition
 		// MultiSig condition
 		`0452000000000000000200000000000000020000000000000001e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f7001a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35`,
+		// DelegateCondition
+		`054200000000000000010405040504050405040504050405040504050405040504050405040504050405010603060306030603060306030603060306030603060306030603060306030603`,
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -69,6 +71,8 @@ func TestUnlockConditionRivineEncoding(t *testing.T) {
 		`0354111111111111111101016363636363636363636363636363636363636363636363636363636363636363`, // using (pubKey) unlock hash condition
 		// MultiSig condition
 		`049602000000000000000401e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f7001a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35`,
+		// Delegate condition
+		`0584010405040504050405040504050405040504050405040504050405040504050405010603060306030603060306030603060306030603060306030603060306030603`,
 	}
 	for idx, testCase := range testCases {
 		b, err := hex.DecodeString(testCase)
@@ -308,6 +312,15 @@ func TestUnlockConditionJSONEncoding(t *testing.T) {
 		}`,
 			``,
 		},
+		// delegate condition
+		{
+			`{
+				"type": 5,
+				"data": {
+					"delegate": "01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105",
+					"owner": "01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"
+				}
+			}`, ``},
 	}
 	for idx, testCase := range testCases {
 		var up UnlockConditionProxy
@@ -875,6 +888,72 @@ func TestUnlockConditionEqual(t *testing.T) {
 				},
 			},
 			"edge case, where first condition has two times the unlockhashes the second condition has, but length is equal",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				Delegate: unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+			},
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				Delegate: unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+			},
+			"",
+		},
+		{
+			&DelegateCondition{
+				Owner:    NewUnlockHash(UnlockTypePubKey, crypto.Hash{}),
+				Delegate: NewUnlockHash(UnlockTypePubKey, crypto.Hash{}),
+			},
+			&DelegateCondition{
+				Owner:    NewUnlockHash(UnlockTypePubKey, crypto.Hash{}),
+				Delegate: NewUnlockHash(UnlockTypePubKey, crypto.Hash{}),
+			},
+			"",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				Delegate: unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+			},
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+				Delegate: unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+			},
+			"Delegate and owner swapped",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				Delegate: unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+			},
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+				Delegate: unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+			},
+			"Different owner",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				Delegate: unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+			},
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				Delegate: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+			},
+			"Different delegate",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01e89843e4b8231a01ba18b254d530110364432aafab8206bea72e5a20eaa55f70b1ccc65e2105"),
+				Delegate: unlockHashFromHex("01a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc353bdcf54be7d8"),
+			},
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				Delegate: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+			},
+			"Different delegate and owner",
 		},
 	}
 	for idx, testCase := range testCases {
@@ -2141,6 +2220,32 @@ func TestValidFulFill(t *testing.T) {
 				PrivateKey: sk2[:],
 			},
 		},
+		{
+			// Delegate can unlock
+			&DelegateCondition{
+				Owner:    NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				Delegate: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk2))),
+			},
+			func() MarshalableUnlockFulfillment {
+				return &SingleSignatureFulfillment{
+					PublicKey: ed25519pk2,
+				}
+			},
+			sk2,
+		},
+		{
+			// Owner can unlock
+			&DelegateCondition{
+				Owner:    NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				Delegate: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk2))),
+			},
+			func() MarshalableUnlockFulfillment {
+				return &SingleSignatureFulfillment{
+					PublicKey: ed25519pk,
+				}
+			},
+			sk,
+		},
 	}
 	for idx, testCase := range testCases {
 		// test each testcase separately
@@ -2429,6 +2534,48 @@ func TestIsStandardCondition(t *testing.T) {
 				},
 			},
 			"only pubKey unlockhashes are allowed",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("015fe50b9c596d8717e5e7ba79d5a7c9c8b82b1427a04d5c0771268197c90e99dccbcdf0ba9c90"),
+				Delegate: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+			},
+			"",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51"),
+				Delegate: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+			},
+			"",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+				Delegate: unlockHashFromHex("01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9aa9e7c6f58893"),
+			},
+			"Owner must be a pubkey unlock hash",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51"),
+				Delegate: unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+			},
+			"Delegate must be a pubkey unlock hash",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("023b64dcf61cbb2a0d2df21cd6d63240a52f18dfb8e8804ba8c9d48dfc1c3cfd479fef1ede784c"),
+				Delegate: unlockHashFromHex("02a24c97c80eeac111aa4bcbb0ac8ffc364fa9b22da10d3054778d2332f68b365e5e5af8e71541"),
+			},
+			"Owner and Delegate must be a pubkey unlock hash",
+		},
+		{
+			&DelegateCondition{
+				Owner:    unlockHashFromHex("01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51"),
+				Delegate: unlockHashFromHex("01fc8714235d549f890f35e52d745b9eeeee34926f96c4b9ef1689832f338d9349b453898f7e51"),
+			},
+			"Owner can't be the same as the delegate",
 		},
 	}
 	for idx, testCase := range testCases {
@@ -3200,6 +3347,11 @@ func TestUnlockConditionFulfillable(t *testing.T) {
 		},
 		{
 			&MultiSignatureCondition{},
+			FulfillableContext{},
+			true,
+		},
+		{
+			&DelegateCondition{},
 			FulfillableContext{},
 			true,
 		},

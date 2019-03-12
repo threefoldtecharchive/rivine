@@ -563,8 +563,8 @@ type (
 	// DelegateCondition implements the ConditionTypeDelegate ConditionType.
 	// See ConditionTypeDelegate for more information
 	DelegateCondition struct {
+		Delegate UnlockHash `json:"delegate"`
 		Owner    UnlockHash `json:"owner"`
-		Delegate UnlockHash `json:"owner"`
 	}
 
 	// PublicKeySignaturePair is a public key and a signature created from the corresponding
@@ -1798,6 +1798,10 @@ func NewDelegateCondition(owner UnlockHash, delegate UnlockHash) *DelegateCondit
 		panic("Owner and delegate unlock hashes in delegate condition must have the UnlockTypePubKey type")
 	}
 
+	if build.DEBUG && owner == delegate {
+		panic("Owner and delegate can't be the same")
+	}
+
 	return &DelegateCondition{Owner: owner, Delegate: delegate}
 }
 
@@ -1836,6 +1840,10 @@ func (d *DelegateCondition) IsStandardCondition(ValidationContext) error {
 
 	if d.Delegate.Type != UnlockTypePubKey {
 		return fmt.Errorf("unsupported delegate unlock hash type: %d", d.Delegate.Type)
+	}
+
+	if d.Owner == d.Delegate {
+		return fmt.Errorf("owner and delegate can't be the same")
 	}
 
 	return nil
