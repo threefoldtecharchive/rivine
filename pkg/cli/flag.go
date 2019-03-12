@@ -106,6 +106,10 @@ type (
 	}
 	// EncodingType defines an enum, to represent all encoding options.
 	EncodingType uint8
+
+	ArbitraryDataFlag struct {
+		arbitraryData *[]byte
+	}
 )
 
 const (
@@ -217,6 +221,46 @@ func EncodingTypeFlagDescription(mask EncodingType) string {
 		options = append(options, "human")
 	}
 	return "enum flag to define how to encode the output, options: " + strings.Join(options, "|")
+}
+
+// ArbitraryDataFlagVar defines a ArbitraryData flag with specified name and usage string.
+// The argument s points to an array of bytes variable in which to store the validated values of the flags.
+// The value of each argument will not try to be separated by comma, each value has to be defined as a separate flag (using the same name).
+func ArbitraryDataFlagVar(f *pflag.FlagSet, s *[]byte, name string, usage string) {
+	f.Var(&ArbitraryDataFlag{arbitraryData: s}, name, usage)
+}
+
+// ArbitraryDataFlagVarP defines a ArbitraryData flag with specified name, shorthand and usage string.
+// The argument s points to an array of bytes variable in which to store the validated values of the flags.
+// The value of each argument will not try to be separated by comma, each value has to be defined as a separate flag (using the same name or shorthand).
+func ArbitraryDataFlagVarP(f *pflag.FlagSet, s *[]byte, name, shorthand string, usage string) {
+	f.VarP(&ArbitraryDataFlag{arbitraryData: s}, name, shorthand, usage)
+}
+
+// Set implements pflag.Value.Set
+func (flag *ArbitraryDataFlag) Set(str string) error {
+	if out, err := strconv.Unquote(`"` + str + `"`); err == nil {
+		*flag.arbitraryData = []byte(out)
+	} else {
+		*flag.arbitraryData = []byte(str)
+	}
+	return nil
+}
+
+// Type implements pflag.Value.Type
+func (flag *ArbitraryDataFlag) Type() string {
+	return "ArbitraryDataFlag"
+}
+
+// String implements pflag.Value.String
+func (flag *ArbitraryDataFlag) String() string {
+	byteArray := *flag.arbitraryData
+	if len(byteArray) == 0 {
+		return ""
+	}
+
+	s := strconv.Quote(string(byteArray[:]))
+	return strings.Trim(s, "\"")
 }
 
 var computeTimeNow = func() time.Time {
