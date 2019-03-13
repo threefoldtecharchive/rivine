@@ -75,6 +75,7 @@ func (p *peer) accept() (modules.PeerConn, error) {
 // to handle its requests and increments the remotePeers accordingly
 func (g *Gateway) addPeer(p *peer) {
 	g.peers[p.NetAddress] = p
+	g.log.Debugln("Added peer on address", p.NetAddress)
 	go g.threadedListenPeer(p)
 }
 
@@ -729,6 +730,7 @@ func (g *Gateway) Disconnect(addr modules.NetAddress) error {
 	delete(g.nodes, addr)
 	g.mu.Unlock()
 
+	g.log.Debugln("Disconnected from peer:", addr)
 	g.log.Println("INFO: disconnected from peer", addr)
 	return nil
 }
