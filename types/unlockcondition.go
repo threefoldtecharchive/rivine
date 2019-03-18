@@ -173,6 +173,11 @@ type (
 		// BlockTime defines the time of the currently last registered block,
 		// the transaction belonged to.
 		BlockTime Timestamp
+		// IsBlockCreatingTx defines if a transaction is used for the sole purpose
+		// of creating a block. More specifically, a transaction is considered a
+		// block creating transaction if it only respends a blockstake output
+		// for the purpose of the proof of blockstake protocol
+		IsBlockCreatingTx bool
 	}
 
 	// FulfillmentSignContext is given as part of the sign call of an UnlockFullment,
