@@ -20,9 +20,10 @@ func (tp *TransactionPool) ValidateTransactionSet(ts []types.Transaction) error 
 		return fmt.Errorf("failed to fetch block at height %d", blockHeight)
 	}
 	ctx := types.ValidationContext{
-		Confirmed:   false,
-		BlockHeight: blockHeight,
-		BlockTime:   block.Timestamp,
+		Confirmed:         false,
+		BlockHeight:       blockHeight,
+		BlockTime:         block.Timestamp,
+		IsBlockCreatingTx: false,
 	}
 	//validate each transaction in the transaction set
 	var err error
