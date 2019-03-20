@@ -15,7 +15,7 @@ import (
 )
 
 type commands struct {
-	cfg           daemon.Config
+	cfg           ExtendedDaemonConfig
 	moduleSetFlag daemon.ModuleSetFlag
 }
 
@@ -52,7 +52,7 @@ func (cmds *commands) rootCommand(*cobra.Command, []string) {
 	}
 
 	// Process the config variables, cleaning up slightly invalid values
-	cmds.cfg = daemon.ProcessConfig(cmds.cfg)
+	cmds.cfg.Config = daemon.ProcessConfig(cmds.cfg.Config)
 
 	// run daemon
 	err = runDaemon(cmds.cfg, networkCfg, cmds.moduleSetFlag.ModuleIdentifiers())

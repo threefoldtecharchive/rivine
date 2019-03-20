@@ -20,7 +20,7 @@ import (
 	"github.com/threefoldtech/rivine/pkg/daemon"
 )
 
-func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentifiers daemon.ModuleIdentifierSet) error {
+func runDaemon(cfg ExtendedDaemonConfig, networkCfg daemon.NetworkConfig, moduleIdentifiers daemon.ModuleIdentifierSet) error {
 	// Print a startup message.
 	fmt.Println("Loading...")
 	loadStart := time.Now()

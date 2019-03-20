@@ -13,7 +13,7 @@ import (
 func main() {
 	var cmds commands
 	// load default config to start with
-	cmds.cfg = daemon.DefaultConfig()
+	cmds.cfg.Config = daemon.DefaultConfig()
 	// load default config flag
 	cmds.moduleSetFlag = daemon.DefaultModuleSetFlag()
 
@@ -29,6 +29,14 @@ func main() {
 	cmds.cfg.RegisterAsFlags(root.Flags())
 	// also add our modules as a flag
 	cmds.moduleSetFlag.RegisterFlag(root.Flags(), fmt.Sprintf("%s modules", os.Args[0]))
+
+	// custom flags
+	cli.NetAddressArrayFlagVar(
+		root.Flags(),
+		&cmds.cfg.BootstrapPeers,
+		"bootstrap-peers",
+		"overwrite the bootstrap peers to use, instead of using the default bootstrap peers",
+	)
 
 	// create the other commands
 	root.AddCommand(&cobra.Command{
