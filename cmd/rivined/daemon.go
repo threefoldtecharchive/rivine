@@ -54,7 +54,7 @@ func runDaemon(cfg ExtendedDaemonConfig, networkCfg daemon.NetworkConfig, module
 		printModuleIsLoading("gateway")
 		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap,
 			filepath.Join(cfg.RootPersistentDir, modules.GatewayDir),
-			cfg.BlockchainInfo, networkCfg.Constants, networkCfg.BootstrapPeers, cfg.VerboseLogging)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.BootstrapPeers, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}
