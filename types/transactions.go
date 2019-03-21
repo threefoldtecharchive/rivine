@@ -821,18 +821,12 @@ var (
 	SpecifierCoinCreationTransaction   = Specifier{'c', 'o', 'i', 'n', ' ', 'm', 'i', 'n', 't', ' ', 't', 'x'}
 )
 
-// TFChainReadDB is the Read-Only Database that is required in order to fetch the
-// different transaction-related data from required by Tfchain transactions.
-type TFChainReadDB interface {
-	MintConditionGetter
-}
-
 type (
 	// MintConditionGetter allows you to get the mint condition at a given block height.
 	//
 	// For the daemon this interface could be implemented directly by the DB object
 	// that keeps track of the mint condition state, while for a client this could
-	// come via the REST API from a tfchain daemon in a more indirect way.
+	// come via the REST API from a rivine daemon in a more indirect way.
 	MintConditionGetter interface {
 		// GetActiveMintCondition returns the active active mint condition.
 		GetActiveMintCondition() (UnlockConditionProxy, error)
@@ -842,7 +836,7 @@ type (
 )
 
 type (
-	// CoinCreationTransactionController defines a tfchain-specific transaction controller,
+	// CoinCreationTransactionController defines a rivine-specific transaction controller,
 	// for a transaction type reserved at type 129. It allows for the creation of Coin Outputs,
 	// without requiring coin inputs, but can only be used by the defined Coin Minters.
 	CoinCreationTransactionController struct {
@@ -853,7 +847,7 @@ type (
 		MintConditionGetter MintConditionGetter
 	}
 
-	// MinterDefinitionTransactionController defines a tfchain-specific transaction controller,
+	// MinterDefinitionTransactionController defines a rivine-specific transaction controller,
 	// for a transaction type reserved at type 128. It allows the transfer of coin minting powers.
 	MinterDefinitionTransactionController struct {
 		// MintConditionGetter is used to get a mint condition at the context-defined block height.
@@ -945,7 +939,7 @@ func (cctc CoinCreationTransactionController) DecodeTransactionData(r io.Reader)
 		return TransactionData{}, fmt.Errorf(
 			"failed to binary-decode tx as a CoinCreationTx: %v", err)
 	}
-	// return coin creation tx as regular tfchain tx data
+	// return coin creation tx as regular rivine tx data
 	return cctx.TransactionData(), nil
 }
 
@@ -966,7 +960,7 @@ func (cctc CoinCreationTransactionController) JSONDecodeTransactionData(data []b
 		return TransactionData{}, fmt.Errorf(
 			"failed to json-decode tx as a CoinCreationTx: %v", err)
 	}
-	// return coin creation tx as regular tfchain tx data
+	// return coin creation tx as regular rivine tx data
 	return cctx.TransactionData(), nil
 }
 
@@ -1119,7 +1113,7 @@ func (mdtc MinterDefinitionTransactionController) DecodeTransactionData(r io.Rea
 		return TransactionData{}, fmt.Errorf(
 			"failed to binary-decode tx as a MinterDefinitionTx: %v", err)
 	}
-	// return minter definition tx as regular tfchain tx data
+	// return minter definition tx as regular rivine tx data
 	return mdtx.TransactionData(), nil
 }
 
@@ -1140,7 +1134,7 @@ func (mdtc MinterDefinitionTransactionController) JSONDecodeTransactionData(data
 		return TransactionData{}, fmt.Errorf(
 			"failed to json-decode tx as a MinterDefinitionTx: %v", err)
 	}
-	// return minter definition tx as regular tfchain tx data
+	// return minter definition tx as regular rivine tx data
 	return mdtx.TransactionData(), nil
 }
 
@@ -1343,7 +1337,7 @@ type (
 		MintFulfillment UnlockFulfillmentProxy `json:"mintfulfillment"`
 		// CoinOutputs defines the coin outputs,
 		// which contain the freshly created coins, adding to the total pool of coins
-		// available in the tfchain network.
+		// available in the rivine network.
 		CoinOutputs []CoinOutput `json:"coinoutputs"`
 		// Minerfees, a fee paid for this coin creation transaction.
 		MinerFees []Currency `json:"minerfees"`
@@ -1360,7 +1354,7 @@ type (
 )
 
 // CoinCreationTransactionFromTransaction creates a CoinCreationTransaction,
-// using a regular in-memory tfchain transaction.
+// using a regular in-memory rivine transaction.
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `CoinCreationTransactionFromTransactionData` constructor.
@@ -1382,7 +1376,7 @@ func CoinCreationTransactionFromTransaction(tx Transaction) (CoinCreationTransac
 }
 
 // CoinCreationTransactionFromTransactionData creates a CoinCreationTransaction,
-// using the TransactionData from a regular in-memory tfchain transaction.
+// using the TransactionData from a regular in-memory rivine transaction.
 func CoinCreationTransactionFromTransactionData(txData TransactionData) (CoinCreationTransaction, error) {
 	// (tx) extension (data) is expected to be a pointer to a valid CoinCreationTransactionExtension,
 	// which contains the nonce and the mintFulfillment that can be used to fulfill the globally defined mint condition
@@ -1410,7 +1404,7 @@ func CoinCreationTransactionFromTransactionData(txData TransactionData) (CoinCre
 }
 
 // TransactionData returns this CoinCreationTransaction
-// as regular tfchain transaction data.
+// as regular rivine transaction data.
 func (cctx *CoinCreationTransaction) TransactionData() TransactionData {
 	return TransactionData{
 		CoinOutputs:   cctx.CoinOutputs,
@@ -1424,7 +1418,7 @@ func (cctx *CoinCreationTransaction) TransactionData() TransactionData {
 }
 
 // Transaction returns this CoinCreationTransaction
-// as regular tfchain transaction, using TransactionVersionCoinCreation as the type.
+// as regular rivine transaction, using TransactionVersionCoinCreation as the type.
 func (cctx *CoinCreationTransaction) Transaction() Transaction {
 	return Transaction{
 		Version:       TransactionVersionCoinCreation,
@@ -1470,7 +1464,7 @@ type (
 )
 
 // MinterDefinitionTransactionFromTransaction creates a MinterDefinitionTransaction,
-// using a regular in-memory tfchain transaction.
+// using a regular in-memory rivine transaction.
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `MinterDefinitionTransactionFromTransactionData` constructor.
@@ -1492,7 +1486,7 @@ func MinterDefinitionTransactionFromTransaction(tx Transaction) (MinterDefinitio
 }
 
 // MinterDefinitionTransactionFromTransactionData creates a MinterDefinitionTransaction,
-// using the TransactionData from a regular in-memory tfchain transaction.
+// using the TransactionData from a regular in-memory rivine transaction.
 func MinterDefinitionTransactionFromTransactionData(txData TransactionData) (MinterDefinitionTransaction, error) {
 	// (tx) extension (data) is expected to be a pointer to a valid MinterDefinitionTransactionExtension,
 	// which contains the nonce, the mintFulfillment that can be used to fulfill the currently globally defined mint condition,
@@ -1522,7 +1516,7 @@ func MinterDefinitionTransactionFromTransactionData(txData TransactionData) (Min
 }
 
 // TransactionData returns this CoinCreationTransaction
-// as regular tfchain transaction data.
+// as regular rivine transaction data.
 func (cctx *MinterDefinitionTransaction) TransactionData() TransactionData {
 	return TransactionData{
 		MinerFees:     cctx.MinerFees,
@@ -1536,7 +1530,7 @@ func (cctx *MinterDefinitionTransaction) TransactionData() TransactionData {
 }
 
 // Transaction returns this CoinCreationTransaction
-// as regular tfchain transaction, using TransactionVersionCoinCreation as the type.
+// as regular rivine transaction, using TransactionVersionCoinCreation as the type.
 func (cctx *MinterDefinitionTransaction) Transaction() Transaction {
 	return Transaction{
 		Version:       TransactionVersionMinterDefinition,

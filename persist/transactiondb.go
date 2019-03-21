@@ -29,17 +29,6 @@ const (
 //   - modify (function godoc) comments to take into account that now we also store/delete/manage 3bots, not just mintconditions
 
 // TODO:
-//  ensure that we cannot add 2 (or more) (bot) Tx's in the same block,
-//  that use the same pubKey or name
-//     for double spending, it seems to ensure no double spending happens, even when
-//     spending an uncomfirmed spended coin output, as can be seen from following output:
-//        Could not publish transaction: HTTP 400 error: error after call to
-//        /wallet/transactions: consensus conflict: transaction spends a nonexisting coin output
-//     ... need to figure out how this works, and also make such logic possible
-//      for the checking of unique names and unique addresses
-//     see: https://github.com/threefoldfoundation/tfchain/issues/195
-
-// TODO:
 //   add an in-memory cache (layer), such that we do not constantly have to look up the same
 //   names/records/identifiers/publickeys
 //   (for mint condition I do not think it is required, as interaction with minting is minimal)
@@ -249,7 +238,7 @@ func (txdb *TransactionDB) Close() error {
 func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.UnlockConditionProxy) (err error) {
 	var (
 		dbMetadata = Metadata{
-			Header:  "TFChain Transaction Database",
+			Header:  "Rivine Transaction Database",
 			Version: "1.1.2.1",
 		}
 	)
@@ -257,7 +246,7 @@ func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.Un
 	txdb.db, err = OpenDatabase(dbMetadata, filename)
 	if err != nil {
 		if err != ErrBadVersion {
-			return fmt.Errorf("error opening tfchain transaction database: %v", err)
+			return fmt.Errorf("error opening rivine transaction database: %v", err)
 		}
 		// try to migrate the DB
 		err = txdb.migrateDB(filename)
@@ -268,7 +257,7 @@ func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.Un
 		txdb.db.Metadata = dbMetadata
 		err = txdb.db.SaveMetadata()
 		if err != nil {
-			return fmt.Errorf("error while saving the v1.1.2 metadata in the tfchain transaction database: %v", err)
+			return fmt.Errorf("error while saving the v1.1.2 metadata in the rivine transaction database: %v", err)
 		}
 	}
 	return txdb.db.Update(func(tx *bolt.Tx) (err error) {
@@ -314,7 +303,7 @@ func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.Un
 func (txdb *TransactionDB) migrateDB(filename string) error {
 	// try to open the DB using the original version
 	dbMetadata := Metadata{
-		Header:  "TFChain Transaction Database",
+		Header:  "Rivine Transaction Database",
 		Version: "1.1.0",
 	}
 	var err error
@@ -324,7 +313,7 @@ func (txdb *TransactionDB) migrateDB(filename string) error {
 	// 	return txdb.db.Update(txdb.migrateV110DB)
 	// }
 	if err != ErrBadVersion {
-		return fmt.Errorf("error opening tfchain transaction v1.1.0 database: %v", err)
+		return fmt.Errorf("error opening rivine transaction v1.1.0 database: %v", err)
 	}
 
 	// try to open the initial v1.2.0 DB (never released, but already out in field for dev purposes)
@@ -335,9 +324,9 @@ func (txdb *TransactionDB) migrateDB(filename string) error {
 	// 	return txdb.db.Update(txdb.migrateV120DB)
 	// }
 	if err == ErrBadVersion {
-		return fmt.Errorf("error opening tfchain transaction database with unknown version: %v", err)
+		return fmt.Errorf("error opening rivine transaction database with unknown version: %v", err)
 	}
-	return fmt.Errorf("error opening tfchain transaction v1.2.0 database: %v", err)
+	return fmt.Errorf("error opening rivine transaction v1.2.0 database: %v", err)
 }
 
 // func (txdb *TransactionDB) migrateV110DB(tx *bolt.Tx) error {
