@@ -8,6 +8,7 @@ import (
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
+	persist "github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/julienschmidt/httprouter"
@@ -51,6 +52,12 @@ type (
 		BlockStakeOutputUnlockHashes []types.UnlockHash         `json:"blockstakeunlockhashes"`
 
 		Unconfirmed bool `json:"unconfirmed"`
+	}
+
+	// TransactionDBGetMintCondition contains a requested mint condition,
+	// either the current active one active for the given blockheight or lower.
+	TransactionDBGetMintCondition struct {
+		MintCondition types.UnlockConditionProxy `json:"mintcondition"`
 	}
 )
 
@@ -222,25 +229,40 @@ type (
 	}
 )
 
+// ExplorerParam is an object that RegisterExplorerHTTPHandlers expects.
+// A struct is used so params can be optional passed in RegisterExplorerHTTPHandlers
+type ExplorerParam struct {
+	Router   Router
+	Cs       modules.ConsensusSet
+	Explorer modules.Explorer
+	Tpool    modules.TransactionPool
+	Txdb     *persist.TransactionDB
+}
+
 // RegisterExplorerHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
-func RegisterExplorerHTTPHandlers(router Router, cs modules.ConsensusSet, explorer modules.Explorer, tpool modules.TransactionPool) {
-	if cs == nil {
+func RegisterExplorerHTTPHandlers(param ExplorerParam) {
+	if param.Cs == nil {
 		panic("no consensus module given")
 	}
-	if explorer == nil {
+	if param.Explorer == nil {
 		panic("no explorer module given")
 	}
-	if router == nil {
+	if param.Router == nil {
 		panic("no httprouter Router given")
 	}
 
-	router.GET("/explorer", NewExplorerRootHandler(explorer))
-	router.GET("/explorer/blocks/:height", NewExplorerBlocksHandler(cs, explorer))
-	router.GET("/explorer/hashes/:hash", NewExplorerHashHandler(explorer, tpool))
-	router.GET("/explorer/stats/history", NewExplorerHistoryStatsHandler(explorer))
-	router.GET("/explorer/stats/range", NewExplorerRangeStatsHandler(explorer))
-	router.GET("/explorer/constants", NewExplorerConstantsHandler(explorer))
-	router.GET("/explorer/downloader/status", NewConsensusRootHandler(cs))
+	param.Router.GET("/explorer", NewExplorerRootHandler(param.Explorer))
+	param.Router.GET("/explorer/blocks/:height", NewExplorerBlocksHandler(param.Cs, param.Explorer))
+	param.Router.GET("/explorer/hashes/:hash", NewExplorerHashHandler(param.Explorer, param.Tpool))
+	param.Router.GET("/explorer/stats/history", NewExplorerHistoryStatsHandler(param.Explorer))
+	param.Router.GET("/explorer/stats/range", NewExplorerRangeStatsHandler(param.Explorer))
+	param.Router.GET("/explorer/constants", NewExplorerConstantsHandler(param.Explorer))
+	param.Router.GET("/explorer/downloader/status", NewConsensusRootHandler(param.Cs))
+
+	if param.Txdb != nil {
+		param.Router.GET("/explorer/mintcondition", NewTransactionDBGetActiveMintConditionHandler(param.Txdb))
+		param.Router.GET("/explorer/mintcondition/:height", NewTransactionDBGetMintConditionAtHandler(param.Txdb))
+	}
 }
 
 // NewExplorerBlocksHandler creates a handler to handle API calls to /explorer/blocks/:height.
@@ -557,4 +579,38 @@ func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.Transac
 		explorerTxns[i].Unconfirmed = true
 	}
 	return explorerTxns
+}
+
+// NewTransactionDBGetActiveMintConditionHandler creates a handler to handle the API calls to /transactiondb/mintcondition.
+func NewTransactionDBGetActiveMintConditionHandler(txdb *persist.TransactionDB) httprouter.Handle {
+	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+		mintCondition, err := txdb.GetActiveMintCondition()
+		if err != nil {
+			WriteError(w, Error{Message: err.Error()}, http.StatusInternalServerError)
+			return
+		}
+		WriteJSON(w, TransactionDBGetMintCondition{
+			MintCondition: mintCondition,
+		})
+	}
+}
+
+// NewTransactionDBGetMintConditionAtHandler creates a handler to handle the API calls to /transactiondb/mintcondition/:height.
+func NewTransactionDBGetMintConditionAtHandler(txdb *persist.TransactionDB) httprouter.Handle {
+	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		heightStr := ps.ByName("height")
+		height, err := strconv.ParseUint(heightStr, 10, 64)
+		if err != nil {
+			WriteError(w, Error{Message: fmt.Sprintf("invalid block height given: %v", err)}, http.StatusBadRequest)
+			return
+		}
+		mintCondition, err := txdb.GetMintConditionAt(types.BlockHeight(height))
+		if err != nil {
+			WriteError(w, Error{Message: err.Error()}, http.StatusInternalServerError)
+			return
+		}
+		WriteJSON(w, TransactionDBGetMintCondition{
+			MintCondition: mintCondition,
+		})
+	}
 }
