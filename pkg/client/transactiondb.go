@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 
+	minting "github.com/threefoldtech/rivine/extensions/minting"
 	"github.com/threefoldtech/rivine/pkg/api"
 	types "github.com/threefoldtech/rivine/types"
 )
@@ -43,10 +44,10 @@ func NewTransactionDBExplorerClient(cli *CommandLineClient) *TransactionDBClient
 
 var (
 	// ensure TransactionDBClient implements the MintConditionGetter interface
-	_ types.MintConditionGetter = (*TransactionDBClient)(nil)
+	_ minting.MintConditionGetter = (*TransactionDBClient)(nil)
 )
 
-// GetActiveMintCondition implements types.MintConditionGetter.GetActiveMintCondition
+// GetActiveMintCondition implements minting.MintConditionGetter.GetActiveMintCondition
 func (cli *TransactionDBClient) GetActiveMintCondition() (types.UnlockConditionProxy, error) {
 	var result api.TransactionDBGetMintCondition
 	err := cli.client.GetAPI(cli.rootEndpoint+"/mintcondition", &result)
@@ -57,7 +58,7 @@ func (cli *TransactionDBClient) GetActiveMintCondition() (types.UnlockConditionP
 	return result.MintCondition, nil
 }
 
-// GetMintConditionAt implements types.MintConditionGetter.GetMintConditionAt
+// GetMintConditionAt implements minting.MintConditionGetter.GetMintConditionAt
 func (cli *TransactionDBClient) GetMintConditionAt(height types.BlockHeight) (types.UnlockConditionProxy, error) {
 	var result api.TransactionDBGetMintCondition
 	err := cli.client.GetAPI(fmt.Sprintf("%s/mintcondition/%d", cli.rootEndpoint, height), &result)

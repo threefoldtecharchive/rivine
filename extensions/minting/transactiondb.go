@@ -1,4 +1,4 @@
-package persist
+package minting
 
 import (
 	"encoding/binary"
@@ -8,15 +8,14 @@ import (
 	"os"
 	"path"
 
-	internal "github.com/threefoldtech/rivine/persist/internal"
 	types "github.com/threefoldtech/rivine/types"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
+	persist "github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	rivinesync "github.com/threefoldtech/rivine/sync"
-
-	bolt "github.com/rivine/bbolt"
 )
 
 // TransactionDB I/O constants
@@ -56,7 +55,7 @@ type (
 		// blocks until they have all exited before returning from Close.
 		tg rivinesync.ThreadGroup
 
-		db    *BoltDatabase
+		db    *persist.BoltDatabase
 		stats transactionDBStats
 
 		subscriber *transactionDBCSSubscriber
@@ -81,7 +80,7 @@ type (
 
 var (
 	// ensure TransactionDB implements the MintConditionGetter interface
-	_ types.MintConditionGetter = (*TransactionDB)(nil)
+	_ MintConditionGetter = (*TransactionDB)(nil)
 )
 
 // NewTransactionDB creates a new TransactionDB, using the given file (path) to store the (single) persistent BoltDB file.
@@ -173,7 +172,7 @@ func (txdb *TransactionDB) GetMintConditionAt(height types.BlockHeight) (types.U
 		cursor := mintConditionsBucket.Cursor()
 
 		var k []byte
-		k, b = cursor.Seek(internal.EncodeBlockheight(height))
+		k, b = cursor.Seek(EncodeBlockheight(height))
 		if len(k) == 0 {
 			// could be that we're past the last key, let's try the last key first
 			k, b = cursor.Last()
@@ -182,7 +181,7 @@ func (txdb *TransactionDB) GetMintConditionAt(height types.BlockHeight) (types.U
 			}
 			return nil
 		}
-		foundHeight := internal.DecodeBlockheight(k)
+		foundHeight := DecodeBlockheight(k)
 		if foundHeight <= height {
 			return nil
 		}
@@ -237,15 +236,15 @@ func (txdb *TransactionDB) Close() error {
 // openDB loads the set database and populates it with the necessary buckets
 func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.UnlockConditionProxy) (err error) {
 	var (
-		dbMetadata = Metadata{
+		dbMetadata = persist.Metadata{
 			Header:  "Rivine Transaction Database",
 			Version: "1.1.2.1",
 		}
 	)
 
-	txdb.db, err = OpenDatabase(dbMetadata, filename)
+	txdb.db, err = persist.OpenDatabase(dbMetadata, filename)
 	if err != nil {
-		if err != ErrBadVersion {
+		if err != persist.ErrBadVersion {
 			return fmt.Errorf("error opening rivine transaction database: %v", err)
 		}
 		// try to migrate the DB
@@ -275,7 +274,7 @@ func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.Un
 
 			// and ensure the genesis mint condition is the same as the given one
 			mintConditionsBucket := tx.Bucket(bucketMintConditions)
-			b = mintConditionsBucket.Get(internal.EncodeBlockheight(0))
+			b = mintConditionsBucket.Get(EncodeBlockheight(0))
 			if len(b) == 0 {
 				return errors.New("genesis mint condition could not be found in existing transaction db")
 			}
@@ -302,28 +301,28 @@ func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.Un
 
 func (txdb *TransactionDB) migrateDB(filename string) error {
 	// try to open the DB using the original version
-	dbMetadata := Metadata{
+	dbMetadata := persist.Metadata{
 		Header:  "Rivine Transaction Database",
 		Version: "1.1.0",
 	}
 	var err error
-	txdb.db, err = OpenDatabase(dbMetadata, filename)
+	txdb.db, err = persist.OpenDatabase(dbMetadata, filename)
 	// if err == nil {
 	// 	// migrate from a v1.1.0 DB
 	// 	return txdb.db.Update(txdb.migrateV110DB)
 	// }
-	if err != ErrBadVersion {
+	if err != persist.ErrBadVersion {
 		return fmt.Errorf("error opening rivine transaction v1.1.0 database: %v", err)
 	}
 
 	// try to open the initial v1.2.0 DB (never released, but already out in field for dev purposes)
 	dbMetadata.Version = "1.2.0"
-	txdb.db, err = OpenDatabase(dbMetadata, filename)
+	txdb.db, err = persist.OpenDatabase(dbMetadata, filename)
 	// if err == nil {
 	// 	// migrate from a v1.2.0 DB
 	// 	return txdb.db.Update(txdb.migrateV120DB)
 	// }
-	if err == ErrBadVersion {
+	if err == persist.ErrBadVersion {
 		return fmt.Errorf("error opening rivine transaction database with unknown version: %v", err)
 	}
 	return fmt.Errorf("error opening rivine transaction v1.2.0 database: %v", err)
@@ -427,7 +426,7 @@ func (txdb *TransactionDB) createDB(tx *bolt.Tx, genesisMintCondition types.Unlo
 
 	// store the genesis mint condition
 	mintConditionsBucket := tx.Bucket(bucketMintConditions)
-	err = mintConditionsBucket.Put(internal.EncodeBlockheight(0), siabin.Marshal(genesisMintCondition))
+	err = mintConditionsBucket.Put(EncodeBlockheight(0), siabin.Marshal(genesisMintCondition))
 	if err != nil {
 		return fmt.Errorf("failed to store genesis mint condition: %v", err)
 	}
@@ -513,7 +512,7 @@ func (txdb *TransactionDB) revertBlocks(tx *bolt.Tx, blocks []types.Block) error
 
 			// check the version and handle the ones we care about
 			switch rtx.Version {
-			case types.TransactionVersionMinterDefinition:
+			case TransactionVersionMinterDefinition:
 				err = txdb.revertMintConditionTx(tx, rtx)
 			}
 			if err != nil {
@@ -556,7 +555,7 @@ func (txdb *TransactionDB) applyBlocks(tx *bolt.Tx, blocks []types.Block) error 
 			}
 			// check the version and handle the ones we care about
 			switch rtx.Version {
-			case types.TransactionVersionMinterDefinition:
+			case TransactionVersionMinterDefinition:
 				err = txdb.applyMintConditionTx(tx, rtx)
 			}
 			if err != nil {
@@ -574,11 +573,11 @@ func (txdb *TransactionDB) applyMintConditionTx(tx *bolt.Tx, rtx *types.Transact
 	if mintConditionsBucket == nil {
 		return errors.New("corrupt transaction DB: mint conditions bucket does not exist")
 	}
-	mdtx, err := types.MinterDefinitionTransactionFromTransaction(*rtx)
+	mdtx, err := MinterDefinitionTransactionFromTransaction(*rtx)
 	if err != nil {
 		return fmt.Errorf("unexpected error while unpacking the minter def. tx type: %v" + err.Error())
 	}
-	err = mintConditionsBucket.Put(internal.EncodeBlockheight(txdb.stats.BlockHeight), siabin.Marshal(mdtx.MintCondition))
+	err = mintConditionsBucket.Put(EncodeBlockheight(txdb.stats.BlockHeight), siabin.Marshal(mdtx.MintCondition))
 	if err != nil {
 		return fmt.Errorf(
 			"failed to put mint condition for block height %d: %v",
@@ -592,7 +591,7 @@ func (txdb *TransactionDB) revertMintConditionTx(tx *bolt.Tx, rtx *types.Transac
 	if mintConditionsBucket == nil {
 		return errors.New("corrupt transaction DB: mint conditions bucket does not exist")
 	}
-	err := mintConditionsBucket.Delete(internal.EncodeBlockheight(txdb.stats.BlockHeight))
+	err := mintConditionsBucket.Delete(EncodeBlockheight(txdb.stats.BlockHeight))
 	if err != nil {
 		return fmt.Errorf(
 			"failed to delete mint condition for block height %d: %v",

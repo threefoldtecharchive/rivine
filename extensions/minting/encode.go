@@ -1,4 +1,4 @@
-package internal
+package minting
 
 import (
 	"encoding/binary"

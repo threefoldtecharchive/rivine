@@ -7,8 +7,8 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
+	minting "github.com/threefoldtech/rivine/extensions/minting"
 	"github.com/threefoldtech/rivine/modules"
-	persist "github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/julienschmidt/httprouter"
@@ -236,7 +236,7 @@ type ExplorerParam struct {
 	Cs       modules.ConsensusSet
 	Explorer modules.Explorer
 	Tpool    modules.TransactionPool
-	Txdb     *persist.TransactionDB
+	Txdb     *minting.TransactionDB
 }
 
 // RegisterExplorerHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
@@ -582,7 +582,7 @@ func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.Transac
 }
 
 // NewTransactionDBGetActiveMintConditionHandler creates a handler to handle the API calls to /transactiondb/mintcondition.
-func NewTransactionDBGetActiveMintConditionHandler(txdb *persist.TransactionDB) httprouter.Handle {
+func NewTransactionDBGetActiveMintConditionHandler(txdb *minting.TransactionDB) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		mintCondition, err := txdb.GetActiveMintCondition()
 		if err != nil {
@@ -596,7 +596,7 @@ func NewTransactionDBGetActiveMintConditionHandler(txdb *persist.TransactionDB) 
 }
 
 // NewTransactionDBGetMintConditionAtHandler creates a handler to handle the API calls to /transactiondb/mintcondition/:height.
-func NewTransactionDBGetMintConditionAtHandler(txdb *persist.TransactionDB) httprouter.Handle {
+func NewTransactionDBGetMintConditionAtHandler(txdb *minting.TransactionDB) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		heightStr := ps.ByName("height")
 		height, err := strconv.ParseUint(heightStr, 10, 64)
