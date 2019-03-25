@@ -71,22 +71,22 @@ type exploreCmd struct {
 // blockCmd is the handler for the command `rivinec explore block`,
 // explores a block on the blockchain, by looking it up by its height,
 // and printing either all info, or just the raw block itself.
-func (explorerSubCmds *exploreCmd) blockCmd(blockHeightStr string) {
+func (cmd *exploreCmd) blockCmd(blockHeightStr string) {
 	// get the block on the given height, using the daemon's explorer module
 	var resp api.ExplorerBlockGET
-	err := explorerSubCmds.cli.GetAPI("/explorer/blocks/"+blockHeightStr, &resp)
+	err := cmd.cli.GetAPI("/explorer/blocks/"+blockHeightStr, &resp)
 	if err != nil {
 		cli.Die(fmt.Sprintf("Could not get a block on height %q: %v", blockHeightStr, err))
 	}
 
 	// define the value to print
 	value := interface{}(resp.Block)
-	if explorerSubCmds.blockCfg.BlockOnly {
+	if cmd.blockCfg.BlockOnly {
 		value = resp.Block.RawBlock
 	}
 
 	// print depending on the encoding type
-	switch explorerSubCmds.blockCfg.EncodingType {
+	switch cmd.blockCfg.EncodingType {
 	case cli.EncodingTypeHex:
 		enc := siabin.NewEncoder(hex.NewEncoder(os.Stdout))
 		enc.Encode(value)
@@ -103,20 +103,20 @@ func (explorerSubCmds *exploreCmd) blockCmd(blockHeightStr string) {
 // explorehashcmd is the handler for the command `rivinec explore hash`,
 // explores an item on the blockchain, by looking it up by its hash,
 // and printing all info it receives back for that hash
-func (explorerSubCmds *exploreCmd) hashCmd(hash string) {
+func (cmd *exploreCmd) hashCmd(hash string) {
 	// get the block on the given height, using the daemon's explorer module
 	var resp api.ExplorerHashGET
 	url := "/explorer/hashes/" + hash
-	if explorerSubCmds.hashCfg.MinHeight > 0 {
-		url += fmt.Sprintf("?minheight=%d", explorerSubCmds.hashCfg.MinHeight)
+	if cmd.hashCfg.MinHeight > 0 {
+		url += fmt.Sprintf("?minheight=%d", cmd.hashCfg.MinHeight)
 	}
-	err := explorerSubCmds.cli.GetAPI(url, &resp)
+	err := cmd.cli.GetAPI(url, &resp)
 	if err != nil {
 		cli.Die(fmt.Sprintf("Could not get an item using the hash %q: %v", hash, err))
 	}
 
 	// print depending on the encoding type
-	switch explorerSubCmds.hashCfg.EncodingType {
+	switch cmd.hashCfg.EncodingType {
 	case cli.EncodingTypeJSON:
 		json.NewEncoder(os.Stdout).Encode(resp)
 	default:
