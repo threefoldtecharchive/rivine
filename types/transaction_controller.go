@@ -207,16 +207,13 @@ func (td *TransactionData) UnmarshalRivine(r io.Reader) error {
 type (
 	// DefaultTransactionController is the default transaction controller used,
 	// and is also by default the controller for the default transaction version 0x01.
-	DefaultTransactionController struct {
-		TransactionFeeCheckBlockHeight BlockHeight
-	}
+	DefaultTransactionController struct{}
+
 	// LegacyTransactionController is a legacy transaction controller,
 	// which used to be the default when Rivine launched.
 	// It should however not be used any longer, and only exists,
 	// as to support chains which launched together with Rivine.
-	LegacyTransactionController struct {
-		TransactionFeeCheckBlockHeight BlockHeight
-	}
+	LegacyTransactionController struct{}
 )
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
