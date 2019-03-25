@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	minting "github.com/threefoldtech/rivine/extensions/minting"
-	"github.com/threefoldtech/rivine/pkg/api"
+	"github.com/threefoldtech/rivine/extensions/minting/api"
+	client "github.com/threefoldtech/rivine/pkg/client"
 	types "github.com/threefoldtech/rivine/types"
 )
 
@@ -14,13 +15,13 @@ import (
 // without requiring access to the consensus-extended transactiondb,
 // normally the validation isn't required on the client side, but it is now possible none the less
 type TransactionDBClient struct {
-	client       *CommandLineClient
+	client       *client.CommandLineClient
 	rootEndpoint string
 }
 
 // NewTransactionDBConsensusClient creates a new TransactionDBClient,
 // that can be used for easy interaction with the TransactionDB API exposed via the Consensus endpoints
-func NewTransactionDBConsensusClient(cli *CommandLineClient) *TransactionDBClient {
+func NewTransactionDBConsensusClient(cli *client.CommandLineClient) *TransactionDBClient {
 	if cli == nil {
 		panic("no CommandLineClient given")
 	}
@@ -32,7 +33,7 @@ func NewTransactionDBConsensusClient(cli *CommandLineClient) *TransactionDBClien
 
 // NewTransactionDBExplorerClient creates a new TransactionDBClient,
 // that can be used for easy interaction with the TransactionDB API exposed via the Explorer endpoints
-func NewTransactionDBExplorerClient(cli *CommandLineClient) *TransactionDBClient {
+func NewTransactionDBExplorerClient(cli *client.CommandLineClient) *TransactionDBClient {
 	if cli == nil {
 		panic("no CommandLineClient given")
 	}

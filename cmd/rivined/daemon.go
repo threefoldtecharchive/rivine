@@ -153,7 +153,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		}
 
 		// Params are passed as a struct so the transaction database in this case doesn't need to be passed
-		api.RegisterExplorerHTTPHandlers(api.ExplorerParam{Router: router, Cs: cs, Explorer: e, Tpool: tpool})
+		api.RegisterExplorerHTTPHandlers(router, cs, e, tpool)
 		defer func() {
 			fmt.Println("Closing explorer...")
 			err := e.Close()
