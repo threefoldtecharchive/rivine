@@ -4,10 +4,16 @@ package explorer
 
 import (
 	"errors"
+	"fmt"
+	"net/http"
+	"path"
+	"runtime"
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
+
+	certmagic "github.com/mholt/certmagic"
 )
 
 const (
@@ -92,4 +98,37 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 func (e *Explorer) Close() error {
 	e.cs.Unsubscribe(e)
 	return e.db.Close()
+}
+
+// ServeFrontend serves all static files in /frontend/explorer/public
+// Which will host the explorer locally on :port 2015
+func ServeFrontend(isLocalhost bool, domainNames []string, email string) error {
+	// read and agree to your CA's legal documents
+	certmagic.Agreed = true
+
+	// provide an email address
+	certmagic.Email = email
+
+	// use the staging endpoint while we're developing
+	certmagic.CA = certmagic.LetsEncryptStagingCA
+
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		return errors.New("Calling runtime failed")
+	}
+
+	// Path to frontend static files
+	filepath := path.Join(path.Dir(filename), "./../../frontend/explorer/public")
+
+	http.Handle("/", http.FileServer(http.Dir(filepath)))
+
+	if !isLocalhost {
+		for _, domainName := range domainNames {
+			if !certmagic.HostQualifies(domainName) {
+				return fmt.Errorf("Domain name %s is not valid for automatic https", domainName)
+			}
+		}
+		return certmagic.HTTPS(domainNames, nil)
+	}
+	return http.ListenAndServe(":2015", nil)
 }

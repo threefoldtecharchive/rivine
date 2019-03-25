@@ -3,24 +3,31 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:afe8d08fa4c15449c1542b6da69396220a771b2c6109beea707dca1baa804fd9"
   name = "github.com/NebulousLabs/demotemutex"
   packages = ["."]
+  pruneopts = "UT"
   revision = "235395f71c4073ee8e71eb51476e7989043b9809"
 
 [[projects]]
   branch = "master"
+  digest = "1:cd9402bbeef43a72e786ac3c860f790d64a8afbeabf3564dfbebfb01c7b0b199"
   name = "github.com/NebulousLabs/errors"
   packages = ["."]
+  pruneopts = "UT"
   revision = "7ead97ef90b8efe5e824efdf129a60498291632a"
 
 [[projects]]
   branch = "master"
+  digest = "1:9a112e9f617878a9a643fdfcb7c31afaf0cf8859b8c179bf6bf53f9f881be695"
   name = "github.com/NebulousLabs/fastrand"
   packages = ["."]
+  pruneopts = "UT"
   revision = "3cf7173006a0b7d2371fa1a220da7f9d48c7827c"
 
 [[projects]]
   branch = "master"
+  digest = "1:a940cbe66b93cfbd21916d06dca51a4f68cf0fccb95d7f0d80f4e127347e6e5e"
   name = "github.com/NebulousLabs/go-upnp"
   packages = [
     ".",
@@ -29,23 +36,62 @@
     "goupnp/httpu",
     "goupnp/scpd",
     "goupnp/soap",
-    "goupnp/ssdp"
+    "goupnp/ssdp",
   ]
+  pruneopts = "UT"
   revision = "29b680b06c82d044ebea91bf3069038eb562df2a"
 
 [[projects]]
   branch = "master"
+  digest = "1:213a8de08bf90cb613ab645093072524c2e4b9c6761ecc43fb70b8cd00e10d51"
   name = "github.com/NebulousLabs/merkletree"
   packages = ["."]
+  pruneopts = "UT"
   revision = "1db44fa75fb1036c6d7be59a5793be4b1fb8a5ab"
 
 [[projects]]
+  branch = "master"
+  digest = "1:1343a2963481a305ca4d051e84bc2abd16b601ee22ed324f8d605de1adb291b0"
   name = "github.com/bgentry/speakeasy"
   packages = ["."]
+  pruneopts = "UT"
   revision = "4aabc24848ce5fd31929f7d1e4ea74d3709c14cd"
-  version = "v0.1.0"
 
 [[projects]]
+  digest = "1:166438587ed45ac211dab8a3ecebf4fa0c186d0db63430fb9127bbc2e5fcdc67"
+  name = "github.com/cenkalti/backoff"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1e4cf3da559842a91afcb6ea6141451e6c30c618"
+  version = "v2.1.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:14a83f3829155cda35831e1cdd028d716975a94be054c14fb36e821e4276b0fa"
+  name = "github.com/go-acme/lego"
+  packages = [
+    "acme",
+    "acme/api",
+    "acme/api/internal/nonces",
+    "acme/api/internal/secure",
+    "acme/api/internal/sender",
+    "certcrypto",
+    "certificate",
+    "challenge",
+    "challenge/dns01",
+    "challenge/http01",
+    "challenge/resolver",
+    "challenge/tlsalpn01",
+    "lego",
+    "log",
+    "platform/wait",
+    "registration",
+  ]
+  pruneopts = "UT"
+  revision = "b668bde5e4b782e3a7553397d0cec3ed0fa29b8f"
+
+[[projects]]
+  digest = "1:d8180cdf086f729ae7c0c995194788c5578aed12cc49dd4673702b2b4073ca1f"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -55,96 +101,175 @@
     "internal/pool",
     "internal/proto",
     "internal/singleflight",
-    "internal/util"
+    "internal/util",
   ]
+  pruneopts = "UT"
   revision = "83fb42932f6145ce52df09860384a4653d2d332a"
   version = "v6.12.0"
 
 [[projects]]
+  digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
+  pruneopts = "UT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
 
 [[projects]]
+  digest = "1:ccfa094742ce1c97fd3f6481e1bf98f3d9862510eee2bc0eb56e2745396bd330"
   name = "github.com/julienschmidt/httprouter"
   packages = ["."]
+  pruneopts = "UT"
   revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:2d643962fac133904694fffa959bc3c5dcfdcee38c6f5ffdd99a3c93eb9c835c"
+  name = "github.com/klauspost/cpuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e7e905edc00ea8827e58662220139109efea09db"
+  version = "v1.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:50d0ad64282a9828ff1bac544ca0e05ad19d047f688e7def61ee8e7a9863cb52"
+  name = "github.com/mholt/certmagic"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ee1543e2f234dc5e8eb3c7e76cbafb89398dd455"
+
+[[projects]]
+  digest = "1:4c195ae33dbe8df4eb3485f3357788f47b614547abcd048cbcc59d9025db6b8d"
+  name = "github.com/miekg/dns"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "cc8cd02140663157ce797c6650488d6c8563f31f"
+  version = "v1.1.6"
+
+[[projects]]
+  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:29390cd90266e2b4c714cfe135842e20760c4292b7baf84db9fd0b50655d367a"
   name = "github.com/rivine/bbolt"
   packages = ["."]
+  pruneopts = "UT"
   revision = "19c3af6fd3cefb5dc9c05dfc84122e8f74f92927"
 
 [[projects]]
+  branch = "master"
+  digest = "1:3695d03071166c5421b8737065239a2b4382a8dd2abcb8a455b90f76b4433489"
+  name = "github.com/rivine/rivine"
+  packages = [
+    "build",
+    "crypto",
+    "encoding",
+    "modules",
+    "types",
+  ]
+  pruneopts = "UT"
+  revision = "31f4fe4a49ea9caa7c18960e4f4d4687ac231081"
+
+[[projects]]
+  digest = "1:727749ee690197b064e9995ad9c4789c32f94de2b5a1557117dc43eaa001acf8"
   name = "github.com/rivine/smux"
   packages = ["."]
+  pruneopts = "UT"
   revision = "e28719eede1ac5714cf0b06ba2f403125864ebe0"
   version = "v1.0.7"
 
 [[projects]]
+  digest = "1:645cabccbb4fa8aab25a956cbcbdf6a6845ca736b2c64e197ca7cbb9d210b939"
   name = "github.com/spf13/cobra"
   packages = ["."]
+  pruneopts = "UT"
   revision = "ef82de70bb3f60c65fb8eebacbb2d122ef517385"
   version = "v0.0.3"
 
 [[projects]]
+  digest = "1:9424f440bba8f7508b69414634aef3b2b3a877e522d8a4624692412805407bb7"
   name = "github.com/spf13/pflag"
   packages = ["."]
+  pruneopts = "UT"
   revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:1df0e41fd4937b76449f3c78deefa6a8e629f68014660c2de0b71c9e1e27c5f3"
+  name = "github.com/threefoldfoundation/tfchain"
+  packages = ["pkg/config"]
+  pruneopts = "UT"
+  revision = "d01ecd15fb1a5149b230e48af696081ce1afb24a"
+  version = "v1.1.1"
+
+[[projects]]
   branch = "master"
+  digest = "1:bdc3f44533dbd81b8536fb037792d8aa2597744ab3a57a5f57fd297267b40e7e"
   name = "github.com/tyler-smith/go-bip39"
   packages = [
     ".",
-    "wordlists"
+    "wordlists",
   ]
+  pruneopts = "UT"
   revision = "95c66720ed7ac2f4b78ddb31d940d59193894f49"
 
 [[projects]]
   branch = "master"
+  digest = "1:a61b08717d14c30bd3d153516a26eb06f9ac86815d1d63220edf7eabc7217410"
   name = "golang.org/x/crypto"
   packages = [
     "blake2b",
     "ed25519",
     "ed25519/internal/edwards25519",
+    "ocsp",
     "pbkdf2",
-    "twofish"
+    "twofish",
   ]
+  pruneopts = "UT"
   revision = "7f39a6fea4fe9364fb61e1def6a268a51b4f3a06"
 
 [[projects]]
   branch = "master"
+  digest = "1:f1a5d9f162c35117bb6b8dbab0c5e95ddff47e6f2ef27ee2d480c6fe035aa341"
   name = "golang.org/x/net"
   packages = [
+    "bpf",
     "html",
     "html/atom",
-    "html/charset"
+    "html/charset",
+    "idna",
+    "internal/iana",
+    "internal/socket",
+    "ipv4",
+    "ipv6",
   ]
+  pruneopts = "UT"
   revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
 
 [[projects]]
   branch = "master"
+  digest = "1:9765d84230788e85cc7ede289309d7e5468b4114715ae06adc8d50433bf05dae"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
-    "unix"
+    "unix",
   ]
+  pruneopts = "UT"
   revision = "ad87a3a340fa7f3bed189293fbfa7a9b7e021ae1"
 
 [[projects]]
+  digest = "1:436b24586f8fee329e0dd65fd67c817681420cda1d7f934345c13fe78c212a73"
   name = "golang.org/x/text"
   packages = [
+    "collate",
+    "collate/build",
     "encoding",
     "encoding/charmap",
     "encoding/htmlindex",
@@ -155,20 +280,59 @@
     "encoding/simplifiedchinese",
     "encoding/traditionalchinese",
     "encoding/unicode",
+    "internal/colltab",
     "internal/gen",
     "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
+    "secure/bidirule",
     "transform",
-    "unicode/cldr"
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable",
   ]
+  pruneopts = "UT"
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
+
+[[projects]]
+  digest = "1:c0c30f47f9c16f227ba82f0bdfd14fa968453c30b7677a07903b3b4f34b98d49"
+  name = "gopkg.in/square/go-jose.v2"
+  packages = [
+    ".",
+    "cipher",
+    "json",
+  ]
+  pruneopts = "UT"
+  revision = "628223f44a71f715d2881ea69afc795a1e9c01be"
+  version = "v2.3.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7896271e57a19ddc6e2977617b67779677526914d53cfda5718dbf54c7f3241f"
+  input-imports = [
+    "github.com/NebulousLabs/demotemutex",
+    "github.com/NebulousLabs/errors",
+    "github.com/NebulousLabs/fastrand",
+    "github.com/NebulousLabs/go-upnp",
+    "github.com/NebulousLabs/merkletree",
+    "github.com/bgentry/speakeasy",
+    "github.com/go-redis/redis",
+    "github.com/julienschmidt/httprouter",
+    "github.com/mholt/certmagic",
+    "github.com/rivine/bbolt",
+    "github.com/rivine/smux",
+    "github.com/spf13/cobra",
+    "github.com/spf13/pflag",
+    "github.com/threefoldfoundation/tfchain/pkg/config",
+    "github.com/tyler-smith/go-bip39",
+    "golang.org/x/crypto/blake2b",
+    "golang.org/x/crypto/ed25519",
+    "golang.org/x/crypto/twofish",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
