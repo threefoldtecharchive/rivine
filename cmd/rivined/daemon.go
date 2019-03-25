@@ -16,7 +16,7 @@ import (
 	"github.com/threefoldtech/rivine/modules/gateway"
 	"github.com/threefoldtech/rivine/modules/transactionpool"
 	"github.com/threefoldtech/rivine/modules/wallet"
-	api "github.com/threefoldtech/rivine/pkg/api"
+	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/daemon"
 )
 
@@ -151,8 +151,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err != nil {
 			return err
 		}
-
-		// Params are passed as a struct so the transaction database in this case doesn't need to be passed
 		api.RegisterExplorerHTTPHandlers(router, cs, e, tpool)
 		defer func() {
 			fmt.Println("Closing explorer...")
