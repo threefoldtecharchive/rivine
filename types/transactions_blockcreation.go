@@ -153,8 +153,6 @@ var (
 	// implements the desired interfaces
 	_ TransactionController      = BlockCreationTransactionController{}
 	_ TransactionValidator       = BlockCreationTransactionController{}
-	_ CoinOutputValidator        = BlockCreationTransactionController{}
-	_ BlockStakeOutputValidator  = BlockCreationTransactionController{}
 	_ TransactionSignatureHasher = BlockCreationTransactionController{}
 	_ TransactionIDEncoder       = BlockCreationTransactionController{}
 )
@@ -222,17 +220,6 @@ func (bctc BlockCreationTransactionController) ValidateTransaction(t Transaction
 
 	// Tx is valid
 	return nil
-}
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs,
-func (bctc BlockCreationTransactionController) ValidateCoinOutputs(t Transaction, ctx FundValidationContext, coinInputs map[CoinOutputID]CoinOutput) error {
-	// no coin input and outputs
-	return nil
-}
-
-// ValidateBlockStakeOutputs implements BlockStakeOutputValidator.ValidateBlockStakeOutputs
-func (bctc BlockCreationTransactionController) ValidateBlockStakeOutputs(t Transaction, ctx FundValidationContext, blockStakeInputs map[BlockStakeOutputID]BlockStakeOutput) (err error) {
-	return nil // always valid, no block stake inputs/outputs
 }
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
