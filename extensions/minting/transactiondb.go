@@ -1,36 +1,17 @@
 package minting
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path"
-
-	types "github.com/threefoldtech/rivine/types"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
-	persist "github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	rivinesync "github.com/threefoldtech/rivine/sync"
+	"github.com/threefoldtech/rivine/types"
 )
-
-// TransactionDB I/O constants
-const (
-	TransactionDBDir      = "transactiondb"
-	TransactionDBFilename = TransactionDBDir + ".db"
-)
-
-// TODO:
-//   - modify (function godoc) comments to take into account that now we also store/delete/manage 3bots, not just mintconditions
-
-// TODO:
-//   add an in-memory cache (layer), such that we do not constantly have to look up the same
-//   names/records/identifiers/publickeys
-//   (for mint condition I do not think it is required, as interaction with minting is minimal)
 
 // internal bucket database keys used for the transactionDB
 var (
@@ -83,26 +64,66 @@ var (
 	_ MintConditionGetter = (*TransactionDB)(nil)
 )
 
-// NewTransactionDB creates a new TransactionDB, using the given file (path) to store the (single) persistent BoltDB file.
-// A new db will be created if it doesn't exist yet, if it does exist it should be ensured that the given genesis mint condition
-// equals the already stored genesis mint condition.
-func NewTransactionDB(rootDir string, genesisMintCondition types.UnlockConditionProxy) (*TransactionDB, error) {
-	persistDir := path.Join(rootDir, TransactionDBDir)
-	// Create the directory if it doesn't exist.
-	err := os.MkdirAll(persistDir, 0700)
+// ExtendTransactionDB takes in an existing TransactionDB and extends it with the mintcondition buckets.
+// if the transactionDB does exist it should be ensured that the given genesis mint condition equals the already stored genesis mint condition
+func (txdb *TransactionDB) ExtendTransactionDB(genesisMintCondition types.UnlockConditionProxy, filename string, dbMetadata persist.Metadata) (err error) {
+	// Add the internal, stats and mintconditions buckets to the TransactionDB if the buckets don't exist yet
+	// AppendBuckets(txdb)
+	txdb.db, err = persist.OpenDatabase(dbMetadata, filename)
 	if err != nil {
-		return nil, err
+		if err != persist.ErrBadVersion {
+			return fmt.Errorf("error opening transaction database: %v", err)
+		}
+		// save the new metadata
+		txdb.db.Metadata = dbMetadata
+		err = txdb.db.SaveMetadata()
+		if err != nil {
+			return fmt.Errorf("error while saving the metadata in the transactiondb: %v", err)
+		}
 	}
 
-	txdb := new(TransactionDB)
-	err = txdb.openDB(path.Join(persistDir, TransactionDBFilename), genesisMintCondition)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open the transaction DB: %v", err)
-	}
-	return txdb, nil
+	txdb.db.Update(func(tx *bolt.Tx) (err error) {
+		if txdb.dbInitialized(tx) {
+			// db is already created, get the stored stats
+			internalBucket := tx.Bucket(bucketInternal)
+			b := internalBucket.Get(bucketInternalKeyStats)
+			if len(b) == 0 {
+				return errors.New("structured stats value could not be found in existing transaction db")
+			}
+			err = siabin.Unmarshal(b, &txdb.stats)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal structured stats value from existing transaction db: %v", err)
+			}
+
+			// and ensure the genesis mint condition is the same as the given one
+			mintConditionsBucket := tx.Bucket(bucketMintConditions)
+			b = mintConditionsBucket.Get(EncodeBlockheight(0))
+			if len(b) == 0 {
+				return errors.New("genesis mint condition could not be found in existing transaction db")
+			}
+			var storedMintCondition types.UnlockConditionProxy
+			err = siabin.Unmarshal(b, &storedMintCondition)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal genesis mint condition from existing transaction db: %v", err)
+			}
+			if !storedMintCondition.Equal(genesisMintCondition) {
+				return errors.New("stored genesis mint condition is different from the given genesis mint condition")
+			}
+
+			return nil // nothing to do
+		}
+
+		// successfully create the DB
+		err = txdb.createConsensusBuckets(tx, genesisMintCondition)
+		if err != nil {
+			return fmt.Errorf("failed to create transactionDB: %v", err)
+		}
+		return nil
+	})
+	return nil
 }
 
-// Retrieves the Last ConsensusChangeID stored.
+// GetLastConsensusChangeID retrieves the Last ConsensusChangeID stored.
 func (txdb *TransactionDB) GetLastConsensusChangeID() modules.ConsensusChangeID {
 	return txdb.stats.ConsensusChangeID
 }
@@ -233,165 +254,6 @@ func (txdb *TransactionDB) Close() error {
 	return build.ComposeErrors(tgErr, dbErr)
 }
 
-// openDB loads the set database and populates it with the necessary buckets
-func (txdb *TransactionDB) openDB(filename string, genesisMintCondition types.UnlockConditionProxy) (err error) {
-	var (
-		dbMetadata = persist.Metadata{
-			Header:  "Rivine Transaction Database",
-			Version: "1.1.2.1",
-		}
-	)
-
-	txdb.db, err = persist.OpenDatabase(dbMetadata, filename)
-	if err != nil {
-		if err != persist.ErrBadVersion {
-			return fmt.Errorf("error opening rivine transaction database: %v", err)
-		}
-		// try to migrate the DB
-		err = txdb.migrateDB(filename)
-		if err != nil {
-			return err
-		}
-		// save the new metadata
-		txdb.db.Metadata = dbMetadata
-		err = txdb.db.SaveMetadata()
-		if err != nil {
-			return fmt.Errorf("error while saving the v1.1.2 metadata in the rivine transaction database: %v", err)
-		}
-	}
-	return txdb.db.Update(func(tx *bolt.Tx) (err error) {
-		if txdb.dbInitialized(tx) {
-			// db is already created, get the stored stats
-			internalBucket := tx.Bucket(bucketInternal)
-			b := internalBucket.Get(bucketInternalKeyStats)
-			if len(b) == 0 {
-				return errors.New("structured stats value could not be found in existing transaction db")
-			}
-			err = siabin.Unmarshal(b, &txdb.stats)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal structured stats value from existing transaction db: %v", err)
-			}
-
-			// and ensure the genesis mint condition is the same as the given one
-			mintConditionsBucket := tx.Bucket(bucketMintConditions)
-			b = mintConditionsBucket.Get(EncodeBlockheight(0))
-			if len(b) == 0 {
-				return errors.New("genesis mint condition could not be found in existing transaction db")
-			}
-			var storedMintCondition types.UnlockConditionProxy
-			err = siabin.Unmarshal(b, &storedMintCondition)
-			if err != nil {
-				return fmt.Errorf("failed to unmarshal genesis mint condition from existing transaction db: %v", err)
-			}
-			if !storedMintCondition.Equal(genesisMintCondition) {
-				return errors.New("stored genesis mint condition is different from the given genesis mint condition")
-			}
-
-			return nil // nothing to do
-		}
-
-		// successfully create the DB
-		err = txdb.createDB(tx, genesisMintCondition)
-		if err != nil {
-			return fmt.Errorf("failed to create transactionDB: %v", err)
-		}
-		return nil
-	})
-}
-
-func (txdb *TransactionDB) migrateDB(filename string) error {
-	// try to open the DB using the original version
-	dbMetadata := persist.Metadata{
-		Header:  "Rivine Transaction Database",
-		Version: "1.1.0",
-	}
-	var err error
-	txdb.db, err = persist.OpenDatabase(dbMetadata, filename)
-	// if err == nil {
-	// 	// migrate from a v1.1.0 DB
-	// 	return txdb.db.Update(txdb.migrateV110DB)
-	// }
-	if err != persist.ErrBadVersion {
-		return fmt.Errorf("error opening rivine transaction v1.1.0 database: %v", err)
-	}
-
-	// try to open the initial v1.2.0 DB (never released, but already out in field for dev purposes)
-	dbMetadata.Version = "1.2.0"
-	txdb.db, err = persist.OpenDatabase(dbMetadata, filename)
-	// if err == nil {
-	// 	// migrate from a v1.2.0 DB
-	// 	return txdb.db.Update(txdb.migrateV120DB)
-	// }
-	if err == persist.ErrBadVersion {
-		return fmt.Errorf("error opening rivine transaction database with unknown version: %v", err)
-	}
-	return fmt.Errorf("error opening rivine transaction v1.2.0 database: %v", err)
-}
-
-// func (txdb *TransactionDB) migrateV110DB(tx *bolt.Tx) error {
-// 	// Enumerate and create the new database buckets.
-// 	buckets := [][]byte{
-// 		bucketBotRecords,
-// 		bucketBotKeyToIDMapping,
-// 		bucketBotNameToIDMapping,
-// 		bucketBotRecordImplicitUpdates,
-// 		bucketBotTransactions,
-// 	}
-// 	var err error
-// 	for _, bucket := range buckets {
-// 		_, err = tx.CreateBucket(bucket)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	// update the stats bucket
-// 	var oldStats struct {
-// 		ConsensusChangeID modules.ConsensusChangeID
-// 		BlockHeight       types.BlockHeight
-// 		Synced            bool
-// 	}
-// 	internalBucket := tx.Bucket(bucketInternal)
-// 	b := internalBucket.Get(bucketInternalKeyStats)
-// 	if len(b) == 0 {
-// 		return errors.New("structured stats value could not be found in existing transaction db")
-// 	}
-// 	err = siabin.Unmarshal(b, &oldStats)
-// 	if err != nil {
-// 		return fmt.Errorf("failed to unmarshal structured stats value from existing transaction db: %v", err)
-// 	}
-// 	err = internalBucket.Put(bucketInternalKeyStats, siabin.Marshal(transactionDBStats{
-// 		ConsensusChangeID: oldStats.ConsensusChangeID,
-// 		BlockHeight:       oldStats.BlockHeight,
-// 		ChainTime:         0, // will fix itself on the first block it receives
-// 		Synced:            oldStats.Synced,
-// 	}))
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	// Continue the migration process towards the newest version
-// 	return txdb.migrateV120DB(tx)
-// }
-
-// func (txdb *TransactionDB) migrateV120DB(tx *bolt.Tx) error {
-// 	// Enumerate and create the new database buckets.
-// 	buckets := [][]byte{
-// 		bucketERC20ToTFTAddresses,
-// 		bucketTFTToERC20Addresses,
-// 		bucketERC20TransactionIDs,
-// 	}
-// 	var err error
-// 	for _, bucket := range buckets {
-// 		_, err = tx.CreateBucket(bucket)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	// migration process is finished
-// 	return nil
-// }
-
 // dbInitialized returns true if the database appears to be initialized, false
 // if not. Checking for the existence of the siafund pool bucket is typically
 // sufficient to determine whether the database has gone through the
@@ -401,8 +263,7 @@ func (txdb *TransactionDB) dbInitialized(tx *bolt.Tx) bool {
 }
 
 // createConsensusObjects initialzes the consensus portions of the database.
-func (txdb *TransactionDB) createDB(tx *bolt.Tx, genesisMintCondition types.UnlockConditionProxy) (err error) {
-	// Enumerate and create the database buckets.
+func (txdb *TransactionDB) createConsensusBuckets(tx *bolt.Tx, genesisMintCondition types.UnlockConditionProxy) (err error) {
 	buckets := [][]byte{
 		bucketInternal,
 		bucketMintConditions,
@@ -597,63 +458,5 @@ func (txdb *TransactionDB) revertMintConditionTx(tx *bolt.Tx, rtx *types.Transac
 			"failed to delete mint condition for block height %d: %v",
 			txdb.stats.BlockHeight, err)
 	}
-	return nil
-}
-
-type transactionContext struct {
-	BlockHeight  types.BlockHeight
-	BlockTime    types.Timestamp
-	TxSequenceID uint16
-}
-
-func (tctx transactionContext) TransactionShortID() sortableTransactionShortID {
-	return newSortableTransactionShortID(tctx.BlockHeight, tctx.TxSequenceID)
-}
-
-// sortableTransactionShortID wraps around the types.TransactionShortID,
-// as to ensure it is encoded in a way that allows boltdb use it for natural ordering.
-type sortableTransactionShortID types.TransactionShortID
-
-func newSortableTransactionShortID(height types.BlockHeight, txSequenceID uint16) sortableTransactionShortID {
-	return sortableTransactionShortID(types.NewTransactionShortID(height, txSequenceID))
-}
-
-// MarshalSia implements SiaMarshaler.MarshalSia,
-// alias of MarshalRivine for backwards-compatibility reasons.
-func (sid sortableTransactionShortID) MarshalSia(w io.Writer) error {
-	return sid.MarshalRivine(w)
-}
-
-// UnmarshalSia implements SiaMarshaler.UnmarshalSia,
-// alias of UnmarshalRivine for backwards-compatibility reasons.
-func (sid *sortableTransactionShortID) UnmarshalSia(r io.Reader) error {
-	return sid.UnmarshalRivine(r)
-}
-
-// MarshalRivine implements RivineMarshaler.MarshalRivine
-func (sid sortableTransactionShortID) MarshalRivine(w io.Writer) error {
-	var b [8]byte
-	binary.BigEndian.PutUint64(b[:], uint64(sid))
-	n, err := w.Write(b[:])
-	if err != nil {
-		return err
-	}
-	if n != 8 {
-		return io.ErrShortWrite
-	}
-	return nil
-}
-
-// UnmarshalRivine implements RivineUnmarshaler.UnmarshalRivine
-func (sid *sortableTransactionShortID) UnmarshalRivine(r io.Reader) error {
-	var b [8]byte
-	n, err := r.Read(b[:])
-	if err != nil {
-		return err
-	}
-	if n != 8 {
-		return io.ErrUnexpectedEOF
-	}
-	*sid = sortableTransactionShortID(binary.BigEndian.Uint64(b[:]))
 	return nil
 }
