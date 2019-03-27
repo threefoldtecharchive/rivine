@@ -56,6 +56,10 @@ type ConsensusSet struct {
 	// the function of adding a subscriber should not be exposed.
 	subscribers []modules.ConsensusSetSubscriber
 
+	// plugins to the consensus set will receive updates to the consensus set.
+	// At initialization, they receive all changes that they are missing.
+	plugins map[string]modules.ConsensusSetPlugin
+
 	// dosBlocks are blocks that are invalid, but the invalidity is only
 	// discoverable during an expensive step of validation. These blocks are
 	// recorded to eliminate a DoS vector where an expensive-to-validate block

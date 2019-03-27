@@ -7,12 +7,11 @@ package consensus
 // ignored otherwise, which is suboptimal.
 
 import (
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -55,6 +54,9 @@ var (
 	// TransactionIDMap is a database bucket that containsall of the present
 	// transaction IDs linked to their short ID
 	TransactionIDMap = []byte("TransactionIDMap")
+
+	// BucketPlugins is a database buckets that contains all plugins and their metadata.
+	BucketPlugins = []byte("Plugins")
 )
 
 // createConsensusObjects initialzes the consensus portions of the database.
@@ -68,6 +70,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 		CoinOutputs,
 		BlockStakeOutputs,
 		TransactionIDMap,
+		BucketPlugins,
 	}
 	for _, bucket := range buckets {
 		_, err := tx.CreateBucket(bucket)
