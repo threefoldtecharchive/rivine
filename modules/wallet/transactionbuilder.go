@@ -354,6 +354,11 @@ func (tb *transactionBuilder) SetArbitraryData(arb []byte) {
 	tb.transaction.ArbitraryData = arb
 }
 
+// SetExtension sets the extension of the transaction
+func (tb *transactionBuilder) SetExtension(extension interface{}) {
+	tb.transaction.Extension = extension
+}
+
 // Drop discards all of the outputs in a transaction, returning them to the
 // pool so that other transactions may use them. 'Drop' should only be called
 // if a transaction is both unsigned and will not be used any further.

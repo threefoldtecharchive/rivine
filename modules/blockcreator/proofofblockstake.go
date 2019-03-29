@@ -2,6 +2,7 @@ package blockcreator
 
 import (
 	"encoding/json"
+	"errors"
 	"math/big"
 	"time"
 
@@ -157,24 +158,57 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) er
 		}
 	}
 
-	//otherwise the blockstake is not yet spent in this block, spent it now
-	t := bc.wallet.StartTransaction()
-	err := t.SpendBlockStake(ubso.BlockStakeOutputID) // link the input of this transaction
-	// to the used BlockStake output
+	bso, err := bc.cs.GetBlockStakeOutput(ubso.BlockStakeOutputID)
 	if err != nil {
 		return err
 	}
 
-	bso := types.BlockStakeOutput{
-		Value:     ubso.Value,     //use the same amount of BlockStake
-		Condition: ubso.Condition, //use the same condition.
+	if bso.Condition.ConditionType() != types.ConditionTypeUnlockHash {
+		return errors.New("unsupported output condition for pobs")
 	}
-	t.AddBlockStakeOutput(bso)
-	txnSet, err := t.Sign()
+
+	pk, _, err := bc.wallet.GetKey(bso.Condition.UnlockHash())
 	if err != nil {
+		return errors.New("Failed to retrieve public key for blockstake output")
+	}
+
+	// create the input for the used output
+	input := types.BlockStakeInput{ParentID: ubso.BlockStakeOutputID, Fulfillment: types.NewFulfillment(types.NewSingleSignatureFulfillment(pk))}
+
+	// create the extension for the block creation tx based on the used input
+	txExt := &types.BlockCreationTransactionExtension{Reference: input}
+
+	// Create transactionbuilder for the new transaction and add the extension
+	txb := bc.wallet.StartTransactionWithVersion(types.TransactionVersionBlockCreation)
+	txb.SetExtension(txExt)
+	if err = txb.SignAllPossible(); err != nil {
 		return err
 	}
-	//add this transaction in front of the list of unsolved block transactions
-	bc.unsolvedBlock.Transactions = append(txnSet, bc.unsolvedBlock.Transactions...)
+
+	tx, _ := txb.View()
+
+	// //otherwise the blockstake is not yet spent in this block, spent it now
+	// t := bc.wallet.StartTransaction()
+	// err = t.SpendBlockStake(ubso.BlockStakeOutputID) // link the input of this transaction
+	// // to the used BlockStake output
+	// if err != nil {
+	// 	return err
+	// }
+
+	// bso := types.BlockStakeOutput{
+	// 	Value:     ubso.Value,     //use the same amount of BlockStake
+	// 	Condition: ubso.Condition, //use the same condition.
+	// }
+	// t.AddBlockStakeOutput(bso)
+	// txnSet, err := t.Sign()
+	// if err != nil {
+	// 	return err
+	// }
+	// //add this transaction in front of the list of unsolved block transactions
+	// bc.unsolvedBlock.Transactions = append(txnSet, bc.unsolvedBlock.Transactions...)
+
+	// add this transaction in front of the list of unsolved block transactions
+	bc.unsolvedBlock.Transactions = append([]types.Transaction{tx}, bc.unsolvedBlock.Transactions...)
+
 	return nil
 }

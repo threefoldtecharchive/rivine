@@ -81,13 +81,15 @@ func BlockCreationTransactionFromTransactionData(txData TransactionData) (BlockC
 		return BlockCreationTransaction{}, errors.New("no blockstake outputs allowed for a block creation transaction")
 	}
 
-	extensionData, ok := txData.Extension.(*BlockCreationTransactionExtension)
-	if !ok {
-		return BlockCreationTransaction{}, errors.New("invalid extension data for a block creation transaction")
-	}
+	tx := BlockCreationTransaction{}
 
-	tx := BlockCreationTransaction{
-		Reference: extensionData.Reference,
+	if txData.Extension != nil {
+		extensionData, ok := txData.Extension.(*BlockCreationTransactionExtension)
+		if !ok {
+			return tx, errors.New("invalid extension data for a block creation transaction")
+		}
+
+		tx.Reference = extensionData.Reference
 	}
 
 	return tx, nil
@@ -145,7 +147,14 @@ func (bctx *BlockCreationTransaction) UnmarshalRivine(r io.Reader) error {
 type (
 	// BlockCreationTransactionController defines a transaction controller for a a transaction type
 	// reserved at type 0x02. It allows creation of blocks without blockstake respend
-	BlockCreationTransactionController struct{}
+	BlockCreationTransactionController struct {
+		bsog BlockStakeOutputGetter
+	}
+
+	//BlockStakeOutputGetter allows the retrieval of a blockstake output based on its ID
+	BlockStakeOutputGetter interface {
+		GetBlockStakeOutput(BlockStakeOutputID) (BlockStakeOutput, error)
+	}
 )
 
 var (
@@ -155,7 +164,15 @@ var (
 	_ TransactionValidator       = BlockCreationTransactionController{}
 	_ TransactionSignatureHasher = BlockCreationTransactionController{}
 	_ TransactionIDEncoder       = BlockCreationTransactionController{}
+	_ TransactionExtensionSigner = BlockCreationTransactionController{}
 )
+
+// NewBlockCreationTransactionController creates a new block creation transaction controller
+func NewBlockCreationTransactionController(bsog BlockStakeOutputGetter) BlockCreationTransactionController {
+	return BlockCreationTransactionController{
+		bsog: bsog,
+	}
+}
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (bctc BlockCreationTransactionController) EncodeTransactionData(w io.Writer, txData TransactionData) error {
@@ -254,4 +271,22 @@ func (bctc BlockCreationTransactionController) EncodeTransactionIDInput(w io.Wri
 		return fmt.Errorf("failed to convert txData to a BlockCreationTx: %v", err)
 	}
 	return rivbin.NewEncoder(w).EncodeAll(SpecifierBlockCreationTransaction, bctx)
+}
+
+// SignExtension implements TransactionExtensionSigner.SignExtension
+func (bctc BlockCreationTransactionController) SignExtension(extension interface{}, sign func(*UnlockFulfillmentProxy, UnlockConditionProxy, ...interface{}) error) (interface{}, error) {
+	bctxExtension, ok := extension.(*BlockCreationTransactionExtension)
+	if !ok {
+		return nil, errors.New("Invalid extension data for a block creation transaction")
+	}
+
+	bso, err := bctc.bsog.GetBlockStakeOutput(bctxExtension.Reference.ParentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the active mint condition: %v", err)
+	}
+	err = sign(&bctxExtension.Reference.Fulfillment, bso.Condition)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign block creation tx extension: %v", err)
+	}
+	return bctxExtension, nil
 }
