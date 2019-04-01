@@ -135,11 +135,9 @@ func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) e
 		})
 	}
 	for name, plugin := range cs.plugins {
-		for _, txn := range pb.Block.Transactions {
-			err := plugin.RevertTransaction(txn, pluginBuckets[name])
-			if err != nil {
-				return err
-			}
+		err := plugin.RevertBlock(pb.Block, pb.Height, pluginBuckets[name])
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -171,11 +169,9 @@ func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) 
 		})
 	}
 	for name, plugin := range cs.plugins {
-		for _, txn := range pb.Block.Transactions {
-			err := plugin.ApplyTransaction(txn, pluginBuckets[name])
-			if err != nil {
-				return err
-			}
+		err := plugin.ApplyBlock(pb.Block, pb.Height, pluginBuckets[name])
+		if err != nil {
+			return err
 		}
 	}
 	return nil

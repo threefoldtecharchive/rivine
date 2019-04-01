@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	bolt "github.com/rivine/bbolt"
+
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
@@ -82,14 +83,14 @@ type (
 		// An error should be returned in case something went wrong.
 		// metadata is nil in case the plugin wasn't registered prior to this attempt.
 		// This method will be called while registering the plugin.
-		InitBucket(metadata *persist.Metadata, bucket *bolt.Bucket) (persist.Metadata, error)
+		InitBucket(metadata *persist.Metadata, name string, bucket *bolt.Bucket, db *persist.BoltDatabase) (persist.Metadata, error)
 
 		// Apply the transaction to the plugin.
 		// An error should be returned in case something went wrong.
-		ApplyTransaction(txn types.Transaction, bucket *persist.LazyBoltBucket) error
+		ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 		// Revert the block from the plugin.
 		// An error should be returned in case something went wrong.
-		RevertTransaction(txn types.Transaction, bucket *persist.LazyBoltBucket) error
+		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 	}
 
 	// A ConsensusChange enumerates a set of changes that occurred to the consensus set.
@@ -263,6 +264,8 @@ type (
 
 		// GetBlockStakeOutput takes a blockstake output ID and returns the appropriate blockstake output
 		GetBlockStakeOutput(types.BlockStakeOutputID) (types.BlockStakeOutput, error)
+
+		RegisterPlugin(name string, plugin ConsensusSetPlugin, cancel <-chan struct{}) error
 	}
 )
 

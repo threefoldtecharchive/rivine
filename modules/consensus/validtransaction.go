@@ -148,13 +148,6 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 				return err
 			}
 			applyTransaction(tx, diffHolder, txn)
-			for name, plugin := range cs.plugins {
-				err = plugin.ApplyTransaction(txn, pluginBuckets[name])
-				if err != nil {
-					cs.log.Printf("WARN: plugin %s: try-out tx %v is invalid: %v", name, txn.ID(), err)
-					return err
-				}
-			}
 		}
 		return errSuccess
 	})

@@ -8,12 +8,12 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/types"
-	"github.com/spf13/cobra"
 )
 
 // ConfigFromDaemonConstants returns CLI constants using

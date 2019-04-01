@@ -71,7 +71,7 @@ func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetP
 	// init the plugin
 	var consensusChangeID modules.ConsensusChangeID
 	err = cs.db.Update(func(tx *bolt.Tx) (err error) {
-		consensusChangeID, err = initConsensusSetPlugin(tx, name, plugin)
+		consensusChangeID, err = cs.initConsensusSetPlugin(tx, name, plugin)
 		return err
 	})
 	if err != nil {
@@ -106,6 +106,14 @@ func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetP
 
 		// save the new metadata
 		pluginMetadata.ConsensusChangeID = newConsensusChangeID
+
+		// Check if map is nil, if nil make one
+		if cs.plugins == nil {
+			cs.plugins = make(map[string]modules.ConsensusSetPlugin)
+		}
+		// Add plugin to cs plugins map
+		cs.plugins[name] = plugin
+
 		return metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
 	})
 }
@@ -171,19 +179,17 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 					return err
 				}
 				for _, block := range cc.RevertedBlocks {
-					for _, txn := range block.Transactions {
-						err = plugin.RevertTransaction(txn, bucket)
-						if err != nil {
-							return err
-						}
+					blockHeight, _ := cs.BlockHeightOfBlock(block)
+					err = plugin.RevertBlock(block, blockHeight, bucket)
+					if err != nil {
+						return err
 					}
 				}
 				for _, block := range cc.AppliedBlocks {
-					for _, txn := range block.Transactions {
-						err = plugin.ApplyTransaction(txn, bucket)
-						if err != nil {
-							return err
-						}
+					blockHeight, _ := cs.BlockHeightOfBlock(block)
+					err = plugin.ApplyBlock(block, blockHeight, bucket)
+					if err != nil {
+						return err
 					}
 				}
 				newChangeID = cc.ID
@@ -195,7 +201,7 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 	return newChangeID, err
 }
 
-func initConsensusSetPlugin(tx *bolt.Tx, name string, plugin modules.ConsensusSetPlugin) (modules.ConsensusChangeID, error) {
+func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin modules.ConsensusSetPlugin) (modules.ConsensusChangeID, error) {
 	// get the bucket
 	bucket := tx.Bucket([]byte(name))
 	if bucket == nil {
@@ -236,7 +242,7 @@ func initConsensusSetPlugin(tx *bolt.Tx, name string, plugin modules.ConsensusSe
 	}
 
 	// init plugin
-	pluginVersion, err := plugin.InitBucket(pluginMetadata.Version, bucket)
+	pluginVersion, err := plugin.InitBucket(pluginMetadata.Version, name, bucket, cs.db)
 	if err != nil {
 		return modules.ConsensusChangeID{}, err
 	}

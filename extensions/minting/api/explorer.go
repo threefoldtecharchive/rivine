@@ -18,15 +18,15 @@ type TransactionDBGetMintCondition struct {
 }
 
 // RegisterExplorerMintingHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
-func RegisterExplorerMintingHTTPHandlers(router rapi.Router, txdb *minting.TransactionDB) {
-	router.GET("/explorer/mintcondition", NewTransactionDBGetActiveMintConditionHandler(txdb))
-	router.GET("/explorer/mintcondition/:height", NewTransactionDBGetMintConditionAtHandler(txdb))
+func RegisterExplorerMintingHTTPHandlers(router rapi.Router, plugin *minting.Plugin) {
+	router.GET("/explorer/mintcondition", NewTransactionDBGetActiveMintConditionHandler(plugin))
+	router.GET("/explorer/mintcondition/:height", NewTransactionDBGetMintConditionAtHandler(plugin))
 }
 
 // NewTransactionDBGetActiveMintConditionHandler creates a handler to handle the API calls to /transactiondb/mintcondition.
-func NewTransactionDBGetActiveMintConditionHandler(txdb *minting.TransactionDB) httprouter.Handle {
+func NewTransactionDBGetActiveMintConditionHandler(plugin *minting.Plugin) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		mintCondition, err := txdb.GetActiveMintCondition()
+		mintCondition, err := plugin.GetActiveMintCondition()
 		if err != nil {
 			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
 			return
@@ -38,7 +38,7 @@ func NewTransactionDBGetActiveMintConditionHandler(txdb *minting.TransactionDB) 
 }
 
 // NewTransactionDBGetMintConditionAtHandler creates a handler to handle the API calls to /transactiondb/mintcondition/:height.
-func NewTransactionDBGetMintConditionAtHandler(txdb *minting.TransactionDB) httprouter.Handle {
+func NewTransactionDBGetMintConditionAtHandler(plugin *minting.Plugin) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		heightStr := ps.ByName("height")
 		height, err := strconv.ParseUint(heightStr, 10, 64)
@@ -46,7 +46,7 @@ func NewTransactionDBGetMintConditionAtHandler(txdb *minting.TransactionDB) http
 			rapi.WriteError(w, rapi.Error{Message: fmt.Sprintf("invalid block height given: %v", err)}, http.StatusBadRequest)
 			return
 		}
-		mintCondition, err := txdb.GetMintConditionAt(types.BlockHeight(height))
+		mintCondition, err := plugin.GetMintConditionAt(types.BlockHeight(height))
 		if err != nil {
 			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
 			return
