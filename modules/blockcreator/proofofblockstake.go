@@ -158,6 +158,10 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) er
 		}
 	}
 
+	// get current height so we can store the block height of the block the tx is
+	// supposed to make in the block (currentHeight + 1)
+	currentHeight := bc.cs.Height()
+
 	bso, err := bc.cs.GetBlockStakeOutput(ubso.BlockStakeOutputID)
 	if err != nil {
 		return err
@@ -176,7 +180,7 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) er
 	input := types.BlockStakeInput{ParentID: ubso.BlockStakeOutputID, Fulfillment: types.NewFulfillment(types.NewSingleSignatureFulfillment(pk))}
 
 	// create the extension for the block creation tx based on the used input
-	txExt := &types.BlockCreationTransactionExtension{Reference: input}
+	txExt := &types.BlockCreationTransactionExtension{Reference: input, Height: types.BlockHeight(currentHeight + 1)}
 
 	// Create transactionbuilder for the new transaction and add the extension
 	txb := bc.wallet.StartTransactionWithVersion(types.TransactionVersionBlockCreation)

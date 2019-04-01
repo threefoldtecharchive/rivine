@@ -29,12 +29,16 @@ type (
 	BlockCreationTransaction struct {
 		// Reference unlocks a blockstake output to prove ownership, but does not consume it
 		Reference BlockStakeInput
+		// Height for the block this tx is going to create
+		Height BlockHeight
 	}
 
 	// BlockCreationTransactionExtension defines the BlockCreationTransaction Extension Data
 	BlockCreationTransactionExtension struct {
 		// Reference unlocks a blockstake output to prove ownership, but does not consume it
 		Reference BlockStakeInput
+		// Height for the block this tx is going to create
+		Height BlockHeight
 	}
 )
 
@@ -90,6 +94,7 @@ func BlockCreationTransactionFromTransactionData(txData TransactionData) (BlockC
 		}
 
 		tx.Reference = extensionData.Reference
+		tx.Height = extensionData.Height
 	}
 
 	return tx, nil
@@ -101,6 +106,7 @@ func (bctx *BlockCreationTransaction) TransactionData() TransactionData {
 	txData := TransactionData{
 		Extension: &BlockCreationTransactionExtension{
 			Reference: bctx.Reference,
+			Height:    bctx.Height,
 		},
 	}
 	return txData
@@ -113,6 +119,7 @@ func (bctx *BlockCreationTransaction) Transaction() Transaction {
 		Version: TransactionVersionBlockCreation,
 		Extension: &BlockCreationTransactionExtension{
 			Reference: bctx.Reference,
+			Height:    bctx.Height,
 		},
 	}
 	return tx
@@ -235,6 +242,11 @@ func (bctc BlockCreationTransactionController) ValidateTransaction(t Transaction
 		return err
 	}
 
+	// check block height in tx
+	if bctx.Height != ctx.BlockHeight {
+		return fmt.Errorf("tx is supposed to create block %v, but is in block %v", bctx.Height, ctx.BlockHeight)
+	}
+
 	// Tx is valid
 	return nil
 }
@@ -253,6 +265,7 @@ func (bctc BlockCreationTransactionController) SignatureHash(t Transaction, extr
 		t.Version,
 		SpecifierBlockCreationTransaction,
 		bctx.Reference.ParentID,
+		bctx.Height,
 	)
 
 	if len(extraObjects) > 0 {
