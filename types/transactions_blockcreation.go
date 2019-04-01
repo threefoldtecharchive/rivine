@@ -242,6 +242,15 @@ func (bctc BlockCreationTransactionController) ValidateTransaction(t Transaction
 		return err
 	}
 
+	bso, err := bctc.bsog.GetBlockStakeOutput(bctx.Reference.ParentID)
+	if err != nil {
+		return fmt.Errorf("failed to get the referenced blockstake output condition condition: %v", err)
+	}
+
+	if err = bso.Condition.Fulfill(bctx.Reference.Fulfillment, FulfillContext{BlockHeight: ctx.BlockHeight, BlockTime: ctx.BlockTime, Transaction: t, ExtraObjects: nil}); err != nil {
+		return err
+	}
+
 	// check block height in tx
 	if bctx.Height != ctx.BlockHeight {
 		return fmt.Errorf("tx is supposed to create block %v, but is in block %v", bctx.Height, ctx.BlockHeight)
@@ -295,7 +304,7 @@ func (bctc BlockCreationTransactionController) SignExtension(extension interface
 
 	bso, err := bctc.bsog.GetBlockStakeOutput(bctxExtension.Reference.ParentID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the active mint condition: %v", err)
+		return nil, fmt.Errorf("failed to get the referenced blockstake output condition condition: %v", err)
 	}
 	err = sign(&bctxExtension.Reference.Fulfillment, bso.Condition)
 	if err != nil {
