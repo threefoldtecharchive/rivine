@@ -4,11 +4,11 @@ import (
 	"errors"
 	"math/big"
 
-	bolt "github.com/rivine/bbolt"
-
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
+
+	bolt "github.com/rivine/bbolt"
 )
 
 const (
@@ -83,7 +83,7 @@ type (
 		// An error should be returned in case something went wrong.
 		// metadata is nil in case the plugin wasn't registered prior to this attempt.
 		// This method will be called while registering the plugin.
-		InitBucket(metadata *persist.Metadata, name string, bucket *bolt.Bucket, db *persist.BoltDatabase) (persist.Metadata, error)
+		InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps PluginViewStorage) (persist.Metadata, error)
 
 		// Apply the transaction to the plugin.
 		// An error should be returned in case something went wrong.
@@ -91,6 +91,11 @@ type (
 		// Revert the block from the plugin.
 		// An error should be returned in case something went wrong.
 		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+	}
+
+	// A PluginStorage
+	PluginViewStorage interface {
+		View(callback func(bucket *bolt.Bucket) error) error
 	}
 
 	// A ConsensusChange enumerates a set of changes that occurred to the consensus set.

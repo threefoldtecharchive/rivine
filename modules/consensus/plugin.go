@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+
+	bolt "github.com/rivine/bbolt"
 )
 
 // plugin user errors
@@ -127,14 +128,14 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 		var entry changeEntry
 
 		if start == modules.ConsensusChangeBeginning {
-			// Special case: for modules.ConsensusChangeBeginning, create an
+			// Special case: for ConsensusChangeBeginning, create an
 			// initial node pointing to the genesis block. The subscriber will
 			// receive the diffs for all blocks in the consensus set, including
 			// the genesis block.
 			entry = cs.genesisEntry()
 			exists = true
 		} else if start == modules.ConsensusChangeRecent {
-			// Special case: for modules.ConsensusChangeRecent, set up the
+			// Special case: for ConsensusChangeRecent, set up the
 			// subscriber to start receiving only new blocks, but the
 			// subscriber does not need to do any catch-up. For this
 			// implementation, a no-op will have this effect.
@@ -146,7 +147,7 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 			// change.
 			entry, exists = getEntry(tx, start)
 			if !exists {
-				// modules.ErrInvalidConsensusChangeID is a named error that
+				// ErrInvalidConsensusChangeID is a named error that
 				// signals a break in synchronization between the consensus set
 				// persistence and the subscriber persistence. Typically,
 				// receiving this error means that the subscriber needs to
@@ -202,8 +203,19 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 }
 
 func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin modules.ConsensusSetPlugin) (modules.ConsensusChangeID, error) {
-	// get the bucket
-	bucket := tx.Bucket([]byte(name))
+	// get the root plugins bucket
+	rootbucket := tx.Bucket([]byte(BucketPlugins))
+	if rootbucket == nil {
+		// create the root plugins bucket
+		var err error
+		rootbucket, err = tx.CreateBucket([]byte(BucketPlugins))
+		if err != nil {
+			return modules.ConsensusChangeID{}, err
+		}
+	}
+
+	// get the plugin bucket
+	bucket := rootbucket.Bucket([]byte(name))
 	if bucket == nil {
 		// create the metadata
 		metadataBucket, err := tx.CreateBucketIfNotExists(bucketPluginsMetadata)
@@ -219,8 +231,8 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 			return modules.ConsensusChangeID{}, err
 		}
 
-		// create the bucket
-		bucket, err = tx.CreateBucket([]byte(name))
+		// create the plugin bucket in the rootbucket
+		bucket, err = rootbucket.CreateBucket([]byte(name))
 		if err != nil {
 			return modules.ConsensusChangeID{}, err
 		}
@@ -241,8 +253,10 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 		return modules.ConsensusChangeID{}, err
 	}
 
+	var pluginStorage modules.PluginViewStorage
+	pluginStorage = NewPluginStorage(cs.db, name)
 	// init plugin
-	pluginVersion, err := plugin.InitBucket(pluginMetadata.Version, name, bucket, cs.db)
+	pluginVersion, err := plugin.InitPlugin(pluginMetadata.Version, bucket, pluginStorage)
 	if err != nil {
 		return modules.ConsensusChangeID{}, err
 	}
