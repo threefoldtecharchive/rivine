@@ -26,7 +26,7 @@ type (
 )
 
 // New creates a new Plugin with a genesisMintCondition
-func New(genesisMintCondition types.UnlockConditionProxy) *Plugin {
+func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy) *Plugin {
 	p := &Plugin{
 		genesisMintCondition: genesisMintCondition,
 	}
