@@ -192,6 +192,9 @@ type (
 		// AddArbitraryData sets the arbitrary data of the transaction.
 		SetArbitraryData(arb []byte)
 
+		// SetExtension sets the extension of the transaction
+		SetExtension(interface{})
+
 		// Sign will sign any inputs added by 'FundCoins' or 'FundBlockStakes'
 		// and return a transaction set that contains all parents prepended to
 		// the transaction. If more fields need to be added, a new transaction
@@ -388,6 +391,10 @@ type (
 		// StartTransaction is a convenience method that calls
 		// RegisterTransaction(types.Transaction{}, nil)
 		StartTransaction() TransactionBuilder
+
+		// StartTransactionWithVersion is a convenience function that calls
+		// RegisterTransaction(types.Transaction{Version: version}, nil).
+		StartTransactionWithVersion(types.TransactionVersion) TransactionBuilder
 
 		// SendCoins is a tool for sending coins from the wallet to anyone who can fulfill the
 		// given condition (can be nil). The transaction is automatically given to the transaction pool, and

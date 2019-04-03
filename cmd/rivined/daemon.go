@@ -18,6 +18,7 @@ import (
 	"github.com/threefoldtech/rivine/modules/wallet"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/daemon"
+	"github.com/threefoldtech/rivine/types"
 )
 
 func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentifiers daemon.ModuleIdentifierSet) error {
@@ -89,6 +90,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 				fmt.Println("Error during consensus set shutdown:", err)
 			}
 		}()
+		types.RegisterTransactionVersion(types.TransactionVersionBlockCreation, types.NewBlockCreationTransactionController(cs))
 
 	}
 	var tpool modules.TransactionPool

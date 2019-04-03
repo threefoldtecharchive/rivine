@@ -107,6 +107,17 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 						spent = true
 					}
 				}
+				// check block creation txes, as they don't technically respend
+				if tr.Version == types.TransactionVersionBlockCreation {
+					ext, ok := tr.Extension.(*types.BlockCreationTransactionExtension)
+					if !ok {
+						// should never happen
+						continue
+					}
+					if ext.Reference.ParentID == bsoid {
+						spent = true
+					}
+				}
 			}
 		}
 	}
@@ -120,6 +131,18 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 					if blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputID(ubsu.OutputIndex) == bsi.ParentID {
 						bv.cs.log.Debugf("[SBV] Confirmed blockstake respend from an inactive fork, ubsu in block %d, new block at height %d\n", ubsu.BlockHeight, height)
 						valueofblockstakeoutput = blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputs[ubsu.OutputIndex].Value
+						spent = true
+					}
+				}
+				// check block creation txes, as they don't technically respend
+				if tr.Version == types.TransactionVersionBlockCreation {
+					ext, ok := tr.Extension.(*types.BlockCreationTransactionExtension)
+					if !ok {
+						// should never happen
+						continue
+					}
+					if ext.Reference.ParentID == blockatheight.Transactions[ubsu.TransactionIndex].BlockStakeOutputID(ubsu.OutputIndex) {
+						bv.cs.log.Debugf("[SBV] Confirmed blockstake respend from an inactive fork, ubsu in block %d, new block at height %d\n", ubsu.BlockHeight, height)
 						spent = true
 					}
 				}
