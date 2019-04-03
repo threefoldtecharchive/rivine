@@ -158,6 +158,8 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) er
 		}
 	}
 
+	// No valid blockstake have been spend yet in the block to be created
+
 	// get current height so we can store the block height of the block the tx is
 	// supposed to make in the block (currentHeight + 1)
 	currentHeight := bc.cs.Height()
@@ -190,26 +192,6 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) er
 	}
 
 	tx, _ := txb.View()
-
-	// //otherwise the blockstake is not yet spent in this block, spent it now
-	// t := bc.wallet.StartTransaction()
-	// err = t.SpendBlockStake(ubso.BlockStakeOutputID) // link the input of this transaction
-	// // to the used BlockStake output
-	// if err != nil {
-	// 	return err
-	// }
-
-	// bso := types.BlockStakeOutput{
-	// 	Value:     ubso.Value,     //use the same amount of BlockStake
-	// 	Condition: ubso.Condition, //use the same condition.
-	// }
-	// t.AddBlockStakeOutput(bso)
-	// txnSet, err := t.Sign()
-	// if err != nil {
-	// 	return err
-	// }
-	// //add this transaction in front of the list of unsolved block transactions
-	// bc.unsolvedBlock.Transactions = append(txnSet, bc.unsolvedBlock.Transactions...)
 
 	// add this transaction in front of the list of unsolved block transactions
 	bc.unsolvedBlock.Transactions = append([]types.Transaction{tx}, bc.unsolvedBlock.Transactions...)
