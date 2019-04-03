@@ -122,7 +122,7 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 		pluginBuckets := map[string]*persist.LazyBoltBucket{}
 		for name := range cs.plugins {
 			pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-				mdBucket := tx.Bucket(bucketPluginsMetadata)
+				mdBucket := tx.Bucket(BucketPlugins)
 				if mdBucket == nil {
 					return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
 				}

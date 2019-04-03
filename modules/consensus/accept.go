@@ -182,9 +182,11 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 		if len(cs.plugins) > 0 {
 			consensusChangeID := ce.ID()
 			for name := range cs.plugins {
-				metadataBucket := tx.Bucket(bucketPluginsMetadata)
+				rootbucket := tx.Bucket(BucketPlugins)
+				// get the metadata bucket from the rootbucket
+				metadataBucket := rootbucket.Bucket(bucketPluginsMetadata)
 				if metadataBucket == nil {
-					return ErrPluginGhostMetadata
+					return ErrMissingMetadataBucket
 				}
 				// get the plugin metadata as-is
 				pluginMetadataBytes := metadataBucket.Get([]byte(name))

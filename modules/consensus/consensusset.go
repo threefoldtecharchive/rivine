@@ -8,6 +8,7 @@ package consensus
 
 import (
 	"errors"
+	gosync "sync"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
@@ -59,6 +60,9 @@ type ConsensusSet struct {
 	// plugins to the consensus set will receive updates to the consensus set.
 	// At initialization, they receive all changes that they are missing.
 	plugins map[string]modules.ConsensusSetPlugin
+
+	// pluginsWaitGroup makes sure that we wait with closing the db until all plugins are unsubcribed
+	pluginsWaitGroup gosync.WaitGroup
 
 	// dosBlocks are blocks that are invalid, but the invalidity is only
 	// discoverable during an expensive step of validation. These blocks are

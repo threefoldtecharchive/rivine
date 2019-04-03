@@ -6,11 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
-
-	"github.com/rivine/bbolt"
 )
 
 const (
@@ -86,6 +85,7 @@ func (cs *ConsensusSet) initPersist(verbose bool) error {
 	}
 	// Set up the closing of the database.
 	cs.tg.AfterStop(func() {
+		cs.pluginsWaitGroup.Wait()
 		err := cs.db.Close()
 		if err != nil {
 			cs.log.Println("ERROR: Unable to close consensus set database at shutdown:", err)

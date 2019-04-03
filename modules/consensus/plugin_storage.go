@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/threefoldtech/rivine/persist"
 
@@ -12,14 +13,17 @@ import (
 type PluginViewStorage struct {
 	db   *persist.BoltDatabase
 	name string
+	wg   *sync.WaitGroup
 }
 
 // NewPluginStorage creates a new plugin storage for a given plugin bucket.
 // PluginViewStorage abstracts the way the plugin bucket manages its data.
-func NewPluginStorage(db *persist.BoltDatabase, name string) *PluginViewStorage {
+func NewPluginStorage(db *persist.BoltDatabase, name string, wg *sync.WaitGroup) *PluginViewStorage {
+	wg.Add(1)
 	return &PluginViewStorage{
 		db:   db,
 		name: name,
+		wg:   wg,
 	}
 }
 
@@ -36,4 +40,10 @@ func (ps *PluginViewStorage) View(callback func(bucket *bolt.Bucket) error) erro
 		}
 		return callback(childbucket)
 	})
+}
+
+// Close closes pluginViewStorage
+func (ps *PluginViewStorage) Close() error {
+	ps.wg.Done()
+	return nil
 }

@@ -123,11 +123,11 @@ func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) e
 	pluginBuckets := map[string]*persist.LazyBoltBucket{}
 	for name := range cs.plugins {
 		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-			mdBucket := tx.Bucket(bucketPluginsMetadata)
-			if mdBucket == nil {
-				return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
+			rootbucket := tx.Bucket(BucketPlugins)
+			if rootbucket == nil {
+				return nil, fmt.Errorf("plugin bucket does not exist")
 			}
-			b := mdBucket.Bucket([]byte(name))
+			b := rootbucket.Bucket([]byte(name))
 			if b == nil {
 				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
 			}
@@ -157,11 +157,11 @@ func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) 
 	pluginBuckets := map[string]*persist.LazyBoltBucket{}
 	for name := range cs.plugins {
 		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-			mdBucket := tx.Bucket(bucketPluginsMetadata)
-			if mdBucket == nil {
-				return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
+			rootbucket := tx.Bucket(BucketPlugins)
+			if rootbucket == nil {
+				return nil, fmt.Errorf("plugin bucket does not exist")
 			}
-			b := mdBucket.Bucket([]byte(name))
+			b := rootbucket.Bucket([]byte(name))
 			if b == nil {
 				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
 			}

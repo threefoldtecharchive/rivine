@@ -28,6 +28,8 @@ var (
 	ErrPluginGhostMetadata = errors.New("a plugin that wasn't registered yet does have metadata")
 	// ErrMissingPluginMetadata is returned in case a plugin is missing metadata.
 	ErrMissingPluginMetadata = errors.New("the metadata of the plugin is missing")
+	// ErrMissingMetadataBucket is returned in case root plugins metadata folder is missing
+	ErrMissingMetadataBucket = errors.New("root plugins metadata folder is missing")
 )
 
 var (
@@ -90,7 +92,9 @@ func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetP
 	}
 	// update the plugin metadata and call it done
 	return cs.db.Update(func(tx *bolt.Tx) error {
-		metadataBucket := tx.Bucket(bucketPluginsMetadata)
+		rootbucket := tx.Bucket(BucketPlugins)
+		// get the metadata bucket from the rootbucket
+		metadataBucket := rootbucket.Bucket(bucketPluginsMetadata)
 		if metadataBucket == nil {
 			return ErrPluginGhostMetadata
 		}
@@ -158,11 +162,13 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 		}
 
 		bucket := persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-			mdBucket := tx.Bucket(bucketPluginsMetadata)
+			rootbucket := tx.Bucket(BucketPlugins)
+			// get the metadata bucket from the rootbucket
+			mdBucket := rootbucket.Bucket(bucketPluginsMetadata)
 			if mdBucket == nil {
 				return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
 			}
-			b := mdBucket.Bucket([]byte(name))
+			b := rootbucket.Bucket([]byte(name))
 			if b == nil {
 				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
 			}
@@ -180,17 +186,21 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 					return err
 				}
 				for _, block := range cc.RevertedBlocks {
-					blockHeight, _ := cs.BlockHeightOfBlock(block)
-					err = plugin.RevertBlock(block, blockHeight, bucket)
-					if err != nil {
-						return err
+					blockHeight, exists := cs.BlockHeightOfBlock(block)
+					if exists {
+						err = plugin.RevertBlock(block, blockHeight, bucket)
+						if err != nil {
+							return err
+						}
 					}
 				}
 				for _, block := range cc.AppliedBlocks {
-					blockHeight, _ := cs.BlockHeightOfBlock(block)
-					err = plugin.ApplyBlock(block, blockHeight, bucket)
-					if err != nil {
-						return err
+					blockHeight, exists := cs.BlockHeightOfBlock(block)
+					if exists {
+						err = plugin.ApplyBlock(block, blockHeight, bucket)
+						if err != nil {
+							return err
+						}
 					}
 				}
 				newChangeID = cc.ID
@@ -218,7 +228,7 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	bucket := rootbucket.Bucket([]byte(name))
 	if bucket == nil {
 		// create the metadata
-		metadataBucket, err := tx.CreateBucketIfNotExists(bucketPluginsMetadata)
+		metadataBucket, err := rootbucket.CreateBucketIfNotExists(bucketPluginsMetadata)
 		if err != nil {
 			return modules.ConsensusChangeID{}, err
 		}
@@ -239,7 +249,7 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	}
 
 	// get the metadata
-	metadataBucket := tx.Bucket(bucketPluginsMetadata)
+	metadataBucket := rootbucket.Bucket(bucketPluginsMetadata)
 	if metadataBucket == nil {
 		return modules.ConsensusChangeID{}, errors.New("metadata bucket should always exist at this point")
 	}
@@ -254,9 +264,11 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	}
 
 	var pluginStorage modules.PluginViewStorage
-	pluginStorage = NewPluginStorage(cs.db, name)
+	pluginStorage = NewPluginStorage(cs.db, name, &cs.pluginsWaitGroup)
 	// init plugin
-	pluginVersion, err := plugin.InitPlugin(pluginMetadata.Version, bucket, pluginStorage)
+	pluginVersion, err := plugin.InitPlugin(pluginMetadata.Version, bucket, pluginStorage, func(plugin modules.ConsensusSetPlugin) {
+		cs.UnregisterPlugin(name, plugin)
+	})
 	if err != nil {
 		return modules.ConsensusChangeID{}, err
 	}
@@ -280,8 +292,9 @@ func (cs *ConsensusSet) UnregisterPlugin(name string, plugin modules.ConsensusSe
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	// TODO: perhaps log edge cases here
 	if existingPlugin, ok := cs.plugins[name]; ok && existingPlugin == plugin {
 		delete(cs.plugins, name)
+	} else {
+		fmt.Printf("try to delete plugin %s, plugin does not exist", name)
 	}
 }

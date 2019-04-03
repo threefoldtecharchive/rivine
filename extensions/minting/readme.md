@@ -7,12 +7,27 @@
 After creating the consensus module and registering the http handlers you can use following snippet
 
 ```golang
-condition := AnyUnlockCondition
+// This is an unlockcondition for testing purposes.
+uhString := "01fbaa166912244082784a28ec8756d5d2126f789ed25d93074b2afa05f984e32c0ae996e398e5"
+var uh types.UnlockHash
+if err := uh.LoadString(uhString); err != nil {
+    panic(err)
+}
+condition := types.NewUnlockHashCondition(uh)
+
+/* any condition that is defined types.unlockconditions.go can be passed to NewMintingPlugin
+    for example this can be one of following:
+    * singlesignature condition, which is an unlockhash
+    * timelock condition
+    * multisignature condition
+*/
+
+// Pass the condition the NewMintingPlugin
 plugin := minting.NewMintingPlugin(types.UnlockConditionProxy{Condition: condition})
-    err = cs.RegisterPlugin("minting", plugin, cancel)
-    if err != nil {
-        return err
-    }
+err = cs.RegisterPlugin("minting", plugin, cancel)
+if err != nil {
+    return err
+}
 ```
 
 This will register the minting plugin on the consensus.

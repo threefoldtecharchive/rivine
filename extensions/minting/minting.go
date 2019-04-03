@@ -17,11 +17,16 @@ const (
 	pluginDBHeader  = "mintingPlugin"
 )
 
+var (
+	bucketMintConditions = []byte("mintconditions")
+)
+
 type (
 	// Plugin is a struct defines the minting plugin
 	Plugin struct {
 		genesisMintCondition types.UnlockConditionProxy
-		ps                   modules.PluginViewStorage
+		storage              modules.PluginViewStorage
+		unregisterCallback   modules.PluginUnregisterCallback
 	}
 )
 
@@ -36,11 +41,20 @@ func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy) *Plugin {
 }
 
 // InitPlugin initializes the Bucket for the first time
-func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps modules.PluginViewStorage) (persist.Metadata, error) {
-	p.ps = ps
+func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, storage modules.PluginViewStorage, unregisterCallback modules.PluginUnregisterCallback) (persist.Metadata, error) {
+	p.storage = storage
 	if metadata == nil {
+		mintingBucket := bucket.Bucket([]byte(bucketMintConditions))
+		if mintingBucket == nil {
+			var err error
+			mintingBucket, err = bucket.CreateBucket([]byte(bucketMintConditions))
+			if err != nil {
+				return persist.Metadata{}, fmt.Errorf("failed to create mintcondition bucket: %v", err)
+			}
+		}
+
 		mintcond := siabin.Marshal(p.genesisMintCondition)
-		err := bucket.Put(EncodeBlockheight(0), mintcond)
+		err := mintingBucket.Put(EncodeBlockheight(0), mintcond)
 		if err != nil {
 			return persist.Metadata{}, fmt.Errorf("failed to store genesis mint condition: %v", err)
 		}
@@ -57,7 +71,11 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps 
 // ApplyBlock applies a block's minting transactions to the minting bucket.
 func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
-		return errors.New("mint conditions bucket does not exist")
+		return errors.New("minting bucket does not exist")
+	}
+	mintingBucket, err := bucket.Bucket([]byte(bucketMintConditions))
+	if err != nil {
+		return errors.New("mintcondition bucket does not exist")
 	}
 	for i := range block.Transactions {
 		rtx := &block.Transactions[i]
@@ -71,7 +89,7 @@ func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket 
 			if err != nil {
 				return fmt.Errorf("unexpected error while unpacking the minter def. tx type: %v" + err.Error())
 			}
-			err = bucket.Put(EncodeBlockheight(height), siabin.Marshal(mdtx.MintCondition))
+			err = mintingBucket.Put(EncodeBlockheight(height), siabin.Marshal(mdtx.MintCondition))
 			if err != nil {
 				return fmt.Errorf(
 					"failed to put mint condition for block height %d: %v",
@@ -87,6 +105,10 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 	if bucket == nil {
 		return errors.New("mint conditions bucket does not exist")
 	}
+	mintingBucket, err := bucket.Bucket([]byte(bucketMintConditions))
+	if err != nil {
+		return errors.New("mintcondition bucket does not exist")
+	}
 	// collect all one-per-block mint conditions
 	for i := range block.Transactions {
 		rtx := &block.Transactions[i]
@@ -97,7 +119,7 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 		// check the version and handle the ones we care about
 		switch rtx.Version {
 		case TransactionVersionMinterDefinition:
-			err := bucket.Delete(EncodeBlockheight(height))
+			err := mintingBucket.Delete(EncodeBlockheight(height))
 			if err != nil {
 				return fmt.Errorf(
 					"failed to delete mint condition for block height %d: %v",
@@ -112,10 +134,11 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 // GetActiveMintCondition implements types.MintConditionGetter.GetActiveMintCondition
 func (p *Plugin) GetActiveMintCondition() (types.UnlockConditionProxy, error) {
 	var mintCondition types.UnlockConditionProxy
-	err := p.ps.View(func(bucket *bolt.Bucket) error {
+	err := p.storage.View(func(bucket *bolt.Bucket) error {
 		var b []byte
+		mintingBucket := bucket.Bucket([]byte(bucketMintConditions))
 		// return the last cursor
-		cursor := bucket.Cursor()
+		cursor := mintingBucket.Cursor()
 
 		var k []byte
 		k, b = cursor.Last()
@@ -137,8 +160,9 @@ func (p *Plugin) GetActiveMintCondition() (types.UnlockConditionProxy, error) {
 func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockConditionProxy, error) {
 	var mintCondition types.UnlockConditionProxy
 	var b []byte
-	err := p.ps.View(func(bucket *bolt.Bucket) error {
-		cursor := bucket.Cursor()
+	err := p.storage.View(func(bucket *bolt.Bucket) error {
+		mintingBucket := bucket.Bucket([]byte(bucketMintConditions))
+		cursor := mintingBucket.Cursor()
 		var k []byte
 		k, b = cursor.Seek(EncodeBlockheight(height))
 		if len(k) == 0 {
@@ -169,4 +193,13 @@ func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockCondi
 	}
 
 	return mintCondition, nil
+}
+
+// Close unregisters the plugin from the consensus
+func (p *Plugin) Close() error {
+	if p.unregisterCallback == nil {
+		return errors.New("minting plugin was never initialized")
+	}
+	p.unregisterCallback(p)
+	return p.storage.Close()
 }

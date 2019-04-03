@@ -83,7 +83,7 @@ type (
 		// An error should be returned in case something went wrong.
 		// metadata is nil in case the plugin wasn't registered prior to this attempt.
 		// This method will be called while registering the plugin.
-		InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps PluginViewStorage) (persist.Metadata, error)
+		InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps PluginViewStorage, cb PluginUnregisterCallback) (persist.Metadata, error)
 
 		// Apply the transaction to the plugin.
 		// An error should be returned in case something went wrong.
@@ -93,9 +93,13 @@ type (
 		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 	}
 
+	// PluginUnregisterCallback allows plugins to unregister
+	PluginUnregisterCallback func(plugin ConsensusSetPlugin)
+
 	// A PluginStorage
 	PluginViewStorage interface {
 		View(callback func(bucket *bolt.Bucket) error) error
+		Close() error
 	}
 
 	// A ConsensusChange enumerates a set of changes that occurred to the consensus set.
@@ -270,7 +274,11 @@ type (
 		// GetBlockStakeOutput takes a blockstake output ID and returns the appropriate blockstake output
 		GetBlockStakeOutput(types.BlockStakeOutputID) (types.BlockStakeOutput, error)
 
+		// RegisterPlugin takes in a name and plugin and registers this plugin on the consensus
 		RegisterPlugin(name string, plugin ConsensusSetPlugin, cancel <-chan struct{}) error
+
+		// UnregisterPlugin takes in a name and plugin and unregisters this plugin off the consensus
+		UnregisterPlugin(name string, plugin ConsensusSetPlugin)
 	}
 )
 
