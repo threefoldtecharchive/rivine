@@ -43,6 +43,7 @@ func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy) *Plugin {
 // InitPlugin initializes the Bucket for the first time
 func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, storage modules.PluginViewStorage, unregisterCallback modules.PluginUnregisterCallback) (persist.Metadata, error) {
 	p.storage = storage
+	p.unregisterCallback = unregisterCallback
 	if metadata == nil {
 		mintingBucket := bucket.Bucket([]byte(bucketMintConditions))
 		if mintingBucket == nil {
@@ -197,9 +198,6 @@ func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockCondi
 
 // Close unregisters the plugin from the consensus
 func (p *Plugin) Close() error {
-	if p.unregisterCallback == nil {
-		return errors.New("minting plugin was never initialized")
-	}
 	p.unregisterCallback(p)
 	return p.storage.Close()
 }
