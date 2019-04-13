@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"os"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -24,7 +23,7 @@ var (
 
 	dbMetadata = persist.Metadata{
 		Header:  "Consensus Set Database",
-		Version: "1.0.5",
+		Version: "1.1.0",
 	}
 )
 

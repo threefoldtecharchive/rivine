@@ -15,7 +15,7 @@ import (
 	types "github.com/threefoldtech/rivine/types"
 )
 
-func createExploreCmd(client *client.CommandLineClient) {
+func CreateExploreCmd(client *client.CommandLineClient) {
 	exploreCmd := &exploreCmd{cli: client}
 
 	// create root explore command and all subs
@@ -47,7 +47,7 @@ type exploreCmd struct {
 }
 
 func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []string) {
-	txDBReader := NewTransactionDBExplorerClient(explorerSubCmds.cli)
+	pluginReader := NewPluginExplorerClient(explorerSubCmds.cli)
 
 	var (
 		mintCondition types.UnlockConditionProxy
@@ -57,7 +57,7 @@ func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []s
 	switch len(args) {
 	case 0:
 		// get active mint condition for the latest block height
-		mintCondition, err = txDBReader.GetActiveMintCondition()
+		mintCondition, err = pluginReader.GetActiveMintCondition()
 		if err != nil {
 			cli.DieWithError("failed to get the active mint condition", err)
 		}
@@ -69,7 +69,7 @@ func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []s
 			cmd.UsageFunc()
 			cli.DieWithError("invalid block height given", err)
 		}
-		mintCondition, err = txDBReader.GetMintConditionAt(types.BlockHeight(height))
+		mintCondition, err = pluginReader.GetMintConditionAt(types.BlockHeight(height))
 		if err != nil {
 			cli.DieWithError("failed to get the mint condition at the given block height", err)
 		}

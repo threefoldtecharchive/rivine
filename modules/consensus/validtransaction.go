@@ -2,13 +2,15 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 // validCoins checks that the coin inputs and outputs are valid in the
@@ -116,6 +118,20 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 		blockTime, err := blockTimeStamp(tx, diffHolder.Height)
 		if err != nil {
 			return err
+		}
+		pluginBuckets := map[string]*persist.LazyBoltBucket{}
+		for name := range cs.plugins {
+			pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
+				mdBucket := tx.Bucket(BucketPlugins)
+				if mdBucket == nil {
+					return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
+				}
+				b := mdBucket.Bucket([]byte(name))
+				if b == nil {
+					return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
+				}
+				return b, nil
+			})
 		}
 		for _, txn := range txns {
 			// a transaction can only be "block creating" in the context of a block,

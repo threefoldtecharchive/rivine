@@ -2,11 +2,13 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/persist"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 var (
@@ -56,7 +58,10 @@ func (cs *ConsensusSet) revertToBlock(tx *bolt.Tx, pb *processedBlock) (reverted
 	// Rewind blocks until 'pb' is the current block.
 	for currentBlockID(tx) != pb.Block.ID() {
 		block := currentProcessedBlock(tx)
-		cs.rewindBlock(tx, block)
+		err = cs.rewindBlock(tx, block)
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
 		revertedBlocks = append(revertedBlocks, block)
 
 		// Sanity check - after removing a block, check that the consensus set
@@ -79,7 +84,10 @@ func (cs *ConsensusSet) applyUntilBlock(tx *bolt.Tx, pb *processedBlock) (applie
 		// If the diffs for this block have already been generated, apply diffs
 		// directly instead of generating them. This is much faster.
 		if block.DiffsGenerated {
-			cs.forwardBlock(tx, block)
+			err := cs.forwardBlock(tx, block)
+			if err != nil {
+				return nil, err
+			}
 		} else {
 			err := cs.generateAndApplyDiff(tx, block)
 			if err != nil {
@@ -102,19 +110,71 @@ func (cs *ConsensusSet) applyUntilBlock(tx *bolt.Tx, pb *processedBlock) (applie
 }
 
 // rewindBlock rewinds a single block from the consensus set. This method assumes that pb is the current top op the chain, i.e. the active fork
-func (cs *ConsensusSet) rewindBlock(tx *bolt.Tx, pb *processedBlock) {
+func (cs *ConsensusSet) rewindBlock(tx *bolt.Tx, pb *processedBlock) error {
 	cs.log.Debugf("[CS] rewinding block %d\n", pb.Height)
 	createDCOBucket(tx, pb.Height)
 	commitDiffSet(tx, pb, modules.DiffRevert)
 	deleteDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
+	return cs.rewindBlockForPlugins(tx, pb)
+}
+
+func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
+	// update plugins
+	pluginBuckets := map[string]*persist.LazyBoltBucket{}
+	for name := range cs.plugins {
+		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
+			rootbucket := tx.Bucket(BucketPlugins)
+			if rootbucket == nil {
+				return nil, fmt.Errorf("plugin bucket does not exist")
+			}
+			b := rootbucket.Bucket([]byte(name))
+			if b == nil {
+				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
+			}
+			return b, nil
+		})
+	}
+	for name, plugin := range cs.plugins {
+		err := plugin.RevertBlock(pb.Block, pb.Height, pluginBuckets[name])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // forwardBlock adds a single block to the chain. It assumes that pb is the block at "currentHeight + 1"
-func (cs *ConsensusSet) forwardBlock(tx *bolt.Tx, pb *processedBlock) {
+func (cs *ConsensusSet) forwardBlock(tx *bolt.Tx, pb *processedBlock) error {
 	cs.log.Debugf("[CS] reapplying block %d\n", pb.Height)
 	createDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
 	commitDiffSet(tx, pb, modules.DiffApply)
 	deleteDCOBucket(tx, pb.Height)
+	return cs.forwardBlockForPlugins(tx, pb)
+}
+
+func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
+	// update plugins
+	pluginBuckets := map[string]*persist.LazyBoltBucket{}
+	for name := range cs.plugins {
+		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
+			rootbucket := tx.Bucket(BucketPlugins)
+			if rootbucket == nil {
+				return nil, fmt.Errorf("plugin bucket does not exist")
+			}
+			b := rootbucket.Bucket([]byte(name))
+			if b == nil {
+				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
+			}
+			return b, nil
+		})
+	}
+	for name, plugin := range cs.plugins {
+		err := plugin.ApplyBlock(pb.Block, pb.Height, pluginBuckets[name])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // forkBlockchain will move the consensus set onto the 'newBlock' fork. An

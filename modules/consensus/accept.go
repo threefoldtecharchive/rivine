@@ -6,9 +6,10 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 var (
@@ -176,6 +177,37 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 		if err != nil {
 			return err
 		}
+
+		// update consensus change id for all plugins
+		if len(cs.plugins) > 0 {
+			consensusChangeID := ce.ID()
+			for name := range cs.plugins {
+				rootbucket := tx.Bucket(BucketPlugins)
+				// get the metadata bucket from the rootbucket
+				metadataBucket := rootbucket.Bucket(bucketPluginsMetadata)
+				if metadataBucket == nil {
+					return ErrMissingMetadataBucket
+				}
+				// get the plugin metadata as-is
+				pluginMetadataBytes := metadataBucket.Get([]byte(name))
+				if len(pluginMetadataBytes) == 0 {
+					return ErrMissingPluginMetadata
+				}
+				var pluginMetadata pluginMetadata
+				err := rivbin.Unmarshal(pluginMetadataBytes, &pluginMetadata)
+				if err != nil {
+					return err
+				}
+
+				// save the new metadata
+				pluginMetadata.ConsensusChangeID = consensusChangeID
+				err = metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
+				if err != nil {
+					return err
+				}
+			}
+		}
+
 		return nil
 	})
 	if err != nil {

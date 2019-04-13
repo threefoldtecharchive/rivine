@@ -638,3 +638,11 @@ func (css *consensusSetStub) GetBlockStakeOutput(id types.BlockStakeOutputID) (b
 	}
 	return types.BlockStakeOutput{}, errors.New("BlockStake output not found in database")
 }
+
+func (css *consensusSetStub) RegisterPlugin(name string, plugin modules.ConsensusSetPlugin, cancel <-chan struct{}) (err error) {
+	return nil
+}
+
+func (css *consensusSetStub) UnregisterPlugin(name string, plugin modules.ConsensusSetPlugin) {
+	// Do nothing
+}
