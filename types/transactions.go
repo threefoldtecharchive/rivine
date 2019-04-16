@@ -6,6 +6,7 @@ package types
 // it is cryptographically unlikely that any two objects would share an id.
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"io"
@@ -795,4 +796,20 @@ func (bsoid BlockStakeOutputID) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON decodes the json hex string of the blockstake output id.
 func (bsoid *BlockStakeOutputID) UnmarshalJSON(b []byte) error {
 	return (*crypto.Hash)(bsoid).UnmarshalJSON(b)
+}
+
+// TransactionNonce is a nonce
+// used to ensure the uniqueness of an otherwise potentially non-unique Tx
+type TransactionNonce [TransactionNonceLength]byte
+
+// TransactionNonceLength defines the length of a TransactionNonce
+const TransactionNonceLength = 8
+
+// RandomTransactionNonce creates a random Transaction nonce
+func RandomTransactionNonce() (nonce TransactionNonce) {
+	for nonce == (TransactionNonce{}) {
+		// generate non-nil crypto-Random TransactionNonce
+		rand.Read(nonce[:])
+	}
+	return
 }
