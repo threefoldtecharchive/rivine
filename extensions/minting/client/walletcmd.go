@@ -1,7 +1,6 @@
 package client
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -80,7 +79,7 @@ func (walletCmd *walletCmd) createMinterDefinitionTxCmd(cmd *cobra.Command, args
 
 	// create a minter definition tx with a random nonce and the minimum required miner fee
 	tx := minting.MinterDefinitionTransaction{
-		Nonce:     RandomTransactionNonce(),
+		Nonce:     types.RandomTransactionNonce(),
 		MinerFees: []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
 	}
 
@@ -118,7 +117,7 @@ func (walletCmd *walletCmd) createCoinCreationTxCmd(cmd *cobra.Command, args []s
 	}
 
 	tx := minting.CoinCreationTransaction{
-		Nonce:     RandomTransactionNonce(),
+		Nonce:     types.RandomTransactionNonce(),
 		MinerFees: []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
 	}
 
@@ -156,15 +155,6 @@ func parseConditionString(str string) (condition types.UnlockConditionProxy, err
 	if err != nil {
 		return types.UnlockConditionProxy{}, fmt.Errorf(
 			"condition has to be UnlockHash or JSON-encoded UnlockCondition, output %q is neither", str)
-	}
-	return
-}
-
-// RandomTransactionNonce creates a random Transaction nonce
-func RandomTransactionNonce() (nonce minting.TransactionNonce) {
-	for nonce == (minting.TransactionNonce{}) {
-		// generate non-nil crypto-Random TransactionNonce
-		rand.Read(nonce[:])
 	}
 	return
 }

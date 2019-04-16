@@ -232,7 +232,7 @@ func (cctc CoinCreationTransactionController) ValidateTransaction(t types.Transa
 		return fmt.Errorf("failed to fulfill mint condition: %v", err)
 	}
 	// ensure the Nonce is not Nil
-	if cctx.Nonce == (TransactionNonce{}) {
+	if cctx.Nonce == (types.TransactionNonce{}) {
 		return errors.New("nil nonce is not allowed for a coin creation transaction")
 	}
 
@@ -420,7 +420,7 @@ func (mdtc MinterDefinitionTransactionController) ValidateTransaction(t types.Tr
 		return fmt.Errorf("failed to fulfill mint condition: %v", err)
 	}
 	// ensure the Nonce is not Nil
-	if mdtx.Nonce == (TransactionNonce{}) {
+	if mdtx.Nonce == (types.TransactionNonce{}) {
 		return errors.New("nil nonce is not allowed for a mint condition transaction")
 	}
 
@@ -533,20 +533,13 @@ func (mdtc MinterDefinitionTransactionController) GetCommonExtensionData(extensi
 	}, nil
 }
 
-// TransactionNonce is a nonce
-// used to ensure the uniqueness of an otherwise potentially non-unique Tx
-type TransactionNonce [TransactionNonceLength]byte
-
-// TransactionNonceLength defines the length of a TransactionNonce
-const TransactionNonceLength = 8
-
 type (
 	// CoinCreationTransaction is to be created only by the defined Coin Minters,
 	// as a medium in order to create coins (coin outputs), without backing them
 	// (so without having to spend previously unspend coin outputs, see: coin inputs).
 	CoinCreationTransaction struct {
 		// Nonce used to ensure the uniqueness of a CoinCreationTransaction's ID and signature.
-		Nonce TransactionNonce `json:"nonce"`
+		Nonce types.TransactionNonce `json:"nonce"`
 		// MintFulfillment defines the fulfillment which is used in order to
 		// fulfill the globally defined MintCondition.
 		MintFulfillment types.UnlockFulfillmentProxy `json:"mintfulfillment"`
@@ -563,7 +556,7 @@ type (
 	}
 	// CoinCreationTransactionExtension defines the CoinCreationTx Extension Data
 	CoinCreationTransactionExtension struct {
-		Nonce           TransactionNonce
+		Nonce           types.TransactionNonce
 		MintFulfillment types.UnlockFulfillmentProxy
 	}
 )
@@ -652,7 +645,7 @@ type (
 	// as a medium in order to transfer minting powers.
 	MinterDefinitionTransaction struct {
 		// Nonce used to ensure the uniqueness of a MinterDefinitionTransaction's ID and signature.
-		Nonce TransactionNonce `json:"nonce"`
+		Nonce types.TransactionNonce `json:"nonce"`
 		// MintFulfillment defines the fulfillment which is used in order to
 		// fulfill the globally defined MintCondition.
 		MintFulfillment types.UnlockFulfillmentProxy `json:"mintfulfillment"`
@@ -672,7 +665,7 @@ type (
 	}
 	// MinterDefinitionTransactionExtension defines the MinterDefinitionTx Extension Data
 	MinterDefinitionTransactionExtension struct {
-		Nonce           TransactionNonce
+		Nonce           types.TransactionNonce
 		MintFulfillment types.UnlockFulfillmentProxy
 		MintCondition   types.UnlockConditionProxy
 	}
