@@ -44,6 +44,9 @@ type (
 
 		// Delegation is the condition which needs to be unlocked to use the delegated blockstakes
 		Delegation BlockStakeOutput
+
+		// Fee is the percantage of the block reward the block creator can keep, 0 to 100
+		Fee uint8
 	}
 
 	// DelegationTransactionExtension defines the DelegationTransaction Extension Data
@@ -52,6 +55,8 @@ type (
 		Reference BlockStakeInput
 		// Delegation is the condition which needs to be unlocked to use the delegated blockstakes
 		Delegation BlockStakeOutput
+		// Fee is the percantage of the block reward the block creator can keep, 0 to 100
+		Fee uint8
 	}
 )
 
@@ -109,6 +114,7 @@ func DelegationTransactionFromTransactionData(txData TransactionData) (Delegatio
 
 		tx.Reference = extensionData.Reference
 		tx.Delegation = extensionData.Delegation
+		tx.Fee = extensionData.Fee
 	}
 
 	tx.CoinInputs = txData.CoinInputs
@@ -133,6 +139,7 @@ func (dtx *DelegationTransaction) TransactionData() TransactionData {
 		Extension: &DelegationTransactionExtension{
 			Reference:  dtx.Reference,
 			Delegation: dtx.Delegation,
+			Fee:        dtx.Fee,
 		},
 	}
 	return txData
@@ -150,6 +157,7 @@ func (dtx *DelegationTransaction) Transaction() Transaction {
 		Extension: &DelegationTransaction{
 			Reference:  dtx.Reference,
 			Delegation: dtx.Delegation,
+			Fee:        dtx.Fee,
 		},
 	}
 	return tx
@@ -176,6 +184,7 @@ func (dtx DelegationTransaction) MarshalRivine(w io.Writer) error {
 		dtx.ArbitraryData,
 		dtx.Reference,
 		dtx.Delegation,
+		dtx.Fee,
 	)
 }
 
@@ -188,6 +197,7 @@ func (dtx *DelegationTransaction) UnmarshalRivine(r io.Reader) error {
 		&dtx.ArbitraryData,
 		&dtx.Reference,
 		&dtx.Delegation,
+		&dtx.Fee,
 	)
 }
 
@@ -278,6 +288,11 @@ func (dtc DelegationTransactionController) ValidateTransaction(t Transaction, ct
 		return ErrTooSmallMinerFee
 	}
 
+	// validate fee is in acceptable range
+	if dtx.Fee > 100 {
+		return fmt.Errorf("fee too large: %v", err)
+	}
+
 	// prevent double spending
 	spendCoins := make(map[CoinOutputID]struct{})
 	for _, ci := range dtx.CoinInputs {
@@ -335,6 +350,7 @@ func (dtc DelegationTransactionController) SignatureHash(t Transaction, extraObj
 		dtx.ArbitraryData,
 		dtx.Reference.ParentID,
 		dtx.Delegation,
+		dtx.Fee,
 	)
 
 	if len(extraObjects) > 0 {
