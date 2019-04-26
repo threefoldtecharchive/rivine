@@ -96,7 +96,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("transaction pool")
 		tpool, err = transactionpool.New(cs, g,
 			filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir),
-			cfg.BlockchainInfo, networkCfg.Constants)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}

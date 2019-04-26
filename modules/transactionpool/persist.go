@@ -12,6 +12,10 @@ import (
 	"github.com/rivine/bbolt"
 )
 
+const (
+	logFile = modules.TransactionPoolDir + ".log"
+)
+
 var (
 	// bucketRecentConsensusChange holds the most recent consensus change seen
 	// by the transaction pool.
@@ -45,9 +49,16 @@ func (tp *TransactionPool) resetDB(tx *bolt.Tx) error {
 }
 
 // initPersist creates buckets in the database
-func (tp *TransactionPool) initPersist() error {
+func (tp *TransactionPool) initPersist(verbose bool) error {
 	// Create the persist directory if it does not yet exist.
 	err := os.MkdirAll(tp.persistDir, 0700)
+	if err != nil {
+		return err
+	}
+
+	// Initialize the logger.
+	tp.log, err = persist.NewFileLogger(tp.bcInfo,
+		filepath.Join(tp.persistDir, logFile), verbose)
 	if err != nil {
 		return err
 	}
