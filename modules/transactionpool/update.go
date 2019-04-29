@@ -1,6 +1,8 @@
 package transactionpool
 
 import (
+	"fmt"
+
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
@@ -52,7 +54,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		for _, txn := range block.Transactions {
 			setID := TransactionSetID(crypto.HashObject([]types.Transaction{txn}))
 			tp.broadcastCache.delete(setID)
-			tp.log.Debug("Remove accepted tx set %v from broadcast cache", setID)
+			tp.log.Debug(fmt.Sprintf("Remove accepted tx set %v from broadcast cache", crypto.Hash(setID).String()))
 		}
 	}
 
@@ -65,7 +67,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	for _, block := range cc.AppliedBlocks {
 		for _, txn := range block.Transactions {
 			id := txn.ID()
-			tp.log.Debug("Accepted tx %v in block", id)
+			tp.log.Debug(fmt.Sprintf("Accepted tx %v in block", id))
 			txids[id] = struct{}{}
 		}
 	}
@@ -97,7 +99,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		for _, txn := range tSet {
 			_, exists := txids[txn.ID()]
 			if !exists {
-				tp.log.Println("Remembering tx %v, in pool but not in latest block", txn.ID())
+				tp.log.Println(fmt.Sprintf("Remembering tx %v, in pool but not in latest block", txn.ID()))
 				newTSet = append(newTSet, txn)
 			}
 		}
@@ -130,7 +132,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 			// so remove it from the cache as well
 			setID := TransactionSetID(crypto.HashObject(set))
 			tp.broadcastCache.delete(setID)
-			tp.log.Println("[WARN] Failed to accept transaction set %v, was previously in pool but not in latest block, and is now invalid")
+			tp.log.Println(fmt.Sprintf("[WARN] Failed to accept transaction set %v, was previously in pool but not in latest block, and is now invalid", crypto.Hash(setID).String()))
 			continue
 		}
 	}
@@ -139,7 +141,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	if cc.Synced {
 		currentheight := tp.consensusSet.Height()
 		for _, id := range tp.broadcastCache.getTransactionsToBroadcast(currentheight) {
-			tp.log.Println("Rebroadcasting transaction %v to peers", id)
+			tp.log.Println(fmt.Sprintf("Rebroadcasting transaction %v to peers", crypto.Hash(id).String()))
 			go tp.gateway.Broadcast("RelayTransactionSet", tp.transactionSets[id], tp.gateway.Peers())
 		}
 	}

@@ -5,6 +5,7 @@ package transactionpool
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
@@ -211,10 +212,10 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	setID := TransactionSetID(crypto.HashObject(ts))
 
 	// Validate the composition of the transaction set
-	tp.log.Debug("validation transaction set %v composition", setID)
+	tp.log.Debug(fmt.Sprintf("validation transaction set %v composition", crypto.Hash(setID).String()))
 	err = tp.validateTransactionSetComposition(ts)
 	if err != nil {
-		tp.log.Debug("Transaction set %v composition invalid: %v", setID, err)
+		tp.log.Debug(fmt.Sprintf("Transaction set %v composition invalid: %v", crypto.Hash(setID).String(), err))
 		return err
 	}
 
@@ -233,10 +234,10 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 		tp.log.Debug("Handling conflicts in transaction set %v", setID)
 		return tp.handleConflicts(ts, conflicts)
 	}
-	tp.log.Debug("Trying out transaction set %v against current consensus", setID)
+	tp.log.Debug(fmt.Sprintf("Trying out transaction set %v against current consensus", crypto.Hash(setID).String()))
 	cc, err := tp.consensusSet.TryTransactionSet(ts)
 	if err != nil {
-		tp.log.Debug("Transaction set %v has conflict with current consensus", setID)
+		tp.log.Debug(fmt.Sprintf("Transaction set %v has conflict with current consensus", crypto.Hash(setID).String()))
 		return modules.NewConsensusConflict(err.Error())
 	}
 
@@ -245,7 +246,7 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	for _, oid := range oids {
 		tp.knownObjects[oid] = setID
 	}
-	tp.log.Println("Accepted transaction set %v in pool", setID)
+	tp.log.Println(fmt.Sprintf("Accepted transaction set %v in pool", crypto.Hash(setID).String()))
 	// remember when the transaction was added
 	tp.broadcastCache.add(setID, tp.consensusSet.Height())
 	tp.transactionSetDiffs[setID] = cc
@@ -266,7 +267,7 @@ func (tp *TransactionPool) AcceptTransactionSet(ts []types.Transaction) error {
 	}
 
 	// Notify subscribers and broadcast the transaction set.
-	tp.log.Debug("Relaying transaction set %v to peers", TransactionSetID(crypto.HashObject(ts)))
+	tp.log.Debug(fmt.Sprintf("Relaying transaction set %v to peers", crypto.HashObject(ts)))
 	go tp.gateway.Broadcast("RelayTransactionSet", ts, tp.gateway.Peers())
 	tp.updateSubscribersTransactions()
 	return nil
