@@ -6,7 +6,7 @@ import (
 	"errors"
 
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/persist"
+	persist "github.com/threefoldtech/rivine/tarantool-persist"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -36,13 +36,14 @@ type (
 	// including various statistics and metrics.
 	Explorer struct {
 		cs             modules.ConsensusSet
-		db             *persist.BoltDatabase
 		persistDir     string
 		bcInfo         types.BlockchainInfo
 		chainCts       types.ChainConstants
 		rootTarget     types.Target
 		genesisBlock   types.Block
 		genesisBlockID types.BlockID
+
+		client *persist.TarantoolClient
 	}
 )
 
@@ -74,7 +75,7 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 
 	// retrieve the current ConsensusChangeID
 	var recentChange modules.ConsensusChangeID
-	err = e.db.View(dbGetInternal(internalRecentChange, &recentChange))
+	err = dbGetConsensusChangeID(&recentChange, e.client)
 	if err != nil {
 		return nil, err
 	}
@@ -91,5 +92,5 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 // Close closes the explorer.
 func (e *Explorer) Close() error {
 	e.cs.Unsubscribe(e)
-	return e.db.Close()
+	return e.client.Close()
 }

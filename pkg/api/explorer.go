@@ -307,7 +307,10 @@ func NewExplorerHashHandler(explorer modules.Explorer, tpool modules.Transaction
 				txns, blocks = BuildTransactionSet(explorer, txids, filters)
 			}
 			txns = append(txns, getUnconfirmedTransactions(explorer, tpool, addr)...)
-			multiSigAddresses := explorer.MultiSigAddresses(addr)
+			multiSigAddresses, err := explorer.MultiSigAddresses(addr)
+			if err != nil {
+				panic(err)
+			}
 			if len(txns) != 0 || len(blocks) != 0 || len(multiSigAddresses) != 0 {
 				WriteJSON(w, ExplorerHashGET{
 					HashType:          HashTypeUnlockHashStr,
@@ -408,7 +411,10 @@ func NewExplorerHashHandler(explorer modules.Explorer, tpool modules.Transaction
 // NewExplorerRootHandler creates a handler to handle API calls to /explorer
 func NewExplorerRootHandler(explorer modules.Explorer) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		facts := explorer.LatestBlockFacts()
+		facts, err := explorer.LatestBlockFacts()
+		if err != nil {
+			panic(err)
+		}
 		WriteJSON(w, ExplorerGET{
 			BlockFacts: facts,
 		})

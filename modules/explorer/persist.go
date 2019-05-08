@@ -1,21 +1,13 @@
 package explorer
 
 import (
+	"fmt"
 	"os"
-	"path/filepath"
 
-	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/persist"
-	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
-	"github.com/rivine/bbolt"
+	persist "github.com/threefoldtech/rivine/tarantool-persist"
 )
-
-var explorerMetadata = persist.Metadata{
-	Header:  "Sia Explorer",
-	Version: "1.0.8",
-}
 
 // initPersist initializes the persistent structures of the explorer module.
 func (e *Explorer) initPersist() error {
@@ -26,64 +18,41 @@ func (e *Explorer) initPersist() error {
 	}
 
 	// Open the database
-	dbFilPath := filepath.Join(e.persistDir, "explorer.db")
-	db, err := persist.OpenDatabase(explorerMetadata, dbFilPath)
+	e.client = persist.NewTarantoolClient()
+
+	// err = SetupExplorerDatabase(e.client)
+	// if err != nil {
+	// 	return err
+	// }
+
+	err = SetupExplorerDatabaseOperations(e.client)
 	if err != nil {
-		if err != persist.ErrBadVersion {
-			return err
-		}
-		db, err = e.convertLegacyDatabase(dbFilPath)
+		return err
+	}
+
+	// set default values for the spaceInternal
+	internalDefaults := []struct {
+		key string
+		val interface{}
+	}{
+		{"initial", types.BlockHeight(0)},
+	}
+	// spaceIntern := e.client.Schema.Spaces[spaceInternal]
+
+	for _, d := range internalDefaults {
+		data, err := e.client.Call("get_consensus_changeid", []interface{}{})
+		// data, err := e.client.Get(InternalSpace, "key", 0, 1, tarantool.IterEq, d.key)
 		if err != nil {
 			return err
 		}
-	}
-	e.db = db
-
-	// Initialize the database
-	err = e.db.Update(func(tx *bolt.Tx) error {
-		buckets := [][]byte{
-			bucketBlockFacts,
-			bucketBlockIDs,
-			bucketBlocksDifficulty,
-			bucketBlockTargets,
-			bucketInternal,
-			bucketCoinOutputIDs,
-			bucketCoinOutputs,
-			bucketBlockStakeOutputIDs,
-			bucketBlockStakeOutputs,
-			bucketTransactionIDs,
-			bucketUnlockHashes,
-			bucketWalletAddressToMultiSigAddressMapping,
+		if len(data) == 0 {
+			fmt.Print(d)
+			// // data, err = e.client.Insert(InternalSpace, []interface{}{d.key, d.val})
+			// _, err = e.client.Call("insert_info", []interface{}{d.key, d.val})
+			// if err != nil {
+			// 	return err
+			// }
 		}
-		for _, b := range buckets {
-			_, err := tx.CreateBucketIfNotExists(b)
-			if err != nil {
-				return err
-			}
-		}
-
-		// set default values for the bucketInternal
-		internalDefaults := []struct {
-			key, val []byte
-		}{
-			{internalBlockHeight, siabin.Marshal(types.BlockHeight(0))},
-			{internalRecentChange, siabin.Marshal(modules.ConsensusChangeID{})},
-		}
-		b := tx.Bucket(bucketInternal)
-		for _, d := range internalDefaults {
-			if b.Get(d.key) != nil {
-				continue
-			}
-			err := b.Put(d.key, d.val)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	return nil

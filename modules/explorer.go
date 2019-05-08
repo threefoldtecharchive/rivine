@@ -105,7 +105,7 @@ type (
 
 		// LatestBlockFacts returns the block facts of the last block
 		// in the explorer's database.
-		LatestBlockFacts() BlockFacts
+		LatestBlockFacts() (BlockFacts, error)
 
 		// Transaction returns the block that contains the input transaction
 		// id. The transaction itself is either the block (indicating the miner
@@ -119,7 +119,7 @@ type (
 		UnlockHash(types.UnlockHash) []types.TransactionID
 
 		// MultiSigAddresses returns all multisig addresses this wallet address is involved in.
-		MultiSigAddresses(types.UnlockHash) []types.UnlockHash
+		MultiSigAddresses(types.UnlockHash) ([]types.UnlockHash, error)
 
 		// CoinOutput will return the coin output associated with the
 		// input id.
