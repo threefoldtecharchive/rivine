@@ -3,6 +3,7 @@ package modules
 import (
 	"math/big"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -145,6 +146,8 @@ type (
 
 		// Constants returns the constants in use by the chain
 		Constants() DaemonConstants
+
+		ServeFrontend(stagingCA bool, domainNames []NetAddress, email string, router *httprouter.Router) error
 
 		Close() error
 	}
