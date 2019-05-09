@@ -133,6 +133,8 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 
 		dosBlocks: make(map[types.BlockID]struct{}),
 
+		bootstrap: bootstrap,
+
 		marshaler:       stdMarshaler{},
 		blockRuleHelper: stdBlockRuleHelper{chainCts: chainCts},
 
@@ -182,12 +184,14 @@ func (cs *ConsensusSet) Start() {
 		// typically we don't have any mock peers to synchronize with in
 		// testing.
 		if cs.bootstrap {
+			cs.log.Println("Bootstrap enabled, starting IBD")
 			// We are in a virgin goroutine right now, so calling the threaded
 			// function without a goroutine is okay.
 			err := cs.threadedInitialBlockchainDownload()
 			if err != nil {
 				return
 			}
+			cs.log.Println("IBD finished")
 		}
 
 		// threadedInitialBlockchainDownload will release the threadgroup 'Add'
@@ -200,6 +204,7 @@ func (cs *ConsensusSet) Start() {
 		defer cs.tg.Done()
 
 		// Register RPCs
+		cs.log.Debug("Registering CS RPC endpoints")
 		cs.gateway.RegisterRPC("SendBlocks", cs.rpcSendBlocks)
 		cs.gateway.RegisterRPC("RelayHeader", cs.threadedRPCRelayHeader)
 		cs.gateway.RegisterRPC("SendBlk", cs.rpcSendBlk)
@@ -213,6 +218,7 @@ func (cs *ConsensusSet) Start() {
 
 		// Mark that we are synced with the network.
 		cs.mu.Lock()
+		cs.log.Debug("Marked CS as Synced")
 		cs.synced = true
 		cs.mu.Unlock()
 	}()
