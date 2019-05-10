@@ -4,11 +4,11 @@ Gathered here are a set of extensions that implementing chains can reuse to add 
 
 ## Description
 
-An extension can be registered to the consensus, when a block is created or reverted some transactions might be applied or reverted. Every extensions should have their own transaction types which can be recognised by the consensus. If an extension has commands that can be executed by the client it should also provide some client functionality.
+An extension can be registered to the consensus, it's a subscriber which can process consensus changes. When a block gets applied or reverted by the consensus, extensions are notified of this change. Most commonly an extension will process applied/reverted transactions that reside in a block. Every extensions should have their own transaction types which can be recognised by the consensus. This way an extension can know which transaction type it wants to process. If an extension has commands that can be executed by the client it should also provide client functionality, this is also applied for an exposed API.
 
 ## Examples
 
-Lets take the minting extension as an example. A plugin (extensions) is a struct with following properties:
+Lets take the minting extension as an example. A plugin (extension) is a struct that needs to be defined with for example following properties:
 
 ```golang
 type (
@@ -21,7 +21,7 @@ type (
 )
 ```
 
-A plugin should implement following interface:
+A plugin **has to** implement following interface:
 
 ```golang
 // A ConsensusSetPlugin is an object that receives updates to the consensus set
@@ -49,21 +49,21 @@ A plugin should implement following interface:
 InitPlugin inits the plugin with some metadata, a metadata bucket, a pluginViewStorage and a PluginUnregisteredCallback.
 It creates the buckets that are designated to the plugin and optionally stores some default values.
 
-* Metadata should consist with a header and a version. See `persist.Metadata`.
-* Metadata bucket is the bucket where the metadata is stored
+* Metadata should consist with a header and a version. See [persist.Metatdata](https://godoc.org/github.com/threefoldtech/rivine/persist#Metadata).
+* A Metadata bucket is the bucket where the metadata is stored.
 * PluginViewStorage abstract the way we View whats inside an plugin's bucket.
-* UnregisterCallback unregisters the plugin from the consensus when the consensus is closed
+* UnregisterCallback unregisters the plugin from the consensus when the consensus is closed.
 
 ### ApplyBlock
 
-ApplyBlocks applies transactions that are in applied blocks processed by the consensus. In this method a plugins looks for `Transactions` that applies to itself and stores these transactions data in the designated buckets. For an example implementation look at [ApplyBlockMintingPlugin](https://github.com/threefoldtech/rivine/blob/75993ba4f451b08b970e593ba6c3e99d5fb492e9/extensions/minting/minting.go#L73)
+ApplyBlocks applies blocks processed by the consensus. In this method the extension has access to the entire applied block and can do a range of operations on it. For an example implementation look at [ApplyBlockMintingPlugin](https://github.com/threefoldtech/rivine/blob/75993ba4f451b08b970e593ba6c3e99d5fb492e9/extensions/minting/minting.go#L73). In this method the minting plugin looks for `Transactions` that applies to itself and stores these transactions data in the designated buckets.
 
 
 ### RevertBlock
 
-RevertBlock reverts transactions that are in reverted blocks processed by the consensus. In this method a plugins looks for `Transactions` that applies to itself and reverts these transactions data from the designated buckets. For an example implementation look at [ApplyBlockMintingPlugin](https://github.com/threefoldtech/rivine/blob/75993ba4f451b08b970e593ba6c3e99d5fb492e9/extensions/minting/minting.go#L105)
+RevertBlock reverts blocks processed by the consensus. In this method the extension has access to the entire reverted block and can do a range of operations on it. For an example implementation look at [ApplyBlockMintingPlugin](https://github.com/threefoldtech/rivine/blob/75993ba4f451b08b970e593ba6c3e99d5fb492e9/extensions/minting/minting.go#L105). In this method the minting plugin looks for `Transactions` that applies to itself and reverts these transactions data from the designated buckets.
 
-### Other methods that are usefull
+### Other methods that are useful
 
 * `NewPlugin()` creates a new plugin and registers the transaction types.
 * `Close()` closes the plugin when the consensus is closed. This should the `unregisterCallback` and `p.storage.close()`.
@@ -71,4 +71,4 @@ RevertBlock reverts transactions that are in reverted blocks processed by the co
 
 ## Example usage of minting plugin
 
-How to use the minting plugin can be found [here](/extensions/minting/readme.md)
+How to use the minting plugin can be found [/extensions/minting/readme.md](/extensions/minting/readme.md).
