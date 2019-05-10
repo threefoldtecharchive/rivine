@@ -274,6 +274,11 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 			if err := addr.TryNameResolution(); err != nil {
 				// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
 				g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", addr, err)
+
+				// Start a retry loop for every failed bootstrap node connection
+				go func() {
+					g.connectToBootstapPeer(addr)
+				}()
 			}
 			err := g.addNode(addr)
 			if err != nil && err != errNodeExists {
@@ -341,6 +346,26 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 	go g.threadedLearnHostname()
 
 	return g, nil
+}
+
+func (g *Gateway) connectToBootstapPeer(bootstrapPeer modules.NetAddress) error {
+	// Wait 1 minute
+	time.Sleep(5 * time.Minute)
+	g.log.Debugf("retrying connection to bootstrap node [%v]", bootstrapPeer)
+
+	if err := bootstrapPeer.TryNameResolution(); err != nil {
+		// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
+		g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", bootstrapPeer, err)
+
+		// Recursive retry loop
+		g.connectToBootstapPeer(bootstrapPeer)
+	}
+	err := g.addNode(bootstrapPeer)
+	if err != nil && err != errNodeExists {
+		g.log.Printf("WARN: failed to add the bootstrap node '%v': %v", bootstrapPeer, err)
+	}
+
+	return nil
 }
 
 // enforce that Gateway satisfies the modules.Gateway interface
