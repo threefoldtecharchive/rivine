@@ -45,12 +45,9 @@ Releases
         - delegated staking
 
 - 1.1.3
-    - ~tfchain Farmer registration~
     - Ethereum erc20 tokens and bridge
-    - Automated Tfchain shop with bitcoin and ethereum
     - Rework deployment templates
     - Electrum module with support for address notifications
-    - More commercial rivine documentation and slides
   
 - 1.1.2 (<https://github.com/orgs/threefoldtech/projects/1>):
     - digitalme (3Bot) support (<https://github.com/threefoldtech/home/issues/42>);
