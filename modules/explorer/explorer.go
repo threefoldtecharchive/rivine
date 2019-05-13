@@ -4,10 +4,17 @@ package explorer
 
 import (
 	"errors"
+	"fmt"
+	"net/http"
+	"path"
+	"runtime"
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
+
+	"github.com/julienschmidt/httprouter"
+	certmagic "github.com/mholt/certmagic"
 )
 
 const (
@@ -85,11 +92,61 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		return nil, errors.New("explorer subscription failed: " + err.Error())
 	}
 
-	return e, nil
+	return e, err
 }
 
 // Close closes the explorer.
 func (e *Explorer) Close() error {
 	e.cs.Unsubscribe(e)
 	return e.db.Close()
+}
+
+// ServeFrontend serves all static files in /frontend/explorer/public
+// Which will host the explorer locally on :port 2015
+func (e *Explorer) ServeFrontend(stagingCA bool, domainNames []modules.NetAddress, email string, router *httprouter.Router) error {
+	// read and agree to your CA's legal documents
+	certmagic.Agreed = true
+
+	// use production endpoint by default
+	certmagic.CA = certmagic.LetsEncryptProductionCA
+	if stagingCA {
+		// use the staging endpoint while we're developing
+		certmagic.CA = certmagic.LetsEncryptStagingCA
+	}
+
+	// Call runtime to get the path to this file
+	_, filename, _, ok := runtime.Caller(1)
+	if !ok {
+		return errors.New("Calling runtime failed")
+	}
+	// Path to frontend static files
+	filepath := path.Join(path.Dir(filename), "./../../frontend/explorer/public")
+
+	// Set the router not found method to serving our static files. This approach can serve static files under '/'.
+	// If we would use router.ServeFiles("/app/*filepath", http.Dir(filepath))
+	// we cannot serve static files under '/' because we have some subroutes defined (Explorer API).
+	router.NotFound = http.FileServer(http.Dir(filepath)).ServeHTTP
+
+	// If domainNames are provided we will use certmagic.HTTPS for redirecting http -> https
+	if len(domainNames) > 0 {
+		// provide an email address
+		certmagic.Email = email
+
+		var hostNames []string
+		for _, domainName := range domainNames {
+			if !certmagic.HostQualifies(domainName.Host()) {
+				return fmt.Errorf("Domain name %s is not valid for automatic https", domainName)
+			}
+			hostNames = append(hostNames, domainName.Host())
+		}
+		return certmagic.HTTPS(hostNames, router)
+	}
+
+	// If domainNames are not provided we will serve the frontend static files and explorer API under localhost:2015
+	fmt.Println("starting explorer frontend..")
+	err := http.ListenAndServe(":2015", router)
+	if err != nil {
+		return err
+	}
+	return nil
 }

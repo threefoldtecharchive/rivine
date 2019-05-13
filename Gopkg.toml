@@ -43,3 +43,11 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/mholt/certmagic"
+
+[[override]]
+  name = "github.com/go-acme/lego"
+  branch = "master"

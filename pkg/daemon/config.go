@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/types"
 	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/types"
 )
 
 const (
@@ -57,6 +57,18 @@ type (
 
 		//Verbose (debug) logging
 		VerboseLogging bool
+
+		// indicates if we should host explorer or not
+		HostExplorer bool
+
+		// indicates the build is production
+		StagingCA bool
+
+		// email used for the caddy https certificate
+		CaddyEmail string
+
+		// Optional CaddyDomains we want to use for our certificate.
+		CaddyDomains []modules.NetAddress
 
 		// Optional BootstrapPeers we want to use instead of the default NetworkConfigs.
 		BootstrapPeers []modules.NetAddress
@@ -111,9 +123,14 @@ func (cfg *Config) RegisterAsFlags(flagSet *pflag.FlagSet) {
 	flagSet.BoolVarP(&cfg.AuthenticateAPI, "authenticate-api", "", cfg.AuthenticateAPI, "enable API password protection")
 	flagSet.BoolVarP(&cfg.AllowAPIBind, "disable-api-security", "", cfg.AllowAPIBind, fmt.Sprintf("allow the daemon of %s to listen on a non-localhost address (DANGEROUS)", cfg.BlockchainInfo.Name))
 	flagSet.StringVarP(&cfg.BlockchainInfo.NetworkName, "network", "n", cfg.BlockchainInfo.NetworkName, "the name of the network to which the daemon connects")
+	flagSet.BoolVarP(&cfg.HostExplorer, "hostexplorer", "e", false, "host explorer files")
+	flagSet.BoolVarP(&cfg.StagingCA, "stagingcertificate", "c", false, "indicates if the deamon should use a stagingcertificate for serving frontend files, default productioncertificate")
 
 	cli.NetAddressArrayFlagVar(flagSet, &cfg.BootstrapPeers, "bootstrap-peers",
 		"overwrite the bootstrap peers to use, instead of using the default bootstrap peers")
+
+	cli.NetAddressArrayFlagVar(flagSet, &cfg.CaddyDomains, "caddy-domains",
+		"specify caddy domains for our certificate")
 }
 
 // ProcessConfig checks the configuration values and performs cleanup on

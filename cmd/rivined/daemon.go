@@ -155,7 +155,21 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err != nil {
 			return err
 		}
-		api.RegisterExplorerHTTPHandlers(router, cs, e, tpool)
+		if cfg.HostExplorer {
+			explorerRouter := httprouter.New()
+			api.RegisterExplorerHTTPHandlers(explorerRouter, cs, e, tpool)
+
+			// After registering endpoints start explorer frontend
+			go func() {
+				err = e.ServeFrontend(cfg.StagingCA, cfg.CaddyDomains, cfg.CaddyEmail, explorerRouter)
+				if err != nil {
+					servErrs <- err
+				}
+			}()
+		} else {
+			api.RegisterExplorerHTTPHandlers(router, cs, e, tpool)
+		}
+
 		defer func() {
 			fmt.Println("Closing explorer...")
 			err := e.Close()
