@@ -8,7 +8,7 @@ import (
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 // ProcessConsensusChange follows the most recent changes to the consensus set,
@@ -141,7 +141,12 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				}
 				for _, sci := range txn.CoinInputs {
 					dbAddCoinOutputID(tx, sci.ParentID, txid)
-					mapParentUnlockConditionHash(tx, sci.ParentID, txid)
+					err := mapParentUnlockConditionHash(tx, sci.ParentID, txid)
+					if err != nil {
+						e.log.Output(2, fmt.Sprintf(
+							"[ERROR] failed to map tx %s to parent unlock condition Hash for parent coin output ID %s\n",
+							txid.String(), sci.ParentID.String()))
+					}
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
@@ -151,7 +156,12 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbAddBlockStakeOutputID(tx, sfi.ParentID, txid)
-					mapParentUnlockConditionHash(tx, sfi.ParentID, txid)
+					err := mapParentUnlockConditionHash(tx, sfi.ParentID, txid)
+					if err != nil {
+						e.log.Output(2, fmt.Sprintf(
+							"[ERROR] failed to map tx %s to parent unlock condition Hash for parent blockstake output ID %s\n",
+							txid.String(), sfi.ParentID.String()))
+					}
 				}
 
 				// add any common extension data, should the txn have it
@@ -413,13 +423,13 @@ func dbRemoveTransactionID(tx *bolt.Tx, id types.TransactionID) {
 	mustDelete(tx.Bucket(bucketTransactionIDs), id)
 }
 
-func mapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.TransactionID) {
+func mapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.TransactionID) error {
 	switch id := parentID.(type) {
 	case types.CoinOutputID:
 		var sco types.CoinOutput
 		err := dbGetAndDecode(bucketCoinOutputs, id, &sco)(tx)
 		if err != nil {
-			return
+			return err
 		}
 		mapUnlockConditionHash(tx, sco.Condition, txid)
 
@@ -427,21 +437,23 @@ func mapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.
 		var bso types.BlockStakeOutput
 		err := dbGetAndDecode(bucketBlockStakeOutputs, id, &bso)(tx)
 		if err != nil {
-			return
+			return err
 		}
 		mapUnlockConditionHash(tx, bso.Condition, txid)
 
 	default:
 		panic(fmt.Sprintf("unexpected output ID type: %T", parentID))
 	}
+
+	return nil
 }
-func unmapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.TransactionID) {
+func unmapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.TransactionID) error {
 	switch id := parentID.(type) {
 	case types.CoinOutputID:
 		var sco types.CoinOutput
 		err := dbGetAndDecode(bucketCoinOutputs, id, &sco)(tx)
 		if err != nil {
-			return
+			return err
 		}
 		unmapUnlockConditionHash(tx, sco.Condition, txid)
 
@@ -449,13 +461,14 @@ func unmapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid type
 		var bso types.BlockStakeOutput
 		err := dbGetAndDecode(bucketBlockStakeOutputs, id, &bso)(tx)
 		if err != nil {
-			return
+			return err
 		}
 		unmapUnlockConditionHash(tx, bso.Condition, txid)
 
 	default:
 		panic(fmt.Sprintf("unexpected output ID type: %T", parentID))
 	}
+	return nil
 }
 func mapUnlockConditionHash(tx *bolt.Tx, ucp types.UnlockConditionProxy, txid types.TransactionID) {
 	muh := ucp.UnlockHash()

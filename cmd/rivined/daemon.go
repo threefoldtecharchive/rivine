@@ -151,7 +151,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("creator")
 		e, err = explorer.New(cs,
 			filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir),
-			cfg.BlockchainInfo, networkCfg.Constants)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}

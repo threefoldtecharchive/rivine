@@ -9,7 +9,7 @@ import (
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 var explorerMetadata = persist.Metadata{
@@ -18,9 +18,17 @@ var explorerMetadata = persist.Metadata{
 }
 
 // initPersist initializes the persistent structures of the explorer module.
-func (e *Explorer) initPersist() error {
+func (e *Explorer) initPersist(verbose bool) error {
 	// Make the persist directory
 	err := os.MkdirAll(e.persistDir, 0700)
+	if err != nil {
+		return err
+	}
+
+	// Initialize the logger.
+	logFilePath := filepath.Join(e.persistDir, "explorer.log")
+	e.log, err = persist.NewFileLogger(e.bcInfo,
+		filepath.Join(e.persistDir, logFilePath), verbose)
 	if err != nil {
 		return err
 	}
