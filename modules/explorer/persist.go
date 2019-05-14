@@ -27,8 +27,7 @@ func (e *Explorer) initPersist(verbose bool) error {
 
 	// Initialize the logger.
 	logFilePath := filepath.Join(e.persistDir, "explorer.log")
-	e.log, err = persist.NewFileLogger(e.bcInfo,
-		filepath.Join(e.persistDir, logFilePath), verbose)
+	e.log, err = persist.NewFileLogger(e.bcInfo, logFilePath, verbose)
 	if err != nil {
 		return err
 	}
