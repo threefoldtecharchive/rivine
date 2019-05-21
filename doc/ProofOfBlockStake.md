@@ -51,4 +51,4 @@ The chance of having a match is also multiplied by the number of blockstakes you
 
 Difficulty is adjusted every 50 blocks to compensate for the fact that not every blockstake available is always participating in the POBS protocol.
 
-![POBSprotocoldifficulty](POBSdifficulty.svg?sanitize=true)
+![POBSprotocoldifficulty](POBSdifficulty.svg)
