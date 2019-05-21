@@ -14,7 +14,7 @@ Block stakes are required in order to create blocks, and thus every blockcreator
 protocol
 --------
 
-![POBSprotocoloverview](POBSoverview.svg?sanitize=true)
+![POBSprotocoloverview](POBSoverview.svg)
 
 The hash function used is a 32-byte BLAKE2b hash. To compare the hash with the difficulty it is interpreted as a big-endian unsigned integer.
 
