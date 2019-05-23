@@ -16,7 +16,8 @@ committing your changes. Most editors have plug-ins that do this automatically.
 Pull request descriptions should be as clear as possible and include a reference
 to all the issues that they address.
 
-** Commit messages**
+**Commit messages**
+
 Commit messages must start with a capitalized and short summary (max. 50 chars)
 written in the imperative, followed by an optional, more detailed explanatory
 text which is separated from the summary by an empty line.
