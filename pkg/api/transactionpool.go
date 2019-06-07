@@ -36,6 +36,7 @@ func RegisterTransactionPoolHTTPHandlers(router Router, cs modules.ConsensusSet,
 	}
 	router.GET("/transactionpool/transactions", NewTransactionPoolGetTransactionsHandler(cs, tpool))
 	router.POST("/transactionpool/transactions", RequirePasswordHandler(NewTransactionPoolPostTransactionHandler(tpool), requiredPassword))
+	router.OPTIONS("/transactionpool/transactions", RequirePasswordHandler(NewTransactionPoolOptionsTransactionHandler(), requiredPassword))
 }
 
 // NewTransactionPoolGetTransactionsHandler creates a handler
@@ -146,5 +147,12 @@ func NewTransactionPoolPostTransactionHandler(tpool modules.TransactionPool) htt
 			return
 		}
 		WriteJSON(w, TransactionPoolPOST{TransactionID: tx.ID()})
+	}
+}
+
+// NewTransactionPoolOptionsTransactionHandler creates a handler to handle OPTIONS calls
+func NewTransactionPoolOptionsTransactionHandler() httprouter.Handle {
+	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+		w.Header().Set("Access-Control-Allow-Methods", "*")
 	}
 }
