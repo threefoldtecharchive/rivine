@@ -4,6 +4,7 @@ package explorer
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
@@ -37,6 +38,7 @@ type (
 	Explorer struct {
 		cs             modules.ConsensusSet
 		db             *persist.BoltDatabase
+		log            *persist.Logger
 		persistDir     string
 		bcInfo         types.BlockchainInfo
 		chainCts       types.ChainConstants
@@ -48,7 +50,7 @@ type (
 
 // New creates the internal data structures, and subscribes to
 // consensus for changes to the blockchain
-func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*Explorer, error) {
+func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verboseLogging bool) (*Explorer, error) {
 	// Check that input modules are non-nil
 	if cs == nil {
 		return nil, errNilCS
@@ -67,7 +69,7 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 	}
 
 	// Initialize the persistent structures, including the database.
-	err := e.initPersist()
+	err := e.initPersist(verboseLogging)
 	if err != nil {
 		return nil, err
 	}
@@ -91,5 +93,13 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 // Close closes the explorer.
 func (e *Explorer) Close() error {
 	e.cs.Unsubscribe(e)
+	// Set up closing the logger.
+	if e.log != nil {
+		err := e.log.Close()
+		if err != nil {
+			// State of the logger is unknown, a println will suffice.
+			fmt.Println("Error shutting down explorer logger:", err)
+		}
+	}
 	return e.db.Close()
 }
