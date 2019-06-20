@@ -21,7 +21,6 @@ var (
 	ErrArbitraryDataTooLarge         = errors.New("arbitrary data is too large to fit in a transaction")
 	ErrCoinInputOutputMismatch       = errors.New("coin inputs do not equal coin outputs for transaction")
 	ErrBlockStakeInputOutputMismatch = errors.New("blockstake inputs do not equal blockstake outputs for transaction")
-	ErrMissingMinerFee               = errors.New("transaction does not specify any miner fees")
 )
 
 // MissingCoinOutputError is returned in case a non-existing coin output is spend by a Tx.
@@ -56,7 +55,7 @@ func TransactionFitsInABlock(t Transaction, blockSizeLimit uint64) error {
 
 // TransactionFollowsMinimumValues checks that all outputs adhere to the rules for the
 // minimum allowed values
-func TransactionFollowsMinimumValues(t Transaction, minimumMinerFee Currency, IsBlockCreatingTx bool) error {
+func TransactionFollowsMinimumValues(t Transaction, minimumMinerFee Currency) error {
 	for _, sco := range t.CoinOutputs {
 		if sco.Value.IsZero() {
 			return ErrZeroOutput
@@ -71,11 +70,6 @@ func TransactionFollowsMinimumValues(t Transaction, minimumMinerFee Currency, Is
 		if fee.Cmp(minimumMinerFee) == -1 {
 			return ErrTooSmallMinerFee
 		}
-	}
-	// also reject abscent miner fees is the minimum fee is non zero
-	// block creation transactions are exempt from this rule
-	if !IsBlockCreatingTx && len(t.MinerFees) == 0 && !minimumMinerFee.IsZero() {
-		return ErrMissingMinerFee
 	}
 	return nil
 }
@@ -124,7 +118,7 @@ func DefaultTransactionValidation(t Transaction, ctx ValidationContext, constant
 	if err != nil {
 		return
 	}
-	err = TransactionFollowsMinimumValues(t, constants.MinimumMinerFee, ctx.IsBlockCreatingTx)
+	err = TransactionFollowsMinimumValues(t, constants.MinimumMinerFee)
 	if err != nil {
 		return
 	}

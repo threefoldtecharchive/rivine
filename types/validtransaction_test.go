@@ -54,36 +54,30 @@ func TestTransactionFollowsMinimumValues_V0(t *testing.T) {
 		BlockStakeOutputs: []BlockStakeOutput{{Value: NewCurrency64(1)}},
 		MinerFees:         []Currency{NewCurrency64(1)},
 	}
-	err := TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err := TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Try a zero value for each type.
 	txn.CoinOutputs[0].Value = ZeroCurrency
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.CoinOutputs[0].Value = NewCurrency64(1)
 	txn.BlockStakeOutputs[0].Value = ZeroCurrency
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.BlockStakeOutputs[0].Value = NewCurrency64(1)
 	txn.MinerFees[0] = ZeroCurrency
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrTooSmallMinerFee {
 		t.Error(err)
 	}
-	// specifically test for miissing miner fees
-	txn.MinerFees = nil
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
-	if err != ErrMissingMinerFee {
-		t.Error(err)
-	}
-	txn.MinerFees = append(txn.MinerFees, NewCurrency64(1))
+	txn.MinerFees[0] = NewCurrency64(1)
 }
 
 // TestTransactionFollowsMinimumValues_Vd probes the
@@ -96,36 +90,30 @@ func TestTransactionFollowsMinimumValues_Vd(t *testing.T) {
 		BlockStakeOutputs: []BlockStakeOutput{{Value: NewCurrency64(1)}},
 		MinerFees:         []Currency{NewCurrency64(1)},
 	}
-	err := TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err := TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != nil {
 		t.Error(err)
 	}
 
 	// Try a zero value for each type.
 	txn.CoinOutputs[0].Value = ZeroCurrency
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.CoinOutputs[0].Value = NewCurrency64(1)
 	txn.BlockStakeOutputs[0].Value = ZeroCurrency
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrZeroOutput {
 		t.Error(err)
 	}
 	txn.BlockStakeOutputs[0].Value = NewCurrency64(1)
 	txn.MinerFees[0] = ZeroCurrency
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
+	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1))
 	if err != ErrTooSmallMinerFee {
 		t.Error(err)
 	}
-	// specifically test for miissing miner fees
-	txn.MinerFees = nil
-	err = TransactionFollowsMinimumValues(txn, NewCurrency64(1), false)
-	if err != ErrMissingMinerFee {
-		t.Error(err)
-	}
-	txn.MinerFees = append(txn.MinerFees, NewCurrency64(1))
+	txn.MinerFees[0] = NewCurrency64(1)
 }
 
 // TestValidateNoDoubleSpendsWithinTransaction_V0 probes

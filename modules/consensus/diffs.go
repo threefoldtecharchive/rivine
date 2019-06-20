@@ -156,12 +156,12 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	// Validate and apply each transaction in the block. They cannot be
 	// validated all at once because some transactions may not be valid until
 	// previous transactions have been applied.
-	for idx, txn := range pb.Block.Transactions {
+	for _, txn := range pb.Block.Transactions {
 		err := validTransaction(tx, txn, types.TransactionValidationConstants{
 			BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
 			ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
 			MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
-		}, pb.Height, pb.Block.Timestamp, cs.isBlockCreatingTx(idx, pb.Block))
+		}, pb.Height, pb.Block.Timestamp)
 		if err != nil {
 			cs.log.Printf("WARN: block %v cannot be applied: tx %v is invalid: %v",
 				pb.Block.ID(), txn.ID(), err)
@@ -199,47 +199,4 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	}
 
 	return blockMap.Put(bid[:], siabin.Marshal(*pb))
-}
-
-// isBlockCreatingTx checks if a transaction at a given index in the block is considered to
-// be a block creating transaction within the block. A block creating transaction is a
-// transaction which respends a single blockstake output for the proof of blockstake protocol.
-// The blockstake input and output MUST be the only input and output in the transaction.
-// Furthermore, the blockstake input used in the transaction MUST spend the blockstake
-// output indicated in the POBSOutput field in the block header
-func (cs *ConsensusSet) isBlockCreatingTx(txIdx int, block types.Block) bool {
-
-	// First check if there is only 1 blockstake input and output
-
-	if len(block.Transactions[txIdx].BlockStakeInputs) != 1 {
-		return false
-	}
-
-	if len(block.Transactions[txIdx].BlockStakeOutputs) != 1 {
-		return false
-	}
-
-	if len(block.Transactions[txIdx].CoinInputs) != 0 {
-		return false
-	}
-
-	if len(block.Transactions[txIdx].CoinOutputs) != 0 {
-		return false
-	}
-
-	// this might be block creation transaction, so do a more expensive check to see
-	// if we indeed spend the output indicated in the block header
-	t, exists := cs.TransactionAtShortID(types.NewTransactionShortID(
-		block.Header().POBSOutput.BlockHeight, uint16(block.Header().POBSOutput.TransactionIndex)))
-	if !exists {
-		return false
-	}
-
-	if uint64(len(t.BlockStakeOutputs)) > block.Header().POBSOutput.OutputIndex &&
-		t.BlockStakeOutputID(block.Header().POBSOutput.OutputIndex) ==
-			block.Transactions[txIdx].BlockStakeInputs[0].ParentID {
-		return true
-	}
-
-	return false
 }

@@ -61,14 +61,13 @@ func validBlockStakes(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockH
 
 // validTransaction checks that all fields are valid within the current
 // consensus state. If not an error is returned.
-func validTransaction(tx *bolt.Tx, t types.Transaction, constants types.TransactionValidationConstants, blockHeight types.BlockHeight, blockTimestamp types.Timestamp, isBlockCreatingTx bool) error {
+func validTransaction(tx *bolt.Tx, t types.Transaction, constants types.TransactionValidationConstants, blockHeight types.BlockHeight, blockTimestamp types.Timestamp) error {
 	// StandaloneValid will check things like signatures and properties that
 	// should be inherent to the transaction. (storage proof rules, etc.)
 	err := t.ValidateTransaction(types.ValidationContext{
-		Confirmed:         true,
-		BlockHeight:       blockHeight,
-		BlockTime:         blockTimestamp,
-		IsBlockCreatingTx: isBlockCreatingTx,
+		Confirmed:   true,
+		BlockHeight: blockHeight,
+		BlockTime:   blockTimestamp,
 	}, constants)
 	if err != nil {
 		return err
@@ -134,15 +133,11 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 			})
 		}
 		for _, txn := range txns {
-			// a transaction can only be "block creating" in the context of a block,
-			// which we don't have here, so just pass in false for the "isBlockCreatingTx"
-			// argument. In other words, a block creating transaction can never be part
-			// of a transaction pool and must be inserted when the block is actually created
 			err := validTransaction(tx, txn, types.TransactionValidationConstants{
 				BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
 				ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
 				MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
-			}, diffHolder.Height, blockTime, false)
+			}, diffHolder.Height, blockTime)
 			if err != nil {
 				cs.log.Printf("WARN: try-out tx %v is invalid: %v", txn.ID(), err)
 				return err
