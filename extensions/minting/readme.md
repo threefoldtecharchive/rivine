@@ -1,6 +1,10 @@
-# Rivine minting extensions
+# Rivine minting extension
 
+The minting extension provides the ability to create new tokens and to define the authority required for doing so.
+A common way would be to use a multignature condition for this authority.
 
+A mechanism has also been implemented to modify this minter condition.
+The same condition  applies to both the coin creation  and nodification of the  authority.
 
 ## Usage
 
@@ -63,7 +67,7 @@ types.RegisterTransactionVersion(minting.TransactionVersionCoinCreation, minting
 })
 ```
 
-
+## Transactions
 ### Minter Definition Transactions
 
 Minter Definition Transactions are used to redefine the creators of coins (AKA minters). These transactions can only be created by the Coin Creators. The (previously-defined) mint condition —meaning the mint condition active at the height of the (to be) created Minter Definition Transaction— defines who the coin creators are and thus who can redefine who the coin creators are to become. A mint condition can be any of the following conditions:
@@ -77,7 +81,7 @@ The Coin Creation transactions defines 4 fields:
 * `mintfulfillment`: the fulfillment which has to fulfill the consensus-defined MintCondition, just the same as that a Coin Input's fulfillment has to fulfill the condition of the Coin Output it is about to spend;
 * `mintcondition`: the condition which will become the new mint condition (that has to be fulfilled in order to create coins and redefine the mint condition, in other words the condition that defines who the coin creators are) once the transaction is part of a created block and until there is a newer block with an accepted mint condition;
 * `minerfees`: defines the transaction fee(s) (works the same as in regular transactions);
-* `arbitrarydata`: describes the capacity that is created/added, creating these coins as a result;
+* `arbitrarydata`: describes the reason for creating these coins;
 * `nonce`: a crypto-random 8-byte array, used to ensure the uniqueness of this transaction's ID;
 
 The Genesis Mint Condition is hardcoded.
