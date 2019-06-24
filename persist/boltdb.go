@@ -1,9 +1,10 @@
 package persist
 
 import (
+	"sync"
 	"time"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 // BoltDatabase is a persist-level wrapper for the bolt database, providing
@@ -99,4 +100,141 @@ func OpenDatabase(md Metadata, filename string) (*BoltDatabase, error) {
 	}
 
 	return boltDB, nil
+}
+
+// LazyBoltBucket is a lazy implementation of the bolt DB,
+// allowing you to only actually get the bucket from bolt db if you need it.
+type LazyBoltBucket struct {
+	createdBucket *bolt.Bucket
+	once          sync.Once
+	getter        func() (*bolt.Bucket, error)
+}
+
+// NewLazyBoltBucket creates a new lazy BoltDB bucket,
+// see `LazyBoltBucket` for more information.
+func NewLazyBoltBucket(getter func() (*bolt.Bucket, error)) *LazyBoltBucket {
+	return &LazyBoltBucket{
+		createdBucket: nil,
+		getter:        getter,
+	}
+}
+
+func (lb *LazyBoltBucket) Bucket(name []byte) (*bolt.Bucket, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return nil, err
+	}
+	return bucket.Bucket(name), nil
+}
+func (lb *LazyBoltBucket) CreateBucket(key []byte) (*bolt.Bucket, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return nil, err
+	}
+	return bucket.CreateBucket(key)
+}
+func (lb *LazyBoltBucket) CreateBucketIfNotExists(key []byte) (*bolt.Bucket, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return nil, err
+	}
+	return bucket.CreateBucketIfNotExists(key)
+}
+func (lb *LazyBoltBucket) Cursor() (*bolt.Cursor, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return nil, err
+	}
+	return bucket.Cursor(), nil
+}
+func (lb *LazyBoltBucket) Delete(key []byte) error {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return err
+	}
+	return bucket.Delete(key)
+}
+func (lb *LazyBoltBucket) DeleteBucket(key []byte) error {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return err
+	}
+	return bucket.DeleteBucket(key)
+}
+func (lb *LazyBoltBucket) ForEach(fn func(k, v []byte) error) error {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return err
+	}
+	return bucket.ForEach(fn)
+}
+func (lb *LazyBoltBucket) Get(key []byte) ([]byte, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return nil, err
+	}
+	return bucket.Get(key), nil
+}
+func (lb *LazyBoltBucket) NextSequence() (uint64, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return 0, err
+	}
+	return bucket.NextSequence()
+}
+func (lb *LazyBoltBucket) Put(key []byte, value []byte) error {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return err
+	}
+	return bucket.Put(key, value)
+}
+func (lb *LazyBoltBucket) Root() (uint64, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return 0, err
+	}
+	return uint64(bucket.Root()), nil
+}
+func (lb *LazyBoltBucket) Sequence() (uint64, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return 0, err
+	}
+	return bucket.Sequence(), nil
+}
+func (lb *LazyBoltBucket) SetSequence(v uint64) error {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return nil
+	}
+	return bucket.SetSequence(v)
+}
+func (lb *LazyBoltBucket) Stats() (bolt.BucketStats, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return bolt.BucketStats{}, err
+	}
+	return bucket.Stats(), nil
+}
+func (lb *LazyBoltBucket) Tx() (*bolt.Tx, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return nil, err
+	}
+	return bucket.Tx(), nil
+}
+func (lb *LazyBoltBucket) Writable() (bool, error) {
+	bucket, err := lb.bucket()
+	if err != nil {
+		return false, err
+	}
+	return bucket.Writable(), nil
+}
+
+func (lb *LazyBoltBucket) bucket() (bucket *bolt.Bucket, err error) {
+	lb.once.Do(func() {
+		lb.createdBucket, err = lb.getter()
+	})
+	return lb.createdBucket, err
 }

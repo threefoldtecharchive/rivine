@@ -14,6 +14,7 @@ import (
 	"io"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 
@@ -264,6 +265,10 @@ func (c Currency) String() string {
 
 // LoadString loads the given Currency from a string.
 func (c *Currency) LoadString(str string) error {
+	str = strings.TrimLeft(str, "0")
+	if str == "" {
+		str = "0"
+	}
 	return c.i.UnmarshalText([]byte(str))
 }
 

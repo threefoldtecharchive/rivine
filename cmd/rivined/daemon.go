@@ -27,6 +27,10 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	fmt.Println("Loading...")
 	loadStart := time.Now()
 
+	if len(cfg.BootstrapPeers) > 0 {
+		networkCfg.BootstrapPeers = cfg.BootstrapPeers
+	}
+
 	var (
 		i             = 1
 		modulesToLoad = moduleIdentifiers.Len()
@@ -94,7 +98,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("transaction pool")
 		tpool, err = transactionpool.New(cs, g,
 			filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir),
-			cfg.BlockchainInfo, networkCfg.Constants)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}
@@ -149,7 +153,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		printModuleIsLoading("creator")
 		e, err = explorer.New(cs,
 			filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir),
-			cfg.BlockchainInfo, networkCfg.Constants)
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 		if err != nil {
 			return err
 		}

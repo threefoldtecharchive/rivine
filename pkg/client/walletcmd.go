@@ -17,6 +17,7 @@ import (
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
+	clipkg "github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -274,12 +275,6 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 		createBlockStakeTxCmd)
 
 	// define config of commands that have a config
-	sendCoinsCmd.Flags().StringVar(
-		&walletCmd.sendCoinsCfg.Data,
-		"data", "", "optional arbitrary data (or description) to attach to transaction")
-	sendBlockStakesCmd.Flags().StringVar(
-		&walletCmd.sendBlockStakesCfg.Data,
-		"data", "", "optional arbitrary data (or description) to attach to transaction")
 	initCmd.Flags().BoolVar(
 		&walletCmd.walletInitCfg.Plain,
 		"plain", false, "create a plain wallet, requiring no passphrase")
@@ -295,6 +290,12 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 	loadSeedCmd.Flags().StringVar(
 		&walletCmd.walletLoadSeedCfg.Seed,
 		"seed", "", "define the seed to be loaded as a flag instead of the STDIN")
+
+	// custom arbitrarydata flag
+	clipkg.ArbitraryDataFlagVar(sendCoinsCmd.Flags(), &walletCmd.sendCoinsCfg.Data,
+		"data", "optional arbitrary data (or description) to attach to transaction")
+	clipkg.ArbitraryDataFlagVar(sendBlockStakesCmd.Flags(), &walletCmd.sendBlockStakesCfg.Data,
+		"data", "optional arbitrary data (or description) to attach to transaction")
 
 	// return root command
 	return &WalletCommand{
@@ -320,10 +321,10 @@ type WalletCommand struct {
 type walletCmd struct {
 	cli          *CommandLineClient
 	sendCoinsCfg struct {
-		Data string
+		Data []byte
 	}
 	sendBlockStakesCfg struct {
-		Data string
+		Data []byte
 	}
 	walletInitCfg struct {
 		Plain bool

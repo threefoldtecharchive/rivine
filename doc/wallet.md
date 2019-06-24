@@ -82,7 +82,7 @@ Verification of ownership happens in 2 steps:
   it can be verified that the given public key is the correct one.
 
 Combining these 2, makes it easy and cheap for anyone to verify the ownership
-and valid spending of unspend outputs.
+and valid spending of unspent outputs.
 
 A final note on the signature algorithm. While the rivine blockchain protocol allows
 for any signature algorithm, we only support ed25519 for now.

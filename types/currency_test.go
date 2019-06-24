@@ -540,3 +540,30 @@ func TestCurrencyStringLoadString(t *testing.T) {
 		}
 	}
 }
+
+func TestCurrencyStringWithLeadingZeroes(t *testing.T) {
+	// created for https://github.com/threefoldtech/rivine/issues/529
+	testCases := []struct {
+		Input          string
+		ExpectedOutput Currency
+	}{
+		{"0", NewCurrency64(0)},
+		{"1", NewCurrency64(1)},
+		{"01", NewCurrency64(1)},
+		{"001", NewCurrency64(1)},
+		{"0100000000", NewCurrency64(100000000)},
+		{"0101", NewCurrency64(101)},
+		{"0300201", NewCurrency64(300201)},
+	}
+	for i, testCase := range testCases {
+		var c Currency
+		err := c.LoadString(testCase.Input)
+		if err != nil {
+			t.Error(i, testCase.Input, err)
+			continue
+		}
+		if !c.Equals(testCase.ExpectedOutput) {
+			t.Error(i, c, "!=", testCase.ExpectedOutput)
+		}
+	}
+}

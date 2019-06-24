@@ -5,6 +5,7 @@ package transactionpool
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
@@ -182,7 +183,9 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 // acceptTransactionSet verifies that a transaction set is allowed to be in the
 // transaction pool, and then adds it to the transaction pool.
 func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
+	tp.log.Debug("Trying to accept transaction set")
 	if len(ts) == 0 {
+		tp.log.Debug("Attempted to accept empty transaction set")
 		return errEmptySet
 	}
 
@@ -202,12 +205,17 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	}
 	// If no transactions remain, return a duplicate error.
 	if len(ts) == 0 {
+		tp.log.Debug("Transaction set could not be accepted: all transactions in set are duplicates")
 		return modules.ErrDuplicateTransactionSet
 	}
 
+	setID := TransactionSetID(crypto.HashObject(ts))
+
 	// Validate the composition of the transaction set
+	tp.log.Debug(fmt.Sprintf("validation transaction set %v composition", crypto.Hash(setID).String()))
 	err = tp.validateTransactionSetComposition(ts)
 	if err != nil {
+		tp.log.Debug(fmt.Sprintf("Transaction set %v composition invalid: %v", crypto.Hash(setID).String(), err))
 		return err
 	}
 
@@ -223,19 +231,22 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 		}
 	}
 	if len(conflicts) > 0 {
+		tp.log.Debug("Handling conflicts in transaction set %v", setID)
 		return tp.handleConflicts(ts, conflicts)
 	}
+	tp.log.Debug(fmt.Sprintf("Trying out transaction set %v against current consensus", crypto.Hash(setID).String()))
 	cc, err := tp.consensusSet.TryTransactionSet(ts)
 	if err != nil {
+		tp.log.Debug(fmt.Sprintf("Transaction set %v has conflict with current consensus", crypto.Hash(setID).String()))
 		return modules.NewConsensusConflict(err.Error())
 	}
 
 	// Add the transaction set to the pool.
-	setID := TransactionSetID(crypto.HashObject(ts))
 	tp.transactionSets[setID] = ts
 	for _, oid := range oids {
 		tp.knownObjects[oid] = setID
 	}
+	tp.log.Println(fmt.Sprintf("Accepted transaction set %v in pool", crypto.Hash(setID).String()))
 	// remember when the transaction was added
 	tp.broadcastCache.add(setID, tp.consensusSet.Height())
 	tp.transactionSetDiffs[setID] = cc
@@ -256,6 +267,7 @@ func (tp *TransactionPool) AcceptTransactionSet(ts []types.Transaction) error {
 	}
 
 	// Notify subscribers and broadcast the transaction set.
+	tp.log.Debug(fmt.Sprintf("Relaying transaction set %v to peers", crypto.HashObject(ts)))
 	go tp.gateway.Broadcast("RelayTransactionSet", ts, tp.gateway.Peers())
 	tp.updateSubscribersTransactions()
 	return nil
@@ -265,6 +277,7 @@ func (tp *TransactionPool) AcceptTransactionSet(ts []types.Transaction) error {
 // the accept is successful, the transaction will be relayed to the gateway's
 // other peers.
 func (tp *TransactionPool) relayTransactionSet(conn modules.PeerConn) error {
+	tp.log.Debug("Received transaction set from peer")
 	var ts []types.Transaction
 	err := siabin.ReadObject(conn, &ts, tp.chainCts.BlockSizeLimit)
 	if err != nil {

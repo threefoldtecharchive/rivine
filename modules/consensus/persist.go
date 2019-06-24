@@ -85,6 +85,7 @@ func (cs *ConsensusSet) initPersist(verbose bool) error {
 	}
 	// Set up the closing of the database.
 	cs.tg.AfterStop(func() {
+		cs.pluginsWaitGroup.Wait()
 		err := cs.db.Close()
 		if err != nil {
 			cs.log.Println("ERROR: Unable to close consensus set database at shutdown:", err)

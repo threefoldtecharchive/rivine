@@ -13,10 +13,53 @@ import (
 	"github.com/threefoldtech/rivine/types"
 )
 
+func convertLegacyDatabase(filepath string, log *persist.Logger) (*persist.BoltDatabase, error) {
+	return convertLegacyOneZeroFiveDatabase(filepath, log)
+}
+
+// convertLegacyOneZeroFiveDatabase converts a 1.0.5 consensus database,
+// to a database of the current version as defined by dbMetadata.
+// It keeps the database open and returns it for further usage.
+func convertLegacyOneZeroFiveDatabase(filepath string, log *persist.Logger) (db *persist.BoltDatabase, err error) {
+	var legacyDBMetadata = persist.Metadata{
+		Header:  "Consensus Set Database",
+		Version: "1.0.5",
+	}
+	db, err = persist.OpenDatabase(legacyDBMetadata, filepath)
+	if err != nil {
+		if err == persist.ErrBadVersion {
+			db, err = convertLegacyZeroFiveZeroDatabase(filepath, log, legacyDBMetadata)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	err = db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucket(BucketPlugins)
+		return err
+	})
+	if err == nil {
+		// set the new metadata, and save it,
+		// such that next time we have the new version stored
+		db.Header, db.Version = dbMetadata.Header, dbMetadata.Version
+		err = db.SaveMetadata()
+	}
+	if err != nil {
+		err := db.Close()
+		if build.DEBUG && err != nil {
+			panic(err)
+		}
+	}
+	return
+}
+
 // convertLegacyDatabase converts a 0.5.0 consensus database,
 // to a database of the current version as defined by dbMetadata.
 // It keeps the database open and returns it for further usage.
-func convertLegacyDatabase(filePath string, log *persist.Logger) (db *persist.BoltDatabase, err error) {
+func convertLegacyZeroFiveZeroDatabase(filePath string, log *persist.Logger, desiredMetadata persist.Metadata) (db *persist.BoltDatabase, err error) {
 	var legacyDBMetadata = persist.Metadata{
 		Header:  "Consensus Set Database",
 		Version: "0.5.0",
@@ -55,7 +98,7 @@ func convertLegacyDatabase(filePath string, log *persist.Logger) (db *persist.Bo
 	if err == nil {
 		// set the new metadata, and save it,
 		// such that next time we have the new version stored
-		db.Header, db.Version = dbMetadata.Header, dbMetadata.Version
+		db.Header, db.Version = desiredMetadata.Header, desiredMetadata.Version
 		err = db.SaveMetadata()
 	}
 	if err != nil {

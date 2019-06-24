@@ -2,9 +2,11 @@ package transactionpool
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/NebulousLabs/demotemutex"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
@@ -76,13 +78,15 @@ type (
 		mu         demotemutex.DemoteMutex
 		persistDir string
 
+		log *persist.Logger
+
 		bcInfo   types.BlockchainInfo
 		chainCts types.ChainConstants
 	}
 )
 
 // New creates a transaction pool that is ready to receive transactions.
-func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants) (*TransactionPool, error) {
+func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*TransactionPool, error) {
 	// Check that the input modules are non-nil.
 	if cs == nil {
 		return nil, errNilCS
@@ -109,7 +113,7 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 	}
 
 	// Open the tpool database.
-	err := tp.initPersist()
+	err := tp.initPersist(verbose)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +127,16 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 func (tp *TransactionPool) Close() error {
 	tp.gateway.UnregisterRPC("RelayTransactionSet")
 	tp.consensusSet.Unsubscribe(tp)
-	return tp.db.Close()
+
+	var errs []error
+	if err := tp.db.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("db.Close failed: %v", err))
+	}
+	if err := tp.log.Close(); err != nil {
+		errs = append(errs, fmt.Errorf("log.Close failed: %v", err))
+	}
+
+	return build.JoinErrors(errs, "; ")
 }
 
 // FeeEstimation returns an estimation for what fee should be applied to

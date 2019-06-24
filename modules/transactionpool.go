@@ -31,10 +31,6 @@ var (
 	// ErrTransactionNotFound is returned in case no transaction could be found
 	// in the transaction pool for a specific ID.
 	ErrTransactionNotFound = errors.New("transaction not found")
-
-	// TransactionPoolDir is the name of the directory that is used to store
-	// the transaction pool's persistent data.
-	TransactionPoolDir = "transactionpool"
 )
 
 const (
@@ -45,6 +41,12 @@ const (
 	// TransactionPoolMaxRebroadcasts is the maximum amount of times a transaction
 	// will get broadcast again.
 	TransactionPoolMaxRebroadcasts = 4
+)
+
+const (
+	// TransactionPoolDir is the name of the directory that is used to store
+	// the transaction pool's persistent data.
+	TransactionPoolDir = "transactionpool"
 )
 
 // A TransactionPoolSubscriber receives updates about the confirmed and

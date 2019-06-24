@@ -48,7 +48,7 @@ func createWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts, false)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 		return nil, err
 	}
 
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts, false)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func createBlankWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts, false)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +237,7 @@ func TestNilInputs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +313,7 @@ func TestCloseWallet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts)
+	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.TransactionPoolDir), bcInfo, chainCts, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -637,4 +637,12 @@ func (css *consensusSetStub) GetBlockStakeOutput(id types.BlockStakeOutputID) (b
 		}
 	}
 	return types.BlockStakeOutput{}, errors.New("BlockStake output not found in database")
+}
+
+func (css *consensusSetStub) RegisterPlugin(name string, plugin modules.ConsensusSetPlugin, cancel <-chan struct{}) (err error) {
+	return nil
+}
+
+func (css *consensusSetStub) UnregisterPlugin(name string, plugin modules.ConsensusSetPlugin) {
+	// Do nothing
 }

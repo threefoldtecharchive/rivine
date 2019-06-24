@@ -8,6 +8,7 @@ package consensus
 
 import (
 	"errors"
+	gosync "sync"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
@@ -55,6 +56,13 @@ type ConsensusSet struct {
 	// unlikely to grow beyond 1kb, and cannot by manipulated by an attacker as
 	// the function of adding a subscriber should not be exposed.
 	subscribers []modules.ConsensusSetSubscriber
+
+	// plugins to the consensus set will receive updates to the consensus set.
+	// At initialization, they receive all changes that they are missing.
+	plugins map[string]modules.ConsensusSetPlugin
+
+	// pluginsWaitGroup makes sure that we wait with closing the db until all plugins are unsubcribed
+	pluginsWaitGroup gosync.WaitGroup
 
 	// dosBlocks are blocks that are invalid, but the invalidity is only
 	// discoverable during an expensive step of validation. These blocks are
@@ -125,6 +133,8 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 
 		dosBlocks: make(map[types.BlockID]struct{}),
 
+		bootstrap: bootstrap,
+
 		marshaler:       stdMarshaler{},
 		blockRuleHelper: stdBlockRuleHelper{chainCts: chainCts},
 
@@ -174,12 +184,14 @@ func (cs *ConsensusSet) Start() {
 		// typically we don't have any mock peers to synchronize with in
 		// testing.
 		if cs.bootstrap {
+			cs.log.Println("Bootstrap enabled, starting IBD")
 			// We are in a virgin goroutine right now, so calling the threaded
 			// function without a goroutine is okay.
 			err := cs.threadedInitialBlockchainDownload()
 			if err != nil {
 				return
 			}
+			cs.log.Println("IBD finished")
 		}
 
 		// threadedInitialBlockchainDownload will release the threadgroup 'Add'
@@ -192,6 +204,7 @@ func (cs *ConsensusSet) Start() {
 		defer cs.tg.Done()
 
 		// Register RPCs
+		cs.log.Debug("Registering CS RPC endpoints")
 		cs.gateway.RegisterRPC("SendBlocks", cs.rpcSendBlocks)
 		cs.gateway.RegisterRPC("RelayHeader", cs.threadedRPCRelayHeader)
 		cs.gateway.RegisterRPC("SendBlk", cs.rpcSendBlk)
@@ -205,6 +218,7 @@ func (cs *ConsensusSet) Start() {
 
 		// Mark that we are synced with the network.
 		cs.mu.Lock()
+		cs.log.Debug("Marked CS as Synced")
 		cs.synced = true
 		cs.mu.Unlock()
 	}()

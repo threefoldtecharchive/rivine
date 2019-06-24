@@ -23,7 +23,7 @@ var (
 
 	dbMetadata = persist.Metadata{
 		Header:  "Consensus Set Database",
-		Version: "1.0.5",
+		Version: "1.1.0",
 	}
 )
 

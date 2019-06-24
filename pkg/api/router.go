@@ -7,4 +7,5 @@ import "github.com/julienschmidt/httprouter"
 type Router interface {
 	GET(path string, handle httprouter.Handle)
 	POST(path string, handle httprouter.Handle)
+	OPTIONS(path string, handle httprouter.Handle)
 }

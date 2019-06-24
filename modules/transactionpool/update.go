@@ -1,6 +1,8 @@
 package transactionpool
 
 import (
+	"fmt"
+
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
@@ -10,6 +12,7 @@ import (
 
 // purge removes all transactions from the transaction pool.
 func (tp *TransactionPool) purge() {
+	tp.log.Debug("Purging transactionpool")
 	tp.knownObjects = make(map[ObjectID]TransactionSetID)
 	tp.transactionSets = make(map[TransactionSetID][]types.Transaction)
 	tp.transactionSetDiffs = make(map[TransactionSetID]modules.ConsensusChange)
@@ -21,6 +24,7 @@ func (tp *TransactionPool) purge() {
 func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	tp.mu.Lock()
 
+	tp.log.Debug("Apply consensus update")
 	// Update the database of confirmed transactions.
 	err := tp.db.Update(func(tx *bolt.Tx) error {
 		for _, block := range cc.RevertedBlocks {
@@ -50,6 +54,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		for _, txn := range block.Transactions {
 			setID := TransactionSetID(crypto.HashObject([]types.Transaction{txn}))
 			tp.broadcastCache.delete(setID)
+			tp.log.Debug(fmt.Sprintf("Remove accepted tx set %v from broadcast cache", crypto.Hash(setID).String()))
 		}
 	}
 
@@ -61,7 +66,9 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	txids := make(map[types.TransactionID]struct{})
 	for _, block := range cc.AppliedBlocks {
 		for _, txn := range block.Transactions {
-			txids[txn.ID()] = struct{}{}
+			id := txn.ID()
+			tp.log.Debug(fmt.Sprintf("Accepted tx %v in block", id))
+			txids[id] = struct{}{}
 		}
 	}
 
@@ -92,6 +99,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		for _, txn := range tSet {
 			_, exists := txids[txn.ID()]
 			if !exists {
+				tp.log.Println(fmt.Sprintf("Remembering tx %v, in pool but not in latest block", txn.ID()))
 				newTSet = append(newTSet, txn)
 			}
 		}
@@ -124,6 +132,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 			// so remove it from the cache as well
 			setID := TransactionSetID(crypto.HashObject(set))
 			tp.broadcastCache.delete(setID)
+			tp.log.Println(fmt.Sprintf("[WARN] Failed to accept transaction set %v, was previously in pool but not in latest block, and is now invalid", crypto.Hash(setID).String()))
 			continue
 		}
 	}
@@ -132,6 +141,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	if cc.Synced {
 		currentheight := tp.consensusSet.Height()
 		for _, id := range tp.broadcastCache.getTransactionsToBroadcast(currentheight) {
+			tp.log.Println(fmt.Sprintf("Rebroadcasting transaction %v to peers", crypto.Hash(id).String()))
 			go tp.gateway.Broadcast("RelayTransactionSet", tp.transactionSets[id], tp.gateway.Peers())
 		}
 	}

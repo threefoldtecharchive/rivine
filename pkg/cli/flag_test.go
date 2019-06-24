@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"testing"
 	"time"
 
+	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -300,6 +302,103 @@ func testPanic(t *testing.T, label string, f func()) {
 		}
 	}()
 	f()
+}
+
+func Test_arbitraryDataFlag(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		output []byte
+	}{
+		{
+			"1",
+			`\x00\x01\x02`,
+			[]byte{0, 1, 2},
+		}, {
+			"2",
+			`\x00\x05\x13`,
+			[]byte{0, 5, 19},
+		}, {
+			"3",
+			`\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00`,
+			[]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		},
+		{
+			"4",
+			"",
+			[]byte{},
+		},
+		{
+			"5",
+			"Hello World!",
+			[]byte{72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100, 33},
+		},
+		{
+			"5",
+			"mat\u00e9riel",
+			[]byte{109, 97, 116, 195, 169, 114, 105, 101, 108},
+		},
+		{
+			"6",
+			"საერთაშორისო",
+			[]byte{225, 131, 161, 225, 131, 144, 225, 131, 148, 225, 131, 160, 225, 131, 151, 225, 131, 144, 225, 131, 168, 225, 131, 157, 225, 131, 160, 225, 131, 152, 225, 131, 161, 225, 131, 157},
+		},
+		{
+			"7",
+			"\u10D2\u10D7\u10EE\u10DD\u10D5\u10D7%20\u10D0\u10EE\u10DA\u10D0\u10D5\u10D4%20\u10D2\u10D0\u10D8\u10D0\u10E0\u10DD\u10D7%20\u10E0\u10D4\u10D2\u10D8\u10E1\u10E2\u10E0\u10D0\u10EA\u10D8\u10D0%20Unicode-\u10D8\u10E1%20\u10DB\u10D4\u10D0\u10D7\u10D4%20\u10E1\u10D0\u10D4\u10E0\u10D7\u10D0\u10E8\u10DD\u10E0\u10D8\u10E1\u10DD",
+			[]byte{225, 131, 146, 225, 131, 151, 225, 131, 174, 225, 131, 157, 225, 131, 149, 225, 131, 151, 37, 50, 48, 225, 131, 144, 225, 131, 174, 225, 131, 154, 225, 131, 144, 225, 131, 149, 225, 131, 148, 37, 50, 48, 225, 131, 146, 225, 131, 144, 225, 131, 152, 225, 131, 144, 225, 131, 160, 225, 131, 157, 225, 131, 151, 37, 50, 48, 225, 131, 160, 225, 131, 148, 225, 131, 146, 225, 131, 152, 225, 131, 161, 225, 131, 162, 225, 131, 160, 225, 131, 144, 225, 131, 170, 225, 131, 152, 225, 131, 144, 37, 50, 48, 85, 110, 105, 99, 111, 100, 101, 45, 225, 131, 152, 225, 131, 161, 37, 50, 48, 225, 131, 155, 225, 131, 148, 225, 131, 144, 225, 131, 151, 225, 131, 148, 37, 50, 48, 225, 131, 161, 225, 131, 144, 225, 131, 148, 225, 131, 160, 225, 131, 151, 225, 131, 144, 225, 131, 168, 225, 131, 157, 225, 131, 160, 225, 131, 152, 225, 131, 161, 225, 131, 157},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var value []byte
+			flag := ArbitraryDataFlag{arbitraryData: &value}
+			err := flag.Set(tt.input)
+			if err != nil {
+				t.Errorf("error parsing")
+			}
+			if bytes.Compare(value, tt.output) != 0 {
+				t.Errorf("Set() = %v (%s) is not %v", value, string(value), tt.output)
+			}
+			if got := flag.String(); got != tt.input {
+				t.Errorf("String() = %v, want %v", got, tt.input)
+			}
+		})
+	}
+}
+
+func TestNetAddressArrayFlag(t *testing.T) {
+	var s []modules.NetAddress
+	flag := netAddressArray{array: &s}
+
+	str := flag.String()
+	if len(str) != 0 {
+		t.Fatal("unexpected stringified NetAddressArrayFlag: ", str)
+	}
+
+	flag.Set("127.0.0.1:23112")
+	expectedStr := "127.0.0.1:23112"
+	str = flag.String()
+	if expectedStr != str {
+		t.Fatal("stringified NetAddressArrayFlag unexpected:", expectedStr, "!=", str)
+	}
+
+	flag.Set("localhost:23122")
+	expectedStr = "127.0.0.1:23112,localhost:23122"
+	str = flag.String()
+	if expectedStr != str {
+		t.Fatal("stringified NetAddressArrayFlag unexpected:", expectedStr, "!=", str)
+	}
+
+	expectedStrs := []modules.NetAddress{"127.0.0.1:23112", "localhost:23122"}
+	if len(s) != len(expectedStrs) {
+		t.Fatal("unexpected NetAddressArrayFlag result:", s)
+	}
+	for i, addr := range s {
+		if addr != expectedStrs[i] {
+			t.Errorf("unexpected NetAddressArrayFlag result value #%d: %s != %s", i+1, addr, expectedStrs[i])
+		}
+	}
 }
 
 const testTimeNow = 1525600388

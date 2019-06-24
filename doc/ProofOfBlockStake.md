@@ -14,7 +14,7 @@ Block stakes are required in order to create blocks, and thus every blockcreator
 protocol
 --------
 
-![POBSprotocoloverview](POBSoverview.svg?sanitize=true)
+![POBSprotocoloverview](POBSoverview.svg)
 
 The hash function used is a 32-byte BLAKE2b hash. To compare the hash with the difficulty it is interpreted as a big-endian unsigned integer.
 
@@ -51,4 +51,4 @@ The chance of having a match is also multiplied by the number of blockstakes you
 
 Difficulty is adjusted every 50 blocks to compensate for the fact that not every blockstake available is always participating in the POBS protocol.
 
-![POBSprotocoldifficulty](POBSdifficulty.svg?sanitize=true)
+![POBSprotocoldifficulty](POBSdifficulty.svg)

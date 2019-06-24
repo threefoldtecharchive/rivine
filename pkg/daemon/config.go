@@ -9,6 +9,7 @@ import (
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
+	"github.com/threefoldtech/rivine/pkg/cli"
 )
 
 const (
@@ -56,6 +57,9 @@ type (
 
 		//Verbose (debug) logging
 		VerboseLogging bool
+
+		// Optional BootstrapPeers we want to use instead of the default NetworkConfigs.
+		BootstrapPeers []modules.NetAddress
 	}
 
 	// NetworkConfig are variables for a particular chain. Currently, these are genesis constants and bootstrap peers
@@ -86,6 +90,8 @@ func DefaultConfig() Config {
 		ProfileDir:        "profiles",
 		RootPersistentDir: "",
 		VerboseLogging:    false,
+
+		BootstrapPeers: nil,
 	}
 }
 
@@ -105,6 +111,9 @@ func (cfg *Config) RegisterAsFlags(flagSet *pflag.FlagSet) {
 	flagSet.BoolVarP(&cfg.AuthenticateAPI, "authenticate-api", "", cfg.AuthenticateAPI, "enable API password protection")
 	flagSet.BoolVarP(&cfg.AllowAPIBind, "disable-api-security", "", cfg.AllowAPIBind, fmt.Sprintf("allow the daemon of %s to listen on a non-localhost address (DANGEROUS)", cfg.BlockchainInfo.Name))
 	flagSet.StringVarP(&cfg.BlockchainInfo.NetworkName, "network", "n", cfg.BlockchainInfo.NetworkName, "the name of the network to which the daemon connects")
+
+	cli.NetAddressArrayFlagVar(flagSet, &cfg.BootstrapPeers, "bootstrap-peers",
+		"overwrite the bootstrap peers to use, instead of using the default bootstrap peers")
 }
 
 // ProcessConfig checks the configuration values and performs cleanup on

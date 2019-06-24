@@ -54,6 +54,9 @@ var (
 	// TransactionIDMap is a database bucket that containsall of the present
 	// transaction IDs linked to their short ID
 	TransactionIDMap = []byte("TransactionIDMap")
+
+	// BucketPlugins is a database buckets that contains all plugins and their metadata.
+	BucketPlugins = []byte("Plugins")
 )
 
 // createConsensusObjects initialzes the consensus portions of the database.
@@ -67,6 +70,7 @@ func (cs *ConsensusSet) createConsensusDB(tx *bolt.Tx) error {
 		CoinOutputs,
 		BlockStakeOutputs,
 		TransactionIDMap,
+		BucketPlugins,
 	}
 	for _, bucket := range buckets {
 		_, err := tx.CreateBucket(bucket)

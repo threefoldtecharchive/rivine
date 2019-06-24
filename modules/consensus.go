@@ -5,7 +5,10 @@ import (
 	"math/big"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
+
+	bolt "github.com/rivine/bbolt"
 )
 
 const (
@@ -69,6 +72,34 @@ type (
 		// There may not be any reverted blocks, but there will always be
 		// applied blocks.
 		ProcessConsensusChange(ConsensusChange)
+	}
+
+	// A ConsensusSetPlugin is an object that receives updates to the consensus set
+	// every time there is a change in consensus. The difference with a ConsensusSetSubscriber
+	// is that it stores its data within the database of the consensus set.
+	ConsensusSetPlugin interface {
+		// Initialize the bucket, could be creating it, migrating it,
+		// or simply checking that all is as expected.
+		// An error should be returned in case something went wrong.
+		// metadata is nil in case the plugin wasn't registered prior to this attempt.
+		// This method will be called while registering the plugin.
+		InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps PluginViewStorage, cb PluginUnregisterCallback) (persist.Metadata, error)
+
+		// Apply the transaction to the plugin.
+		// An error should be returned in case something went wrong.
+		ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		// Revert the block from the plugin.
+		// An error should be returned in case something went wrong.
+		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+	}
+
+	// PluginUnregisterCallback allows plugins to unregister
+	PluginUnregisterCallback func(plugin ConsensusSetPlugin)
+
+	// A PluginStorage
+	PluginViewStorage interface {
+		View(callback func(bucket *bolt.Bucket) error) error
+		Close() error
 	}
 
 	// A ConsensusChange enumerates a set of changes that occurred to the consensus set.
@@ -242,6 +273,12 @@ type (
 
 		// GetBlockStakeOutput takes a blockstake output ID and returns the appropriate blockstake output
 		GetBlockStakeOutput(types.BlockStakeOutputID) (types.BlockStakeOutput, error)
+
+		// RegisterPlugin takes in a name and plugin and registers this plugin on the consensus
+		RegisterPlugin(name string, plugin ConsensusSetPlugin, cancel <-chan struct{}) error
+
+		// UnregisterPlugin takes in a name and plugin and unregisters this plugin off the consensus
+		UnregisterPlugin(name string, plugin ConsensusSetPlugin)
 	}
 )
 
