@@ -44,7 +44,7 @@ func (cs *ConsensusSet) dbCurrentProcessedBlock() (pb *processedBlock) {
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return pb
 }
@@ -57,7 +57,7 @@ func (cs *ConsensusSet) dbGetPath(bh types.BlockHeight) (id types.BlockID, err e
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return id, err
 }
@@ -70,7 +70,7 @@ func (cs *ConsensusSet) dbPushPath(bid types.BlockID) {
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 }
 
@@ -82,7 +82,7 @@ func (cs *ConsensusSet) dbGetBlockMap(id types.BlockID) (pb *processedBlock, err
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return pb, err
 }
@@ -95,7 +95,7 @@ func (cs *ConsensusSet) dbGetCoinOutput(id types.CoinOutputID) (sco types.CoinOu
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return sco, err
 }
@@ -110,7 +110,7 @@ func (cs *ConsensusSet) getArbCoinOutput() (scoid types.CoinOutputID, sco types.
 		return siabin.Unmarshal(scoBytes, &sco)
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	if err != nil {
 		return types.CoinOutputID{}, types.CoinOutput{}, err
@@ -126,7 +126,7 @@ func (cs *ConsensusSet) dbGetBlockStakeOutput(id types.BlockStakeOutputID) (sfo 
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return sfo, err
 }
@@ -139,6 +139,6 @@ func (cs *ConsensusSet) dbAddBlockStakeOutput(id types.BlockStakeOutputID, sfo t
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 }

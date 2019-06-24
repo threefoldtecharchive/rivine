@@ -590,10 +590,10 @@ func (v TransactionVersion) IsValidTransactionVersion() error {
 // See the TransactionShortID type for more information.
 func NewTransactionShortID(height BlockHeight, txSequenceID uint16) TransactionShortID {
 	if (height & blockHeightOOBMask) > 0 {
-		build.Severe("block height out of bounds")
+		build.Critical("block height out of bounds")
 	}
 	if (txSequenceID & txSeqIndexOOBMask) > 0 {
-		build.Severe("transaction sequence ID out of bounds")
+		build.Critical("transaction sequence ID out of bounds")
 	}
 
 	return TransactionShortID(height<<txShortIDBlockHeightShift) |

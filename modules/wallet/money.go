@@ -153,7 +153,7 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 			if len(unlockhashes) == 0 {
 				w.log.Printf("[ERROR] failed to convert output to multisig condition: type=%T conditionType=%d",
 					co.Condition.Condition, co.Condition.ConditionType())
-				build.Severe("Failed to convert output to multisig condition")
+				build.Critical("Failed to convert output to multisig condition")
 				continue
 			}
 			// Create a new wallet for this address
@@ -310,7 +310,7 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 
 // Len returns the number of elements in the sortedOutputs struct.
 func (so sortedOutputs) Len() int {
-	if build.DEBUG && len(so.ids) != len(so.outputs) {
+	if len(so.ids) != len(so.outputs) {
 		build.Severe("sortedOutputs object is corrupt")
 	}
 	return len(so.ids)

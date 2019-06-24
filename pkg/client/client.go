@@ -57,11 +57,11 @@ type Config struct {
 func Wrap(fn interface{}) func(*cobra.Command, []string) {
 	fnVal, fnType := reflect.ValueOf(fn), reflect.TypeOf(fn)
 	if fnType.Kind() != reflect.Func {
-		build.Severe("wrapped function has wrong type signature")
+		build.Critical("wrapped function has wrong type signature")
 	}
 	for i := 0; i < fnType.NumIn(); i++ {
 		if fnType.In(i).Kind() != reflect.String {
-			build.Severe("wrapped function has wrong type signature")
+			build.Critical("wrapped function has wrong type signature")
 		}
 	}
 
@@ -84,18 +84,18 @@ func Wrap(fn interface{}) func(*cobra.Command, []string) {
 func WrapWithConfig(config *Config, fn interface{}) func(*cobra.Command, []string) {
 	fnVal, fnType := reflect.ValueOf(fn), reflect.TypeOf(fn)
 	if fnType.Kind() != reflect.Func {
-		build.Severe("wrapped function has wrong type signature")
+		build.Critical("wrapped function has wrong type signature")
 	}
 	numIn := fnType.NumIn()
 	if numIn < 1 {
-		build.Severe("wrapped function has insufficient amount of arguments")
+		build.Critical("wrapped function has insufficient amount of arguments")
 	}
 	if fnType.In(0).Elem() != reflect.TypeOf(config) {
-		build.Severe("wrapped function should have a *Config param as first argument")
+		build.Critical("wrapped function should have a *Config param as first argument")
 	}
 	for i := 1; i < numIn; i++ {
 		if fnType.In(i).Kind() != reflect.String {
-			build.Severe("wrapped function has wrong type signature")
+			build.Critical("wrapped function has wrong type signature")
 		}
 	}
 

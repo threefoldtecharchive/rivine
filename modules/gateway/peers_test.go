@@ -464,17 +464,17 @@ func TestConnectRejectsVersions(t *testing.T) {
 			defer close(doneChan)
 			conn, err := listener.Accept()
 			if err != nil {
-				build.Severe(fmt.Sprintf("test #%d failed: %s", testIndex, err))
+				build.Critical(fmt.Sprintf("test #%d failed: %s", testIndex, err))
 			}
 			remoteInfo, err := g.acceptConnHandshake(conn, tt.version, tt.uniqueID)
 			if tt.localErrWant != nil && err != tt.localErrWant {
-				build.Severe(fmt.Sprintf("test #%d failed: %s", testIndex, err))
+				build.Critical(fmt.Sprintf("test #%d failed: %s", testIndex, err))
 
 			} else if err == nil && bcInfo.ProtocolVersion.Compare(remoteInfo.Version) != 0 {
-				build.Severe(fmt.Sprintf("test #%d failed: %q != %q",
+				build.Critical(fmt.Sprintf("test #%d failed: %q != %q",
 					testIndex, bcInfo.ProtocolVersion.String(), remoteInfo.Version.String()))
 			} else if err != nil && tt.errWant == nil {
-				build.Severe(fmt.Sprintf("test #%d failed: %q != %q",
+				build.Critical(fmt.Sprintf("test #%d failed: %q != %q",
 					testIndex, bcInfo.ProtocolVersion.String(), remoteInfo.Version.String()))
 			}
 		}()
@@ -509,7 +509,7 @@ func TestDisconnect(t *testing.T) {
 	go func() {
 		_, err := l.Accept()
 		if err != nil {
-			build.Severe(err)
+			build.Critical(err)
 		}
 	}()
 	// skip standard connection protocol
@@ -586,7 +586,7 @@ func TestOverloadedBootstrap(t *testing.T) {
 			err = gs[i].Connect(gs[0].myAddr)
 		}
 		if err != nil {
-			build.Severe(err)
+			build.Critical(err)
 		}
 	}
 

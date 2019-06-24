@@ -657,9 +657,7 @@ func (n *NilFulfillment) IsStandardFulfillment(ValidationContext) error {
 
 // Marshal implements MarshalableUnlockFulfillment.Marshal
 func (n *NilFulfillment) Marshal(MarshalFunc) []byte {
-	if build.DEBUG {
-		build.Severe(ErrNilFulfillmentType)
-	}
+	build.Severe(ErrNilFulfillmentType)
 	return nil // nothing to marshal
 }
 
@@ -1339,7 +1337,7 @@ var (
 // NewTimeLockCondition creates a new TimeLockCondition.
 // If no MarshalableUnlockCondition is given, the NilCondition is assumed.
 func NewTimeLockCondition(lockTime uint64, condition MarshalableUnlockCondition) *TimeLockCondition {
-	if build.DEBUG && lockTime == 0 {
+	if lockTime == 0 {
 		build.Severe("lock time is required")
 	}
 	if condition == nil {
@@ -1503,19 +1501,19 @@ func (tl *TimeLockCondition) UnmarshalJSON(b []byte) error {
 // using the given unlockhashes as a representation of the identities
 // who can unlock the output
 func NewMultiSignatureCondition(uhs UnlockHashSlice, minsigs uint64) *MultiSignatureCondition {
-	if build.DEBUG && minsigs == 0 {
+	if minsigs == 0 {
 		build.Severe("MultiSig outputs must require at least a single signature to unlock")
 	}
-	if build.DEBUG && len(uhs) == 0 {
+	if len(uhs) == 0 {
 		build.Severe("MultiSig outputs must specify at least a single address which can sign it as an input")
 	}
-	if build.DEBUG && uint64(len(uhs)) < minsigs {
+	if uint64(len(uhs)) < minsigs {
 		build.Severe("You can't create a multisig which requires more signatures to spent then there are addresses which can sign")
 	}
 	if build.DEBUG {
 		for _, uh := range uhs {
 			if uh.Type != UnlockTypePubKey {
-				build.Severe("Unlock hashes used in multisig condition must have the UnlockTypePubKey type")
+				build.Critical("Unlock hashes used in multisig condition must have the UnlockTypePubKey type")
 			}
 		}
 

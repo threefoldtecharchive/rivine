@@ -2002,7 +2002,7 @@ func TestIDComputationCompatibleWithLegacyIDs_TFChain_Issue134(t *testing.T) {
 func (t Transaction) LegacyID() TransactionID {
 	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return TransactionID(crypto.HashAll(
 		ltd.CoinInputs,
@@ -2021,7 +2021,7 @@ func (t Transaction) LegacyID() TransactionID {
 func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
 	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return CoinOutputID(crypto.HashAll(
 		SpecifierCoinOutput,
@@ -2100,7 +2100,7 @@ func (t Transaction) LegacyBlockStakeOutputID(i uint64) BlockStakeOutputID {
 
 	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return BlockStakeOutputID(crypto.HashAll(
 		SpecifierBlockStakeOutput,

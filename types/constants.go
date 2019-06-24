@@ -334,7 +334,7 @@ func (c *ChainConstants) Validate() error {
 // GenesisBlock returns the genesis block based on the blockchain config
 func (c *ChainConstants) GenesisBlock() Block {
 	if err := c.GenesisTransactionVersion.IsValidTransactionVersion(); err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return Block{
 		Timestamp: c.GenesisTimestamp,

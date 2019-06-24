@@ -197,7 +197,7 @@ func (d *Decoder) Read(p []byte) (int, error) {
 	n, err := d.r.Read(p)
 	// enforce an absolute maximum size limit
 	if d.n += n; d.n > MaxObjectSize {
-		build.Severe(ErrObjectTooLarge)
+		build.Critical(ErrObjectTooLarge)
 	}
 	return n, err
 }
@@ -245,14 +245,14 @@ func (d *Decoder) readN(n int) []byte {
 			panic(io.ErrUnexpectedEOF)
 		}
 		if d.n += n; d.n > MaxObjectSize {
-			build.Severe(ErrObjectTooLarge)
+			build.Critical(ErrObjectTooLarge)
 		}
 		return b
 	}
 	b := make([]byte, n)
 	_, err := io.ReadFull(d, b)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return b
 }
@@ -266,7 +266,7 @@ func (d *Decoder) decode(val reflect.Value) {
 		if u, ok := val.Addr().Interface().(SiaUnmarshaler); ok {
 			err := u.UnmarshalSia(d.r)
 			if err != nil {
-				build.Severe(err)
+				build.Critical(err)
 			}
 			return
 		}
@@ -288,7 +288,7 @@ func (d *Decoder) decode(val reflect.Value) {
 	case reflect.Bool:
 		b := d.readN(1)
 		if b[0] > 1 {
-			build.Severe("boolean value was not 0 or 1")
+			build.Critical("boolean value was not 0 or 1")
 		}
 		val.SetBool(b[0] == 1)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -298,7 +298,7 @@ func (d *Decoder) decode(val reflect.Value) {
 	case reflect.String:
 		strLen := DecUint64(d.readN(8))
 		if strLen > MaxSliceSize {
-			build.Severe("string is too large")
+			build.Critical("string is too large")
 		}
 		val.SetString(string(d.readN(int(strLen))))
 	case reflect.Slice:
@@ -308,7 +308,7 @@ func (d *Decoder) decode(val reflect.Value) {
 		// sanity-check the sliceLen, otherwise you can crash a peer by making
 		// them allocate a massive slice
 		if sliceLen > 1<<31-1 || sliceLen*uint64(val.Type().Elem().Size()) > MaxSliceSize {
-			build.Severe(ErrSliceTooLarge)
+			build.Critical(ErrSliceTooLarge)
 		} else if sliceLen == 0 {
 			return
 		}
@@ -321,7 +321,7 @@ func (d *Decoder) decode(val reflect.Value) {
 			b := val.Slice(0, val.Len())
 			_, err := io.ReadFull(d, b.Bytes())
 			if err != nil {
-				build.Severe(err)
+				build.Critical(err)
 			}
 			return
 		}
@@ -336,7 +336,7 @@ func (d *Decoder) decode(val reflect.Value) {
 		}
 		return
 	default:
-		build.Severe("unknown type")
+		build.Critical("unknown type")
 	}
 }
 

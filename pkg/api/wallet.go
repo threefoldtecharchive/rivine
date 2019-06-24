@@ -186,10 +186,10 @@ type (
 // RegisterWalletHTTPHandlers registers the default Rivine handlers for all default Rivine Wallet HTTP endpoints.
 func RegisterWalletHTTPHandlers(router Router, wallet modules.Wallet, requiredPassword string) {
 	if wallet == nil {
-		build.Severe("no wallet module given")
+		build.Critical("no wallet module given")
 	}
 	if router == nil {
-		build.Severe("no httprouter Router given")
+		build.Critical("no httprouter Router given")
 	}
 
 	router.GET("/wallet", RequirePasswordHandler(NewWalletRootHandler(wallet), requiredPassword))

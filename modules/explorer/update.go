@@ -214,7 +214,7 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 	// get target
 	target, exists := e.cs.ChildTarget(block.ParentID)
 	if !exists {
-		build.Severe(fmt.Errorf("ConsensusSet is missing target of known block %v", block.ParentID))
+		build.Critical(fmt.Errorf("ConsensusSet is missing target of known block %v", block.ParentID))
 	}
 
 	// update fields
@@ -231,7 +231,7 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 	if bf.Height > e.chainCts.MaturityDelay {
 		oldBlock, exists := e.cs.BlockAtHeight(bf.Height - e.chainCts.MaturityDelay)
 		if !exists {
-			build.Severe(fmt.Errorf("ConsensusSet is missing block at height %v", bf.Height-e.chainCts.MaturityDelay))
+			build.Critical(fmt.Errorf("ConsensusSet is missing block at height %v", bf.Height-e.chainCts.MaturityDelay))
 		}
 		maturityTimestamp = oldBlock.Timestamp
 	}
@@ -245,11 +245,11 @@ func (e *Explorer) dbCalculateBlockFacts(tx *bolt.Tx, block types.Block) blockFa
 		for i := types.BlockHeight(1); i < ActiveBSEstimationBlocks; i++ {
 			b, exists := e.cs.BlockAtHeight(bf.Height - i)
 			if !exists {
-				build.Severe(fmt.Errorf("ConsensusSet is missing block at height %v", bf.Height-i))
+				build.Critical(fmt.Errorf("ConsensusSet is missing block at height %v", bf.Height-i))
 			}
 			target, exists := e.cs.ChildTarget(b.ParentID)
 			if !exists {
-				build.Severe(fmt.Errorf("ConsensusSet is missing target of known block %v", b.ParentID))
+				build.Critical(fmt.Errorf("ConsensusSet is missing target of known block %v", b.ParentID))
 			}
 			totalDifficulty = totalDifficulty.AddDifficulties(
 				target, e.chainCts.RootDepth)
@@ -314,7 +314,7 @@ func (e *Explorer) dbAddGenesisBlock(tx *bolt.Tx) {
 // helper functions
 func assertNil(err error) {
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 }
 func mustPut(bucket *bolt.Bucket, key, val interface{}) {
@@ -431,7 +431,7 @@ func mapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.
 		mapUnlockConditionHash(tx, bso.Condition, txid)
 
 	default:
-		build.Severe(fmt.Errorf("unexpected output ID type: %T", parentID))
+		build.Critical(fmt.Errorf("unexpected output ID type: %T", parentID))
 	}
 }
 func unmapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid types.TransactionID) {
@@ -453,7 +453,7 @@ func unmapParentUnlockConditionHash(tx *bolt.Tx, parentID interface{}, txid type
 		unmapUnlockConditionHash(tx, bso.Condition, txid)
 
 	default:
-		build.Severe(fmt.Errorf("unexpected output ID type: %T", parentID))
+		build.Critical(fmt.Errorf("unexpected output ID type: %T", parentID))
 	}
 }
 func mapUnlockConditionHash(tx *bolt.Tx, ucp types.UnlockConditionProxy, txid types.TransactionID) {
@@ -547,10 +547,10 @@ func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.Transaction
 func dbAddWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, multiSigAddress types.UnlockHash, txid types.TransactionID) {
 	if build.DEBUG {
 		if walletAddress.Type != types.UnlockTypePubKey {
-			build.Severe(fmt.Errorf("wallet address has wrong type: %d", walletAddress.Type))
+			build.Critical(fmt.Errorf("wallet address has wrong type: %d", walletAddress.Type))
 		}
 		if multiSigAddress.Type != types.UnlockTypeMultiSig {
-			build.Severe(fmt.Errorf("multisig address has wrong type: %d", multiSigAddress.Type))
+			build.Critical(fmt.Errorf("multisig address has wrong type: %d", multiSigAddress.Type))
 		}
 	}
 	wab, err := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).CreateBucketIfNotExists(siabin.Marshal(walletAddress))
@@ -562,10 +562,10 @@ func dbAddWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, mult
 func dbRemoveWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, multiSigAddress types.UnlockHash, txid types.TransactionID) {
 	if build.DEBUG {
 		if walletAddress.Type != types.UnlockTypePubKey {
-			build.Severe(fmt.Errorf("wallet address has wrong type: %d", walletAddress.Type))
+			build.Critical(fmt.Errorf("wallet address has wrong type: %d", walletAddress.Type))
 		}
 		if multiSigAddress.Type != types.UnlockTypeMultiSig {
-			build.Severe(fmt.Errorf("multisig address has wrong type: %d", multiSigAddress.Type))
+			build.Critical(fmt.Errorf("multisig address has wrong type: %d", multiSigAddress.Type))
 		}
 	}
 	mb := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping)

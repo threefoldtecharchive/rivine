@@ -216,7 +216,7 @@ func (wt *walletTester) closeWt() {
 		wt.wallet.Close(),
 	}
 	if err := build.JoinErrors(errs, "; "); err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 }
 

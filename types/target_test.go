@@ -178,7 +178,7 @@ func TestTargetNegativeIntToTarget(t *testing.T) {
 	// panic.
 	defer func() {
 		r := recover()
-		contains := strings.Contains(fmt.Sprintf("%v", r), "Severe error: Severe error: negative")
+		contains := strings.Contains(fmt.Sprintf("%v", r), "negative value used when converting to target")
 		if !contains {
 			t.Error("no panic occurred when trying to create a negative target")
 		}
@@ -198,7 +198,7 @@ func TestTargetNegativeRatToTarget(t *testing.T) {
 	// panic.
 	defer func() {
 		r := recover()
-		contains := strings.Contains(fmt.Sprintf("%v", r), "Severe error: Severe error: negative")
+		contains := strings.Contains(fmt.Sprintf("%v", r), "negative value used when converting to target")
 		if !contains {
 			t.Error("no panic occurred when trying to create a negative target")
 		}

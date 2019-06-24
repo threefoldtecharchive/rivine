@@ -61,6 +61,6 @@ func (tm *TryMutex) Unlock() {
 	case tm.lock <- struct{}{}:
 		// Success - do nothing.
 	default:
-		build.Severe("unlock called when TryMutex is not locked")
+		build.Critical("unlock called when TryMutex is not locked")
 	}
 }

@@ -225,13 +225,13 @@ type (
 // RegisterExplorerHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
 func RegisterExplorerHTTPHandlers(router Router, cs modules.ConsensusSet, explorer modules.Explorer, tpool modules.TransactionPool) {
 	if cs == nil {
-		build.Severe("no consensus module given")
+		build.Critical("no consensus module given")
 	}
 	if explorer == nil {
-		build.Severe("no explorer module given")
+		build.Critical("no explorer module given")
 	}
 	if router == nil {
-		build.Severe("no httprouter Router given")
+		build.Critical("no httprouter Router given")
 	}
 
 	router.GET("/explorer", NewExplorerRootHandler(explorer))
@@ -549,7 +549,7 @@ func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.Transac
 			// add confirmed coin output
 			sco, exists := explorer.CoinOutput(sci.ParentID)
 			if !exists {
-				build.Severe("could not find corresponding coin output")
+				build.Critical("could not find corresponding coin output")
 			}
 			spentCoinOutputs[sci.ParentID] = sco
 		}

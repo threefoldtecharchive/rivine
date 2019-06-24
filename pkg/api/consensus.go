@@ -88,10 +88,10 @@ type (
 // RegisterConsensusHTTPHandlers registers the default Rivine handlers for all default Rivine Consensus HTTP endpoints.
 func RegisterConsensusHTTPHandlers(router Router, cs modules.ConsensusSet) {
 	if cs == nil {
-		build.Severe("no consensus module given")
+		build.Critical("no consensus module given")
 	}
 	if router == nil {
-		build.Severe("no httprouter Router given")
+		build.Critical("no httprouter Router given")
 	}
 
 	router.GET("/consensus", NewConsensusRootHandler(cs))

@@ -14,7 +14,7 @@ func (cs *ConsensusSet) dbConsensusChecksum() (checksum crypto.Hash) {
 		return nil
 	})
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return checksum
 }

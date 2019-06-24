@@ -27,8 +27,7 @@ func DefaultNetworkName() string {
 		return "devnet"
 	default:
 		err := "unknown build.Release tag: " + build.Release
-		build.Severe("unknown build.Release tag: " + build.Release)
-		return err
+		build.Critical("unknown build.Release tag: " + build.Release)
 	}
 }
 

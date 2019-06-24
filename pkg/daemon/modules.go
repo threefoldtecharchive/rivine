@@ -83,7 +83,7 @@ func DefaultModuleSetFlag() ModuleSetFlag {
 		),
 		DefaultModuleSet())
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return msFlag
 }
@@ -100,7 +100,7 @@ func DefaultModuleSet() ModuleSet {
 		ExplorerModule,
 	)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return set
 }
@@ -279,7 +279,7 @@ If the %[1]s flag is not specified the default modules are used:
 func ForceNewIdentifierSet(identifiers ...ModuleIdentifier) ModuleIdentifierSet {
 	set, err := NewIdentifierSet(identifiers...)
 	if err != nil {
-		build.Severe("failed to create new identifier set: " + err.Error())
+		build.Critical("failed to create new identifier set: " + err.Error())
 	}
 	return set
 }
@@ -462,7 +462,7 @@ func NewModuleSet(modules ...*Module) (set ModuleSet, err error) {
 // Append the a copy of the given module to the module set.
 func (ms *ModuleSet) Append(mod *Module) error {
 	if mod == nil {
-		build.Severe("nil module cannot be added")
+		build.Critical("nil module cannot be added")
 	}
 	if mod.Name == "" {
 		return errors.New("name is a required property of a module")
@@ -497,7 +497,7 @@ func (ms *ModuleSet) Append(mod *Module) error {
 // overwriting an existing module if it has the same identifier as the given module.
 func (ms *ModuleSet) Set(mod *Module) {
 	if mod == nil {
-		build.Severe("nil module cannot be set")
+		build.Critical("nil module cannot be set")
 	}
 	id := mod.Identifier()
 	for idx, origMod := range ms.modules {

@@ -22,7 +22,7 @@ func Marshal(v interface{}) []byte {
 	b := new(bytes.Buffer)
 	err := NewEncoder(b).Encode(v) // no error possible when using a bytes.Buffer
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return b.Bytes()
 }
@@ -35,7 +35,7 @@ func MarshalAll(vs ...interface{}) []byte {
 	// to a bytes.Buffer.
 	err := enc.EncodeAll(vs...)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	return b.Bytes()
 }
@@ -175,7 +175,7 @@ func (e *Encoder) encode(val reflect.Value) error {
 		// like trying to encode a map or an unexported struct field.
 		errf := fmt.Errorf("error while trying to marshal unsupported type %s/%s",
 			val.Type().String(), val.Kind().String())
-		build.Severe(errf)
+		build.Critical(errf)
 		return errf
 	}
 }

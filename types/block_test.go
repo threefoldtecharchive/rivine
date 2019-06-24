@@ -271,7 +271,7 @@ func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 	hbs := func(str string) []byte { // hexStr -> byte slice
 		bs, err := hex.DecodeString(str)
 		if err != nil {
-			build.Severe(err)
+			build.Critical(err)
 		}
 		return bs
 	}
@@ -634,10 +634,10 @@ func TestDecodeLegacyBlockAfterBug305(t *testing.T) {
 func blockIDFromHex(s string) (id BlockID) {
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		build.Severe(err)
+		build.Critical(err)
 	}
 	if len(b) != len(id) {
-		build.Severe("wrong length")
+		build.Critical("wrong length")
 	}
 	copy(id[:], b[:])
 	return

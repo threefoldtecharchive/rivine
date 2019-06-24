@@ -105,7 +105,7 @@ func NewUnlockHash(t UnlockType, h crypto.Hash) UnlockHash {
 func unlockHashFromHex(hstr string) (uh UnlockHash) {
 	err := uh.LoadString(hstr)
 	if err != nil {
-		build.Severe(fmt.Sprintf("func unlockHashFromHex(%s) failed: %v", hstr, err))
+		build.Critical(fmt.Sprintf("func unlockHashFromHex(%s) failed: %v", hstr, err))
 	}
 	return
 }

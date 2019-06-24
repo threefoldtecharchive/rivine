@@ -117,7 +117,7 @@ func main() {
 //calculate the stakemodifier out of the blockchain. automatically takes the last block as reference.
 func (b *BSParameters) UpdateStakeModifier(blockchain []blockchainitem) {
 	if len(blockchain) < (BLOCKDELAY + 255) {
-		build.Severe("blockchain is not long enough")
+		build.Critical("blockchain is not long enough")
 	}
 	j := len(blockchain) - BLOCKDELAY
 	for i := 0; i < 256; i++ {
@@ -129,7 +129,7 @@ func (b *BSParameters) UpdateStakeModifier(blockchain []blockchainitem) {
 }
 func (b *BSParameters) UpdateDifficulty(NumOfHashes *big.Int, period int, diffstrenght int, blockchain []blockchainitem) {
 	if len(blockchain) < (diffstrenght) {
-		build.Severe("blockchain is not long enough")
+		build.Critical("blockchain is not long enough")
 	}
 	diff := blockchain[len(blockchain)-1].timestamp - blockchain[len(blockchain)-diffstrenght-1].timestamp
 

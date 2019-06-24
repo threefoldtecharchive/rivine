@@ -143,8 +143,8 @@ func commitDiffSet(tx *bolt.Tx, pb *processedBlock, dir modules.DiffDirection) {
 func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) error {
 	// Sanity check - the block being applied should have the current block as
 	// a parent.
-	if build.DEBUG && pb.Block.ParentID != currentBlockID(tx) {
-		build.Severe(errInvalidSuccessor)
+	if pb.Block.ParentID != currentBlockID(tx) {
+		build.Critical(errInvalidSuccessor)
 	}
 
 	// Create the bucket to hold all of the delayed siacoin outputs created by

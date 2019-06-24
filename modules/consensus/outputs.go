@@ -25,7 +25,7 @@ func (cs *ConsensusSet) GetBlockStakeOutput(id types.BlockStakeOutputID) (bso ty
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return bso, err
 }

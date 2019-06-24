@@ -219,7 +219,7 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 
 		blockheight, blockexists := w.cs.BlockHeightOfBlock(block)
 		if !blockexists {
-			build.Severe("Block wherer ubs is used to respent, does not yet exist as processedblock")
+			build.Critical("Block wherer ubs is used to respent, does not yet exist as processedblock")
 		}
 
 		for ti, txn := range block.Transactions {
