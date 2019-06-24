@@ -103,8 +103,8 @@ func convertLegacyZeroFiveZeroDatabase(filePath string, log *persist.Logger, des
 	}
 	if err != nil {
 		err := db.Close()
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 	}
 	return

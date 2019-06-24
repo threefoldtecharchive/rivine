@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 
 	"github.com/julienschmidt/httprouter"
@@ -17,10 +18,10 @@ type GatewayGET struct {
 // RegisterGatewayHTTPHandlers registers the default Rivine handlers for all default Rivine Gateway HTTP endpoints.
 func RegisterGatewayHTTPHandlers(router Router, gateway modules.Gateway, requiredPassword string) {
 	if gateway == nil {
-		panic("no gateway module given")
+		build.Critical("no gateway module given")
 	}
 	if router == nil {
-		panic("no httprouter Router given")
+		build.Critical("no httprouter Router given")
 	}
 	router.GET("/gateway", NewGatewayRootHandler(gateway))
 	router.POST("/gateway/connect/:netaddress", RequirePasswordHandler(NewGatewayConnectHandler(gateway), requiredPassword))

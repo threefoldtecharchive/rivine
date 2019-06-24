@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/modules/blockcreator"
 	"github.com/threefoldtech/rivine/modules/consensus"
@@ -185,7 +187,8 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		// need to flush the response before shutting down the server
 		f, ok := w.(http.Flusher)
 		if !ok {
-			panic("Server does not support flushing")
+			err := errors.New("Server does not support flushing")
+			build.Severe(err)
 		}
 		f.Flush()
 

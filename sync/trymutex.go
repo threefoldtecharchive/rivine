@@ -3,6 +3,8 @@ package sync
 import (
 	"sync"
 	"time"
+
+	"github.com/threefoldtech/rivine/build"
 )
 
 // TryMutex provides a mutex that allows you to attempt to grab a mutex, and
@@ -59,6 +61,6 @@ func (tm *TryMutex) Unlock() {
 	case tm.lock <- struct{}{}:
 		// Success - do nothing.
 	default:
-		panic("unlock called when TryMutex is not locked")
+		build.Critical("unlock called when TryMutex is not locked")
 	}
 }

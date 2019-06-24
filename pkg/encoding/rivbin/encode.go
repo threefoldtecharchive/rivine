@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+
+	"github.com/threefoldtech/rivine/build"
 )
 
 type (
@@ -20,7 +22,7 @@ func Marshal(v interface{}) []byte {
 	b := new(bytes.Buffer)
 	err := NewEncoder(b).Encode(v) // no error possible when using a bytes.Buffer
 	if err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	return b.Bytes()
 }
@@ -33,7 +35,7 @@ func MarshalAll(vs ...interface{}) []byte {
 	// to a bytes.Buffer.
 	err := enc.EncodeAll(vs...)
 	if err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	return b.Bytes()
 }
@@ -171,7 +173,9 @@ func (e *Encoder) encode(val reflect.Value) error {
 	default:
 		// Marshalling should never fail. If it panics, you're doing something wrong,
 		// like trying to encode a map or an unexported struct field.
-		panic(fmt.Sprintf("error while trying to marshal unsupported type %s/%s",
-			val.Type().String(), val.Kind().String()))
+		errf := fmt.Errorf("error while trying to marshal unsupported type %s/%s",
+			val.Type().String(), val.Kind().String())
+		build.Critical(errf)
+		return errf
 	}
 }

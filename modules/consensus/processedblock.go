@@ -3,13 +3,12 @@ package consensus
 import (
 	"math/big"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 // SurpassThreshold is a percentage that dictates how much heavier a competing
@@ -106,8 +105,8 @@ func (cs *ConsensusSet) setChildTarget(blockMap *bolt.Bucket, pb *processedBlock
 	var parent processedBlock
 	parentBytes := blockMap.Get(pb.Block.ParentID[:])
 	err := siabin.Unmarshal(parentBytes, &parent)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 
 	if pb.Height%(cs.chainCts.TargetWindow/2) != 0 {
@@ -133,8 +132,8 @@ func (cs *ConsensusSet) newChild(tx *bolt.Tx, pb *processedBlock, b types.Block)
 	blockMap := tx.Bucket(BlockMap)
 	cs.setChildTarget(blockMap, child)
 	err := blockMap.Put(childID[:], siabin.Marshal(*child))
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return child
 }

@@ -1,7 +1,8 @@
 package consensus
 
 import (
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
+	"github.com/threefoldtech/rivine/build"
 )
 
 // dbBacktrackToCurrentPath is a convenience function to call
@@ -32,7 +33,7 @@ func (cs *ConsensusSet) dbForkBlockchain(pb *processedBlock) (revertedBlocks, ap
 		return nil
 	})
 	if updateErr != nil {
-		panic(updateErr)
+		build.Critical(updateErr)
 	}
 	return revertedBlocks, appliedBlocks, err
 }

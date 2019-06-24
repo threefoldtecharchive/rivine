@@ -19,14 +19,16 @@ type BlockchainInfo struct {
 // rather than this static value).
 func DefaultNetworkName() string {
 	switch build.Release {
-	case "standard":
-		return "standard"
 	case "testing":
 		return "testnet"
 	case "dev":
 		return "devnet"
 	default:
-		panic("unknown build.Release tag: " + build.Release)
+		if build.Release != "standard" {
+			err := "unknown build.Release tag: " + build.Release
+			build.Critical(err)
+		}
+		return "standard"
 	}
 }
 

@@ -43,8 +43,8 @@ func (cs *ConsensusSet) loadDB() error {
 		// Check that the genesis block is correct - typically only incorrect
 		// in the event of developer binaries vs. release binaires.
 		genesisID, err := getPath(tx, 0)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		if genesisID != cs.blockRoot.Block.ID() {
 			return errors.New("Blockchain has wrong genesis block, exiting.")

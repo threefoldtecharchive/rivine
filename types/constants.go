@@ -10,6 +10,7 @@ import (
 	"errors"
 	"math/big"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 )
 
@@ -333,7 +334,7 @@ func (c *ChainConstants) Validate() error {
 // GenesisBlock returns the genesis block based on the blockchain config
 func (c *ChainConstants) GenesisBlock() Block {
 	if err := c.GenesisTransactionVersion.IsValidTransactionVersion(); err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	return Block{
 		Timestamp: c.GenesisTimestamp,

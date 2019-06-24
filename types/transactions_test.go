@@ -2002,7 +2002,7 @@ func TestIDComputationCompatibleWithLegacyIDs_TFChain_Issue134(t *testing.T) {
 func (t Transaction) LegacyID() TransactionID {
 	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	return TransactionID(crypto.HashAll(
 		ltd.CoinInputs,
@@ -2021,7 +2021,7 @@ func (t Transaction) LegacyID() TransactionID {
 func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
 	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	return CoinOutputID(crypto.HashAll(
 		SpecifierCoinOutput,
@@ -2039,8 +2039,8 @@ func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
 func (t Transaction) V106ID() (id TransactionID) {
 	if t.Version == TransactionVersionZero {
 		ltd, err := newLegacyTransactionDataFromTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
@@ -2054,8 +2054,8 @@ func (t Transaction) V106ID() (id TransactionID) {
 func (t Transaction) V106CoinOutputID(i uint64) CoinOutputID {
 	if t.Version == TransactionVersionZero {
 		ltd, err := newLegacyTransactionDataFromTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
@@ -2074,8 +2074,8 @@ func (t Transaction) V106CoinOutputID(i uint64) CoinOutputID {
 func (t Transaction) V106BlockstakeOutputID(i uint64) BlockStakeOutputID {
 	if t.Version == TransactionVersionZero {
 		ltd, err := newLegacyTransactionDataFromTransaction(t)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
@@ -2100,7 +2100,7 @@ func (t Transaction) LegacyBlockStakeOutputID(i uint64) BlockStakeOutputID {
 
 	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	return BlockStakeOutputID(crypto.HashAll(
 		SpecifierBlockStakeOutput,

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"io"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
@@ -590,10 +591,10 @@ func (v TransactionVersion) IsValidTransactionVersion() error {
 // See the TransactionShortID type for more information.
 func NewTransactionShortID(height BlockHeight, txSequenceID uint16) TransactionShortID {
 	if (height & blockHeightOOBMask) > 0 {
-		panic("block height out of bounds")
+		build.Critical("block height out of bounds")
 	}
 	if (txSequenceID & txSeqIndexOOBMask) > 0 {
-		panic("transaction sequence ID out of bounds")
+		build.Critical("transaction sequence ID out of bounds")
 	}
 
 	return TransactionShortID(height<<txShortIDBlockHeightShift) |

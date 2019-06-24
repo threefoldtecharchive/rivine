@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
@@ -270,7 +271,7 @@ func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 	hbs := func(str string) []byte { // hexStr -> byte slice
 		bs, err := hex.DecodeString(str)
 		if err != nil {
-			panic(err)
+			build.Critical(err)
 		}
 		return bs
 	}
@@ -633,10 +634,10 @@ func TestDecodeLegacyBlockAfterBug305(t *testing.T) {
 func blockIDFromHex(s string) (id BlockID) {
 	b, err := hex.DecodeString(s)
 	if err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	if len(b) != len(id) {
-		panic("wrong length")
+		build.Critical("wrong length")
 	}
 	copy(id[:], b[:])
 	return

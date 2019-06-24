@@ -60,8 +60,8 @@ func BuildExplorerTransaction(explorer modules.Explorer, height types.BlockHeigh
 	spentCoinOutputs := map[types.CoinOutputID]types.CoinOutput{}
 	for _, sci := range txn.CoinInputs {
 		sco, exists := explorer.CoinOutput(sci.ParentID)
-		if build.DEBUG && !exists {
-			panic("could not find corresponding coin output")
+		if !exists {
+			build.Severe("could not find corresponding coin output")
 		}
 		spentCoinOutputs[sci.ParentID] = sco
 	}
@@ -78,8 +78,8 @@ func buildExplorerTransactionWithMappedCoinOutputs(explorer modules.Explorer, he
 	// Add the siacoin outputs that correspond with each siacoin input.
 	for _, sci := range txn.CoinInputs {
 		sco, ok := spentCoinOutputs[sci.ParentID]
-		if build.DEBUG && !ok {
-			panic("could not find corresponding coin output")
+		if !ok {
+			build.Severe("could not find corresponding coin output")
 		}
 		et.CoinInputOutputs = append(et.CoinInputOutputs, ExplorerCoinOutput{
 			CoinOutput: sco,
@@ -95,8 +95,8 @@ func buildExplorerTransactionWithMappedCoinOutputs(explorer modules.Explorer, he
 	// Add the siafund outputs that correspond to each siacoin input.
 	for _, sci := range txn.BlockStakeInputs {
 		sco, exists := explorer.BlockStakeOutput(sci.ParentID)
-		if build.DEBUG && !exists {
-			panic("could not find corresponding blockstake output")
+		if !exists {
+			build.Severe("could not find corresponding blockstake output")
 		}
 		et.BlockStakeInputOutputs = append(et.BlockStakeInputOutputs, ExplorerBlockStakeOutput{
 			BlockStakeOutput: sco,
@@ -126,8 +126,8 @@ func BuildExplorerBlock(explorer modules.Explorer, height types.BlockHeight, blo
 	}
 
 	facts, exists := explorer.BlockFacts(height)
-	if build.DEBUG && !exists {
-		panic("incorrect request to buildExplorerBlock - block does not exist")
+	if !exists {
+		build.Severe("incorrect request to buildExplorerBlock - block does not exist")
 	}
 
 	return ExplorerBlock{
@@ -151,8 +151,8 @@ func BuildTransactionSet(explorer modules.Explorer, txids []types.TransactionID,
 		// Get the block containing the transaction - in the case of miner
 		// payouts, the block might be the transaction.
 		block, height, exists := explorer.Transaction(txid)
-		if !exists && build.DEBUG {
-			panic("explorer pointing to nonexistent txn")
+		if !exists {
+			build.Severe("explorer pointing to nonexistent txn")
 		}
 
 		// ensure the height is within the minimum range
@@ -225,13 +225,13 @@ type (
 // RegisterExplorerHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
 func RegisterExplorerHTTPHandlers(router Router, cs modules.ConsensusSet, explorer modules.Explorer, tpool modules.TransactionPool) {
 	if cs == nil {
-		panic("no consensus module given")
+		build.Critical("no consensus module given")
 	}
 	if explorer == nil {
-		panic("no explorer module given")
+		build.Critical("no explorer module given")
 	}
 	if router == nil {
-		panic("no httprouter Router given")
+		build.Critical("no httprouter Router given")
 	}
 
 	router.GET("/explorer", NewExplorerRootHandler(explorer))
@@ -548,8 +548,8 @@ func getUnconfirmedTransactions(explorer modules.Explorer, tpool modules.Transac
 			}
 			// add confirmed coin output
 			sco, exists := explorer.CoinOutput(sci.ParentID)
-			if build.DEBUG && !exists {
-				panic("could not find corresponding coin output")
+			if !exists {
+				build.Critical("could not find corresponding coin output")
 			}
 			spentCoinOutputs[sci.ParentID] = sco
 		}

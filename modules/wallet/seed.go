@@ -265,8 +265,8 @@ func (w *Wallet) initPlainAuxiliarySeeds() error {
 func (w *Wallet) initAuxiliarySeeds(sf func(SeedFile) (modules.Seed, error)) error {
 	for _, seedFile := range w.persist.AuxiliarySeedFiles {
 		seed, err := sf(seedFile)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		if err != nil {
 			w.log.Println("UNLOCK: failed to load an auxiliary seed:", err)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
@@ -104,7 +105,7 @@ func NewUnlockHash(t UnlockType, h crypto.Hash) UnlockHash {
 func unlockHashFromHex(hstr string) (uh UnlockHash) {
 	err := uh.LoadString(hstr)
 	if err != nil {
-		panic(fmt.Sprintf("func unlockHashFromHex(%s) failed: %v", hstr, err))
+		build.Critical(fmt.Sprintf("func unlockHashFromHex(%s) failed: %v", hstr, err))
 	}
 	return
 }

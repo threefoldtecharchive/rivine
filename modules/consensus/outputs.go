@@ -2,6 +2,7 @@ package consensus
 
 import (
 	bolt "github.com/rivine/bbolt"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -12,7 +13,7 @@ func (cs *ConsensusSet) GetCoinOutput(id types.CoinOutputID) (co types.CoinOutpu
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Critical(dbErr)
 	}
 	return co, err
 }
@@ -24,7 +25,7 @@ func (cs *ConsensusSet) GetBlockStakeOutput(id types.BlockStakeOutputID) (bso ty
 		return nil
 	})
 	if dbErr != nil {
-		panic(dbErr)
+		build.Critical(dbErr)
 	}
 	return bso, err
 }

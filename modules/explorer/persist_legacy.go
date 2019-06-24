@@ -8,7 +8,7 @@ import (
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 func (e *Explorer) convertLegacyDatabase(filePath string) (db *persist.BoltDatabase, err error) {
@@ -107,8 +107,8 @@ func (e *Explorer) convertLegacyDatabase(filePath string) (db *persist.BoltDatab
 	}
 	if err != nil {
 		err := db.Close()
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 	}
 	return
@@ -146,8 +146,8 @@ func convert052Database(filePath string) (db *persist.BoltDatabase, err error) {
 	}
 	if err != nil {
 		err := db.Close()
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 	}
 	return

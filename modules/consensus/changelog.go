@@ -17,13 +17,12 @@ package consensus
 // the genesis block will call 'append' later on during initialization.
 
 import (
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -102,8 +101,8 @@ func getEntry(tx *bolt.Tx, id modules.ConsensusChangeID) (ce changeEntry, exists
 		return changeEntry{}, false
 	}
 	err := siabin.Unmarshal(changeNodeBytes, &cn)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 	return cn.Entry, true
 }
@@ -121,8 +120,8 @@ func (ce *changeEntry) NextEntry(tx *bolt.Tx) (nextEntry changeEntry, exists boo
 	cl := tx.Bucket(ChangeLog)
 	changeNodeBytes := cl.Get(ceid[:])
 	err := siabin.Unmarshal(changeNodeBytes, &cn)
-	if build.DEBUG && err != nil {
-		panic(err)
+	if err != nil {
+		build.Severe(err)
 	}
 
 	return getEntry(tx, cn.Next)

@@ -101,7 +101,7 @@ func (tpt *tpoolTester) Close() error {
 		// tpt.wallet.Close()
 	}
 	if err := build.JoinErrors(errs, "; "); err != nil {
-		panic(err)
+		build.Critical(err)
 	}
 	return nil
 }

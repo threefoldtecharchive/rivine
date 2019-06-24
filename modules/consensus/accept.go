@@ -4,12 +4,11 @@ import (
 	"errors"
 	"time"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
-
-	bolt "github.com/rivine/bbolt"
 )
 
 var (
@@ -136,8 +135,8 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 	var nonExtending bool
 	err = cs.db.Update(func(tx *bolt.Tx) error {
 		pb, err := getBlockMap(tx, b.ParentID)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Critical(err)
 		}
 		currentNode := currentProcessedBlock(tx)
 		newNode := cs.newChild(tx, pb, b)
@@ -290,8 +289,8 @@ func (cs *ConsensusSet) managedAcceptBlock(b types.Block) error {
 		return err
 	}
 	// If appliedBlocks is 0, revertedBlocks will also be 0.
-	if build.DEBUG && len(changeEntry.AppliedBlocks) == 0 && len(changeEntry.RevertedBlocks) != 0 {
-		panic("appliedBlocks and revertedBlocks are mismatched!")
+	if len(changeEntry.AppliedBlocks) == 0 && len(changeEntry.RevertedBlocks) != 0 {
+		build.Severe("appliedBlocks and revertedBlocks are mismatched!")
 	}
 	// Updates complete, demote the lock.
 	cs.mu.Demote()

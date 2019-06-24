@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
@@ -185,10 +186,10 @@ type (
 // RegisterWalletHTTPHandlers registers the default Rivine handlers for all default Rivine Wallet HTTP endpoints.
 func RegisterWalletHTTPHandlers(router Router, wallet modules.Wallet, requiredPassword string) {
 	if wallet == nil {
-		panic("no wallet module given")
+		build.Critical("no wallet module given")
 	}
 	if router == nil {
-		panic("no httprouter Router given")
+		build.Critical("no httprouter Router given")
 	}
 
 	router.GET("/wallet", RequirePasswordHandler(NewWalletRootHandler(wallet), requiredPassword))

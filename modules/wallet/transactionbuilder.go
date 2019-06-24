@@ -118,9 +118,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 			}
 			ff = types.NewSingleSignatureFulfillment(pk)
 		default:
-			if build.DEBUG {
-				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sco.Condition))
-			}
+			build.Severe(fmt.Errorf("unexpected condition type: %[1]v (%[1]T)", sco.Condition))
 			return types.ErrUnexpectedUnlockCondition
 		}
 		// Add a coin input for this output.
@@ -218,9 +216,7 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 			}
 			ff = types.NewSingleSignatureFulfillment(pk)
 		default:
-			if build.DEBUG {
-				panic(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sfo.Condition))
-			}
+			build.Severe(fmt.Sprintf("unexpected condition type: %[1]v (%[1]T)", sfo.Condition))
 			return types.ErrUnexpectedUnlockCondition
 		}
 		// Add a block stake input for this output.
@@ -604,23 +600,23 @@ func (w *Wallet) RegisterTransaction(t types.Transaction, parents []types.Transa
 	// transaction.
 	pBytes := bytes.NewBuffer(nil)
 	err := json.NewEncoder(pBytes).Encode(parents)
-	if build.DEBUG && err != nil {
-		panic("Failed to encode parent transactions: " + err.Error())
+	if err != nil {
+		build.Severe("Failed to encode parent transactions: " + err.Error())
 	}
 	var pCopy []types.Transaction
 	err = json.NewDecoder(pBytes).Decode(&pCopy)
-	if build.DEBUG && err != nil {
-		panic("Failed to decode parent transactions: " + err.Error())
+	if err != nil {
+		build.Severe("Failed to decode parent transactions: " + err.Error())
 	}
 	tbytes := bytes.NewBuffer(nil)
 	err = json.NewEncoder(tbytes).Encode(t)
-	if build.DEBUG && err != nil {
-		panic("Failed to encode transaction: " + err.Error())
+	if err != nil {
+		build.Severe("Failed to encode transaction: " + err.Error())
 	}
 	var tCopy types.Transaction
 	err = json.NewDecoder(tbytes).Decode(&tCopy)
-	if build.DEBUG && err != nil {
-		panic("Failed to decode transaction: " + err.Error())
+	if err != nil {
+		build.Severe("Failed to decode transaction: " + err.Error())
 	}
 	return &transactionBuilder{
 		parents:     pCopy,

@@ -3,12 +3,11 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -60,13 +59,13 @@ func applyMaturedCoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 		var sco types.CoinOutput
 		copy(id[:], idBytes)
 		encErr := siabin.Unmarshal(scoBytes, &sco)
-		if build.DEBUG && encErr != nil {
-			panic(encErr)
+		if encErr != nil {
+			build.Severe(encErr)
 		}
 
 		// Sanity check - the output should not already be in coinOuptuts.
-		if build.DEBUG && isCoinOutput(tx, id) {
-			panic(errOutputAlreadyMature)
+		if isCoinOutput(tx, id) {
+			build.Severe(errOutputAlreadyMature)
 		}
 
 		// Add the output to the ConsensusSet and record the diff in the
@@ -89,8 +88,8 @@ func applyMaturedCoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 		dscods = append(dscods, dscod)
 		return nil
 	})
-	if build.DEBUG && dbErr != nil {
-		panic(dbErr)
+	if dbErr != nil {
+		build.Severe(dbErr)
 	}
 	for _, scod := range scods {
 		pb.CoinOutputDiffs = append(pb.CoinOutputDiffs, scod)

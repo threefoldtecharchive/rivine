@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
 
@@ -87,10 +88,10 @@ type (
 // RegisterConsensusHTTPHandlers registers the default Rivine handlers for all default Rivine Consensus HTTP endpoints.
 func RegisterConsensusHTTPHandlers(router Router, cs modules.ConsensusSet) {
 	if cs == nil {
-		panic("no consensus module given")
+		build.Critical("no consensus module given")
 	}
 	if router == nil {
-		panic("no httprouter Router given")
+		build.Critical("no httprouter Router given")
 	}
 
 	router.GET("/consensus", NewConsensusRootHandler(cs))

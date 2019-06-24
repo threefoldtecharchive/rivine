@@ -21,7 +21,7 @@ type (
 )
 
 var (
-	ErrNegativeTarget = errors.New("negative value used when converting to target")
+	ErrNegativeTarget = errors.New("Severe error: negative value used when converting to target")
 )
 
 // AddDifficulties returns the resulting target with the difficulty of 'x' and
@@ -64,9 +64,8 @@ func (t Target) Int() *big.Int {
 func IntToTarget(i *big.Int, rootDepth Target) (t Target) {
 	// Check for negatives.
 	if i.Sign() < 0 {
-		if build.DEBUG {
-			panic(ErrNegativeTarget)
-		}
+		// panic(ErrNegativeTarget)
+		build.Severe(ErrNegativeTarget)
 	} else {
 		// In the event of overflow, return the maximum.
 		if i.BitLen() > 256 {
@@ -100,9 +99,7 @@ func (t Target) Rat() *big.Rat {
 // RatToTarget converts a big.Rat to a Target.
 func RatToTarget(r *big.Rat, rootDepth Target) (t Target) {
 	if r.Num().Sign() < 0 {
-		if build.DEBUG {
-			panic(ErrNegativeTarget)
-		}
+		build.Severe(ErrNegativeTarget)
 	} else {
 		i := new(big.Int).Div(r.Num(), r.Denom())
 		t = IntToTarget(i, rootDepth)

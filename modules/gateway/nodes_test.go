@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
@@ -313,7 +314,7 @@ func TestPruneNodeThreshold(t *testing.T) {
 		go func(i int) {
 			err := gs[i].Close()
 			if err != nil {
-				panic(err)
+				build.Critical(err)
 			}
 			wg.Done()
 		}(i)
@@ -417,7 +418,7 @@ func TestHealthyNodeListPruning(t *testing.T) {
 		go func(i int) {
 			err := gs[i].Close()
 			if err != nil {
-				panic(err)
+				build.Critical(err)
 			}
 			wg.Done()
 		}(i)

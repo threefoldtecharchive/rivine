@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/threefoldtech/rivine/build"
@@ -152,9 +153,7 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 			if len(unlockhashes) == 0 {
 				w.log.Printf("[ERROR] failed to convert output to multisig condition: type=%T conditionType=%d",
 					co.Condition.Condition, co.Condition.ConditionType())
-				if build.DEBUG {
-					panic("Failed to convert output to multisig condition")
-				}
+				build.Critical("Failed to convert output to multisig condition")
 				continue
 			}
 			// Create a new wallet for this address
@@ -185,9 +184,7 @@ func (w *Wallet) MultiSigWallets() ([]modules.MultiSigWallet, error) {
 			if len(unlockhashes) == 0 {
 				w.log.Printf("[ERROR] failed to convert output to multisig condition: type=%T conditionType=%d",
 					bso.Condition.Condition, bso.Condition.ConditionType())
-				if build.DEBUG {
-					panic("Failed to convert output to multisig condition")
-				}
+				build.Severe("Failed to convert output to multisig condition")
 				continue
 			}
 			// Create a new wallet for this address
@@ -302,7 +299,7 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 		return types.Transaction{}, err
 	}
 	if len(txnSet) == 0 {
-		panic("unexpected txnSet length: " + strconv.Itoa(len(txnSet)))
+		build.Severe(fmt.Errorf("unexpected txnSet length: " + strconv.Itoa(len(txnSet))))
 	}
 	err = w.tpool.AcceptTransactionSet(txnSet)
 	if err != nil {
@@ -313,8 +310,8 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 
 // Len returns the number of elements in the sortedOutputs struct.
 func (so sortedOutputs) Len() int {
-	if build.DEBUG && len(so.ids) != len(so.outputs) {
-		panic("sortedOutputs object is corrupt")
+	if len(so.ids) != len(so.outputs) {
+		build.Severe("sortedOutputs object is corrupt")
 	}
 	return len(so.ids)
 }
