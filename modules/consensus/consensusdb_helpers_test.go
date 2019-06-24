@@ -31,7 +31,7 @@ func (cs *ConsensusSet) dbCurrentBlockID() (id types.BlockID) {
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return id
 }
