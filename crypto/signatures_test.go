@@ -172,7 +172,7 @@ func TestReadWriteSignedObject(t *testing.T) {
 
 	// Disrupt the decoding to get coverage on the failure branch.
 	err = ReadSignedObject(b, &read, 11, pk)
-	contains := strings.Contains(err.Error(), "could not decode type crypto.Signature: Severe")
+	contains := strings.Contains(err.Error(), "could not decode type crypto.Signature")
 
 	if err == nil || !contains {
 		t.Fatal(err)
