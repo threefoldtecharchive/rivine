@@ -18,7 +18,7 @@ func (cs *ConsensusSet) dbBlockHeight() (bh types.BlockHeight) {
 		return nil
 	})
 	if dbErr != nil {
-		build.Severe(dbErr)
+		build.Critical(dbErr)
 	}
 	return bh
 }
