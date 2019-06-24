@@ -268,18 +268,20 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 		}
 	})
 
-	// Add the bootstrap peers to the node list.
+	// Spawn the boostrap peer manager and provide tools for ensuring clean shudown.
+	boostrapPeersClosedChan := make(chan struct{})
+	g.threads.OnStop(func() {
+		<-boostrapPeersClosedChan
+	})
+
+	// if no-bootstrap flag is not provided.
 	if bootstrap {
-		for _, addr := range bootstrapPeers {
-			if err := addr.TryNameResolution(); err != nil {
-				// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
-				g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", addr, err)
-			}
-			err := g.addNode(addr)
-			if err != nil && err != errNodeExists {
-				g.log.Printf("WARN: failed to add the bootstrap node '%v': %v", addr, err)
-			}
-		}
+		// Initially try connecting to bootstrap peers without timeout (when daemon has internet access)
+		g.startConnectingToBootstrapPeers(bootstrapPeers)
+		go func() {
+			// Try reconnecting to bootstrap peers with timeout in case daemon has no internet access
+			g.connectToBootstapPeers(boostrapPeersClosedChan, bootstrapPeers)
+		}()
 	}
 
 	// Create the listener which will listen for new connections from peers.
@@ -341,6 +343,37 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 	go g.threadedLearnHostname()
 
 	return g, nil
+}
+
+func (g *Gateway) connectToBootstapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
+	defer close(closeChan)
+g.startConnectingToBootstrapPeers(bootstrapPeers)
+	for {
+		select {
+		// If gateway stop, close the closeChannel
+		case <-g.threads.StopChan():
+			return
+		// Start connection to bootstrapPeers after 1 minute
+		case <-time.After(1 * time.Minute):
+			g.startConnectingToBootstrapPeers(bootstrapPeers)
+		}
+	}
+}
+
+func (g *Gateway) startConnectingToBootstrapPeers(bootstrapPeers []modules.NetAddress) {
+	for _, addr := range bootstrapPeers {
+		g.log.Debugf("Trying to connect to bootstrap peer: %v", addr)
+		if err := addr.TryNameResolution(); err != nil {
+			// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
+			g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", addr, err)
+			continue
+		}
+		err := g.managedConnect(addr)
+		if err != nil && err != errNodeExists {
+			g.log.Printf("WARN: failed to add the bootstrap node '%v': %v", addr, err)
+			continue
+		}
+	}
 }
 
 // enforce that Gateway satisfies the modules.Gateway interface
