@@ -116,9 +116,6 @@ func TestEncode(t *testing.T) {
 
 // TestDecode tests the Decode function.
 func TestDecode(t *testing.T) {
-	// set contains default false
-	var contains bool
-
 	if testing.Short() {
 		t.SkipNow()
 	}
