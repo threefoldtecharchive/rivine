@@ -58,8 +58,6 @@ var (
 		switch build.Release {
 		case "dev":
 			return 1 * time.Second
-		case "standard":
-			return 10 * time.Second
 		case "testing":
 			return 100 * time.Millisecond
 		default:
