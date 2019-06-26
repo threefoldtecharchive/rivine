@@ -1,16 +1,17 @@
 # Rivine minting extension
 
-The minting extension provides the ability to create new tokens and to define the authority required for doing so.
-A common way would be to use a multignature condition for this authority.
+The minting extensions provides the ability to mint tokens without any prior backing (see: create coins).
+Only the condition authorized to do so is able to mint new tokens or change the condition that's authorized to do this from then on.
 
-A mechanism has also been implemented to modify this minter condition.
-The same condition  applies to both the coin creation  and nodification of the  authority.
+An initial condition is passed to the extensions which will be used as the authorized condition until it is changed.
+
+It is recommended to use a multisignature condition as the authorized mint condition.
 
 ## Usage
 
 ### Daemon
 
-After creating the consensus module and registering the http handlers you can use following snippet
+After creating the consensus module and registering the HTTP handlers you can use following snippet:
 
 ```golang
 // This is an unlockcondition for testing purposes.
@@ -29,7 +30,7 @@ condition := types.NewUnlockHashCondition(uh)
 */
 
 // Pass the condition the NewMintingPlugin
-plugin := minting.NewMintingPlugin(types.UnlockConditionProxy{Condition: condition})
+plugin := minting.NewMintingPlugin(types.NewCondition(condition))
 err = cs.RegisterPlugin("minting", plugin, cancel)
 if err != nil {
     return err
@@ -58,16 +59,23 @@ mintingcli.CreateWalletCmds(cliClient)
 
 mintingReader := mintingcli.NewPluginExplorerClient(cliClient)
 
+const customVersionOffset = 128
+const (
+	transactionVersionMinterDefinition = iota + customVersionOffset + 1
+	transactionVersionCoinCreation
+)
+
 // Register the transaction types
-types.RegisterTransactionVersion(minting.TransactionVersionMinterDefinition, minting.MinterDefinitionTransactionController{
+types.RegisterTransactionVersion(transactionVersionMinterDefinition, minting.MinterDefinitionTransactionController{
     MintConditionGetter: mintingReader,
 })
-types.RegisterTransactionVersion(minting.TransactionVersionCoinCreation, minting.CoinCreationTransactionController{
+types.RegisterTransactionVersion(transactionVersionCoinCreation, minting.CoinCreationTransactionController{
     MintConditionGetter: mintingReader,
 })
 ```
 
 ## Transactions
+
 ### Minter Definition Transactions
 
 Minter Definition Transactions are used to redefine the creators of coins (AKA minters). These transactions can only be created by the Coin Creators. The (previously-defined) mint condition —meaning the mint condition active at the height of the (to be) created Minter Definition Transaction— defines who the coin creators are and thus who can redefine who the coin creators are to become. A mint condition can be any of the following conditions:

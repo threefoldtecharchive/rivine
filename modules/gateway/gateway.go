@@ -347,7 +347,7 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 
 func (g *Gateway) connectToBootstapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
 	defer close(closeChan)
-g.startConnectingToBootstrapPeers(bootstrapPeers)
+	g.startConnectingToBootstrapPeers(bootstrapPeers)
 	for {
 		select {
 		// If gateway stop, close the closeChannel

@@ -12,21 +12,6 @@ import (
 	types "github.com/threefoldtech/rivine/types"
 )
 
-const (
-	// TransactionVersionMinterDefinition defines the Transaction version
-	// for a MinterDefinition Transaction.
-	//
-	// See the `MinterDefinitionTransactionController` and `MinterDefinitionTransaction`
-	// types for more information.
-	TransactionVersionMinterDefinition types.TransactionVersion = iota + 128
-	// TransactionVersionCoinCreation defines the Transaction version
-	// for a CoinCreation Transaction.
-	//
-	// See the `CoinCreationTransactionController` and `CoinCreationTransaction`
-	// types for more information.
-	TransactionVersionCoinCreation
-)
-
 // These Specifiers are used internally when calculating a Transaction's ID.
 // See Rivine's Specifier for more details.
 var (
@@ -58,6 +43,10 @@ type (
 		// The found MintCondition defines the condition that has to be fulfilled
 		// in order to mint new coins into existence (in the form of non-backed coin outputs).
 		MintConditionGetter MintConditionGetter
+
+		// TransactionVersion is used to validate/set the transaction version
+		// of a coin creation transaction.
+		TransactionVersion types.TransactionVersion
 	}
 
 	// MinterDefinitionTransactionController defines a rivine-specific transaction controller,
@@ -68,6 +57,10 @@ type (
 		// The found MintCondition defines the condition that has to be fulfilled
 		// in order to mint new coins into existence (in the form of non-backed coin outputs).
 		MintConditionGetter MintConditionGetter
+
+		// TransactionVersion is used to validate/set the transaction version
+		// of a minter definitiontransaction.
+		TransactionVersion types.TransactionVersion
 	}
 )
 
@@ -211,7 +204,7 @@ func (cctc CoinCreationTransactionController) ValidateTransaction(t types.Transa
 	}
 
 	// get CoinCreationTxn
-	cctx, err := CoinCreationTransactionFromTransaction(t)
+	cctx, err := CoinCreationTransactionFromTransaction(t, cctc.TransactionVersion)
 	if err != nil {
 		return fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
 	}
@@ -271,7 +264,7 @@ func (cctc CoinCreationTransactionController) ValidateBlockStakeOutputs(t types.
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (cctc CoinCreationTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	cctx, err := CoinCreationTransactionFromTransaction(t)
+	cctx, err := CoinCreationTransactionFromTransaction(t, cctc.TransactionVersion)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
 	}
@@ -385,7 +378,7 @@ func (mdtc MinterDefinitionTransactionController) ValidateTransaction(t types.Tr
 	}
 
 	// get MinterDefinitionTx
-	mdtx, err := MinterDefinitionTransactionFromTransaction(t)
+	mdtx, err := MinterDefinitionTransactionFromTransaction(t, mdtc.TransactionVersion)
 	if err != nil {
 		return fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
 	}
@@ -484,7 +477,7 @@ func (mdtc MinterDefinitionTransactionController) ValidateBlockStakeOutputs(t ty
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (mdtc MinterDefinitionTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	mdtx, err := MinterDefinitionTransactionFromTransaction(t)
+	mdtx, err := MinterDefinitionTransactionFromTransaction(t, mdtc.TransactionVersion)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as a MinterDefinitionTx: %v", err)
 	}
@@ -566,11 +559,11 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `CoinCreationTransactionFromTransactionData` constructor.
-func CoinCreationTransactionFromTransaction(tx types.Transaction) (CoinCreationTransaction, error) {
-	if tx.Version != TransactionVersionCoinCreation {
+func CoinCreationTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (CoinCreationTransaction, error) {
+	if tx.Version != expectedVersion {
 		return CoinCreationTransaction{}, fmt.Errorf(
 			"a coin creation transaction requires tx version %d",
-			TransactionVersionCoinCreation)
+			expectedVersion)
 	}
 	return CoinCreationTransactionFromTransactionData(types.TransactionData{
 		CoinInputs:        tx.CoinInputs,
@@ -627,9 +620,9 @@ func (cctx *CoinCreationTransaction) TransactionData() types.TransactionData {
 
 // Transaction returns this CoinCreationTransaction
 // as regular rivine transaction, using TransactionVersionCoinCreation as the type.
-func (cctx *CoinCreationTransaction) Transaction() types.Transaction {
+func (cctx *CoinCreationTransaction) Transaction(version types.TransactionVersion) types.Transaction {
 	return types.Transaction{
-		Version:       TransactionVersionCoinCreation,
+		Version:       version,
 		CoinOutputs:   cctx.CoinOutputs,
 		MinerFees:     cctx.MinerFees,
 		ArbitraryData: cctx.ArbitraryData,
@@ -676,11 +669,11 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `MinterDefinitionTransactionFromTransactionData` constructor.
-func MinterDefinitionTransactionFromTransaction(tx types.Transaction) (MinterDefinitionTransaction, error) {
-	if tx.Version != TransactionVersionMinterDefinition {
+func MinterDefinitionTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (MinterDefinitionTransaction, error) {
+	if tx.Version != expectedVersion {
 		return MinterDefinitionTransaction{}, fmt.Errorf(
 			"a minter definition transaction requires tx version %d",
-			TransactionVersionCoinCreation)
+			expectedVersion)
 	}
 	return MinterDefinitionTransactionFromTransactionData(types.TransactionData{
 		CoinInputs:        tx.CoinInputs,
@@ -739,9 +732,9 @@ func (cctx *MinterDefinitionTransaction) TransactionData() types.TransactionData
 
 // Transaction returns this CoinCreationTransaction
 // as regular rivine transaction, using TransactionVersionCoinCreation as the type.
-func (cctx *MinterDefinitionTransaction) Transaction() types.Transaction {
+func (cctx *MinterDefinitionTransaction) Transaction(version types.TransactionVersion) types.Transaction {
 	return types.Transaction{
-		Version:       TransactionVersionMinterDefinition,
+		Version:       version,
 		MinerFees:     cctx.MinerFees,
 		ArbitraryData: cctx.ArbitraryData,
 		Extension: &MinterDefinitionTransactionExtension{

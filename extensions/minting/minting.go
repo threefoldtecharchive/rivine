@@ -1,6 +1,7 @@
 package minting
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -24,19 +25,27 @@ var (
 type (
 	// Plugin is a struct defines the minting plugin
 	Plugin struct {
-		genesisMintCondition types.UnlockConditionProxy
-		storage              modules.PluginViewStorage
-		unregisterCallback   modules.PluginUnregisterCallback
+		genesisMintCondition               types.UnlockConditionProxy
+		minterDefinitionTransactionVersion types.TransactionVersion
+		storage                            modules.PluginViewStorage
+		unregisterCallback                 modules.PluginUnregisterCallback
 	}
 )
 
-// New creates a new Plugin with a genesisMintCondition
-func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy) *Plugin {
+// NewMintingPlugin creates a new Plugin with a genesisMintCondition and correct transaction versions
+func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy, minterDefinitionTransactionVersion, coinCreationTransactionVersion types.TransactionVersion) *Plugin {
 	p := &Plugin{
-		genesisMintCondition: genesisMintCondition,
+		genesisMintCondition:               genesisMintCondition,
+		minterDefinitionTransactionVersion: minterDefinitionTransactionVersion,
 	}
-	types.RegisterTransactionVersion(TransactionVersionMinterDefinition, MinterDefinitionTransactionController{MintConditionGetter: p})
-	types.RegisterTransactionVersion(TransactionVersionCoinCreation, CoinCreationTransactionController{MintConditionGetter: p})
+	types.RegisterTransactionVersion(minterDefinitionTransactionVersion, MinterDefinitionTransactionController{
+		MintConditionGetter: p,
+		TransactionVersion:  minterDefinitionTransactionVersion,
+	})
+	types.RegisterTransactionVersion(coinCreationTransactionVersion, CoinCreationTransactionController{
+		MintConditionGetter: p,
+		TransactionVersion:  coinCreationTransactionVersion,
+	})
 	return p
 }
 
@@ -55,7 +64,7 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 		}
 
 		mintcond := siabin.Marshal(p.genesisMintCondition)
-		err := mintingBucket.Put(EncodeBlockheight(0), mintcond)
+		err := mintingBucket.Put(encodeBlockheight(0), mintcond)
 		if err != nil {
 			return persist.Metadata{}, fmt.Errorf("failed to store genesis mint condition: %v", err)
 		}
@@ -85,12 +94,12 @@ func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket 
 		}
 		// check the version and handle the ones we care about
 		switch rtx.Version {
-		case TransactionVersionMinterDefinition:
-			mdtx, err := MinterDefinitionTransactionFromTransaction(*rtx)
+		case p.minterDefinitionTransactionVersion:
+			mdtx, err := MinterDefinitionTransactionFromTransaction(*rtx, p.minterDefinitionTransactionVersion)
 			if err != nil {
 				return fmt.Errorf("unexpected error while unpacking the minter def. tx type: %v" + err.Error())
 			}
-			err = mintingBucket.Put(EncodeBlockheight(height), siabin.Marshal(mdtx.MintCondition))
+			err = mintingBucket.Put(encodeBlockheight(height), siabin.Marshal(mdtx.MintCondition))
 			if err != nil {
 				return fmt.Errorf(
 					"failed to put mint condition for block height %d: %v",
@@ -119,8 +128,8 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 
 		// check the version and handle the ones we care about
 		switch rtx.Version {
-		case TransactionVersionMinterDefinition:
-			err := mintingBucket.Delete(EncodeBlockheight(height))
+		case p.minterDefinitionTransactionVersion:
+			err := mintingBucket.Delete(encodeBlockheight(height))
 			if err != nil {
 				return fmt.Errorf(
 					"failed to delete mint condition for block height %d: %v",
@@ -165,7 +174,7 @@ func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockCondi
 		mintingBucket := bucket.Bucket([]byte(bucketMintConditions))
 		cursor := mintingBucket.Cursor()
 		var k []byte
-		k, b = cursor.Seek(EncodeBlockheight(height))
+		k, b = cursor.Seek(encodeBlockheight(height))
 		if len(k) == 0 {
 			// could be that we're past the last key, let's try the last key first
 			k, b = cursor.Last()
@@ -174,7 +183,7 @@ func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockCondi
 			}
 			return nil
 		}
-		foundHeight := DecodeBlockheight(k)
+		foundHeight := decodeBlockheight(k)
 		if foundHeight <= height {
 			return nil
 		}
@@ -200,4 +209,16 @@ func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockCondi
 func (p *Plugin) Close() error {
 	p.unregisterCallback(p)
 	return p.storage.Close()
+}
+
+// encodeBlockheight encodes the given blockheight as a sortable key
+func encodeBlockheight(height types.BlockHeight) []byte {
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key[:], uint64(height))
+	return key
+}
+
+// eecodeBlockheight decodes the given sortable key as a blockheight
+func decodeBlockheight(key []byte) types.BlockHeight {
+	return types.BlockHeight(binary.BigEndian.Uint64(key))
 }

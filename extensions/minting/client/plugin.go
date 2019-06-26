@@ -10,10 +10,10 @@ import (
 )
 
 // PluginClient is used to be able to get the active mint condition,
-// the active mint condition at a given block height, as well as any 3bot information
-// such that the CLI can also correctly validate a mint-type a 3bot-type transaction,
+// and the active mint condition at a given block height,
+// such that the CLI can correctly validate a mint condition,
 // without requiring access to the consensus-extended transactiondb,
-// normally the validation isn't required on the client side, but it is now possible none the less
+// normally the validation isn't required on the client side, but it is possible none the less.
 type PluginClient struct {
 	client       *client.CommandLineClient
 	rootEndpoint string
