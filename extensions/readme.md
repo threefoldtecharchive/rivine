@@ -6,6 +6,10 @@ Gathered here are a set of extensions that implementing chains can reuse to add 
 
 An extension can be registered to the consensus, it's a subscriber which can process consensus changes. When a block gets applied or reverted by the consensus, extensions are notified of this change. Most commonly an extension will process applied/reverted transactions that reside in a block. Every extensions should have their own transaction types which can be recognised by the consensus. This way an extension can know which transaction type it wants to process. If an extension has commands that can be executed by the client it should also provide client functionality, this is also applied for an exposed API.
 
+## Available extensions
+
+- [minting extension](./minting/readme.md).
+
 ## Examples
 
 Lets take the minting extension as an example. A plugin (extension) is a struct that needs to be defined with for example following properties:
@@ -68,7 +72,3 @@ RevertBlock reverts blocks processed by the consensus. In this method the extens
 * `NewPlugin()` creates a new plugin and registers the transaction types.
 * `Close()` closes the plugin when the consensus is closed. This should the `unregisterCallback` and `p.storage.close()`.
 
-
-## Example usage of minting plugin
-
-How to use the minting plugin can be found [/extensions/minting/readme.md](/extensions/minting/readme.md).
