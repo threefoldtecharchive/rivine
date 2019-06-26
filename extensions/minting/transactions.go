@@ -35,7 +35,7 @@ type (
 
 type (
 	// CoinCreationTransactionController defines a rivine-specific transaction controller,
-	// for a transaction type reserved at type 129. It allows for the creation of Coin Outputs,
+	// for a CoinCreation Transaction. It allows for the creation of Coin Outputs,
 	// without requiring coin inputs, but can only be used by the defined Coin Minters.
 	CoinCreationTransactionController struct {
 		// MintConditionGetter is used to get a mint condition at the context-defined block height.
@@ -50,7 +50,7 @@ type (
 	}
 
 	// MinterDefinitionTransactionController defines a rivine-specific transaction controller,
-	// for a transaction type reserved at type 128. It allows the transfer of coin minting powers.
+	// for a MinterDefinition Transaction. It allows the transfer of coin minting powers.
 	MinterDefinitionTransactionController struct {
 		// MintConditionGetter is used to get a mint condition at the context-defined block height.
 		//
