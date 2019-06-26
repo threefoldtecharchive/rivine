@@ -8,19 +8,22 @@ An extension can be registered to the consensus, it's a subscriber which can pro
 
 ## Available extensions
 
-- [minting extension](./minting/readme.md).
+- [minting extension](./minting/readme.md)
+- [ERC20 extension](https://github.com/threefoldtech/rivine-extension-erc20/blob/master/README.md)
 
 ## Examples
 
-Lets take the minting extension as an example. A plugin (extension) is a struct that needs to be defined with for example following properties:
+Lets take [the minting extension's plugin](./minting/minting.go) as an example.
+A plugin (extension) is a struct that needs to be defined with for example following properties:
 
 ```golang
 type (
 	// Plugin is a struct defines the minting plugin
 	Plugin struct {
-		genesisMintCondition types.UnlockConditionProxy
-		storage              modules.PluginViewStorage
-		unregisterCallback   modules.PluginUnregisterCallback
+		genesisMintCondition 				types.UnlockConditionProxy
+		minterDefinitionTransactionVersion 	types.TransactionVersion
+		storage              				modules.PluginViewStorage
+		unregisterCallback  				modules.PluginUnregisterCallback
 	}
 )
 ```
@@ -71,4 +74,3 @@ RevertBlock reverts blocks processed by the consensus. In this method the extens
 
 * `NewPlugin()` creates a new plugin and registers the transaction types.
 * `Close()` closes the plugin when the consensus is closed. This should the `unregisterCallback` and `p.storage.close()`.
-

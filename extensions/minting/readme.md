@@ -29,8 +29,15 @@ condition := types.NewUnlockHashCondition(uh)
     * multisignature condition
 */
 
+// define the transaction versions for the 2 extra transactions possible
+const (
+	// can be any unique transaction version >= 128
+	minterDefinitionTxVersion = iota + 128
+	coinCreationTxVersion
+)
+
 // Pass the condition the NewMintingPlugin
-plugin := minting.NewMintingPlugin(types.NewCondition(condition))
+plugin := minting.NewMintingPlugin(types.NewCondition(condition), minterDefinitionTxVersion, coinCreationTxVersion)
 err = cs.RegisterPlugin("minting", plugin, cancel)
 if err != nil {
     return err
@@ -59,18 +66,21 @@ mintingcli.CreateWalletCmds(cliClient)
 
 mintingReader := mintingcli.NewPluginExplorerClient(cliClient)
 
-const customVersionOffset = 128
+// define the transaction versions for the 2 extra transactions possible
 const (
-	transactionVersionMinterDefinition = iota + customVersionOffset + 1
-	transactionVersionCoinCreation
+	// can be any unique transaction version >= 128
+	minterDefinitionTxVersion = iota + 128
+	coinCreationTxVersion
 )
 
 // Register the transaction types
-types.RegisterTransactionVersion(transactionVersionMinterDefinition, minting.MinterDefinitionTransactionController{
-    MintConditionGetter: mintingReader,
+types.RegisterTransactionVersion(minterDefinitionTxVersion, minting.MinterDefinitionTransactionController{
+	MintConditionGetter: mintingReader,
+	TransactionVersion: minterDefinitionTxVersion,
 })
-types.RegisterTransactionVersion(transactionVersionCoinCreation, minting.CoinCreationTransactionController{
-    MintConditionGetter: mintingReader,
+types.RegisterTransactionVersion(coinCreationTxVersion, minting.CoinCreationTransactionController{
+	MintConditionGetter: mintingReader,
+	TransactionVersion: coinCreationTxVersion,
 })
 ```
 
@@ -101,8 +111,8 @@ this is however not a consensus-defined requirement, as discussed earlier.
 
 ```javascript
 {
-	// 0x80, the version number of a Minter Definition Transaction
-	"version": 128,
+	// 0x80, an example version number of a Minter Definition Transaction
+	"version": 128, // the decimal representation of the above example version number
 	// Coin Creation Transaction Data
 	"data": {
 		// crypto-random 8-byte array (base64-encoded to a string) to ensure
@@ -164,7 +174,7 @@ Computing that hash can be represented by following pseudo code:
 
 ```plain
 blake2b_256_hash(SiaBinaryEncoding(
-  - transactionVersion: 1 byte, hardcoded to `0x81` (129 in decimal)
+  - transactionVersion: 1 byte
   - specifier: 16 bytes, hardcoded to "minter defin tx\0"
   - nonce: 8 bytes
   - binaryEncoding(mintCondition)
@@ -197,8 +207,8 @@ this is however not a consensus-defined requirement. You can ready more about th
 
 ```javascript
 {
-	// 0x81, the version number of a Coin Creation Transaction
-	"version": 129,
+	// 0x81, an example version number of a Coin Creation Transaction
+	"version": 129, // the decimal representation of the above example version number
 	// Coin Creation Transaction Data
 	"data": {
 		// crypto-random 8-byte array (base64-encoded to a string) to ensure
@@ -262,7 +272,7 @@ Computing that hash can be represented by following pseudo code:
 
 ```plain
 blake2b_256_hash(SiaBinaryEncoding(
-  - transactionVersion: 1 byte, hardcoded to `0x81` (129 in decimal)
+  - transactionVersion: 1 byte
   - specifier: 16 bytes, hardcoded to "coin mint tx\0\0\0\0"
   - nonce: 8 bytes
   - length(coinOutputs): int64 (8 bytes, little endian)
