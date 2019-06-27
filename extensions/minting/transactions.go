@@ -88,46 +88,6 @@ var (
 	_ types.TransactionCommonExtensionDataGetter = MinterDefinitionTransactionController{}
 )
 
-// DefaultTransactionController
-type (
-	// DefaultTransactionController is the default transaction controller used,
-	// and is also by default the controller for the default transaction version 0x01.
-	DefaultTransactionController struct {
-		TransactionFeeCheckBlockHeight types.BlockHeight
-	}
-	// LegacyTransactionController is a legacy transaction controller,
-	// which used to be the default when Rivine launched.
-	// It should however not be used any longer, and only exists,
-	// as to support chains which launched together with Rivine.
-	LegacyTransactionController struct {
-		TransactionFeeCheckBlockHeight types.BlockHeight
-	}
-)
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (dtc DefaultTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) error {
-	if ctx.Confirmed && ctx.BlockHeight < dtc.TransactionFeeCheckBlockHeight {
-		// as to ensure the miner fee is at least bigger than 0,
-		// we however only want to put this restriction within the consensus set,
-		// the stricter miner fee checks should apply immediately to the transaction pool logic
-		constants.MinimumMinerFee = types.NewCurrency64(1)
-	}
-	return types.DefaultTransactionValidation(t, ctx, constants)
-}
-
-// LegacyTransactionController
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (ltc LegacyTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) error {
-	if ctx.Confirmed && ctx.BlockHeight < ltc.TransactionFeeCheckBlockHeight {
-		// as to ensure the miner fee is at least bigger than 0,
-		// we however only want to put this restriction within the consensus set,
-		// the stricter miner fee checks should apply immediately to the transaction pool logic
-		constants.MinimumMinerFee = types.NewCurrency64(1)
-	}
-	return types.DefaultTransactionValidation(t, ctx, constants)
-}
-
 // CoinCreationTransactionController
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
