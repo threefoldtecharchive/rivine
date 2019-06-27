@@ -66,7 +66,7 @@ func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []s
 		// get active mint condition for a given block height
 		height, err := strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
-			cmd.UsageFunc()
+			cmd.UsageFunc()(cmd)
 			cli.DieWithError("invalid block height given", err)
 		}
 		mintCondition, err = pluginReader.GetMintConditionAt(types.BlockHeight(height))
@@ -75,7 +75,7 @@ func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []s
 		}
 
 	default:
-		cmd.UsageFunc()
+		cmd.UsageFunc()(cmd)
 		cli.Die("Invalid amount of arguments. One optional pos argument can be given, a valid block height.")
 	}
 

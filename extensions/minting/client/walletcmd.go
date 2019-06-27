@@ -73,7 +73,7 @@ type walletCmd struct {
 
 func (walletCmd *walletCmd) createMinterDefinitionTxCmd(cmd *cobra.Command, args []string) {
 	if len(args) != 1 {
-		cmd.UsageFunc()
+		cmd.UsageFunc()(cmd)
 		cli.Die("Invalid amount of arguments. One argume has to be given: <dest>|<rawCondition>")
 	}
 
@@ -105,7 +105,7 @@ func (walletCmd *walletCmd) createCoinCreationTxCmd(cmd *cobra.Command, args []s
 
 	// Check that the remaining args are condition + value pairs
 	if len(args)%2 != 0 {
-		cmd.UsageFunc()
+		cmd.UsageFunc()(cmd)
 		cli.Die("Invalid arguments. Arguments must be of the form <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
 	}
 
