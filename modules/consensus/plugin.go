@@ -49,6 +49,7 @@ type pluginMetadata struct {
 // RegisterPlugin registers a plugin to the map of plugins,
 // initializes its bucket using the plugin and ensures it receives all
 // consensus updates it is missing (as a special case this means anything).
+// This initial sync can be cancelled by sending something on the `cancel` channel.
 func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetPlugin, cancel <-chan struct{}) error {
 	if name == "" {
 		return ErrPluginNameEmpty
@@ -123,6 +124,9 @@ func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetP
 	})
 }
 
+// initPluginSync ensures the plugin receives all
+// consensus updates it is missing (as a special case this means anything).
+// This initial sync can be cancelled by sending something on the `cancel` channel.
 func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetPlugin, start modules.ConsensusChangeID, cancel <-chan struct{}) (modules.ConsensusChangeID, error) {
 	newChangeID := start
 	err := cs.db.View(func(tx *bolt.Tx) error {

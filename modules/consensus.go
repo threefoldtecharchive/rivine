@@ -275,6 +275,8 @@ type (
 		GetBlockStakeOutput(types.BlockStakeOutputID) (types.BlockStakeOutput, error)
 
 		// RegisterPlugin takes in a name and plugin and registers this plugin on the consensus
+		// When the plugin is registered, all unprocessed changes are sent to the plugin
+		// This initial sync can be cancelled by sending something on the `cancel` channel
 		RegisterPlugin(name string, plugin ConsensusSetPlugin, cancel <-chan struct{}) error
 
 		// UnregisterPlugin takes in a name and plugin and unregisters this plugin off the consensus
