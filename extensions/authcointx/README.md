@@ -5,6 +5,9 @@ Only the condition authorized to do so is able to define which addresses are aut
 The condition that defines who is authorized to do so can also only changed by the one(s) owning the current
 condition authorized to do this and the address authorization.
 
+> :warning: This extension also overwrites the standard Rivine `0x01` transaction controller,
+> and disabled `0x00` transactions by settings its transaction controller to `nil`.
+
 An initial condition is passed to the extensions which will be used as the authorized condition until it is changed.
 
 It is recommended to use a multisignature condition as the authorized mint condition.
