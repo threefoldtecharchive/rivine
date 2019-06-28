@@ -77,27 +77,27 @@ test:
 test-v:
 	go test -race -v -short -tags='debug testing' -timeout=60s $(testpkgs) -run=$(run)
 test-long: fmt vet
-	go test -v -race -tags='debug testing' -timeout=500s $(testpkgs) -run=$(run)
+	go test -v -race -tags='debug testing' -timeout=1000s $(testpkgs) -run=$(run)
 bench: fmt
-	go test -tags='testing' -timeout=500s -run=XXX -bench=. $(testpkgs)
+	go test -tags='testing' -timeout=1000s -run=XXX -bench=. $(testpkgs)
 cover:
 	@mkdir -p cover/modules
 	@for package in $(testpkgs); do \
-		go test -tags='testing debug' -timeout=500s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
+		go test -tags='testing debug' -timeout=1000s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
 		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html \
 		&& rm cover/$$package.out ; \
 	done
 cover-integration:
 	@mkdir -p cover/modules
 	@for package in $(testpkgs); do \
-		go test -run=TestIntegration -tags='testing debug' -timeout=500s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
+		go test -run=TestIntegration -tags='testing debug' -timeout=1000s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
 		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html \
 		&& rm cover/$$package.out ; \
 	done
 cover-unit:
 	@mkdir -p cover/modules
 	@for package in $(testpkgs); do \
-		go test -run=TestUnit -tags='testing debug' -timeout=500s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
+		go test -run=TestUnit -tags='testing debug' -timeout=1000s -covermode=atomic -coverprofile=cover/$$package.out ./$$package \
 		&& go tool cover -html=cover/$$package.out -o=cover/$$package.html \
 		&& rm cover/$$package.out ; \
 	done
