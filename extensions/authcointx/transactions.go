@@ -510,7 +510,7 @@ func (cutc AuthConditionUpdateTransactionController) DecodeTransactionData(r io.
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (cutc AuthConditionUpdateTransactionController) JSONEncodeTransactionData(txData types.TransactionData) ([]byte, error) {
-	autx, err := AuthAddressUpdateTransactionFromTransactionData(txData)
+	autx, err := AuthConditionUpdateTransactionFromTransactionData(txData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert txData to a AuthAddressUpdateTx: %v", err)
 	}

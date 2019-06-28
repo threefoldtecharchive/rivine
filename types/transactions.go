@@ -803,6 +803,27 @@ func (bsoid *BlockStakeOutputID) UnmarshalJSON(b []byte) error {
 // used to ensure the uniqueness of an otherwise potentially non-unique Tx
 type TransactionNonce [TransactionNonceLength]byte
 
+// MarshalJSON implements JSON.Marshaller.MarshalJSON
+// encodes the Nonce as a base64-encoded string
+func (tn TransactionNonce) MarshalJSON() ([]byte, error) {
+	return json.Marshal(tn[:])
+}
+
+// UnmarshalJSON implements JSON.Unmarshaller.UnmarshalJSON
+// piggy-backing on the base64-decoding used for byte slices in the std JSON lib
+func (tn *TransactionNonce) UnmarshalJSON(in []byte) error {
+	var out []byte
+	err := json.Unmarshal(in, &out)
+	if err != nil {
+		return err
+	}
+	if len(out) != TransactionNonceLength {
+		return errors.New("invalid tx nonce length")
+	}
+	copy(tn[:], out[:])
+	return nil
+}
+
 // TransactionNonceLength defines the length of a TransactionNonce
 const TransactionNonceLength = 8
 
