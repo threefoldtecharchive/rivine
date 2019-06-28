@@ -9,6 +9,7 @@ An extension can be registered to the consensus, it's a subscriber which can pro
 ## Available extensions
 
 - [minting extension](./minting/readme.md)
+- [auth coin transactions extension](./minting/readme.md)
 - [ERC20 extension](https://github.com/threefoldtech/rivine-extension-erc20/blob/master/README.md)
 
 ## Examples
