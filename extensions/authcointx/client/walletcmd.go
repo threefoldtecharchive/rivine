@@ -59,7 +59,7 @@ func CreateWalletCmds(client *client.CommandLineClient, conditionUpdateTransacti
 		"description", "optionally add a description to describe the reasons of auth address update, added as arbitrary data")
 	createAuthAddressUpdateTxCmd.Flags().StringSliceVarP(
 		&walletCmd.authAddressUpdateTxCfg.AuthAddresses,
-		"auth", "a", nil, "add addresses to authorize, allowing the addresses to receive and send coins",
+		"auth", "e", nil, "add addresses to authorize, allowing (Enabling) the addresses to receive and send coins",
 	)
 	createAuthAddressUpdateTxCmd.Flags().StringSliceVarP(
 		&walletCmd.authAddressUpdateTxCfg.DeauthAddresses,
