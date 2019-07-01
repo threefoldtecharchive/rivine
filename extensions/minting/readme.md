@@ -60,19 +60,19 @@ import (
 // * rivinec explore mintcondition [height] [flags]
 mintingcli.CreateExploreCmd(cliClient)
 
-// Will create the createCoinTransaction and createMinterDefinitionTransaction command
-// * rivinec wallet create minterdefinitiontransaction
-// * rivinec wallet create coincreationtransaction
-mintingcli.CreateWalletCmds(cliClient)
-
-mintingReader := mintingcli.NewPluginExplorerClient(cliClient)
-
 // define the transaction versions for the 2 extra transactions possible
 const (
 	// can be any unique transaction version >= 128
 	minterDefinitionTxVersion = iota + 128
 	coinCreationTxVersion
 )
+
+// Will create the createCoinTransaction and createMinterDefinitionTransaction command
+// * rivinec wallet create minterdefinitiontransaction
+// * rivinec wallet create coincreationtransaction
+mintingcli.CreateWalletCmds(cliClient, minterDefinitionTxVersion, coinCreationTxVersion)
+
+mintingReader := mintingcli.NewPluginExplorerClient(cliClient)
 
 // Register the transaction types
 types.RegisterTransactionVersion(minterDefinitionTxVersion, minting.MinterDefinitionTransactionController{

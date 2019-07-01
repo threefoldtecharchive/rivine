@@ -14,8 +14,12 @@ import (
 	client "github.com/threefoldtech/rivine/pkg/client"
 )
 
-func CreateWalletCmds(client *client.CommandLineClient) {
-	walletCmd := &walletCmd{cli: client}
+func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion) {
+	walletCmd := &walletCmd{
+		cli:                        client,
+		mintingDefinitionTxVersion: mintingDefinitionTxVersion,
+		coinCreationTxVersion:      coinCreationTxVersion,
+	}
 
 	// create root explore command and all subs
 	var (
@@ -62,8 +66,9 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 }
 
 type walletCmd struct {
-	cli                   *client.CommandLineClient
-	minterDefinitionTxCfg struct {
+	cli                                               *client.CommandLineClient
+	mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion
+	minterDefinitionTxCfg                             struct {
 		Description []byte
 	}
 	coinCreationTxCfg struct {
@@ -97,7 +102,7 @@ func (walletCmd *walletCmd) createMinterDefinitionTxCmd(cmd *cobra.Command, args
 	}
 
 	// encode the transaction as a JSON-encoded string and print it to the STDOUT
-	json.NewEncoder(os.Stdout).Encode(tx.Transaction())
+	json.NewEncoder(os.Stdout).Encode(tx.Transaction(walletCmd.mintingDefinitionTxVersion))
 }
 
 func (walletCmd *walletCmd) createCoinCreationTxCmd(cmd *cobra.Command, args []string) {
@@ -132,7 +137,7 @@ func (walletCmd *walletCmd) createCoinCreationTxCmd(cmd *cobra.Command, args []s
 			Condition: pair.Condition,
 		})
 	}
-	err = json.NewEncoder(os.Stdout).Encode(tx.Transaction())
+	err = json.NewEncoder(os.Stdout).Encode(tx.Transaction(walletCmd.coinCreationTxVersion))
 	if err != nil {
 		panic(err)
 	}
