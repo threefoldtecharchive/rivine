@@ -47,7 +47,7 @@ func (cs *ConsensusSet) loadDB() error {
 			build.Severe(err)
 		}
 		if genesisID != cs.blockRoot.Block.ID() {
-			return errors.New("Blockchain has wrong genesis block, exiting.")
+			return errors.New("blockchain has wrong genesis block, exiting")
 		}
 		return nil
 	})

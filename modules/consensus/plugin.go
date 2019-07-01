@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -49,8 +50,8 @@ type pluginMetadata struct {
 // RegisterPlugin registers a plugin to the map of plugins,
 // initializes its bucket using the plugin and ensures it receives all
 // consensus updates it is missing (as a special case this means anything).
-// This initial sync can be cancelled by sending something on the `cancel` channel.
-func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetPlugin, cancel <-chan struct{}) error {
+// This initial sync is cancelled if tyhe passed context is cancelled.
+func (cs *ConsensusSet) RegisterPlugin(ctx context.Context, name string, plugin modules.ConsensusSetPlugin) error {
 	if name == "" {
 		return ErrPluginNameEmpty
 	}
@@ -83,7 +84,9 @@ func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetP
 	}
 
 	// init sync the plugin
-	newConsensusChangeID, err := cs.initPluginSync(name, plugin, consensusChangeID, cancel)
+	initialSyncCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	newConsensusChangeID, err := cs.initPluginSync(initialSyncCtx, name, plugin, consensusChangeID)
 	if err != nil {
 		return err
 	}
@@ -126,8 +129,8 @@ func (cs *ConsensusSet) RegisterPlugin(name string, plugin modules.ConsensusSetP
 
 // initPluginSync ensures the plugin receives all
 // consensus updates it is missing (as a special case this means anything).
-// This initial sync can be cancelled by sending something on the `cancel` channel.
-func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetPlugin, start modules.ConsensusChangeID, cancel <-chan struct{}) (modules.ConsensusChangeID, error) {
+// This initial sync is  be cancelled if the passes context is closed.
+func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin modules.ConsensusSetPlugin, start modules.ConsensusChangeID) (modules.ConsensusChangeID, error) {
 	newChangeID := start
 	err := cs.db.View(func(tx *bolt.Tx) error {
 		// 'exists' and 'entry' are going to be pointed to the first entry that
@@ -182,7 +185,7 @@ func (cs *ConsensusSet) initPluginSync(name string, plugin modules.ConsensusSetP
 		// Send all remaining consensus changes to the subscriber.
 		for exists {
 			select {
-			case <-cancel:
+			case <-ctx.Done():
 				return errors.New("aborting initPluginSync")
 			default:
 				cc, err := cs.computeConsensusChange(tx, entry)
