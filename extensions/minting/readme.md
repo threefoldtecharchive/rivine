@@ -38,9 +38,8 @@ const (
 
 // Pass the condition the NewMintingPlugin
 plugin := minting.NewMintingPlugin(types.NewCondition(condition), minterDefinitionTxVersion, coinCreationTxVersion)
-//Create a channel to cancel the initial syncing if needed ( for example when the process is halted)
-cancel:= make(chan struct{})
-err = cs.RegisterPlugin("minting", plugin, cancel)
+
+err = cs.RegisterPlugin(context.BackGround(),"minting", plugin)
 if err != nil {
     return err
 }
