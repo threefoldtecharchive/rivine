@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"errors"
@@ -639,7 +640,7 @@ func (css *consensusSetStub) GetBlockStakeOutput(id types.BlockStakeOutputID) (b
 	return types.BlockStakeOutput{}, errors.New("BlockStake output not found in database")
 }
 
-func (css *consensusSetStub) RegisterPlugin(name string, plugin modules.ConsensusSetPlugin, cancel <-chan struct{}) (err error) {
+func (css *consensusSetStub) RegisterPlugin(ctx context.Context, name string, plugin modules.ConsensusSetPlugin) (err error) {
 	return nil
 }
 
