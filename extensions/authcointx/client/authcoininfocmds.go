@@ -29,7 +29,9 @@ func CreateConsensusAuthCoinInfoCmd(client *client.CommandLineClient) {
 
 func createAuthCoinCmd(client *client.CommandLineClient, pluginClient *PluginClient, rootCmd *cobra.Command) {
 	authCoinCmd := &authCoinCmd{
-		cli: client}
+		cli:          client,
+		pluginClient: pluginClient,
+	}
 
 	// create root explore command and all subs
 	var (
