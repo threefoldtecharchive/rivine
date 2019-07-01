@@ -16,7 +16,18 @@ import (
 )
 
 func CreateExploreCmd(client *client.CommandLineClient) {
-	exploreCmd := &exploreCmd{cli: client}
+	createExploreCmd(client, client.ExploreCmd, NewPluginExplorerClient(client))
+}
+
+func CreateConsensusCmd(client *client.CommandLineClient) {
+	createExploreCmd(client, client.ConsensusCmd, NewPluginConsensusClient(client))
+}
+
+func createExploreCmd(client *client.CommandLineClient, rootCmd *cobra.Command, pluginClient *PluginClient) {
+	exploreCmd := &exploreCmd{
+		cli:          client,
+		pluginClient: pluginClient,
+	}
 
 	// create root explore command and all subs
 	var (
@@ -36,11 +47,12 @@ or the one for the given block height.
 		cli.EncodingTypeFlagDescription(0))
 
 	// Add getMintConditionCmd to the ExploreCmd
-	client.ExploreCmd.AddCommand(getMintConditionCmd)
+	rootCmd.AddCommand(getMintConditionCmd)
 }
 
 type exploreCmd struct {
 	cli                 *client.CommandLineClient
+	pluginClient        *PluginClient
 	getMintConditionCfg struct {
 		EncodingType cli.EncodingType
 	}
