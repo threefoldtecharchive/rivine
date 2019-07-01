@@ -23,6 +23,12 @@ func RegisterExplorerMintingHTTPHandlers(router rapi.Router, plugin *minting.Plu
 	router.GET("/explorer/mintcondition/:height", NewTransactionDBGetMintConditionAtHandler(plugin))
 }
 
+// RegisterConsensusMintingHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
+func RegisterConsensusMintingHTTPHandlers(router rapi.Router, plugin *minting.Plugin) {
+	router.GET("/consensus/mintcondition", NewTransactionDBGetActiveMintConditionHandler(plugin))
+	router.GET("/consensus/mintcondition/:height", NewTransactionDBGetMintConditionAtHandler(plugin))
+}
+
 // NewTransactionDBGetActiveMintConditionHandler creates a handler to handle the API calls to /transactiondb/mintcondition.
 func NewTransactionDBGetActiveMintConditionHandler(plugin *minting.Plugin) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
