@@ -221,7 +221,7 @@ func (autc AuthAddressUpdateTransactionController) JSONDecodeTransactionData(dat
 func (autc AuthAddressUpdateTransactionController) SignExtension(extension interface{}, sign func(*types.UnlockFulfillmentProxy, types.UnlockConditionProxy, ...interface{}) error) (interface{}, error) {
 	// (tx) extension (data) is expected to be a pointer to a valid AuthAddressUpdateTransaction,
 	// which contains the nonce and the mintFulfillment that can be used to fulfill the globally defined auth condition
-	auTxExtension, ok := extension.(*AuthAddressUpdateTransaction)
+	auTxExtension, ok := extension.(*AuthAddressUpdateTransactionExtension)
 	if !ok {
 		return nil, errors.New("invalid extension data for a AuthAddressUpdateTransaction")
 	}
