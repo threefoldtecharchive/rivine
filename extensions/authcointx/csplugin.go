@@ -42,7 +42,7 @@ func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdat
 		authAddressUpdateTransactionVersion:   authAddressUpdateTransactionVersion,
 		authConditionUpdateTransactionVersion: authConditionUpdateTransactionVersion,
 	}
-	types.RegisterTransactionVersion(types.TransactionVersionZero, nil) // not supported
+	types.RegisterTransactionVersion(types.TransactionVersionZero, DisabledTransactionController{})
 	types.RegisterTransactionVersion(types.TransactionVersionOne, AuthStandardTransferTransactionController{
 		AuthInfoGetter: p,
 	})
