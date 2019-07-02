@@ -73,7 +73,7 @@ func TestIntegrationConflictingTransactionSets(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundCoins(fund)
+	err = txnBuilder.FundCoins(fund, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +176,7 @@ func TestIntegrationTransactionSuperset(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundCoins(fund)
+	err = txnBuilder.FundCoins(fund, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -235,7 +235,7 @@ func TestIntegrationTransactionSubset(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundCoins(fund)
+	err = txnBuilder.FundCoins(fund, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +282,7 @@ func TestIntegrationTransactionChild(t *testing.T) {
 	// Fund a partial transaction.
 	fund := types.NewCurrency64(30e6)
 	txnBuilder := tpt.wallet.StartTransaction()
-	err = txnBuilder.FundCoins(fund)
+	err = txnBuilder.FundCoins(fund, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

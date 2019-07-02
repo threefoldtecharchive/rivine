@@ -297,6 +297,22 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 	clipkg.ArbitraryDataFlagVar(sendBlockStakesCmd.Flags(), &walletCmd.sendBlockStakesCfg.Data,
 		"data", "optional arbitrary data (or description) to attach to transaction")
 
+	// other custom send coins flags
+	sendCoinsCmd.Flags().StringVar(
+		&walletCmd.sendCoinsCfg.RefundAddress,
+		"refund-address", "", "define a custom refund address")
+	sendCoinsCmd.Flags().BoolVar(
+		&walletCmd.sendCoinsCfg.RefundAddressNew,
+		"refund-address-new", false, "generate a new refund address if a refund needs to happen")
+
+	// other custom send blockstkars flags
+	sendBlockStakesCmd.Flags().StringVar(
+		&walletCmd.sendBlockStakesCfg.RefundAddress,
+		"refund-address", "", "define a custom refund address")
+	sendBlockStakesCmd.Flags().BoolVar(
+		&walletCmd.sendBlockStakesCfg.RefundAddressNew,
+		"refund-address-new", false, "generate a new refund address if a refund needs to happen")
+
 	// return root command
 	return &WalletCommand{
 		Command:       rootCmd,
@@ -321,10 +337,14 @@ type WalletCommand struct {
 type walletCmd struct {
 	cli          *CommandLineClient
 	sendCoinsCfg struct {
-		Data []byte
+		Data             []byte
+		RefundAddress    string
+		RefundAddressNew bool
 	}
 	sendBlockStakesCfg struct {
-		Data []byte
+		Data             []byte
+		RefundAddress    string
+		RefundAddressNew bool
 	}
 	walletInitCfg struct {
 		Plain bool
@@ -537,6 +557,18 @@ func (walletCmd *walletCmd) sendCoinsCmd(cmd *cobra.Command, args []string) {
 			Condition: pair.Condition,
 		}
 	}
+	if walletCmd.sendCoinsCfg.RefundAddress != "" {
+		// use the specified address as the refund address if a refund has to happen
+		var uh types.UnlockHash
+		err = uh.LoadString(walletCmd.sendCoinsCfg.RefundAddress)
+		if err != nil {
+			cli.DieWithError("invalid refund address specified", err)
+		}
+		body.RefundAddress = &uh
+	} else if walletCmd.sendCoinsCfg.RefundAddressNew {
+		// ensure the daemon generates a new refund address if a refund needs to happen
+		body.GenerateRefundAddress = true
+	}
 
 	bytes, err := json.Marshal(&body)
 	if err != nil {
@@ -572,6 +604,18 @@ func (walletCmd *walletCmd) sendBlockStakesCmd(cmd *cobra.Command, args []string
 			Value:     pair.Value,
 			Condition: pair.Condition,
 		}
+	}
+	if walletCmd.sendBlockStakesCfg.RefundAddress != "" {
+		// use the specified address as the refund address if a refund has to happen
+		var uh types.UnlockHash
+		err = uh.LoadString(walletCmd.sendBlockStakesCfg.RefundAddress)
+		if err != nil {
+			cli.DieWithError("invalid refund address specified", err)
+		}
+		body.RefundAddress = &uh
+	} else if walletCmd.sendBlockStakesCfg.RefundAddressNew {
+		// ensure the daemon generates a new refund address if a refund needs to happen
+		body.GenerateRefundAddress = true
 	}
 
 	bytes, err := json.Marshal(&body)

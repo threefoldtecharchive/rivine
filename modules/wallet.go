@@ -145,7 +145,7 @@ type (
 		// the transaction will be completed and broadcast within a few hours.
 		// Longer risks double-spends, as the wallet will assume that the
 		// transaction failed.
-		FundCoins(amount types.Currency) error
+		FundCoins(amount types.Currency, refundAddress *types.UnlockHash, reuseRefundAddress bool) error
 
 		// FundBlockStakes will add a siafund input of exactly 'amount' to the
 		// transaction. A parent transaction may be needed to achieve an input
@@ -402,7 +402,7 @@ type (
 
 		// SendOutputs is a tool for sending coins and/or block stakes from the wallet, to one or multiple addreses.
 		// The transaction is automatically given to the transaction pool, and is also returned to the caller.
-		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte) (types.Transaction, error)
+		SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs []types.BlockStakeOutput, data []byte, refundAddress *types.UnlockHash, reuseRefundAddress bool) (types.Transaction, error)
 
 		// BlockStakeStats returns the blockstake statistical information of
 		// this wallet of the last 1000 blocks. If the blockcount is less than

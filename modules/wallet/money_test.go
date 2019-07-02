@@ -218,7 +218,7 @@ func TestNilOutputs(t *testing.T) {
 	}
 	defer wt.closeWt()
 
-	_, err = wt.wallet.SendOutputs(nil, nil, []byte("data"))
+	_, err = wt.wallet.SendOutputs(nil, nil, []byte("data"), nil, false)
 	if err != ErrNilOutputs {
 		t.Fatal("expected ErrNilOutput, but receiver: ", err)
 	}

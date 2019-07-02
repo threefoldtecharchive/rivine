@@ -141,7 +141,7 @@ func TestDoubleSignError(t *testing.T) {
 	// Create a transaction, add money to it, and then call sign twice.
 	b := wt.wallet.StartTransaction()
 	txnFund := types.NewCurrency64(100e9)
-	err = b.FundCoins(txnFund)
+	err = b.FundCoins(txnFund, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

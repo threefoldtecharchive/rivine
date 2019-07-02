@@ -49,7 +49,7 @@ func TestSubscription(t *testing.T) {
 
 	// Create a valid transaction set and check that the mock subscriber's
 	// transaction list is updated.
-	_, err = tpt.wallet.SendCoins(types.NewCurrency64(100), types.UnlockHash{})
+	_, err = tpt.wallet.SendCoins(types.NewCurrency64(100), types.UnlockHash{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -84,8 +84,10 @@ type (
 	// WalletCoinsPOST is given by the user
 	// to indicate to where to send how much coins
 	WalletCoinsPOST struct {
-		CoinOutputs []types.CoinOutput `json:"coinoutputs`
-		Data        []byte             `json:"data,omitempty"`
+		CoinOutputs           []types.CoinOutput `json:"coinoutputs`
+		Data                  []byte             `json:"data,omitempty"`
+		RefundAddress         *types.UnlockHash  `json:"refundaddress,omitempty"`
+		GenerateRefundAddress bool               `json:"genrefundaddress,omitempty"`
 	}
 	// WalletCoinsPOSTResp Resp contains the ID of the transaction
 	// that was created as a result of a POST call to /wallet/coins.
@@ -96,8 +98,10 @@ type (
 	// WalletBlockStakesPOST is given by the user
 	// to indicate to where to send how much blockstakes
 	WalletBlockStakesPOST struct {
-		BlockStakeOutputs []types.BlockStakeOutput `json:"blockstakeoutputs`
-		Data              []byte                   `json:"data,omitempty"`
+		BlockStakeOutputs     []types.BlockStakeOutput `json:"blockstakeoutputs`
+		Data                  []byte                   `json:"data,omitempty"`
+		RefundAddress         *types.UnlockHash        `json:"refundaddress,omitempty"`
+		GenerateRefundAddress bool                     `json:"genrefundaddress,omitempty"`
 	}
 	// WalletBlockStakesPOSTResp Resp contains the ID of the transaction
 	// that was created as a result of a POST call to /wallet/blockstakes.
@@ -533,7 +537,7 @@ func NewWalletCoinsHandler(wallet modules.Wallet) httprouter.Handle {
 			WriteError(w, Error{"error decoding the supplied coin outputs: " + err.Error()}, http.StatusBadRequest)
 			return
 		}
-		tx, err := wallet.SendOutputs(body.CoinOutputs, nil, body.Data)
+		tx, err := wallet.SendOutputs(body.CoinOutputs, nil, body.Data, body.RefundAddress, !body.GenerateRefundAddress)
 		if err != nil {
 			WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, walletErrorToHTTPStatus(err))
 			return
@@ -552,7 +556,7 @@ func NewWalletBlockStakesHandler(wallet modules.Wallet) httprouter.Handle {
 			WriteError(w, Error{"error decoding the supplied blockstake outputs: " + err.Error()}, http.StatusBadRequest)
 			return
 		}
-		tx, err := wallet.SendOutputs(nil, body.BlockStakeOutputs, body.Data)
+		tx, err := wallet.SendOutputs(nil, body.BlockStakeOutputs, body.Data, body.RefundAddress, !body.GenerateRefundAddress)
 		if err != nil {
 			WriteError(w, Error{"error after call to /wallet/blockstakes: " + err.Error()}, walletErrorToHTTPStatus(err))
 			return

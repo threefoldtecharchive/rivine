@@ -43,7 +43,7 @@ type inputSignContext struct {
 // FundCoins will add a siacoin input of exactly 'amount' to the
 // transaction. The coin input will not be signed until 'Sign' is called
 // on the transaction builder.
-func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
+func (tb *transactionBuilder) FundCoins(amount types.Currency, refundAddress *types.UnlockHash, reuseRefundAddress bool) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
@@ -150,9 +150,27 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency) error {
 
 	// Create a refund output if needed.
 	if !amount.Equals(fund) {
-		refundUnlockHash, err := tb.wallet.nextPrimarySeedAddress()
-		if err != nil {
-			return err
+		var refundUnlockHash types.UnlockHash
+		if refundAddress != nil {
+			// use specified refund address
+			refundUnlockHash = *refundAddress
+		} else if reuseRefundAddress {
+			// use the fist coin input of this tx as refund address
+			var maxCoinAmount types.Currency
+			for _, ci := range tb.transaction.CoinInputs {
+				co := tb.wallet.coinOutputs[ci.ParentID]
+				if maxCoinAmount.Cmp(co.Value) < 0 {
+					maxCoinAmount = co.Value
+					refundUnlockHash = co.Condition.UnlockHash()
+				}
+			}
+		} else {
+			// generate a new address
+			var err error
+			refundUnlockHash, err = tb.wallet.nextPrimarySeedAddress()
+			if err != nil {
+				return err
+			}
 		}
 		refundOutput := types.CoinOutput{
 			Value:     fund.Sub(amount),
