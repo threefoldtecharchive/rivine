@@ -152,13 +152,14 @@ func (autx *AuthAddressUpdateTransaction) Transaction(version types.TransactionV
 var (
 	// ensure at compile time that AuthAddressUpdateTransactionController
 	// implements the desired interfaces
-	_ types.TransactionController      = AuthAddressUpdateTransactionController{}
-	_ types.TransactionExtensionSigner = AuthAddressUpdateTransactionController{}
-	_ types.TransactionValidator       = AuthAddressUpdateTransactionController{}
-	_ types.CoinOutputValidator        = AuthAddressUpdateTransactionController{}
-	_ types.BlockStakeOutputValidator  = AuthAddressUpdateTransactionController{}
-	_ types.TransactionSignatureHasher = AuthAddressUpdateTransactionController{}
-	_ types.TransactionIDEncoder       = AuthAddressUpdateTransactionController{}
+	_ types.TransactionController                = AuthAddressUpdateTransactionController{}
+	_ types.TransactionExtensionSigner           = AuthAddressUpdateTransactionController{}
+	_ types.TransactionValidator                 = AuthAddressUpdateTransactionController{}
+	_ types.CoinOutputValidator                  = AuthAddressUpdateTransactionController{}
+	_ types.BlockStakeOutputValidator            = AuthAddressUpdateTransactionController{}
+	_ types.TransactionSignatureHasher           = AuthAddressUpdateTransactionController{}
+	_ types.TransactionIDEncoder                 = AuthAddressUpdateTransactionController{}
+	_ types.TransactionCommonExtensionDataGetter = AuthAddressUpdateTransactionController{}
 )
 
 type (
@@ -355,6 +356,25 @@ func (autc AuthAddressUpdateTransactionController) EncodeTransactionIDInput(w io
 	return rivbin.NewEncoder(w).EncodeAll(SpecifierAuthAddressUpdateTransaction, autx)
 }
 
+// GetCommonExtensionData implements TransactionCommonExtensionDataGetter.GetCommonExtensionData
+func (autc AuthAddressUpdateTransactionController) GetCommonExtensionData(extension interface{}) (types.CommonTransactionExtensionData, error) {
+	auTxExtension, ok := extension.(*AuthAddressUpdateTransactionExtension)
+	if !ok {
+		return types.CommonTransactionExtensionData{}, errors.New("invalid extension data for an AuthAddressUpdateTransaction")
+	}
+	data := types.CommonTransactionExtensionData{}
+	// add all auth addresses
+	for _, addr := range auTxExtension.AuthAddresses {
+		data.UnlockConditions = append(data.UnlockConditions, types.NewCondition(types.NewUnlockHashCondition(addr)))
+	}
+	// add all deauth addresses
+	for _, addr := range auTxExtension.DeauthAddresses {
+		data.UnlockConditions = append(data.UnlockConditions, types.NewCondition(types.NewUnlockHashCondition(addr)))
+	}
+	// return it all
+	return data, nil
+}
+
 ///////////////////////////////////////////////////////////////////////////////////
 // TRANSACTION		///		Auth Condition Update								///
 ///////////////////////////////////////////////////////////////////////////////////
@@ -464,13 +484,14 @@ func (autx *AuthConditionUpdateTransaction) Transaction(version types.Transactio
 var (
 	// ensure at compile time that AuthConditionUpdateTransactionController
 	// implements the desired interfaces
-	_ types.TransactionController      = AuthConditionUpdateTransactionController{}
-	_ types.TransactionExtensionSigner = AuthConditionUpdateTransactionController{}
-	_ types.TransactionValidator       = AuthConditionUpdateTransactionController{}
-	_ types.CoinOutputValidator        = AuthConditionUpdateTransactionController{}
-	_ types.BlockStakeOutputValidator  = AuthConditionUpdateTransactionController{}
-	_ types.TransactionSignatureHasher = AuthConditionUpdateTransactionController{}
-	_ types.TransactionIDEncoder       = AuthConditionUpdateTransactionController{}
+	_ types.TransactionController                = AuthConditionUpdateTransactionController{}
+	_ types.TransactionExtensionSigner           = AuthConditionUpdateTransactionController{}
+	_ types.TransactionValidator                 = AuthConditionUpdateTransactionController{}
+	_ types.CoinOutputValidator                  = AuthConditionUpdateTransactionController{}
+	_ types.BlockStakeOutputValidator            = AuthConditionUpdateTransactionController{}
+	_ types.TransactionSignatureHasher           = AuthConditionUpdateTransactionController{}
+	_ types.TransactionIDEncoder                 = AuthConditionUpdateTransactionController{}
+	_ types.TransactionCommonExtensionDataGetter = AuthConditionUpdateTransactionController{}
 )
 
 type (
@@ -652,6 +673,17 @@ func (cutc AuthConditionUpdateTransactionController) EncodeTransactionIDInput(w 
 		return fmt.Errorf("failed to convert txData to a AuthConditionUpdateTx: %v", err)
 	}
 	return rivbin.NewEncoder(w).EncodeAll(SpecifierAuthConditionUpdateTransaction, autx)
+}
+
+// GetCommonExtensionData implements TransactionCommonExtensionDataGetter.GetCommonExtensionData
+func (cutc AuthConditionUpdateTransactionController) GetCommonExtensionData(extension interface{}) (types.CommonTransactionExtensionData, error) {
+	cuTxExtension, ok := extension.(*AuthConditionUpdateTransactionExtension)
+	if !ok {
+		return types.CommonTransactionExtensionData{}, errors.New("invalid extension data for a AuthConditionUpdateTransaction")
+	}
+	return types.CommonTransactionExtensionData{
+		UnlockConditions: []types.UnlockConditionProxy{cuTxExtension.AuthCondition},
+	}, nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
