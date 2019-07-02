@@ -28,16 +28,16 @@ type GetAddressAuthState struct {
 func RegisterConsensusuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin) {
 	router.GET("/consensus/authcoin/condition", NewGetActiveAuthConditionHandler(plugin))
 	router.GET("/consensus/authcoin/condition/:height", NewGetAuthConditionAtHandler(plugin))
-	router.GET("/consensus/authcoin/address/:address", NewGetActiveAuthConditionHandler(plugin))
-	router.GET("/consensus/authcoin/address/:address/:height", NewGetAuthConditionAtHandler(plugin))
+	router.GET("/consensus/authcoin/address/:address", NewGetAddressAuthStateNowHandler(plugin))
+	router.GET("/consensus/authcoin/address/:address/:height", NewGetAddressAuthStateAtHeightHandler(plugin))
 }
 
 // RegisterExplorerAuthCoinHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
 func RegisterExplorerAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin) {
 	router.GET("/explorer/authcoin/condition", NewGetActiveAuthConditionHandler(plugin))
 	router.GET("/explorer/authcoin/condition/:height", NewGetAuthConditionAtHandler(plugin))
-	router.GET("/explorer/authcoin/address/:address", NewGetActiveAuthConditionHandler(plugin))
-	router.GET("/explorer/authcoin/address/:address/:height", NewGetAuthConditionAtHandler(plugin))
+	router.GET("/explorer/authcoin/address/:address", NewGetAddressAuthStateNowHandler(plugin))
+	router.GET("/explorer/authcoin/address/:address/:height", NewGetAddressAuthStateAtHeightHandler(plugin))
 }
 
 // NewGetActiveAuthConditionHandler creates a handler to handle the API calls to /explorer/authcoin/condition.

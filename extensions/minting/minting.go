@@ -83,28 +83,42 @@ func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket 
 	if bucket == nil {
 		return errors.New("minting bucket does not exist")
 	}
-	mintingBucket, err := bucket.Bucket([]byte(bucketMintConditions))
-	if err != nil {
-		return errors.New("mintcondition bucket does not exist")
-	}
-	for i := range block.Transactions {
-		rtx := &block.Transactions[i]
-		if rtx.Version == types.TransactionVersionOne {
-			continue // ignore most common Tx
+	var err error
+	for _, txn := range block.Transactions {
+		err = p.ApplyTransaction(txn, block, height, bucket)
+		if err != nil {
+			return err
 		}
-		// check the version and handle the ones we care about
-		switch rtx.Version {
-		case p.minterDefinitionTransactionVersion:
-			mdtx, err := MinterDefinitionTransactionFromTransaction(*rtx, p.minterDefinitionTransactionVersion)
+	}
+	return nil
+}
+
+// ApplyTransaction applies a minting transactions to the minting bucket.
+func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+	if bucket == nil {
+		return errors.New("minting bucket does not exist")
+	}
+	var (
+		mintingBucket *bolt.Bucket
+	)
+	// check the version and handle the ones we care about
+	switch txn.Version {
+	case p.minterDefinitionTransactionVersion:
+		mdtx, err := MinterDefinitionTransactionFromTransaction(txn, p.minterDefinitionTransactionVersion)
+		if err != nil {
+			return fmt.Errorf("unexpected error while unpacking the minter def. tx type: %v" + err.Error())
+		}
+		if mintingBucket == nil {
+			mintingBucket, err = bucket.Bucket([]byte(bucketMintConditions))
 			if err != nil {
-				return fmt.Errorf("unexpected error while unpacking the minter def. tx type: %v" + err.Error())
+				return errors.New("mintcondition bucket does not exist")
 			}
-			err = mintingBucket.Put(encodeBlockheight(height), siabin.Marshal(mdtx.MintCondition))
-			if err != nil {
-				return fmt.Errorf(
-					"failed to put mint condition for block height %d: %v",
-					height, err)
-			}
+		}
+		err = mintingBucket.Put(encodeBlockheight(height), siabin.Marshal(mdtx.MintCondition))
+		if err != nil {
+			return fmt.Errorf(
+				"failed to put mint condition for block height %d: %v",
+				height, err)
 		}
 	}
 	return nil
@@ -115,27 +129,40 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 	if bucket == nil {
 		return errors.New("mint conditions bucket does not exist")
 	}
-	mintingBucket, err := bucket.Bucket([]byte(bucketMintConditions))
-	if err != nil {
-		return errors.New("mintcondition bucket does not exist")
-	}
 	// collect all one-per-block mint conditions
-	for i := range block.Transactions {
-		rtx := &block.Transactions[i]
-		if rtx.Version == types.TransactionVersionOne {
-			continue // ignore most common Tx
+	var err error
+	for _, txn := range block.Transactions {
+		err = p.RevertTransaction(txn, block, height, bucket)
+		if err != nil {
+			return err
 		}
+	}
+	return nil
+}
 
-		// check the version and handle the ones we care about
-		switch rtx.Version {
-		case p.minterDefinitionTransactionVersion:
-			err := mintingBucket.Delete(encodeBlockheight(height))
+// RevertTransaction reverts a minting transactions to the minting bucket.
+func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+	if bucket == nil {
+		return errors.New("minting bucket does not exist")
+	}
+	var (
+		err           error
+		mintingBucket *bolt.Bucket
+	)
+	// check the version and handle the ones we care about
+	switch txn.Version {
+	case p.minterDefinitionTransactionVersion:
+		if mintingBucket == nil {
+			mintingBucket, err = bucket.Bucket([]byte(bucketMintConditions))
 			if err != nil {
-				return fmt.Errorf(
-					"failed to delete mint condition for block height %d: %v",
-					height, err)
+				return errors.New("mintcondition bucket does not exist")
 			}
-			return nil
+		}
+		err := mintingBucket.Delete(encodeBlockheight(height))
+		if err != nil {
+			return fmt.Errorf(
+				"failed to delete mint condition for block height %d: %v",
+				height, err)
 		}
 	}
 	return nil

@@ -86,12 +86,19 @@ type (
 		// This method will be called while registering the plugin.
 		InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps PluginViewStorage, cb PluginUnregisterCallback) (persist.Metadata, error)
 
-		// Apply the transaction to the plugin.
+		// Apply the block to the plugin.
 		// An error should be returned in case something went wrong.
 		ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 		// Revert the block from the plugin.
 		// An error should be returned in case something went wrong.
 		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+
+		// Apply the transaction to the plugin.
+		// An error should be returned in case something went wrong.
+		ApplyTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		// Revert the transaction from the plugin.
+		// An error should be returned in case something went wrong.
+		RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 	}
 
 	// PluginUnregisterCallback allows plugins to unregister

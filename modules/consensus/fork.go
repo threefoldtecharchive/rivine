@@ -121,6 +121,7 @@ func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) e
 	// update plugins
 	pluginBuckets := map[string]*persist.LazyBoltBucket{}
 	for name := range cs.plugins {
+		name := name
 		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
 			rootbucket := tx.Bucket(BucketPlugins)
 			if rootbucket == nil {
@@ -155,6 +156,7 @@ func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) 
 	// update plugins
 	pluginBuckets := map[string]*persist.LazyBoltBucket{}
 	for name := range cs.plugins {
+		name := name
 		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
 			rootbucket := tx.Bucket(BucketPlugins)
 			if rootbucket == nil {

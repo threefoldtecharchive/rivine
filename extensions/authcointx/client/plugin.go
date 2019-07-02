@@ -74,7 +74,7 @@ func (cli *PluginClient) EnsureAddressesAreAuthNow(addresses ...types.UnlockHash
 		result api.GetAddressAuthState
 	)
 	for _, address := range addresses {
-		err = cli.client.GetAPI(fmt.Sprintf("%s/authcoin/authcoin/address/%s", cli.rootEndpoint, address.String()), &result)
+		err = cli.client.GetAPI(fmt.Sprintf("%s/authcoin/address/%s", cli.rootEndpoint, address.String()), &result)
 		if err != nil {
 			err = fmt.Errorf(
 				"failed to get address %s auth state from daemon: %v",
@@ -102,7 +102,7 @@ func (cli *PluginClient) EnsureAddressesAreAuthAt(height types.BlockHeight, addr
 		result api.GetAddressAuthState
 	)
 	for _, address := range addresses {
-		err = cli.client.GetAPI(fmt.Sprintf("%s/authcoin/authcoin/address/%s/%d", cli.rootEndpoint, address.String(), height), &result)
+		err = cli.client.GetAPI(fmt.Sprintf("%s/authcoin/address/%s/%d", cli.rootEndpoint, address.String(), height), &result)
 		if err != nil {
 			err = fmt.Errorf(
 				"failed to get address %s auth state at height %d from daemon: %v",

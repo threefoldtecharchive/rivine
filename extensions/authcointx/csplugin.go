@@ -102,61 +102,72 @@ func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket 
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
-	for i := range block.Transactions {
-		rtx := &block.Transactions[i]
+	var err error
+	for _, txn := range block.Transactions {
+		err = p.ApplyTransaction(txn, block, height, bucket)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-		// check the version and handle the ones we care about
-		switch rtx.Version {
-		case p.authConditionUpdateTransactionVersion:
-			acutx, err := AuthConditionUpdateTransactionFromTransaction(*rtx, p.authConditionUpdateTransactionVersion)
+// ApplyTransaction applies a minting transactions to the minting bucket.
+func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+	if bucket == nil {
+		return errors.New("plugin bucket does not exist")
+	}
+	// check the version and handle the ones we care about
+	switch txn.Version {
+	case p.authConditionUpdateTransactionVersion:
+		acutx, err := AuthConditionUpdateTransactionFromTransaction(txn, p.authConditionUpdateTransactionVersion)
+		if err != nil {
+			return fmt.Errorf("unexpected error while unpacking the auth condition update tx type: %v" + err.Error())
+		}
+		authBucket, err := bucket.Bucket([]byte(bucketAuthConditions))
+		if err != nil {
+			return errors.New("auth conditions bucket does not exist")
+		}
+		err = authBucket.Put(encodeBlockheight(height), rivbin.Marshal(acutx.AuthCondition))
+		if err != nil {
+			return fmt.Errorf(
+				"failed to put auth condition for block height %d: %v",
+				height, err)
+		}
+
+	case p.authAddressUpdateTransactionVersion:
+		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn, p.authAddressUpdateTransactionVersion)
+		if err != nil {
+			return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
+		}
+		authBucket, err := bucket.Bucket([]byte(bucketAuthAddresses))
+		if err != nil {
+			return errors.New("auth conditions bucket does not exist")
+		}
+		// store all new (de)auth address info
+		// an address can only appear once per tx, so no need to do intermediate bucket caching
+		for _, address := range aautx.AuthAddresses {
+			addressAuthBucket, err := authBucket.CreateBucketIfNotExists(rivbin.Marshal(address))
 			if err != nil {
-				return fmt.Errorf("unexpected error while unpacking the auth condition update tx type: %v" + err.Error())
+				return fmt.Errorf("auth address (%s) condition bucket does not exist and could not be created: %v", address.String(), err)
 			}
-			authBucket, err := bucket.Bucket([]byte(bucketAuthConditions))
-			if err != nil {
-				return errors.New("auth conditions bucket does not exist")
-			}
-			err = authBucket.Put(encodeBlockheight(height), rivbin.Marshal(acutx.AuthCondition))
+			err = addressAuthBucket.Put(encodeBlockheight(height), rivbin.Marshal(true))
 			if err != nil {
 				return fmt.Errorf(
-					"failed to put auth condition for block height %d: %v",
-					height, err)
+					"failed to put auth condition for address %s block height %d: %v",
+					address.String(), height, err)
 			}
-
-		case p.authAddressUpdateTransactionVersion:
-			aautx, err := AuthAddressUpdateTransactionFromTransaction(*rtx, p.authAddressUpdateTransactionVersion)
+		}
+		for _, address := range aautx.DeauthAddresses {
+			addressAuthBucket, err := authBucket.CreateBucketIfNotExists(rivbin.Marshal(address))
 			if err != nil {
-				return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
+				return fmt.Errorf("auth address (%s) condition bucket does not exist and could not be created: %v", address.String(), err)
 			}
-			authBucket, err := bucket.Bucket([]byte(bucketAuthAddresses))
+			err = addressAuthBucket.Put(encodeBlockheight(height), rivbin.Marshal(false))
 			if err != nil {
-				return errors.New("auth conditions bucket does not exist")
-			}
-			// store all new (de)auth address info
-			// an address can only appear once per tx, so no need to do intermediate bucket caching
-			for _, address := range aautx.AuthAddresses {
-				addressAuthBucket, err := authBucket.CreateBucketIfNotExists(rivbin.Marshal(address))
-				if err != nil {
-					return fmt.Errorf("auth address (%s) condition bucket does not exist and could not be created: %v", address.String(), err)
-				}
-				err = addressAuthBucket.Put(encodeBlockheight(height), rivbin.Marshal(true))
-				if err != nil {
-					return fmt.Errorf(
-						"failed to put auth condition for address %s block height %d: %v",
-						address.String(), height, err)
-				}
-			}
-			for _, address := range aautx.DeauthAddresses {
-				addressAuthBucket, err := authBucket.CreateBucketIfNotExists(rivbin.Marshal(address))
-				if err != nil {
-					return fmt.Errorf("auth address (%s) condition bucket does not exist and could not be created: %v", address.String(), err)
-				}
-				err = addressAuthBucket.Put(encodeBlockheight(height), rivbin.Marshal(false))
-				if err != nil {
-					return fmt.Errorf(
-						"failed to put deauth condition for address %s block height %d: %v",
-						address.String(), height, err)
-				}
+				return fmt.Errorf(
+					"failed to put deauth condition for address %s block height %d: %v",
+					address.String(), height, err)
 			}
 		}
 	}
@@ -168,57 +179,68 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
-	for i := range block.Transactions {
-		rtx := &block.Transactions[i]
+	var err error
+	for _, txn := range block.Transactions {
+		err = p.RevertTransaction(txn, block, height, bucket)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-		// check the version and handle the ones we care about
-		switch rtx.Version {
-		case p.authConditionUpdateTransactionVersion:
-			authBucket, err := bucket.Bucket([]byte(bucketAuthConditions))
-			if err != nil {
-				return errors.New("auth conditions bucket does not exist")
+// RevertTransaction reverts a  minting transaction from the minting bucket
+func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+	if bucket == nil {
+		return errors.New("plugin bucket does not exist")
+	}
+	// check the version and handle the ones we care about
+	switch txn.Version {
+	case p.authConditionUpdateTransactionVersion:
+		authBucket, err := bucket.Bucket([]byte(bucketAuthConditions))
+		if err != nil {
+			return errors.New("auth conditions bucket does not exist")
+		}
+		err = authBucket.Delete(encodeBlockheight(height))
+		if err != nil {
+			return fmt.Errorf(
+				"failed to delete auth condition for block height %d: %v",
+				height, err)
+		}
+
+	case p.authAddressUpdateTransactionVersion:
+		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn, p.authAddressUpdateTransactionVersion)
+		if err != nil {
+			return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
+		}
+		authBucket, err := bucket.Bucket([]byte(bucketAuthAddresses))
+		if err != nil {
+			return errors.New("auth conditions bucket does not exist")
+		}
+		// delete all reverted (de)auth address info
+		// an address can only appear once per tx, so no need to do intermediate bucket caching
+		for _, address := range aautx.AuthAddresses {
+			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
+			if addressAuthBucket == nil {
+				return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
 			}
-			err = authBucket.Delete(encodeBlockheight(height))
+			err = addressAuthBucket.Delete(encodeBlockheight(height))
 			if err != nil {
 				return fmt.Errorf(
-					"failed to delete auth condition for block height %d: %v",
-					height, err)
+					"failed to delete auth condition for address %s block height %d: %v",
+					address.String(), height, err)
 			}
-
-		case p.authAddressUpdateTransactionVersion:
-			aautx, err := AuthAddressUpdateTransactionFromTransaction(*rtx, p.authAddressUpdateTransactionVersion)
+		}
+		for _, address := range aautx.DeauthAddresses {
+			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
+			if addressAuthBucket == nil {
+				return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
+			}
+			err = addressAuthBucket.Delete(encodeBlockheight(height))
 			if err != nil {
-				return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
-			}
-			authBucket, err := bucket.Bucket([]byte(bucketAuthAddresses))
-			if err != nil {
-				return errors.New("auth conditions bucket does not exist")
-			}
-			// delete all reverted (de)auth address info
-			// an address can only appear once per tx, so no need to do intermediate bucket caching
-			for _, address := range aautx.AuthAddresses {
-				addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
-				if addressAuthBucket == nil {
-					return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
-				}
-				err = addressAuthBucket.Delete(encodeBlockheight(height))
-				if err != nil {
-					return fmt.Errorf(
-						"failed to delete auth condition for address %s block height %d: %v",
-						address.String(), height, err)
-				}
-			}
-			for _, address := range aautx.DeauthAddresses {
-				addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
-				if addressAuthBucket == nil {
-					return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
-				}
-				err = addressAuthBucket.Delete(encodeBlockheight(height))
-				if err != nil {
-					return fmt.Errorf(
-						"failed to delete deauth condition for address %s block height %d: %v",
-						address.String(), height, err)
-				}
+				return fmt.Errorf(
+					"failed to delete deauth condition for address %s block height %d: %v",
+					address.String(), height, err)
 			}
 		}
 	}
@@ -300,6 +322,18 @@ func (p *Plugin) EnsureAddressesAreAuthNow(addresses ...types.UnlockHash) error 
 				return fmt.Errorf("auth address (%s) condition bucket does not exist: address was never authorized", address.String())
 			}
 
+			err := addressAuthBucket.ForEach(func(k, v []byte) error {
+				var authState bool
+				err := rivbin.Unmarshal(v, &authState)
+				if err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				panic(err)
+			}
+
 			// return the last cursor
 			cursor := addressAuthBucket.Cursor()
 			var k []byte
@@ -309,7 +343,7 @@ func (p *Plugin) EnsureAddressesAreAuthNow(addresses ...types.UnlockHash) error 
 			}
 
 			var authState bool
-			err := rivbin.Unmarshal(b, &authState)
+			err = rivbin.Unmarshal(b, &authState)
 			if err != nil {
 				return fmt.Errorf("failed to decode found auth condition for address %s: %v", address.String(), err)
 			}
@@ -326,7 +360,6 @@ func (p *Plugin) EnsureAddressesAreAuthNow(addresses ...types.UnlockHash) error 
 func (p *Plugin) EnsureAddressesAreAuthAt(height types.BlockHeight, addresses ...types.UnlockHash) error {
 	return p.storage.View(func(bucket *bolt.Bucket) error {
 		authBucket := bucket.Bucket([]byte(bucketAuthAddresses))
-		var b []byte
 		for _, address := range addresses {
 			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
 			if addressAuthBucket == nil {
@@ -334,7 +367,7 @@ func (p *Plugin) EnsureAddressesAreAuthAt(height types.BlockHeight, addresses ..
 			}
 			cursor := addressAuthBucket.Cursor()
 
-			var k []byte
+			var k, b []byte
 			k, b = cursor.Seek(encodeBlockheight(height))
 			if len(k) == 0 {
 				// could be that we're past the last key, let's try the last key first
@@ -342,15 +375,13 @@ func (p *Plugin) EnsureAddressesAreAuthAt(height types.BlockHeight, addresses ..
 				if len(k) == 0 {
 					return fmt.Errorf("corrupt plugin DB: no matching address (%s) auth condition could be found", address.String())
 				}
-				return nil
 			}
 			foundHeight := decodeBlockheight(k)
-			if foundHeight <= height {
-				return nil
-			}
-			k, b = cursor.Prev()
-			if len(k) == 0 {
-				return fmt.Errorf("corrupt plugin DB: no matching address (%s) auth condition could be found", address.String())
+			if foundHeight > height {
+				k, b = cursor.Prev()
+				if len(k) == 0 {
+					return fmt.Errorf("corrupt plugin DB: no matching address (%s) auth condition could be found", address.String())
+				}
 			}
 			var authState bool
 			err := rivbin.Unmarshal(b, &authState)

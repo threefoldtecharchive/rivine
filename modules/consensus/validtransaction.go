@@ -120,6 +120,7 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 		}
 		pluginBuckets := map[string]*persist.LazyBoltBucket{}
 		for name := range cs.plugins {
+			name := name
 			pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
 				mdBucket := tx.Bucket(BucketPlugins)
 				if mdBucket == nil {
@@ -147,6 +148,14 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 				return err
 			}
 			applyTransaction(tx, diffHolder, txn)
+
+			// apply transaction for all plugins
+			for name, plugin := range cs.plugins {
+				err := plugin.ApplyTransaction(txn, diffHolder.Block, diffHolder.Height, pluginBuckets[name])
+				if err != nil {
+					return err
+				}
+			}
 		}
 		return errSuccess
 	})
