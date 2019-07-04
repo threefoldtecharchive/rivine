@@ -107,7 +107,9 @@ func (w *Wallet) initSettings() error {
 	// unlock by default if the file is unencrypted,
 	// load the primary and aux seeds already as well and subscribe the wallet
 	if w.persist.PrimarySeedFile.UID != (UniqueID{}) && len(w.persist.EncryptionVerification) == 0 {
+		w.mu.RLock()
 		w.unlocked = true
+		w.mu.RUnlock()
 		err = w.initPlainPrimarySeed()
 		if err != nil {
 			return err
@@ -120,7 +122,9 @@ func (w *Wallet) initSettings() error {
 		if err != nil {
 			return err
 		}
+		w.mu.Lock()
 		w.subscribed = true
+		w.mu.Unlock()
 	}
 	return nil
 }
