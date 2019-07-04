@@ -286,7 +286,7 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 		totalAmount = totalAmount.Add(bso.Value)
 	}
 	if !totalAmount.Equals64(0) {
-		err = txnBuilder.FundBlockStakes(totalAmount)
+		err = txnBuilder.FundBlockStakes(totalAmount, refundAddress, reuseRefundAddress)
 		if err != nil {
 			return types.Transaction{}, err
 		}

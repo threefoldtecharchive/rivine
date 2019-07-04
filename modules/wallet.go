@@ -156,7 +156,7 @@ type (
 		// will be completed and broadcast within a few hours. Longer risks
 		// double-spends, because the wallet will assume the transaction
 		// failed.
-		FundBlockStakes(amount types.Currency) error
+		FundBlockStakes(amount types.Currency, refundAddress *types.UnlockHash, reuseRefundAddress bool) error
 
 		// SpendBlockStake will link the unspent block stake to the transaction as an input.
 		// In contrast with FundBlockStakes, this function will not loop over all unspent

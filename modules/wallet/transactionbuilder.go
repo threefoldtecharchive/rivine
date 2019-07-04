@@ -189,7 +189,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency, refundAddress *ty
 // FundBlockStakes will add a blockstake input of exactly 'amount' to the
 // transaction. The blockstake input will not be signed until 'Sign' is called
 // on the transaction builder.
-func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
+func (tb *transactionBuilder) FundBlockStakes(amount types.Currency, refundAddress *types.UnlockHash, reuseRefundAddress bool) error {
 	tb.wallet.mu.Lock()
 	defer tb.wallet.mu.Unlock()
 
@@ -266,9 +266,27 @@ func (tb *transactionBuilder) FundBlockStakes(amount types.Currency) error {
 
 	// Create a refund output if needed.
 	if !amount.Equals(fund) {
-		refundUnlockHash, err := tb.wallet.nextPrimarySeedAddress()
-		if err != nil {
-			return err
+		var refundUnlockHash types.UnlockHash
+		if refundAddress != nil {
+			// use specified refund address
+			refundUnlockHash = *refundAddress
+		} else if reuseRefundAddress {
+			// use the fist coin input of this tx as refund address
+			var maxCoinAmount types.Currency
+			for _, bsi := range tb.transaction.BlockStakeInputs {
+				bso := tb.wallet.blockstakeOutputs[bsi.ParentID]
+				if maxCoinAmount.Cmp(bso.Value) < 0 {
+					maxCoinAmount = bso.Value
+					refundUnlockHash = bso.Condition.UnlockHash()
+				}
+			}
+		} else {
+			// generate a new address
+			var err error
+			refundUnlockHash, err = tb.wallet.nextPrimarySeedAddress()
+			if err != nil {
+				return err
+			}
 		}
 		refundOutput := types.BlockStakeOutput{
 			Value:     fund.Sub(amount),
