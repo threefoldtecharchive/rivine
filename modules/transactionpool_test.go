@@ -7,27 +7,6 @@ import (
 	"github.com/threefoldtech/rivine/types"
 )
 
-// TestConsensusConflict checks that the consensus conflict type is correctly
-// assembling consensus conflict errors.
-func TestConsensusConflict(t *testing.T) {
-	t.Parallel()
-
-	ncc := NewConsensusConflict("problem")
-	if ncc.Error() != "consensus conflict: problem" {
-		t.Error("wrong error message being reported in a consensus conflict")
-	}
-
-	err := func() error {
-		return ncc
-	}()
-	if err.Error() != "consensus conflict: problem" {
-		t.Error("wrong error message being reported in a consensus conflict")
-	}
-	if _, ok := err.(ConsensusConflict); !ok {
-		t.Error("error is not maintaining consensus conflict type")
-	}
-}
-
 // TestCalculateFee checks that the CalculateFee function is correctly tallying
 // the number of fees in a transaction set.
 func TestCalculateFee(t *testing.T) {
