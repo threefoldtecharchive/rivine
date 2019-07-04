@@ -91,7 +91,7 @@ func RequirePasswordHandler(h httprouter.Handle, password string) httprouter.Han
 		_, pass, ok := req.BasicAuth()
 		if !ok || pass != password {
 			w.Header().Set("WWW-Authenticate", "Basic realm=\"SiaAPI\"")
-			WriteError(w, Error{"API authentication failed."}, http.StatusUnauthorized)
+			WriteError(w, Error{"API Basic authentication failed."}, http.StatusUnauthorized)
 			return
 		}
 		h(w, req, ps)

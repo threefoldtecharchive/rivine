@@ -731,7 +731,7 @@ func (sttc AuthStandardTransferTransactionController) ValidateCoinOutputs(t type
 	// validate them all at once
 	err := sttc.AuthInfoGetter.EnsureAddressesAreAuthAt(ctx.BlockHeight, addresses...)
 	if err != nil {
-		return types.NewClientError(fmt.Errorf("unauthorized address(s) cannot participate in a coin transfer: %v", err), types.ClientErrorUnauthorized)
+		return types.NewClientError(fmt.Errorf("unauthorized address(s) cannot participate in a coin transfer: %v", err), types.ClientErrorForbidden)
 	}
 	return nil
 }

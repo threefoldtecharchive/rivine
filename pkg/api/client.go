@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/bgentry/speakeasy"
@@ -168,7 +169,15 @@ func (c *HTTPClient) apiPost(call, data string) (*http.Response, error) {
 	}
 	// check error code
 	if resp.StatusCode == http.StatusUnauthorized {
+		b, rErr := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
+		if rErr != nil || !c.responseIsAPIPasswordError(b) {
+			apiErr, ok := c.responseAsError(b)
+			if ok {
+				return nil, fmt.Errorf("Unauthorized (401): %s", apiErr.Message)
+			}
+			return nil, errors.New("API Call failed with the (401) unauthorized status")
+		}
 		// try again using an authenticated HTTP Post call
 		password, err := c.apiPassword()
 		if err != nil {
@@ -195,6 +204,17 @@ func (c *HTTPClient) apiPost(call, data string) (*http.Response, error) {
 		}
 	}
 	return resp, nil
+}
+
+func (c *HTTPClient) responseIsAPIPasswordError(resp []byte) bool {
+	err, ok := c.responseAsError(resp)
+	return ok && err.Message == "API Basic authentication failed."
+}
+
+func (c *HTTPClient) responseAsError(resp []byte) (Error, bool) {
+	var apiError Error
+	err := json.Unmarshal(resp, &apiError)
+	return apiError, err == nil
 }
 
 func (c *HTTPClient) apiPassword() (string, error) {

@@ -12,7 +12,7 @@ import (
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 )
 
 // TODO: Add a priority structure that will allow the transaction pool to
@@ -154,7 +154,7 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 	// Check that the transaction set is valid.
 	cc, err := tp.consensusSet.TryTransactionSet(superset)
 	if err != nil {
-		return modules.NewConsensusConflict(err.Error())
+		return err
 	}
 
 	// Remove the conflicts from the transaction pool. The diffs do not need to
@@ -238,7 +238,7 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	cc, err := tp.consensusSet.TryTransactionSet(ts)
 	if err != nil {
 		tp.log.Debug(fmt.Sprintf("Transaction set %v has conflict with current consensus", crypto.Hash(setID).String()))
-		return modules.NewConsensusConflict(err.Error())
+		return err
 	}
 
 	// Add the transaction set to the pool.
