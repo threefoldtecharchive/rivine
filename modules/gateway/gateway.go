@@ -268,14 +268,13 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 		}
 	})
 
-	// Spawn the boostrap peer manager and provide tools for ensuring clean shudown.
-	boostrapPeersClosedChan := make(chan struct{})
-	g.threads.OnStop(func() {
-		<-boostrapPeersClosedChan
-	})
-
 	// if no-bootstrap flag is not provided.
 	if bootstrap {
+		// Spawn the boostrap peer manager and provide tools for ensuring clean shudown.
+		boostrapPeersClosedChan := make(chan struct{})
+		g.threads.OnStop(func() {
+			<-boostrapPeersClosedChan
+		})
 		// Initially try connecting to bootstrap peers without timeout (when daemon has internet access)
 		g.startConnectingToBootstrapPeers(bootstrapPeers)
 		go func() {
