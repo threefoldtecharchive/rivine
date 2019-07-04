@@ -803,5 +803,8 @@ func walletErrorToHTTPStatus(err error) int {
 	if err == modules.ErrLockedWallet {
 		return http.StatusForbidden
 	}
+	if cErr, ok := err.(types.ClientError); ok {
+		return cErr.Kind.AsHTTPStatusCode()
+	}
 	return http.StatusInternalServerError
 }

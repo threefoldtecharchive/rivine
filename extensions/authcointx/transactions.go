@@ -267,7 +267,7 @@ func (autc AuthAddressUpdateTransactionController) ValidateTransaction(t types.T
 		Transaction: t,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to fulfill mint condition: %v", err)
+		return types.NewClientError(fmt.Errorf("failed to fulfill mint condition: %v", err), types.ClientErrorUnauthorized)
 	}
 	// ensure the Nonce is not Nil
 	if autx.Nonce == (types.TransactionNonce{}) {
@@ -599,7 +599,7 @@ func (cutc AuthConditionUpdateTransactionController) ValidateTransaction(t types
 		Transaction: t,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to fulfill mint condition: %v", err)
+		return types.NewClientError(fmt.Errorf("failed to fulfill mint condition: %v", err), types.ClientErrorUnauthorized)
 	}
 	// ensure the Nonce is not Nil
 	if cutx.Nonce == (types.TransactionNonce{}) {
@@ -731,7 +731,7 @@ func (sttc AuthStandardTransferTransactionController) ValidateCoinOutputs(t type
 	// validate them all at once
 	err := sttc.AuthInfoGetter.EnsureAddressesAreAuthAt(ctx.BlockHeight, addresses...)
 	if err != nil {
-		return fmt.Errorf("unauthorized address(s) cannot participate in a coin transfer: %v", err)
+		return types.NewClientError(fmt.Errorf("unauthorized address(s) cannot participate in a coin transfer: %v", err), types.ClientErrorUnauthorized)
 	}
 	return nil
 }

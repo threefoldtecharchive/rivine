@@ -144,7 +144,7 @@ func NewTransactionPoolPostTransactionHandler(tpool modules.TransactionPool) htt
 			return
 		}
 		if err := tpool.AcceptTransactionSet([]types.Transaction{tx}); err != nil {
-			WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, http.StatusBadRequest)
+			WriteError(w, Error{"error after call to /wallet/transactions: " + err.Error()}, transactionPoolErrorToHTTPStatus(err))
 			return
 		}
 		WriteJSON(w, TransactionPoolPOST{TransactionID: tx.ID()})
@@ -156,4 +156,11 @@ func NewTransactionPoolOptionsTransactionHandler() httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		w.Header().Set("Access-Control-Allow-Methods", "*")
 	}
+}
+
+func transactionPoolErrorToHTTPStatus(err error) int {
+	if cErr, ok := err.(types.ClientError); ok {
+		return cErr.Kind.AsHTTPStatusCode()
+	}
+	return http.StatusBadRequest
 }
