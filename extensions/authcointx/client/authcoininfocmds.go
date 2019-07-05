@@ -142,8 +142,10 @@ func (ac *authCoinCmd) getAddressAuthState(cmd *cobra.Command, address types.Unl
 	switch len(args) {
 	case 0:
 		// get address auth state for the given address at the latest block height
-		err = ac.pluginClient.EnsureAddressesAreAuthNow(address)
-		authState = err == nil
+		authState, err = ac.pluginClient.GetAddresAuthStateNow(address)
+		if err != nil {
+			cli.DieWithError("failed to fetch auth state for given address", err)
+		}
 
 	case 1:
 		// get address auth state for the given address at the given block height
@@ -152,8 +154,10 @@ func (ac *authCoinCmd) getAddressAuthState(cmd *cobra.Command, address types.Unl
 			cmd.UsageFunc()(cmd)
 			cli.DieWithError("invalid block height given", err)
 		}
-		err = ac.pluginClient.EnsureAddressesAreAuthAt(types.BlockHeight(height), address)
-		authState = err == nil
+		authState, err = ac.pluginClient.GetAddressAuthStateAt(types.BlockHeight(height), address)
+		if err != nil {
+			cli.DieWithError("failed to fetch auth state for given address", err)
+		}
 
 	default:
 		panic(fmt.Sprint("BUG: unexpected amount of args at this point", args))

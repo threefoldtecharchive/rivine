@@ -28,12 +28,15 @@ type (
 		// GetAuthConditionAt returns the auth condition at a given block height.
 		GetAuthConditionAt(height types.BlockHeight) (types.UnlockConditionProxy, error)
 
-		// Ensure that the given addresses are authorized at the current block height,
-		// returning an address if an address is not authorized at the current block height.
-		EnsureAddressesAreAuthNow(addresses ...types.UnlockHash) error
-		// Ensure that the given addresses are authorized at the given block height,
-		// returning an address if an address is not authorized at the given block height.
-		EnsureAddressesAreAuthAt(height types.BlockHeight, addresses ...types.UnlockHash) error
+		// GetAddressesAuthStateNow rerturns for each requested address, in order as given,
+		// the current auth state for that address as a boolean: true if authed, false otherwise.
+		// If exitEarlyFn is given GetAddressesAuthStateNow can stop earlier in case exitEarlyFn returns true for an iteration.
+		GetAddressesAuthStateNow(addresses []types.UnlockHash, exitEarlyFn func(index int, state bool) bool) ([]bool, error)
+
+		// GetAddressesAuthStateAt rerturns for each requested address, in order as given,
+		// the auth state at the given height for that address as a boolean: true if authed, false otherwise.
+		// If exitEarlyFn is given GetAddressesAuthStateNow can stop earlier in case exitEarlyFn returns true for an iteration.
+		GetAddressesAuthStateAt(height types.BlockHeight, addresses []types.UnlockHash, exitEarlyFn func(index int, state bool) bool) ([]bool, error)
 	}
 )
 
@@ -300,6 +303,32 @@ func (autc AuthAddressUpdateTransactionController) ValidateTransaction(t types.T
 			return
 		}
 		addressesSeen[address] = struct{}{}
+	}
+
+	// ensure all addresses to authorize are for now deauthorized
+	stateSlice, err := autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.AuthAddresses, func(_ int, state bool) bool { return state })
+	if err != nil {
+		err = fmt.Errorf("failed to check if any address to auth are at block height %d not authed already: %v", ctx.BlockHeight, err)
+		return
+	}
+	for index, state := range stateSlice {
+		if state {
+			err = types.NewClientError(fmt.Errorf("address %s (to auth) is already authorized", autx.AuthAddresses[index]), types.ClientErrorForbidden)
+			return
+		}
+	}
+
+	// ensure all addresses to deauthorize are for now authorized
+	stateSlice, err = autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.DeauthAddresses, func(_ int, state bool) bool { return !state })
+	if err != nil {
+		err = fmt.Errorf("failed to check if any address to deauth are at block height %d still authed: %v", ctx.BlockHeight, err)
+		return
+	}
+	for index, state := range stateSlice {
+		if !state {
+			err = types.NewClientError(fmt.Errorf("address %s (to auth) is already deauthorized", autx.DeauthAddresses[index]), types.ClientErrorForbidden)
+			return
+		}
 	}
 
 	// no error to return
@@ -729,9 +758,14 @@ func (sttc AuthStandardTransferTransactionController) ValidateCoinOutputs(t type
 	}
 
 	// validate them all at once
-	err := sttc.AuthInfoGetter.EnsureAddressesAreAuthAt(ctx.BlockHeight, addresses...)
+	stateSlice, err := sttc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, addresses, func(_ int, state bool) bool { return !state })
 	if err != nil {
-		return types.NewClientError(fmt.Errorf("unauthorized address(s) cannot participate in a coin transfer: %v", err), types.ClientErrorForbidden)
+		return fmt.Errorf("address(s) cannot participate in a coin transfer as state is unclear due to error: %v", err)
+	}
+	for index, state := range stateSlice {
+		if !state {
+			return types.NewClientError(fmt.Errorf("unauthorized address %s cannot participate in a coin transfer", addresses[index]), types.ClientErrorForbidden)
+		}
 	}
 	return nil
 }

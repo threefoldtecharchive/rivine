@@ -311,90 +311,91 @@ func (p *Plugin) GetAuthConditionAt(height types.BlockHeight) (types.UnlockCondi
 	return authCondition, nil
 }
 
-// EnsureAddressesAreAuthNow implements types.AuthInfoGetter.EnsureAddressesAreAuthNow
-func (p *Plugin) EnsureAddressesAreAuthNow(addresses ...types.UnlockHash) error {
-	return p.storage.View(func(bucket *bolt.Bucket) error {
+// GetAddressesAuthStateNow rerturns for each requested address, in order as given,
+// the current auth state for that address as a boolean: true if authed, false otherwise.
+// If exitEarlyFn is given GetAddressesAuthStateNow can stop earlier in case exitEarlyFn returns true for an iteration.
+func (p *Plugin) GetAddressesAuthStateNow(addresses []types.UnlockHash, exitEarlyFn func(index int, state bool) bool) ([]bool, error) {
+	l := len(addresses)
+	if l == 0 {
+		return nil, errors.New("no addresses given to check the current auth state for")
+	}
+	stateSlice := make([]bool, l)
+	err := p.storage.View(func(bucket *bolt.Bucket) error {
 		authBucket := bucket.Bucket([]byte(bucketAuthAddresses))
 		var b []byte
-		for _, address := range addresses {
+		for index, address := range addresses {
 			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
-			if addressAuthBucket == nil {
-				return fmt.Errorf("auth address (%s) condition bucket does not exist: address was never authorized", address.String())
-			}
-
-			err := addressAuthBucket.ForEach(func(k, v []byte) error {
-				var authState bool
-				err := rivbin.Unmarshal(v, &authState)
-				if err != nil {
-					return err
+			if addressAuthBucket != nil {
+				// return the last cursor
+				cursor := addressAuthBucket.Cursor()
+				var k []byte
+				k, b = cursor.Last()
+				if len(k) != 0 {
+					var authState bool
+					err := rivbin.Unmarshal(b, &authState)
+					if err != nil {
+						return fmt.Errorf("failed to decode found auth condition for address %s: %v", address.String(), err)
+					}
+					stateSlice[index] = authState
 				}
+			}
+			if exitEarlyFn != nil && exitEarlyFn(index, stateSlice[index]) {
 				return nil
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			// return the last cursor
-			cursor := addressAuthBucket.Cursor()
-			var k []byte
-			k, b = cursor.Last()
-			if len(k) == 0 {
-				return fmt.Errorf("no matching auth condition for address could be found: address %s was never authorized", address.String())
-			}
-
-			var authState bool
-			err = rivbin.Unmarshal(b, &authState)
-			if err != nil {
-				return fmt.Errorf("failed to decode found auth condition for address %s: %v", address.String(), err)
-			}
-
-			if !authState {
-				return fmt.Errorf("address %s is not authorized", address.String())
 			}
 		}
 		return nil
 	})
+	return stateSlice, err
 }
 
-// EnsureAddressesAreAuthAt implements types.AuthInfoGetter.EnsureAddressesAreAuthAt
-func (p *Plugin) EnsureAddressesAreAuthAt(height types.BlockHeight, addresses ...types.UnlockHash) error {
-	return p.storage.View(func(bucket *bolt.Bucket) error {
+// GetAddressesAuthStateAt rerturns for each requested address, in order as given,
+// the auth state at the given height for that address as a boolean: true if authed, false otherwise.
+// If exitEarlyFn is given GetAddressesAuthStateNow can stop earlier in case exitEarlyFn returns true for an iteration.
+func (p *Plugin) GetAddressesAuthStateAt(height types.BlockHeight, addresses []types.UnlockHash, exitEarlyFn func(index int, state bool) bool) ([]bool, error) {
+	l := len(addresses)
+	if l == 0 {
+		return nil, errors.New("no addresses given to check the current auth state for")
+	}
+	stateSlice := make([]bool, l)
+	err := p.storage.View(func(bucket *bolt.Bucket) error {
 		authBucket := bucket.Bucket([]byte(bucketAuthAddresses))
-		for _, address := range addresses {
+		var err error
+		for index, address := range addresses {
 			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
-			if addressAuthBucket == nil {
-				return fmt.Errorf("auth address (%s) condition bucket does not exist: address was never authorized", address.String())
+			if addressAuthBucket != nil {
+				stateSlice[index], err = func() (bool, error) {
+					cursor := addressAuthBucket.Cursor()
+					var k, b []byte
+					k, b = cursor.Seek(encodeBlockheight(height))
+					if len(k) == 0 {
+						// could be that we're past the last key, let's try the last key first
+						k, b = cursor.Last()
+						if len(k) == 0 {
+							return false, nil
+						}
+					}
+					foundHeight := decodeBlockheight(k)
+					if foundHeight > height {
+						k, b = cursor.Prev()
+						if len(k) == 0 {
+							return false, nil
+						}
+					}
+					var authState bool
+					err = rivbin.Unmarshal(b, &authState)
+					if err != nil {
+						return false, fmt.Errorf("failed to decode found address (%s) auth condition for address: %v", address.String(), err)
+					}
+					return authState, nil
+				}()
 			}
-			cursor := addressAuthBucket.Cursor()
-
-			var k, b []byte
-			k, b = cursor.Seek(encodeBlockheight(height))
-			if len(k) == 0 {
-				// could be that we're past the last key, let's try the last key first
-				k, b = cursor.Last()
-				if len(k) == 0 {
-					return fmt.Errorf("corrupt plugin DB: no matching address (%s) auth condition could be found", address.String())
-				}
-			}
-			foundHeight := decodeBlockheight(k)
-			if foundHeight > height {
-				k, b = cursor.Prev()
-				if len(k) == 0 {
-					return fmt.Errorf("corrupt plugin DB: no matching address (%s) auth condition could be found", address.String())
-				}
-			}
-			var authState bool
-			err := rivbin.Unmarshal(b, &authState)
-			if err != nil {
-				return fmt.Errorf("failed to decode found address (%s) auth condition for address: %v", address.String(), err)
-			}
-
-			if !authState {
-				return fmt.Errorf("address %s is not authorized at heigh %d", address.String(), height)
+			if exitEarlyFn != nil && exitEarlyFn(index, stateSlice[index]) {
+				return nil
 			}
 		}
 		return nil
 	})
+	return stateSlice, err
 }
 
 // Close unregisters the plugin from the consensus
