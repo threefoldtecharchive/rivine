@@ -758,7 +758,15 @@ func (sttc AuthStandardTransferTransactionController) ValidateCoinOutputs(t type
 	if addressLength == 0 {
 		return nil // early return if nothing to do
 	}
-	addresses := make([]types.UnlockHash, 0, len(dedupAddresses))
+
+	if addressLength == 1 && len(t.CoinOutputs) <= 1 {
+		// considered value as this indicates ether no coin outputs, or a single refund coin output
+		// (both of which require no coin auth).
+		// Transferring block stakes for example requires no auth state if that is the only thing done
+		return nil
+	}
+
+	addresses := make([]types.UnlockHash, 0, addressLength)
 	for uh := range dedupAddresses {
 		addresses = append(addresses, uh)
 	}
