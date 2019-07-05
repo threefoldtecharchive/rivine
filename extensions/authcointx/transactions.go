@@ -284,7 +284,9 @@ func (autc AuthAddressUpdateTransactionController) ValidateTransaction(t types.T
 	}
 
 	// ensure we have at least one address to (de)authorize
-	if len(autx.AuthAddresses) == 0 && len(autx.DeauthAddresses) == 0 {
+	lAuthAddresses := len(autx.AuthAddresses)
+	lDeauthAddresses := len(autx.DeauthAddresses)
+	if lAuthAddresses == 0 && lDeauthAddresses == 0 {
 		err = errors.New("at least one address is required to be authorized or deauthorized")
 	}
 	// ensure all addresses are unique and no address is both authorized and deauthorized
@@ -305,29 +307,33 @@ func (autc AuthAddressUpdateTransactionController) ValidateTransaction(t types.T
 		addressesSeen[address] = struct{}{}
 	}
 
-	// ensure all addresses to authorize are for now deauthorized
-	stateSlice, err := autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.AuthAddresses, func(_ int, state bool) bool { return state })
-	if err != nil {
-		err = fmt.Errorf("failed to check if any address to auth are at block height %d not authed already: %v", ctx.BlockHeight, err)
-		return
-	}
-	for index, state := range stateSlice {
-		if state {
-			err = types.NewClientError(fmt.Errorf("address %s (to auth) is already authorized", autx.AuthAddresses[index]), types.ClientErrorForbidden)
+	var stateSlice []bool
+	if lAuthAddresses > 0 {
+		// ensure all addresses to authorize are for now deauthorized
+		stateSlice, err = autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.AuthAddresses, func(_ int, state bool) bool { return state })
+		if err != nil {
+			err = fmt.Errorf("failed to check if any address to auth are at block height %d not authed already: %v", ctx.BlockHeight, err)
 			return
 		}
+		for index, state := range stateSlice {
+			if state {
+				err = types.NewClientError(fmt.Errorf("address %s (to auth) is already authorized", autx.AuthAddresses[index]), types.ClientErrorForbidden)
+				return
+			}
+		}
 	}
-
-	// ensure all addresses to deauthorize are for now authorized
-	stateSlice, err = autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.DeauthAddresses, func(_ int, state bool) bool { return !state })
-	if err != nil {
-		err = fmt.Errorf("failed to check if any address to deauth are at block height %d still authed: %v", ctx.BlockHeight, err)
-		return
-	}
-	for index, state := range stateSlice {
-		if !state {
-			err = types.NewClientError(fmt.Errorf("address %s (to auth) is already deauthorized", autx.DeauthAddresses[index]), types.ClientErrorForbidden)
+	if lDeauthAddresses > 0 {
+		// ensure all addresses to deauthorize are for now authorized
+		stateSlice, err = autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.DeauthAddresses, func(_ int, state bool) bool { return !state })
+		if err != nil {
+			err = fmt.Errorf("failed to check if any address to deauth are at block height %d still authed: %v", ctx.BlockHeight, err)
 			return
+		}
+		for index, state := range stateSlice {
+			if !state {
+				err = types.NewClientError(fmt.Errorf("address %s (to auth) is already deauthorized", autx.DeauthAddresses[index]), types.ClientErrorForbidden)
+				return
+			}
 		}
 	}
 
