@@ -1,6 +1,15 @@
 package consensus
 
-/*TODO: enable and fix?
+import (
+	"path/filepath"
+
+	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/modules/gateway"
+	"github.com/threefoldtech/rivine/types"
+)
+
 // A consensusSetTester is the helper object for consensus set testing,
 // including helper modules and methods for controlling synchronization between
 // the tester and the modules.
@@ -15,6 +24,7 @@ type consensusSetTester struct {
 	persistDir string
 }
 
+/*TODO: enable and fix?
 // randAddress returns a random address that is not spendable.
 func randAddress() types.UnlockHash {
 	var uh types.UnlockHash
@@ -66,45 +76,25 @@ func (cst *consensusSetTester) addSiafunds() {
 		panic("wallet does not have the blockstakes")
 	}
 }
-
+*/
 // blankConsensusSetTester creates a consensusSetTester that has only the
 // genesis block.
 func blankConsensusSetTester(name string) (*consensusSetTester, error) {
 	testdir := build.TempDir(modules.ConsensusDir, name)
 
 	// Create modules.
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir))
+	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
 	if err != nil {
 		return nil, err
 	}
-	cs, err := New(g, false, filepath.Join(testdir, modules.ConsensusDir))
-	if err != nil {
-		return nil, err
-	}
-	tp, err := transactionpool.New(cs, g, filepath.Join(testdir, modules.ConsensusDir))
-	if err != nil {
-		return nil, err
-	}
-	w, err := wallet.New(cs, tp, filepath.Join(testdir, modules.WalletDir))
-	if err != nil {
-		return nil, err
-	}
-	key := crypto.GenerateTwofishKey()
-	_, err = w.Encrypt(key)
-	if err != nil {
-		return nil, err
-	}
-	err = w.Unlock(key)
+	cs, err := New(g, false, filepath.Join(testdir, modules.ConsensusDir), types.DefaultBlockchainInfo(), types.TestnetChainConstants(), false)
 	if err != nil {
 		return nil, err
 	}
 
 	// Assemble all objects into a consensusSetTester.
 	cst := &consensusSetTester{
-		gateway:   g,
-		tpool:     tp,
-		wallet:    w,
-		walletKey: key,
+		gateway: g,
 
 		cs: cs,
 
@@ -113,6 +103,7 @@ func blankConsensusSetTester(name string) (*consensusSetTester, error) {
 	return cst, nil
 }
 
+/*
 // createConsensusSetTester creates a consensusSetTester that's ready for use,
 // including siacoins and siafunds available in the wallet.
 func createConsensusSetTester(name string) (*consensusSetTester, error) {

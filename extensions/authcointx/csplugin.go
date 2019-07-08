@@ -400,7 +400,6 @@ func (p *Plugin) GetAddressesAuthStateAt(height types.BlockHeight, addresses []t
 
 // Close unregisters the plugin from the consensus
 func (p *Plugin) Close() error {
-	p.unregisterCallback(p)
 	return p.storage.Close()
 }
 

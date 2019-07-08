@@ -49,6 +49,9 @@ A plugin **has to** implement following interface:
 		// Revert the block from the plugin.
 		// An error should be returned in case something went wrong.
 		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+
+		// Close releases any resources helt by the plugin like the PluginViewStorage
+		Close() error
 	}
 ```
 
@@ -74,4 +77,4 @@ RevertBlock reverts blocks processed by the consensus. In this method the extens
 ### Other methods that are useful
 
 * `NewPlugin()` creates a new plugin and registers the transaction types.
-* `Close()` closes the plugin when the consensus is closed. This should the `unregisterCallback` and `p.storage.close()`.
+* `Close()` closes the plugin when the consensus is closed. This should release any rsources and call  `p.storage.close()`.

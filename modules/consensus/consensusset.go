@@ -8,6 +8,7 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 	gosync "sync"
 
 	bolt "github.com/rivine/bbolt"
@@ -337,8 +338,12 @@ func (cs *ConsensusSet) ChildTarget(id types.BlockID) (target types.Target, exis
 	return target, exists
 }
 
-// Close safely closes the block database.
+// Close closes the registered plugins and safely closes the database.
 func (cs *ConsensusSet) Close() error {
+	if err := cs.closePlugins(); err != nil {
+		fmt.Println(err)
+		return err
+	}
 	return cs.tg.Stop()
 }
 

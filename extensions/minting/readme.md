@@ -41,6 +41,7 @@ plugin := minting.NewMintingPlugin(types.NewCondition(condition), minterDefiniti
 
 err = cs.RegisterPlugin(context.BackGround(),"minting", plugin)
 if err != nil {
+	plugin.Close() // Close it since it can still hold resources
     return err
 }
 ```

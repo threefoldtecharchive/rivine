@@ -99,6 +99,9 @@ type (
 		// Revert the transaction from the plugin.
 		// An error should be returned in case something went wrong.
 		RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+
+		// Close releases any resources helt by the plugin like the PluginViewStorage
+		Close() error
 	}
 
 	// PluginUnregisterCallback allows plugins to unregister

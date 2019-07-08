@@ -234,7 +234,6 @@ func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockCondi
 
 // Close unregisters the plugin from the consensus
 func (p *Plugin) Close() error {
-	p.unregisterCallback(p)
 	return p.storage.Close()
 }
 

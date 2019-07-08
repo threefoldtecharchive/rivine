@@ -290,6 +290,20 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	return pluginMetadata.ConsensusChangeID, nil
 }
 
+//closePlugins calls Close on all registered plugins
+func (cs *ConsensusSet) closePlugins() error {
+	if err := cs.tg.Add(); err != nil {
+		return err
+	}
+	defer cs.tg.Done()
+	for _, plugin := range cs.plugins {
+		if err := plugin.Close(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // UnregisterPlugin removes a plugin from the map of plugins
 func (cs *ConsensusSet) UnregisterPlugin(name string, plugin modules.ConsensusSetPlugin) {
 	if cs.tg.Add() != nil {
@@ -300,6 +314,7 @@ func (cs *ConsensusSet) UnregisterPlugin(name string, plugin modules.ConsensusSe
 	defer cs.mu.Unlock()
 
 	if existingPlugin, ok := cs.plugins[name]; ok && existingPlugin == plugin {
+		plugin.Close()
 		delete(cs.plugins, name)
 	} else {
 		fmt.Printf("try to delete plugin %s, plugin does not exist", name)
