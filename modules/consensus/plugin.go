@@ -52,6 +52,7 @@ type pluginMetadata struct {
 // consensus updates it is missing (as a special case this means anything).
 // This initial sync is cancelled if tyhe passed context is cancelled.
 func (cs *ConsensusSet) RegisterPlugin(ctx context.Context, name string, plugin modules.ConsensusSetPlugin) error {
+	cs.log.Debugln("Registering plugin ", name)
 	if name == "" {
 		return ErrPluginNameEmpty
 	}
@@ -271,6 +272,7 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	}
 
 	var pluginStorage modules.PluginViewStorage
+	cs.log.Debugln("Creating new pluginstorage for ", name)
 	pluginStorage = NewPluginStorage(cs.db, name, &cs.pluginsWaitGroup)
 	// init plugin
 	pluginVersion, err := plugin.InitPlugin(pluginMetadata.Version, bucket, pluginStorage, func(plugin modules.ConsensusSetPlugin) {
