@@ -92,40 +92,43 @@ func (cs *ConsensusSet) RegisterPlugin(ctx context.Context, name string, plugin 
 		return err
 	}
 
-	if newConsensusChangeID == consensusChangeID {
-		return nil // return early
-	}
-	// update the plugin metadata and call it done
-	return cs.db.Update(func(tx *bolt.Tx) error {
-		rootbucket := tx.Bucket(BucketPlugins)
-		// get the metadata bucket from the rootbucket
-		metadataBucket := rootbucket.Bucket(bucketPluginsMetadata)
-		if metadataBucket == nil {
-			return ErrPluginGhostMetadata
-		}
-		// get the plugin metadata as-is
-		pluginMetadataBytes := metadataBucket.Get([]byte(name))
-		if len(pluginMetadataBytes) == 0 {
-			return ErrMissingPluginMetadata
-		}
-		var pluginMetadata pluginMetadata
-		err := rivbin.Unmarshal(pluginMetadataBytes, &pluginMetadata)
+	if newConsensusChangeID != consensusChangeID {
+		err = cs.db.Update(func(tx *bolt.Tx) error {
+			rootbucket := tx.Bucket(BucketPlugins)
+			// get the metadata bucket from the rootbucket
+			metadataBucket := rootbucket.Bucket(bucketPluginsMetadata)
+			if metadataBucket == nil {
+				return ErrPluginGhostMetadata
+			}
+			// get the plugin metadata as-is
+			pluginMetadataBytes := metadataBucket.Get([]byte(name))
+			if len(pluginMetadataBytes) == 0 {
+				return ErrMissingPluginMetadata
+			}
+			var pluginMetadata pluginMetadata
+			err := rivbin.Unmarshal(pluginMetadataBytes, &pluginMetadata)
+			if err != nil {
+				return err
+			}
+
+			// save the new metadata
+			pluginMetadata.ConsensusChangeID = newConsensusChangeID
+
+			return metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
+		})
 		if err != nil {
 			return err
 		}
+	}
 
-		// save the new metadata
-		pluginMetadata.ConsensusChangeID = newConsensusChangeID
-
-		// Check if map is nil, if nil make one
-		if cs.plugins == nil {
-			cs.plugins = make(map[string]modules.ConsensusSetPlugin)
-		}
-		// Add plugin to cs plugins map
-		cs.plugins[name] = plugin
-
-		return metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
-	})
+	// Check if map is nil, if nil make one
+	if cs.plugins == nil {
+		cs.plugins = make(map[string]modules.ConsensusSetPlugin)
+	}
+	// Add plugin to cs plugins map
+	cs.plugins[name] = plugin
+	// return without errors
+	return nil
 }
 
 // initPluginSync ensures the plugin receives all
