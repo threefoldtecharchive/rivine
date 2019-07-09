@@ -296,7 +296,10 @@ func (cs *ConsensusSet) closePlugins() error {
 		return err
 	}
 	defer cs.tg.Done()
-	for _, plugin := range cs.plugins {
+	cs.log.Debugln("Number of plugins to close:", len(cs.plugins))
+
+	for name, plugin := range cs.plugins {
+		cs.log.Debugln("Closing plugin ", name)
 		if err := plugin.Close(); err != nil {
 			return err
 		}
