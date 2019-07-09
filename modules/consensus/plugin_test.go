@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	bolt "github.com/rivine/bbolt"
-	"github.com/stretchr/testify/assert"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
@@ -58,5 +57,8 @@ func TestPluginCloseCalled(t *testing.T) {
 
 	cst.cs.RegisterPlugin(context.Background(), "testplugin", &plugin)
 	cst.cs.Close()
-	assert.True(t, plugin.closeCalled, "Closing the consensus should call close on the registered plugins")
+
+	if !plugin.closeCalled {
+		t.Fatal("Closing the consensus should call close on the registered plugins")
+	}
 }
