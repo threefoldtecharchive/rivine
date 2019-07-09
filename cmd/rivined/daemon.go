@@ -195,6 +195,8 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 		if err := srv.Close(); err != nil {
 			servErrs <- err
 		}
+
+		cancel()
 	})
 
 	// handle all our endpoints over a router,
