@@ -58,8 +58,8 @@ func (cs *ConsensusSet) revertToBlock(tx *bolt.Tx, pb *processedBlock) (reverted
 	for currentBlockID(tx) != pb.Block.ID() {
 		block := currentProcessedBlock(tx)
 		err = cs.rewindBlock(tx, block)
-		if build.DEBUG && err != nil {
-			panic(err)
+		if err != nil {
+			build.Severe(err)
 		}
 		revertedBlocks = append(revertedBlocks, block)
 
