@@ -158,7 +158,10 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency, refundAddress *ty
 			// use the fist coin input of this tx as refund address
 			var maxCoinAmount types.Currency
 			for _, ci := range tb.transaction.CoinInputs {
-				co := tb.wallet.coinOutputs[ci.ParentID]
+				co, exists := tb.wallet.coinOutputs[ci.ParentID]
+				if !exists {
+					co = tb.getCoFromUnconfirmedProcessedTransactions(ci.ParentID)
+				}
 				if maxCoinAmount.Cmp(co.Value) < 0 {
 					maxCoinAmount = co.Value
 					refundUnlockHash = co.Condition.UnlockHash()
@@ -184,6 +187,20 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency, refundAddress *ty
 		tb.wallet.spentOutputs[types.OutputID(scoid)] = tb.wallet.consensusSetHeight
 	}
 	return nil
+}
+
+// GetCoFromUnconfirmedProcessedTransaction tries to find a coin output in the unconfirmed
+// transaction list
+func (tb *transactionBuilder) getCoFromUnconfirmedProcessedTransactions(id types.CoinOutputID) types.CoinOutput {
+	for _, upt := range tb.wallet.unconfirmedProcessedTransactions {
+		for i, sco := range upt.Transaction.CoinOutputs {
+			if upt.Transaction.CoinOutputID(uint64(i)) != id {
+				continue
+			}
+			return sco
+		}
+	}
+	return types.CoinOutput{}
 }
 
 // FundBlockStakes will add a blockstake input of exactly 'amount' to the
