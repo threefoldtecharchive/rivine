@@ -4,6 +4,8 @@ package consensus
 // There is an assumption that the transaction has already been verified.
 
 import (
+	"fmt"
+
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
@@ -17,7 +19,7 @@ func applyCoinInputs(tx *bolt.Tx, pb *processedBlock, t types.Transaction) {
 	for _, sci := range t.CoinInputs {
 		sco, err := getCoinOutput(tx, sci.ParentID)
 		if err != nil {
-			build.Severe(err)
+			build.Severe(fmt.Errorf("%s, coininput parentid: %s", err.Error(), sci.ParentID))
 		}
 		scod := modules.CoinOutputDiff{
 			Direction:  modules.DiffRevert,
