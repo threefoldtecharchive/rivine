@@ -755,7 +755,7 @@ func (sttc AuthStandardTransferTransactionController) ValidateCoinOutputs(t type
 		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
 	}
 	addressLength := len(dedupAddresses)
-	if addressLength != 1 || len(t.CoinOutputs) > 1 {
+	if addressLength > 1 || len(t.CoinOutputs) > 1 {
 		// considered value as this indicates ether no coin outputs, or a single refund coin output
 		// (both of which require no coin auth).
 		// Transferring block stakes for example requires no auth state if that is the only thing done
