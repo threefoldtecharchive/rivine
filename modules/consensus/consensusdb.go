@@ -7,6 +7,8 @@ package consensus
 // ignored otherwise, which is suboptimal.
 
 import (
+	"fmt"
+
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
@@ -276,7 +278,7 @@ func addCoinOutput(tx *bolt.Tx, id types.CoinOutputID, sco types.CoinOutput) {
 	coinOutputs := tx.Bucket(CoinOutputs)
 	// Sanity check - should not be adding an item that exists.
 	if coinOutputs.Get(id[:]) != nil {
-		build.Severe("repeat coin output")
+		build.Severe(fmt.Errorf("repeat coin output %s", id))
 	}
 	err := coinOutputs.Put(id[:], siabin.Marshal(sco))
 	if err != nil {
