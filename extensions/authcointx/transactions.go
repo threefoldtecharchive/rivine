@@ -755,33 +755,29 @@ func (sttc AuthStandardTransferTransactionController) ValidateCoinOutputs(t type
 		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
 	}
 	addressLength := len(dedupAddresses)
-	if addressLength == 0 {
-		return nil // early return if nothing to do
-	}
-
 	if addressLength == 1 && len(t.CoinOutputs) <= 1 {
 		// considered value as this indicates ether no coin outputs, or a single refund coin output
 		// (both of which require no coin auth).
 		// Transferring block stakes for example requires no auth state if that is the only thing done
-		return nil
-	}
+		addresses := make([]types.UnlockHash, 0, addressLength)
+		for uh := range dedupAddresses {
+			addresses = append(addresses, uh)
+		}
 
-	addresses := make([]types.UnlockHash, 0, addressLength)
-	for uh := range dedupAddresses {
-		addresses = append(addresses, uh)
-	}
-
-	// validate them all at once
-	stateSlice, err := sttc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, addresses, func(_ int, state bool) bool { return !state })
-	if err != nil {
-		return fmt.Errorf("address(s) cannot participate in a coin transfer as state is unclear due to error: %v", err)
-	}
-	for index, state := range stateSlice {
-		if !state {
-			return types.NewClientError(fmt.Errorf("unauthorized address %s cannot participate in a coin transfer", addresses[index]), types.ClientErrorForbidden)
+		// validate them all at once
+		stateSlice, err := sttc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, addresses, func(_ int, state bool) bool { return !state })
+		if err != nil {
+			return fmt.Errorf("address(s) cannot participate in a coin transfer as state is unclear due to error: %v", err)
+		}
+		for index, state := range stateSlice {
+			if !state {
+				return types.NewClientError(fmt.Errorf("unauthorized address %s cannot participate in a coin transfer", addresses[index]), types.ClientErrorForbidden)
+			}
 		}
 	}
-	return nil
+
+	// apply now the regular coin output validation
+	return types.DefaultCoinOutputValidation(t, ctx, coinInputs)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
