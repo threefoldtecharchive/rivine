@@ -255,11 +255,23 @@ func (cs *ConsensusSet) isBlockCreatingTx(txIdx int, block types.Block) bool {
 
 	// this might be block creation transaction, so do a more expensive check to see
 	// if we indeed spend the output indicated in the block header
-	t, exists := cs.TransactionAtShortID(types.NewTransactionShortID(
-		block.Header().POBSOutput.BlockHeight, uint16(block.Header().POBSOutput.TransactionIndex)))
+
+	// Note that we can't expect the block to extend the active fork, if we do
+	// we won't be able to recover forks
+	height, exists := cs.BlockHeightOfBlock(block)
 	if !exists {
 		return false
 	}
+	refBlock, exists := cs.FindParentBlock(block, height-block.Header().POBSOutput.BlockHeight)
+	if !exists {
+		return false
+	}
+	if block.Header().POBSOutput.TransactionIndex >= uint64(len(refBlock.Transactions)) ||
+		block.Header().POBSOutput.OutputIndex >= uint64(len(refBlock.Transactions[block.Header().POBSOutput.TransactionIndex].BlockStakeOutputs)) {
+		return false
+	}
+
+	t := refBlock.Transactions[block.Header().POBSOutput.TransactionIndex]
 
 	if uint64(len(t.BlockStakeOutputs)) > block.Header().POBSOutput.OutputIndex &&
 		t.BlockStakeOutputID(block.Header().POBSOutput.OutputIndex) ==
