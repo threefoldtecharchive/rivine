@@ -74,6 +74,9 @@ can receive (coin outputs targetting the authorized address) or send (coin input
 		"deauthaddresses": [
 			"019e9b6f2d43a44046b62836ce8d75c935ff66cbba1e624b3e9755b98ac176a08dac5267b2c8ee",
 		],
+		// arbitrary data, can contain anything as long as it
+		// fits within 83 bytes, and is optional
+		"arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
 		// fulfillment which fulfills the AuthCondition,
 		// can be any type of fulfillment as long as it is
 		// valid AND fulfills the AuthCondition
@@ -84,9 +87,6 @@ can receive (coin outputs targetting the authorized address) or send (coin input
 				"signature": "bdf023fbe7e0efec584d254b111655e1c2f81b9488943c3a712b91d9ad3a140cb0949a8868c5f72e08ccded337b79479114bdb4ed05f94dfddb359e1a6124602"
 			}
 		},
-		// arbitrary data, can contain anything as long as it
-		// fits within 83 bytes, and is optional
-		"arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
 	}
 }
 ```
@@ -151,6 +151,18 @@ this is however not a consensus-defined requirement, as discussed earlier.
 		// crypto-random 8-byte array (base64-encoded to a string) to ensure
 		// the uniqueness of this transaction's ID
 		"nonce": "1oQFzIwsLs8=",
+		// arbitrary data, can contain anything as long as it
+		// fits within 83 bytes, and is optional.
+		"arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
+		// condition which will become the new AuthCondition
+		// once the transaction is part of a created block and
+		// until there is a newer block with another accepted AuthCondition
+		"authcondition": {
+			"type": 1,
+			"data": {
+				"unlockhash": "01e78fd5af261e49643dba489b29566db53fa6e195fa0e6aad4430d4f06ce88b73e047fe6a0703"
+			}
+		},
 		// fulfillment which fulfills the current active AuthCondition,
 		// can be any type of fulfillment as long as it is
 		// valid AND fulfills the current active AuthCondition
@@ -161,18 +173,6 @@ this is however not a consensus-defined requirement, as discussed earlier.
 				"signature": "ad59389329ed01c5ee14ce25ae38634c2b3ef694a2bdfa714f73b175f979ba6613025f9123d68c0f11e8f0a7114833c0aab4c8596d4c31671ec8a73923f02305"
 			}
 		},
-		// condition which will become the new AuthCondition
-		// once the transaction is part of a created block and
-		// until there is a newer block with another accepted AuthCondition
-		"authcondition": {
-			"type": 1,
-			"data": {
-				"unlockhash": "01e78fd5af261e49643dba489b29566db53fa6e195fa0e6aad4430d4f06ce88b73e047fe6a0703"
-			}
-		},
-		// arbitrary data, can contain anything as long as it
-		// fits within 83 bytes, and is optional.
-		"arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
 	}
 }
 ```
