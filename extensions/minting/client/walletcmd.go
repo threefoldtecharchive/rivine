@@ -96,7 +96,7 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 				break
 			}
 		}
-		if burnCoinsCmd == nil {
+		if burnRootCmd == nil {
 			burnRootCmd = &cobra.Command{
 				Use:   "burn",
 				Short: "burn resources, using an available command",

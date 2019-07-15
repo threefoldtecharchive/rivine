@@ -40,7 +40,7 @@ or the one for the given block height.
 	)
 
 	getMintConditionCmd.Flags().Var(
-		cli.NewEncodingTypeFlag(cli.EncodingTypeJSON|cli.EncodingTypeHuman, &exploreCmd.getMintConditionCfg.EncodingType, cli.EncodingTypeJSON|cli.EncodingTypeHuman), "encoding",
+		cli.NewEncodingTypeFlag(cli.EncodingTypeHuman, &exploreCmd.getMintConditionCfg.EncodingType, cli.EncodingTypeJSON|cli.EncodingTypeHuman), "encoding",
 		cli.EncodingTypeFlagDescription(cli.EncodingTypeJSON|cli.EncodingTypeHuman))
 
 	// Add getMintConditionCmd to the ExploreCmd
