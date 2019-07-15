@@ -34,10 +34,13 @@ const (
 	// can be any unique transaction version >= 128
 	minterDefinitionTxVersion = iota + 128
 	coinCreationTxVersion
+	coinDestructionTxVersion
 )
 
 // Pass the condition the NewMintingPlugin
-plugin := minting.NewMintingPlugin(types.NewCondition(condition), minterDefinitionTxVersion, coinCreationTxVersion)
+plugin := minting.NewMintingPlugin(types.NewCondition(condition), minterDefinitionTxVersion, coinCreationTxVersion, &minting.MintingPluginOptions{
+	CoinDestructionTransactionVersion: coinDestructionTxVersion, // if equals 0 -> disabled
+})
 
 err = cs.RegisterPlugin(context.BackGround(),"minting", plugin)
 if err != nil {
@@ -66,6 +69,7 @@ const (
 	// can be any unique transaction version >= 128
 	minterDefinitionTxVersion = iota + 128
 	coinCreationTxVersion
+	coinDestructionTxVersion
 )
 
 // Will create the createCoinTransaction and createMinterDefinitionTransaction command
@@ -83,6 +87,10 @@ types.RegisterTransactionVersion(minterDefinitionTxVersion, minting.MinterDefini
 types.RegisterTransactionVersion(coinCreationTxVersion, minting.CoinCreationTransactionController{
 	MintConditionGetter: mintingReader,
 	TransactionVersion: coinCreationTxVersion,
+})
+types.RegisterTransactionVersion(coinDestructionTxVersion, minting.CoinDestructionTransactionController{
+	MintConditionGetter: mintingReader,
+	TransactionVersion: coinDestructionTxVersion,
 })
 ```
 
@@ -156,7 +164,7 @@ See the [Rivine documentation about JSON-encoding of v1 Transactions][rivine-tx-
 
 #### Binary Encoding a Minter Definition Transaction
 
-The binary encoding of a Minter Definition Transaction uses the Rivine encoding package. In order to understand the binary encoding of such a transaction, please see [the Sia encoding documentation][sia-encoding] and [Rivine binary encoding of a v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#binary-encoding-of-v1-transactions) in order to understand how a Minter Definition Transaction is binary encoded. That documentation also contains [an in-detail documented example of a binary encoding v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#example-of-a-binary-encoded-v1-transaction).
+The binary encoding of a Minter Definition Transaction uses the Rivine encoding package. In order to understand the binary encoding of such a transaction, please see [the Rivine encoding documentation][rivine-encoding] and [Rivine binary encoding of a v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#binary-encoding-of-v1-transactions) in order to understand how a Minter Definition Transaction is binary encoded. That documentation also contains [an in-detail documented example of a binary encoding v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#example-of-a-binary-encoded-v1-transaction).
 
 The same transaction that was shown as an example of a JSON-encoded Minter Definition Transaction, can be represented in a hexadecimal string —when binary encoded— as:
 
@@ -175,7 +183,7 @@ which is used as message, which we'll than to create a signature using the Ed255
 Computing that hash can be represented by following pseudo code:
 
 ```plain
-blake2b_256_hash(SiaBinaryEncoding(
+blake2b_256_hash(RivineBinaryEncoding(
   - transactionVersion: 1 byte
   - specifier: 16 bytes, hardcoded to "minter defin tx\0"
   - nonce: 8 bytes
@@ -254,7 +262,7 @@ See the [Rivine documentation about JSON-encoding of v1 Transactions][rivine-tx-
 
 #### Binary Encoding a Coin Creation Transaction
 
-The binary encoding of a Coin Creation Transaction uses the Rivine encoding package. In order to understand the binary encoding of such a transaction, please see [the Sia encoding documentation][sia-encoding] and [Rivine binary encoding of a v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#binary-encoding-of-v1-transactions) in order to understand how a Coin Creation Transaction is binary encoded. That documentation also contains [an in-detail documented example of a binary encoding v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#example-of-a-binary-encoded-v1-transaction).
+The binary encoding of a Coin Creation Transaction uses the Rivine encoding package. In order to understand the binary encoding of such a transaction, please see [the Rivine encoding documentation][rivine-encoding] and [Rivine binary encoding of a v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#binary-encoding-of-v1-transactions) in order to understand how a Coin Creation Transaction is binary encoded. That documentation also contains [an in-detail documented example of a binary encoding v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#example-of-a-binary-encoded-v1-transaction).
 
 The same transaction that was shown as an example of a JSON-encoded Coin Creation Transaction, can be represented in a hexadecimal string —when binary encoded— as:
 
@@ -273,7 +281,7 @@ which is used as message, which we'll than to create a signature using the Ed255
 Computing that hash can be represented by following pseudo code:
 
 ```plain
-blake2b_256_hash(SiaBinaryEncoding(
+blake2b_256_hash(RivineBinaryEncoding(
   - transactionVersion: 1 byte
   - specifier: 16 bytes, hardcoded to "coin mint tx\0\0\0\0"
   - nonce: 8 bytes
@@ -281,6 +289,96 @@ blake2b_256_hash(SiaBinaryEncoding(
   for each coinOutput:
     - value: Currency (8 bytes length + n bytes, little endian encoded)
     - binaryEncoding(condition)
+  - length(minerFees): int64 (8 bytes, little endian)
+  for each minerFee:
+    - fee: Currency (8 bytes length + n bytes, little endian encoded)
+  - arbitraryData: 8 bytes length + n bytes
+)) : 32 bytes fixed-size crypto hash
+```
+
+### Coin Destruction Transactions
+
+Coin Destruction Transactions are used for the destruction of existing coins.
+
+The Coin Destruction transactions defines 4 fields:
+
+* `coininputs`: the fulfillment which has to fulfill the consensus-defined MintCondition, just the same as that a Coin Input's fulfillment has to fulfill the condition of the Coin Output it is about to spend;
+* `refundcoinoutput`: defines coin outputs, the destination of coins (works the same as in regular transactions);
+* `minerfees`: defines the transaction fee(s) (works the same as in regular transactions);
+* `arbitrarydata`: describes the capacity that is created/added, creating these coins as a result;
+
+#### JSON Encoding a Coin Destruction Transaction
+
+```javascript
+{
+	// 0x82, an example version number of a Coin Destruction Transaction
+	"version": 130, // the decimal representation of the above example version number
+	// Coin Creation Transaction Data
+	"data": {
+		// defines the coin outputs to be burned
+		"coininputs": [
+			{
+				"parentid": "1100000000000000000000000000000000000000000000000000000000000011",
+				"fulfillment": {
+					"type": 1,
+					"data": {
+						"publickey": "ed25519:def123def123def123def123def123def123def123def123def123def123def1",
+						"signature": "ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef"
+					}
+				}
+			}
+		],
+		// defines the optonal refund coin output
+		"refundcoinoutput": {
+			"value": "500000000000000",
+			"condition": {
+				"type": 1,
+				"data": {
+					"unlockhash": "01e3cbc41bd3cdfec9e01a6be46a35099ba0e1e1b793904fce6aa5a444496c6d815f5e3e981ccf"
+				}
+			}
+		},
+		// the transaction fees to be paid, small partion of coins that are not burned
+		"minerfees": ["1000000000"],
+		// arbitrary data, can contain anything as long as it
+		// fits within 83 bytes
+		"arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
+	}
+}
+```
+
+See the [Rivine documentation about JSON-encoding of v1 Transactions][rivine-tx-v1] for more information about the primitive data types used, as well as the meaning and encoding of the different types of unlock conditions and fulfillments.
+
+#### Binary Encoding a Coin Destruction Transaction
+
+The binary encoding of a Coin Destruction Transaction uses the Rivine encoding package. In order to understand the binary encoding of such a transaction, please see [the Rivine encoding documentation][rivine-encoding] and [Rivine binary encoding of a v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#binary-encoding-of-v1-transactions) in order to understand how a Coin Destruction Transaction is binary encoded. That documentation also contains [an in-detail documented example of a binary encoding v1 transaction](https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#example-of-a-binary-encoded-v1-transaction).
+
+The same transaction that was shown as an example of a JSON-encoded Coin Destruction Transaction, can be represented in a hexadecimal string —when binary encoded— as:
+
+```raw
+8133a6432220334946018000000000000000656432353531390000000000000000002000000000000000d285f92d6d449d9abb27f4c6cf82713cec0696d62b8c123f1627e054dc6d77804000000000000000a074b976556d6ea2e4ae8d51fbbb5ec99099f11918201abfa31cf80d415c8d5bdfda5a32d9cc167067b6b798e80c6c1a45f6fd9e0f01ac09053e767b15d310050100000000000000070000000000000001c6bf5263400001210000000000000001e78fd5af261e49643dba489b29566db53fa6e195fa0e6aad4430d4f06ce88b73010000000000000004000000000000003b9aca0012000000000000006d6f6e65792066726f6d2074686520736b79
+```
+
+#### Signing a Coin Destruction Transaction
+
+It is assumed that the reader of this chapter has already
+read [Rivine's Introduction to Signing Transactions][rivine-signing-into] and all its referenced content.
+
+In order to sign a v1 transaction, you first need to compute the hash,
+which is used as message, which we'll than to create a signature using the Ed25519 algorithm.
+
+Computing that hash can be represented by following pseudo code:
+
+```plain
+blake2b_256_hash(RivineBinaryEncoding(
+  - transactionVersion: 1 byte
+  - specifier: 16 bytes, hardcoded to "coin destruct tx\0"
+  - nonce: 8 bytes
+  - all coin inputs
+  - refund pointer defined or not: 1 byte
+    if refund output defined:
+	- value: Currency (8 bytes length + n bytes, little endian encoded)
+	- binaryEncoding(condition)
   - length(minerFees): int64 (8 bytes, little endian)
   for each minerFee:
     - fee: Currency (8 bytes length + n bytes, little endian encoded)

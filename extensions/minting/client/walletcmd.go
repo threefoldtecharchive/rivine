@@ -14,7 +14,11 @@ import (
 	client "github.com/threefoldtech/rivine/pkg/client"
 )
 
-func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion) {
+type WalletCmdsOpts struct {
+	CoinDestructionTxVersion types.TransactionVersion
+}
+
+func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion, opts *WalletCmdsOpts) {
 	walletCmd := &walletCmd{
 		cli:                        client,
 		mintingDefinitionTxVersion: mintingDefinitionTxVersion,
@@ -63,16 +67,64 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 		"description", "optionally add a description to describe the reasons of transfer of minting power, added as arbitrary data")
 	cli.ArbitraryDataFlagVar(createCoinCreationTxCmd.Flags(), &walletCmd.coinCreationTxCfg.Description,
 		"description", "optionally add a description to describe the origins of the coin creation, added as arbitrary data")
+
+	if opts != nil && opts.CoinDestructionTxVersion > 0 {
+		var (
+			burnCoinsCmd = &cobra.Command{
+				Use:   "coins <amount>",
+				Short: "burn the given amount of coins",
+				Args:  cobra.ExactArgs(1),
+				Run:   walletCmd.burnCoinsCmd,
+			}
+		)
+
+		// set the flags
+		cli.ArbitraryDataFlagVar(burnCoinsCmd.Flags(), &walletCmd.coinDestructionTxCfg.Description,
+			"description", "optionally add a description to describe the reasons of transfer of minting power, added as arbitrary data")
+		burnCoinsCmd.Flags().StringVar(
+			&walletCmd.coinDestructionTxCfg.RefundAddress,
+			"refund-address", "", "define a custom refund address")
+		burnCoinsCmd.Flags().BoolVar(
+			&walletCmd.coinDestructionTxCfg.RefundAddressNew,
+			"refund-address-new", false, "generate a new refund address if a refund needs to happen")
+
+		// get the root command or create it
+		var burnRootCmd *cobra.Command
+		for _, cmd := range client.WalletCmd.Commands() {
+			if cmd.Name() == "burn" {
+				burnRootCmd = cmd
+				break
+			}
+		}
+		if burnCoinsCmd == nil {
+			burnRootCmd = &cobra.Command{
+				Use:   "burn",
+				Short: "burn resources, using an available command",
+			}
+			client.WalletCmd.AddCommand(burnRootCmd)
+		}
+
+		// attach our burn command to the burn root cmd
+		burnRootCmd.AddCommand(burnCoinsCmd)
+	}
 }
 
 type walletCmd struct {
-	cli                                               *client.CommandLineClient
+	cli *client.CommandLineClient
+
 	mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion
 	minterDefinitionTxCfg                             struct {
 		Description []byte
 	}
 	coinCreationTxCfg struct {
 		Description []byte
+	}
+
+	coinDestructionTxVersion types.TransactionVersion
+	coinDestructionTxCfg     struct {
+		Description      []byte
+		RefundAddress    string
+		RefundAddressNew bool
 	}
 }
 
@@ -141,6 +193,64 @@ func (walletCmd *walletCmd) createCoinCreationTxCmd(cmd *cobra.Command, args []s
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (walletCmd *walletCmd) burnCoinsCmd(cmd *cobra.Command, args []string) {
+	currencyConvertor := walletCmd.cli.CreateCurrencyConvertor()
+	amount, err := currencyConvertor.ParseCoinString(args[0])
+	if err != nil {
+		cmd.UsageFunc()(cmd)
+		cli.Die(err)
+	}
+	// add the minimum miner fee
+	amount = amount.Add(walletCmd.cli.Config.MinimumTransactionFee)
+
+	// create wallet client to be able to fund and sign
+	walletClient := client.NewWalletClient(walletCmd.cli)
+
+	// define the optional user-defined refund address
+	var refundAddress *types.UnlockHash
+	if walletCmd.coinDestructionTxCfg.RefundAddress != "" {
+		refundAddress = new(types.UnlockHash)
+		err = refundAddress.LoadString(walletCmd.coinDestructionTxCfg.RefundAddress)
+		if err != nil {
+			cmd.UsageFunc()(cmd)
+			cli.Die(err)
+		}
+	}
+	// fund the burn Tx
+	coinInputs, refundCoinOutput, err := walletClient.FundCoins(amount, refundAddress, walletCmd.coinDestructionTxCfg.RefundAddressNew)
+	if err != nil {
+		cli.DieWithError("failed to fund burn transaction", err)
+	}
+
+	// assemble the transaction
+	cdTx := minting.CoinDestructionTransaction{
+		CoinInputs:       coinInputs,
+		RefundCoinOutput: refundCoinOutput,
+		MinerFees:        []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
+	}
+	if n := len(walletCmd.coinCreationTxCfg.Description); n > 0 {
+		cdTx.ArbitraryData = make([]byte, n)
+		copy(cdTx.ArbitraryData[:], walletCmd.coinCreationTxCfg.Description[:])
+	}
+
+	// sign the transaction
+	tx := cdTx.Transaction(walletCmd.coinDestructionTxVersion)
+	err = walletClient.GreedySignTx(&tx)
+	if err != nil {
+		cli.DieWithError("failed to sign burn transaction", err)
+	}
+
+	// send the transaction
+	txPoolClient := client.NewTransactionPoolClient(walletCmd.cli)
+	txID, err := txPoolClient.AddTransactiom(tx)
+	if err != nil {
+		cli.DieWithError("failed to send burn transaction", err)
+	}
+
+	// print transaction ID
+	fmt.Println(txID.String())
 }
 
 // try to parse the string first as an unlock hash,

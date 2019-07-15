@@ -1,9 +1,7 @@
 package client
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strconv"
 
@@ -11,7 +9,6 @@ import (
 
 	"github.com/threefoldtech/rivine/pkg/cli"
 	client "github.com/threefoldtech/rivine/pkg/client"
-	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	types "github.com/threefoldtech/rivine/types"
 )
 
@@ -43,8 +40,8 @@ or the one for the given block height.
 	)
 
 	getMintConditionCmd.Flags().Var(
-		cli.NewEncodingTypeFlag(0, &exploreCmd.getMintConditionCfg.EncodingType, 0), "encoding",
-		cli.EncodingTypeFlagDescription(0))
+		cli.NewEncodingTypeFlag(cli.EncodingTypeJSON|cli.EncodingTypeHuman, &exploreCmd.getMintConditionCfg.EncodingType, cli.EncodingTypeJSON|cli.EncodingTypeHuman), "encoding",
+		cli.EncodingTypeFlagDescription(cli.EncodingTypeJSON|cli.EncodingTypeHuman))
 
 	// Add getMintConditionCmd to the ExploreCmd
 	rootCmd.AddCommand(getMintConditionCmd)
@@ -100,12 +97,6 @@ func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []s
 		encode = e.Encode
 	case cli.EncodingTypeJSON:
 		encode = json.NewEncoder(os.Stdout).Encode
-	case cli.EncodingTypeHex:
-		encode = func(v interface{}) error {
-			b := siabin.Marshal(v)
-			fmt.Println(hex.EncodeToString(b))
-			return nil
-		}
 	}
 	err = encode(mintCondition)
 	if err != nil {

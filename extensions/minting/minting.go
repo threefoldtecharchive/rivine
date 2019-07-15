@@ -7,6 +7,7 @@ import (
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 
@@ -29,11 +30,22 @@ type (
 		minterDefinitionTransactionVersion types.TransactionVersion
 		storage                            modules.PluginViewStorage
 		unregisterCallback                 modules.PluginUnregisterCallback
+
+		binMarshal   func(v interface{}) []byte
+		binUnmarshal func(b []byte, v interface{}) error
+	}
+)
+
+type (
+	// PluginOptions allows optional parameters to be defined for the minting plugin.
+	PluginOptions struct {
+		CoinDestructionTransactionVersion types.TransactionVersion
+		UseLegacySiaEncoding              bool
 	}
 )
 
 // NewMintingPlugin creates a new Plugin with a genesisMintCondition and correct transaction versions
-func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy, minterDefinitionTransactionVersion, coinCreationTransactionVersion types.TransactionVersion) *Plugin {
+func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy, minterDefinitionTransactionVersion, coinCreationTransactionVersion types.TransactionVersion, opts *PluginOptions) *Plugin {
 	p := &Plugin{
 		genesisMintCondition:               genesisMintCondition,
 		minterDefinitionTransactionVersion: minterDefinitionTransactionVersion,
@@ -46,6 +58,22 @@ func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy, minterDef
 		MintConditionGetter: p,
 		TransactionVersion:  coinCreationTransactionVersion,
 	})
+	var legacyEncoding bool
+	if opts != nil {
+		if opts.CoinDestructionTransactionVersion > 0 {
+			types.RegisterTransactionVersion(opts.CoinDestructionTransactionVersion, CoinDestructionTransactionController{
+				TransactionVersion: opts.CoinDestructionTransactionVersion,
+			})
+		}
+		legacyEncoding = opts.UseLegacySiaEncoding
+	}
+	if legacyEncoding {
+		p.binMarshal = siabin.Marshal
+		p.binUnmarshal = siabin.Unmarshal
+	} else {
+		p.binMarshal = rivbin.Marshal
+		p.binUnmarshal = rivbin.Unmarshal
+	}
 	return p
 }
 
@@ -63,7 +91,7 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 			}
 		}
 
-		mintcond := siabin.Marshal(p.genesisMintCondition)
+		mintcond := p.binMarshal(p.genesisMintCondition)
 		err := mintingBucket.Put(encodeBlockheight(0), mintcond)
 		if err != nil {
 			return persist.Metadata{}, fmt.Errorf("failed to store genesis mint condition: %v", err)
@@ -114,7 +142,7 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 				return errors.New("mintcondition bucket does not exist")
 			}
 		}
-		err = mintingBucket.Put(encodeBlockheight(height), siabin.Marshal(mdtx.MintCondition))
+		err = mintingBucket.Put(encodeBlockheight(height), p.binMarshal(mdtx.MintCondition))
 		if err != nil {
 			return fmt.Errorf(
 				"failed to put mint condition for block height %d: %v",
@@ -183,7 +211,7 @@ func (p *Plugin) GetActiveMintCondition() (types.UnlockConditionProxy, error) {
 			return errors.New("no matching mint condition could be found")
 		}
 
-		err := siabin.Unmarshal(b, &mintCondition)
+		err := p.binUnmarshal(b, &mintCondition)
 		if err != nil {
 			return fmt.Errorf("failed to decode found mint condition: %v", err)
 		}
@@ -224,7 +252,7 @@ func (p *Plugin) GetMintConditionAt(height types.BlockHeight) (types.UnlockCondi
 		return types.UnlockConditionProxy{}, err
 	}
 
-	err = siabin.Unmarshal(b, &mintCondition)
+	err = p.binUnmarshal(b, &mintCondition)
 	if err != nil {
 		return types.UnlockConditionProxy{}, fmt.Errorf("corrupt transaction DB: failed to decode found mint condition: %v", err)
 	}
