@@ -258,10 +258,22 @@ func (cs *ConsensusSet) isBlockCreatingTx(txIdx int, block types.Block) bool {
 
 	// Note that we can't expect the block to extend the active fork, if we do
 	// we won't be able to recover forks
-	height, exists := cs.BlockHeightOfBlock(block)
+	//
+	// Also, the block under validation can not be expected to be in the cs yet,
+	// so we first load its parent, then the height of the parent, then work
+	// from there
+	parent, exists := cs.FindParentBlock(block, 1)
+	if !exists {
+		// can this happen?
+		return false
+	}
+	height, exists := cs.BlockHeightOfBlock(parent)
 	if !exists {
 		return false
 	}
+	// height points at our parent block right now, so increment by one to
+	// account for that
+	height++
 	refBlock, exists := cs.FindParentBlock(block, height-block.Header().POBSOutput.BlockHeight)
 	if !exists {
 		return false
