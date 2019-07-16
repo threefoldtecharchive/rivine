@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -16,19 +15,6 @@ import (
 // either the current active one active for the given blockheight or lower.
 type GetAuthConditionResponse struct {
 	AuthCondition types.UnlockConditionProxy `json:"authcondition"`
-}
-
-// GetAddressAuthStateResponse contains a requested auth state for the address,
-// either the current active one active for the given blockheight or lower.
-type GetAddressAuthStateResponse struct {
-	AuthState bool `json:"auth"`
-}
-
-// GetAddressesAuthState contains addresses used as input to request
-// for all the given addresses the current active or if given a block height
-// at that given block height or lower.
-type GetAddressesAuthState struct {
-	Addresses []types.UnlockHash `json:"addresses"`
 }
 
 // GetAddressesAuthStateResponse contains a requested auth state for the requested addresses,
@@ -50,10 +36,7 @@ func RegisterExplorerAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx
 func registerAuthCoinHTTPHandlers(router rapi.Router, root string, plugin *authcointx.Plugin) {
 	router.GET(root+"/authcoin/condition", NewGetActiveAuthConditionHandler(plugin))
 	router.GET(root+"/authcoin/condition/:height", NewGetAuthConditionAtHandler(plugin))
-	router.GET(root+"/authcoin/address/:address", NewGetAddressAuthStateNowHandler(plugin))
-	router.GET(root+"/authcoin/address/:address/:height", NewGetAddressAuthStateAtHeightHandler(plugin))
-	router.GET(root+"/authcoin/addresses", NewGetAddressesAuthStateNowHandler(plugin))
-	router.GET(root+"/authcoin/addresses/:height", NewGetAddressesAuthStateAtHeightHandler(plugin))
+	router.GET(root+"/authcoin/status", NewGetAddressesAuthStateHandler(plugin))
 }
 
 // NewGetActiveAuthConditionHandler creates a handler to handle the API calls to /explorer/authcoin/condition.
@@ -90,96 +73,54 @@ func NewGetAuthConditionAtHandler(plugin *authcointx.Plugin) httprouter.Handle {
 	}
 }
 
-// NewGetAddressAuthStateNowHandler creates a handler to handle the API calls to /explorer/authcoin/address/:address.
-func NewGetAddressAuthStateNowHandler(plugin *authcointx.Plugin) httprouter.Handle {
+// NewGetAddressesAuthStateHandler creates a handler to handle the API calls to /<root>/authcoin/status.
+func NewGetAddressesAuthStateHandler(plugin *authcointx.Plugin) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-		address := ps.ByName("address")
-		var uh types.UnlockHash
-		err := uh.LoadString(address)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-		stateSlice, err := plugin.GetAddressesAuthStateNow([]types.UnlockHash{uh}, nil)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
-			return
-		}
-		rapi.WriteJSON(w, GetAddressAuthStateResponse{
-			AuthState: stateSlice[0],
-		})
-	}
-}
+		q := req.URL.Query()
 
-// NewGetAddressAuthStateAtHeightHandler creates a handler to handle the API calls to /explorer/authcoin/address/:address/:height.
-func NewGetAddressAuthStateAtHeightHandler(plugin *authcointx.Plugin) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-		heightStr := ps.ByName("height")
-		height, err := strconv.ParseUint(heightStr, 10, 64)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: fmt.Sprintf("invalid block height given: %v", err)}, http.StatusBadRequest)
+		var (
+			err       error
+			addresses []types.UnlockHash
+			resp      GetAddressesAuthStateResponse
+		)
+
+		// parse all addresses
+		addressStrings, ok := q["addr"]
+		if !ok {
+			rapi.WriteError(w, rapi.Error{Message: "no address given as query parameter while at least one is required"}, http.StatusBadRequest)
 			return
+		}
+		addresses = make([]types.UnlockHash, len(addressStrings))
+		for idx, addressStr := range addressStrings {
+			err = addresses[idx].LoadString(addressStr)
+			if err != nil {
+				rapi.WriteError(w, rapi.Error{Message: fmt.Sprintf("invalid address %s (q#%d) given: %v", addressStr, idx, err)}, http.StatusBadRequest)
+				return
+			}
 		}
 
-		address := ps.ByName("address")
-		var uh types.UnlockHash
-		err = uh.LoadString(address)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-		stateSlice, err := plugin.GetAddressesAuthStateAt(types.BlockHeight(height), []types.UnlockHash{uh}, nil)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
-			return
-		}
-		rapi.WriteJSON(w, GetAddressAuthStateResponse{
-			AuthState: stateSlice[0],
-		})
-	}
-}
+		// get state slice now or in the past
+		if heightStr := q.Get("height"); heightStr != "" {
+			height, err := strconv.ParseUint(heightStr, 10, 64)
+			if err != nil {
+				rapi.WriteError(w, rapi.Error{Message: fmt.Sprintf("invalid block height given: %v", err)}, http.StatusBadRequest)
+				return
+			}
 
-// NewGetAddressesAuthStateNowHandler creates a handler to handle the API calls to /explorer/authcoin/addresses
-func NewGetAddressesAuthStateNowHandler(plugin *authcointx.Plugin) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-		var body GetAddressesAuthState
-		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-			rapi.WriteError(w, rapi.Error{Message: "error decoding the supplied addresses: " + err.Error()}, http.StatusBadRequest)
-			return
-		}
-		stateSlice, err := plugin.GetAddressesAuthStateNow(body.Addresses, nil)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
-			return
-		}
-		rapi.WriteJSON(w, GetAddressesAuthStateResponse{
-			AuthStates: stateSlice,
-		})
-	}
-}
-
-// NewGetAddressesAuthStateAtHeightHandler creates a handler to handle the API calls to /explorer/authcoin/addresses/:height.
-func NewGetAddressesAuthStateAtHeightHandler(plugin *authcointx.Plugin) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
-		heightStr := ps.ByName("height")
-		height, err := strconv.ParseUint(heightStr, 10, 64)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: fmt.Sprintf("invalid block height given: %v", err)}, http.StatusBadRequest)
-			return
+			resp.AuthStates, err = plugin.GetAddressesAuthStateAt(types.BlockHeight(height), addresses, nil)
+			if err != nil {
+				rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
+				return
+			}
+		} else {
+			resp.AuthStates, err = plugin.GetAddressesAuthStateNow(addresses, nil)
+			if err != nil {
+				rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
+				return
+			}
 		}
 
-		var body GetAddressesAuthState
-		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
-			rapi.WriteError(w, rapi.Error{Message: "error decoding the supplied addresses: " + err.Error()}, http.StatusBadRequest)
-			return
-		}
-		stateSlice, err := plugin.GetAddressesAuthStateAt(types.BlockHeight(height), body.Addresses, nil)
-		if err != nil {
-			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
-			return
-		}
-		rapi.WriteJSON(w, GetAddressesAuthStateResponse{
-			AuthStates: stateSlice,
-		})
+		// return successfull response
+		rapi.WriteJSON(w, resp)
 	}
 }

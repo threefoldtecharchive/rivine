@@ -1,7 +1,7 @@
 package client
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/threefoldtech/rivine/extensions/authcointx"
@@ -71,41 +71,53 @@ func (cli *PluginClient) GetAuthConditionAt(height types.BlockHeight) (types.Unl
 // GetAddresAuthStateNow provides functionality now required for the AuthInfoGetter,
 // allowing you to request it for a single address
 func (cli *PluginClient) GetAddresAuthStateNow(address types.UnlockHash) (bool, error) {
-	var result api.GetAddressAuthStateResponse
-	err := cli.client.GetAPI(fmt.Sprintf("%s/authcoin/address/%s", cli.rootEndpoint, address.String()), &result)
-	return result.AuthState, err
+	states, err := cli.GetAddressesAuthStateNow([]types.UnlockHash{address}, nil)
+	if err != nil {
+		return false, err
+	}
+	return states[0], nil
 }
 
 // GetAddressAuthStateAt provides functionality now required for the AuthInfoGetter,
 // allowing you to request it for a single address
 func (cli *PluginClient) GetAddressAuthStateAt(height types.BlockHeight, address types.UnlockHash) (bool, error) {
-	var result api.GetAddressAuthStateResponse
-	err := cli.client.GetAPI(fmt.Sprintf("%s/authcoin/address/%s/%d", cli.rootEndpoint, address.String(), height), &result)
-	return result.AuthState, err
+	states, err := cli.GetAddressesAuthStateAt(height, []types.UnlockHash{address}, nil)
+	if err != nil {
+		return false, err
+	}
+	return states[0], nil
 }
 
 // GetAddressesAuthStateNow implements authcointx.AuthInfoGetter.GetAddressesAuthStateNow
 func (cli *PluginClient) GetAddressesAuthStateNow(addresses []types.UnlockHash, _ func(index int, state bool) bool) ([]bool, error) {
-	requestData, err := json.Marshal(api.GetAddressesAuthState{
-		Addresses: addresses,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal addresses as input addresses for the request: %v", err)
+	if len(addresses) == 0 {
+		return nil, errors.New("no addresses are defined while this is required")
 	}
+
+	resource := fmt.Sprintf("%s/authcoin/status?", cli.rootEndpoint)
+	for _, addr := range addresses {
+		resource += fmt.Sprintf("a=%s&", addr.String())
+	}
+	resource = resource[:len(resource)-1] // remove trailing '&'
+
 	var result api.GetAddressesAuthStateResponse
-	err = cli.client.GetAPIWithData(fmt.Sprintf("%s/authcoin/addresses", cli.rootEndpoint), string(requestData), &result)
+	err := cli.client.GetAPI(resource, &result)
 	return result.AuthStates, err
 }
 
 // GetAddressesAuthStateAt implements authcointx.AuthInfoGetter.GetAddressesAuthStateAt
 func (cli *PluginClient) GetAddressesAuthStateAt(height types.BlockHeight, addresses []types.UnlockHash, _ func(index int, state bool) bool) ([]bool, error) {
-	requestData, err := json.Marshal(api.GetAddressesAuthState{
-		Addresses: addresses,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal addresses as input addresses for the request: %v", err)
+	if len(addresses) == 0 {
+		return nil, errors.New("no addresses are defined while this is required")
 	}
+
+	resource := fmt.Sprintf("%s/authcoin/status?height=%d&", cli.rootEndpoint, height)
+	for _, addr := range addresses {
+		resource += fmt.Sprintf("a=%s&", addr.String())
+	}
+	resource = resource[:len(resource)-1] // remove trailing '&'
+
 	var result api.GetAddressesAuthStateResponse
-	err = cli.client.GetAPIWithData(fmt.Sprintf("%s/authcoin/addresses/%d", cli.rootEndpoint, height), string(requestData), &result)
+	err := cli.client.GetAPI(resource, &result)
 	return result.AuthStates, err
 }
