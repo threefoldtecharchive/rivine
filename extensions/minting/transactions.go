@@ -39,6 +39,7 @@ type (
 	// MintingBaseTransactionController is the base controller for all minting controllers
 	MintingBaseTransactionController struct {
 		UseLegacySiaEncoding bool
+		RequireMinerFees     bool
 	}
 )
 
@@ -145,7 +146,7 @@ var (
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (cctc CoinCreationTransactionController) EncodeTransactionData(w io.Writer, txData types.TransactionData) error {
-	cctx, err := CoinCreationTransactionFromTransactionData(txData)
+	cctx, err := CoinCreationTransactionFromTransactionData(txData, cctc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a CoinCreationTx: %v", err)
 	}
@@ -166,7 +167,7 @@ func (cctc CoinCreationTransactionController) DecodeTransactionData(r io.Reader)
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (cctc CoinCreationTransactionController) JSONEncodeTransactionData(txData types.TransactionData) ([]byte, error) {
-	cctx, err := CoinCreationTransactionFromTransactionData(txData)
+	cctx, err := CoinCreationTransactionFromTransactionData(txData, cctc.RequireMinerFees)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert txData to a CoinCreationTx: %v", err)
 	}
@@ -217,7 +218,7 @@ func (cctc CoinCreationTransactionController) ValidateTransaction(t types.Transa
 	}
 
 	// get CoinCreationTxn
-	cctx, err := CoinCreationTransactionFromTransaction(t, cctc.TransactionVersion)
+	cctx, err := CoinCreationTransactionFromTransaction(t, cctc.TransactionVersion, cctc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
 	}
@@ -277,7 +278,7 @@ func (cctc CoinCreationTransactionController) ValidateBlockStakeOutputs(t types.
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (cctc CoinCreationTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	cctx, err := CoinCreationTransactionFromTransaction(t, cctc.TransactionVersion)
+	cctx, err := CoinCreationTransactionFromTransaction(t, cctc.TransactionVersion, cctc.RequireMinerFees)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
 	}
@@ -295,11 +296,11 @@ func (cctc CoinCreationTransactionController) SignatureHash(t types.Transaction,
 		enc.EncodeAll(extraObjects...)
 	}
 
-	enc.EncodeAll(
-		cctx.CoinOutputs,
-		cctx.MinerFees,
-		cctx.ArbitraryData,
-	)
+	enc.Encode(cctx.CoinOutputs)
+	if cctc.RequireMinerFees {
+		enc.Encode(cctx.MinerFees)
+	}
+	enc.Encode(cctx.ArbitraryData)
 
 	var hash crypto.Hash
 	h.Sum(hash[:0])
@@ -308,7 +309,7 @@ func (cctc CoinCreationTransactionController) SignatureHash(t types.Transaction,
 
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (cctc CoinCreationTransactionController) EncodeTransactionIDInput(w io.Writer, txData types.TransactionData) error {
-	cctx, err := CoinCreationTransactionFromTransactionData(txData)
+	cctx, err := CoinCreationTransactionFromTransactionData(txData, cctc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a CoinCreationTx: %v", err)
 	}
@@ -319,7 +320,7 @@ func (cctc CoinCreationTransactionController) EncodeTransactionIDInput(w io.Writ
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (cdtc CoinDestructionTransactionController) EncodeTransactionData(w io.Writer, txData types.TransactionData) error {
-	cdtx, err := CoinDestructionTransactionFromTransactionData(txData)
+	cdtx, err := CoinDestructionTransactionFromTransactionData(txData, cdtc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a CoinDestructionTx: %v", err)
 	}
@@ -340,7 +341,7 @@ func (cdtc CoinDestructionTransactionController) DecodeTransactionData(r io.Read
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (cdtc CoinDestructionTransactionController) JSONEncodeTransactionData(txData types.TransactionData) ([]byte, error) {
-	cdtx, err := CoinDestructionTransactionFromTransactionData(txData)
+	cdtx, err := CoinDestructionTransactionFromTransactionData(txData, cdtc.RequireMinerFees)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert txData to a CoinDestructionTx: %v", err)
 	}
@@ -367,7 +368,7 @@ func (cdtc CoinDestructionTransactionController) ValidateTransaction(t types.Tra
 	}
 
 	// get CoinDestructionTxn
-	cdtx, err := CoinDestructionTransactionFromTransaction(t, cdtc.TransactionVersion)
+	cdtx, err := CoinDestructionTransactionFromTransaction(t, cdtc.TransactionVersion, cdtc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to use tx as a coin destruction tx: %v", err)
 	}
@@ -378,9 +379,15 @@ func (cdtc CoinDestructionTransactionController) ValidateTransaction(t types.Tra
 		return err
 	}
 
-	for _, fee := range cdtx.MinerFees {
-		if fee.Cmp(constants.MinimumMinerFee) == -1 {
-			return types.ErrTooSmallMinerFee
+	if cdtc.RequireMinerFees {
+		for _, fee := range cdtx.MinerFees {
+			if fee.Cmp(constants.MinimumMinerFee) == -1 {
+				return types.ErrTooSmallMinerFee
+			}
+		}
+	} else {
+		if len(cdtx.MinerFees) > 0 {
+			return errors.New("undesired miner fees: no miner fees required, yet they are defined")
 		}
 	}
 
@@ -424,7 +431,14 @@ func (cdtc CoinDestructionTransactionController) ValidateCoinOutputs(t types.Tra
 	}
 
 	// compute the lower bound
-	lowerBound := t.CoinOutputSum()
+	var lowerBound types.Currency
+	if cdtc.RequireMinerFees {
+		lowerBound = t.CoinOutputSum()
+	} else {
+		for _, sco := range t.CoinOutputs {
+			lowerBound = lowerBound.Add(sco.Value)
+		}
+	}
 
 	// ensure input sum is above lowerBound
 	rcmp := lowerBound.Cmp(inputSum)
@@ -441,7 +455,7 @@ func (cdtc CoinDestructionTransactionController) ValidateCoinOutputs(t types.Tra
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (cdtc CoinDestructionTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	cdtx, err := CoinDestructionTransactionFromTransaction(t, cdtc.TransactionVersion)
+	cdtx, err := CoinDestructionTransactionFromTransaction(t, cdtc.TransactionVersion, cdtc.RequireMinerFees)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as a coin desruction tx: %v", err)
 	}
@@ -461,9 +475,11 @@ func (cdtc CoinDestructionTransactionController) SignatureHash(t types.Transacti
 	enc.EncodeAll(
 		cdtx.CoinInputs,
 		cdtx.RefundCoinOutput,
-		cdtx.MinerFees,
-		cdtx.ArbitraryData,
 	)
+	if cdtc.RequireMinerFees {
+		enc.Encode(cdtx.MinerFees)
+	}
+	enc.Encode(cdtx.ArbitraryData)
 
 	var hash crypto.Hash
 	h.Sum(hash[:0])
@@ -472,7 +488,7 @@ func (cdtc CoinDestructionTransactionController) SignatureHash(t types.Transacti
 
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (cdtc CoinDestructionTransactionController) EncodeTransactionIDInput(w io.Writer, txData types.TransactionData) error {
-	cdtx, err := CoinDestructionTransactionFromTransactionData(txData)
+	cdtx, err := CoinDestructionTransactionFromTransactionData(txData, cdtc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a CoinDestructionTx: %v", err)
 	}
@@ -483,7 +499,7 @@ func (cdtc CoinDestructionTransactionController) EncodeTransactionIDInput(w io.W
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (mdtc MinterDefinitionTransactionController) EncodeTransactionData(w io.Writer, txData types.TransactionData) error {
-	mdtx, err := MinterDefinitionTransactionFromTransactionData(txData)
+	mdtx, err := MinterDefinitionTransactionFromTransactionData(txData, mdtc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a MinterDefinitionTx: %v", err)
 	}
@@ -504,7 +520,7 @@ func (mdtc MinterDefinitionTransactionController) DecodeTransactionData(r io.Rea
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (mdtc MinterDefinitionTransactionController) JSONEncodeTransactionData(txData types.TransactionData) ([]byte, error) {
-	mdtx, err := MinterDefinitionTransactionFromTransactionData(txData)
+	mdtx, err := MinterDefinitionTransactionFromTransactionData(txData, mdtc.RequireMinerFees)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert txData to a MinterDefinitionTx: %v", err)
 	}
@@ -555,7 +571,7 @@ func (mdtc MinterDefinitionTransactionController) ValidateTransaction(t types.Tr
 	}
 
 	// get MinterDefinitionTx
-	mdtx, err := MinterDefinitionTransactionFromTransaction(t, mdtc.TransactionVersion)
+	mdtx, err := MinterDefinitionTransactionFromTransaction(t, mdtc.TransactionVersion, mdtc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
 	}
@@ -599,9 +615,15 @@ func (mdtc MinterDefinitionTransactionController) ValidateTransaction(t types.Tr
 	if err != nil {
 		return
 	}
-	for _, fee := range mdtx.MinerFees {
-		if fee.Cmp(constants.MinimumMinerFee) == -1 {
-			return types.ErrTooSmallMinerFee
+	if mdtc.RequireMinerFees {
+		for _, fee := range mdtx.MinerFees {
+			if fee.Cmp(constants.MinimumMinerFee) == -1 {
+				return types.ErrTooSmallMinerFee
+			}
+		}
+	} else {
+		if len(mdtx.MinerFees) > 0 {
+			return errors.New("undesired miner fees: no miner fees required, yet they are defined")
 		}
 	}
 	return
@@ -654,7 +676,7 @@ func (mdtc MinterDefinitionTransactionController) ValidateBlockStakeOutputs(t ty
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (mdtc MinterDefinitionTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	mdtx, err := MinterDefinitionTransactionFromTransaction(t, mdtc.TransactionVersion)
+	mdtx, err := MinterDefinitionTransactionFromTransaction(t, mdtc.TransactionVersion, mdtc.RequireMinerFees)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as a MinterDefinitionTx: %v", err)
 	}
@@ -672,11 +694,11 @@ func (mdtc MinterDefinitionTransactionController) SignatureHash(t types.Transact
 		enc.EncodeAll(extraObjects...)
 	}
 
-	enc.EncodeAll(
-		mdtx.MintCondition,
-		mdtx.MinerFees,
-		mdtx.ArbitraryData,
-	)
+	enc.Encode(mdtx.MintCondition)
+	if mdtc.RequireMinerFees {
+		enc.Encode(mdtx.MinerFees)
+	}
+	enc.Encode(mdtx.ArbitraryData)
 
 	var hash crypto.Hash
 	h.Sum(hash[:0])
@@ -685,7 +707,7 @@ func (mdtc MinterDefinitionTransactionController) SignatureHash(t types.Transact
 
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (mdtc MinterDefinitionTransactionController) EncodeTransactionIDInput(w io.Writer, txData types.TransactionData) error {
-	mdtx, err := MinterDefinitionTransactionFromTransactionData(txData)
+	mdtx, err := MinterDefinitionTransactionFromTransactionData(txData, mdtc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a MinterDefinitionTx: %v", err)
 	}
@@ -718,7 +740,7 @@ type (
 		// available in the rivine network.
 		CoinOutputs []types.CoinOutput `json:"coinoutputs"`
 		// Minerfees, a fee paid for this coin creation transaction.
-		MinerFees []types.Currency `json:"minerfees"`
+		MinerFees []types.Currency `json:"minerfees,omitempty"`
 		// ArbitraryData can be used for any purpose,
 		// but is mostly to be used in order to define the reason/origins
 		// of the coin creation.
@@ -736,7 +758,7 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `CoinCreationTransactionFromTransactionData` constructor.
-func CoinCreationTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (CoinCreationTransaction, error) {
+func CoinCreationTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion, requireMinerFees bool) (CoinCreationTransaction, error) {
 	if tx.Version != expectedVersion {
 		return CoinCreationTransaction{}, fmt.Errorf(
 			"a coin creation transaction requires tx version %d",
@@ -750,12 +772,12 @@ func CoinCreationTransactionFromTransaction(tx types.Transaction, expectedVersio
 		MinerFees:         tx.MinerFees,
 		ArbitraryData:     tx.ArbitraryData,
 		Extension:         tx.Extension,
-	})
+	}, requireMinerFees)
 }
 
 // CoinCreationTransactionFromTransactionData creates a CoinCreationTransaction,
 // using the TransactionData from a regular in-memory rivine transaction.
-func CoinCreationTransactionFromTransactionData(txData types.TransactionData) (CoinCreationTransaction, error) {
+func CoinCreationTransactionFromTransactionData(txData types.TransactionData, requireMinerFees bool) (CoinCreationTransaction, error) {
 	// (tx) extension (data) is expected to be a pointer to a valid CoinCreationTransactionExtension,
 	// which contains the nonce and the mintFulfillment that can be used to fulfill the globally defined mint condition
 	extensionData, ok := txData.Extension.(*CoinCreationTransactionExtension)
@@ -763,8 +785,13 @@ func CoinCreationTransactionFromTransactionData(txData types.TransactionData) (C
 		return CoinCreationTransaction{}, errors.New("invalid extension data for a CoinCreationTransaction")
 	}
 	// at least one coin output as well as one miner fee is required
-	if len(txData.CoinOutputs) == 0 || len(txData.MinerFees) == 0 {
-		return CoinCreationTransaction{}, errors.New("at least one coin output and miner fee is required for a CoinCreationTransaction")
+	if len(txData.CoinOutputs) == 0 {
+		return CoinCreationTransaction{}, errors.New("at least one coin output is required for a CoinCreationTransaction")
+	}
+	if requireMinerFees && len(txData.MinerFees) == 0 {
+		return CoinCreationTransaction{}, errors.New("at least one miner fee is required for a CoinCreationTransaction")
+	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
+		return CoinCreationTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
 	// no coin inputs, block stake inputs or block stake outputs are allowed
 	if len(txData.CoinInputs) != 0 || len(txData.BlockStakeInputs) != 0 || len(txData.BlockStakeOutputs) != 0 {
@@ -823,7 +850,7 @@ type (
 		// NOTE the following condition must be true: sum(CoinInputs) > sum(RefundCoinOutput, sum(MinerFees))
 		RefundCoinOutput *types.CoinOutput `json:"refundcoinoutput"`
 		// Minerfees, a fee paid for this coin destruction transaction.
-		MinerFees []types.Currency `json:"minerfees"`
+		MinerFees []types.Currency `json:"minerfees,omitempty"`
 		// ArbitraryData can be used for any purpose,
 		// but is mostly to be used in order to define the reason/origins
 		// of the coin creation.
@@ -836,7 +863,7 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `CoinCreationTransactionFromTransactionData` constructor.
-func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (CoinDestructionTransaction, error) {
+func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion, requireMinerFees bool) (CoinDestructionTransaction, error) {
 	if tx.Version != expectedVersion {
 		return CoinDestructionTransaction{}, fmt.Errorf(
 			"a coin destruction transaction requires tx version %d",
@@ -850,28 +877,30 @@ func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVer
 		MinerFees:         tx.MinerFees,
 		ArbitraryData:     tx.ArbitraryData,
 		Extension:         tx.Extension,
-	})
+	}, requireMinerFees)
 }
 
 // CoinDestructionTransactionFromTransactionData creates a CoinDestructionTransaction,
 // using the TransactionData from a regular in-memory rivine transaction.
-func CoinDestructionTransactionFromTransactionData(txData types.TransactionData) (CoinDestructionTransaction, error) {
+func CoinDestructionTransactionFromTransactionData(txData types.TransactionData, requireMinerFees bool) (CoinDestructionTransaction, error) {
 	// at least one coin output as well as one miner fee is required
 	if len(txData.CoinOutputs) > 1 {
 		return CoinDestructionTransaction{}, errors.New("maximum one coin output is allowed for a CoinDestructionTransaction")
 	}
-	if len(txData.MinerFees) == 0 {
+	if requireMinerFees && len(txData.MinerFees) == 0 {
 		return CoinDestructionTransaction{}, errors.New("at least one miner fee is required for a CoinDestructionTransaction")
+	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
+		return CoinDestructionTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
 	// at least one coin input is required
 	if len(txData.CoinInputs) == 0 {
-		return CoinDestructionTransaction{}, errors.New("at least one coin input is required for a CoinCreationTransaction")
+		return CoinDestructionTransaction{}, errors.New("at least one coin input is required for a CoinDestructionTransaction")
 	}
 	// no block stake inputs or block stake outputs are allowed
 	if len(txData.BlockStakeInputs) != 0 || len(txData.BlockStakeOutputs) != 0 {
 		return CoinDestructionTransaction{}, errors.New("no block stake inputs/outputs are allowed in a CoinDestructionTransaction")
 	}
-	// return the CoinCreationTransaction, with the data extracted from the TransactionData
+	// return the CoinDestructionTransaction, with the data extracted from the TransactionData
 	tx := CoinDestructionTransaction{
 		CoinInputs:    txData.CoinInputs,
 		MinerFees:     txData.MinerFees,
@@ -929,7 +958,7 @@ type (
 		// internal condition.
 		MintCondition types.UnlockConditionProxy `json:"mintcondition"`
 		// Minerfees, a fee paid for this minter definition transaction.
-		MinerFees []types.Currency `json:"minerfees"`
+		MinerFees []types.Currency `json:"minerfees,omitempty"`
 		// ArbitraryData can be used for any purpose,
 		// but is mostly to be used in order to define the reason/origins
 		// of the transfer of minting power.
@@ -948,7 +977,7 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `MinterDefinitionTransactionFromTransactionData` constructor.
-func MinterDefinitionTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (MinterDefinitionTransaction, error) {
+func MinterDefinitionTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion, requireMinerFees bool) (MinterDefinitionTransaction, error) {
 	if tx.Version != expectedVersion {
 		return MinterDefinitionTransaction{}, fmt.Errorf(
 			"a minter definition transaction requires tx version %d",
@@ -962,12 +991,12 @@ func MinterDefinitionTransactionFromTransaction(tx types.Transaction, expectedVe
 		MinerFees:         tx.MinerFees,
 		ArbitraryData:     tx.ArbitraryData,
 		Extension:         tx.Extension,
-	})
+	}, requireMinerFees)
 }
 
 // MinterDefinitionTransactionFromTransactionData creates a MinterDefinitionTransaction,
 // using the TransactionData from a regular in-memory rivine transaction.
-func MinterDefinitionTransactionFromTransactionData(txData types.TransactionData) (MinterDefinitionTransaction, error) {
+func MinterDefinitionTransactionFromTransactionData(txData types.TransactionData, requireMinerFees bool) (MinterDefinitionTransaction, error) {
 	// (tx) extension (data) is expected to be a pointer to a valid MinterDefinitionTransactionExtension,
 	// which contains the nonce, the mintFulfillment that can be used to fulfill the currently globally defined mint condition,
 	// as well as a mintCondition to replace the current in-place mintCondition.
@@ -975,9 +1004,10 @@ func MinterDefinitionTransactionFromTransactionData(txData types.TransactionData
 	if !ok {
 		return MinterDefinitionTransaction{}, errors.New("invalid extension data for a MinterDefinitionTransaction")
 	}
-	// at least one miner fee is required
-	if len(txData.MinerFees) == 0 {
+	if requireMinerFees && len(txData.MinerFees) == 0 {
 		return MinterDefinitionTransaction{}, errors.New("at least one miner fee is required for a MinterDefinitionTransaction")
+	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
+		return MinterDefinitionTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
 	// no coin inputs, block stake inputs or block stake outputs are allowed
 	if len(txData.CoinInputs) != 0 || len(txData.CoinOutputs) != 0 || len(txData.BlockStakeInputs) != 0 || len(txData.BlockStakeOutputs) != 0 {

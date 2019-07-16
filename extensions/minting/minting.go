@@ -33,6 +33,8 @@ type (
 
 		binMarshal   func(v interface{}) []byte
 		binUnmarshal func(b []byte, v interface{}) error
+
+		requireMinerFees bool
 	}
 )
 
@@ -41,6 +43,7 @@ type (
 	PluginOptions struct {
 		CoinDestructionTransactionVersion types.TransactionVersion
 		UseLegacySiaEncoding              bool
+		RequireMinerFees                  bool
 	}
 )
 
@@ -49,6 +52,7 @@ func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy, minterDef
 	p := &Plugin{
 		genesisMintCondition:               genesisMintCondition,
 		minterDefinitionTransactionVersion: minterDefinitionTransactionVersion,
+		requireMinerFees:                   opts != nil && opts.RequireMinerFees,
 	}
 	types.RegisterTransactionVersion(minterDefinitionTransactionVersion, MinterDefinitionTransactionController{
 		MintConditionGetter: p,
@@ -132,7 +136,7 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 	// check the version and handle the ones we care about
 	switch txn.Version {
 	case p.minterDefinitionTransactionVersion:
-		mdtx, err := MinterDefinitionTransactionFromTransaction(txn, p.minterDefinitionTransactionVersion)
+		mdtx, err := MinterDefinitionTransactionFromTransaction(txn, p.minterDefinitionTransactionVersion, p.requireMinerFees)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the minter def. tx type: %v" + err.Error())
 		}

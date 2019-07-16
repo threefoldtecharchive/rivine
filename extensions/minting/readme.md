@@ -40,6 +40,8 @@ const (
 // Pass the condition the NewMintingPlugin
 plugin := minting.NewMintingPlugin(types.NewCondition(condition), minterDefinitionTxVersion, coinCreationTxVersion, &minting.MintingPluginOptions{
 	CoinDestructionTransactionVersion: coinDestructionTxVersion, // if equals 0 -> disabled
+	UseLegacySiaEncoding: false, // false by default, usng rivine encoding, otherwise it uses sia encoding if true
+	RequireMinerFees: false, // false by default, otherwise it adds and requires miner fees if true
 })
 
 err = cs.RegisterPlugin(context.BackGround(),"minting", plugin)
@@ -75,7 +77,10 @@ const (
 // Will create the createCoinTransaction and createMinterDefinitionTransaction command
 // * rivinec wallet create minterdefinitiontransaction
 // * rivinec wallet create coincreationtransaction
-mintingcli.CreateWalletCmds(cliClient, minterDefinitionTxVersion, coinCreationTxVersion)
+mintingcli.CreateWalletCmds(cliClient, minterDefinitionTxVersion, coinCreationTxVersion, &mintingcli.WalletCmdsOpts{
+	CoinDestructionTxVersion: coinDestructionTxVersion, // tx version of the coin destruction tx
+	RequireMinerFees: false, // false by default, otherwise it adds and requires miner fees if true
+})
 
 mintingReader := mintingcli.NewPluginExplorerClient(cliClient)
 

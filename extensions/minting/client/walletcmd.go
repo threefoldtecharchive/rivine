@@ -16,6 +16,7 @@ import (
 
 type WalletCmdsOpts struct {
 	CoinDestructionTxVersion types.TransactionVersion
+	RequireMinerFees         bool
 }
 
 func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion, opts *WalletCmdsOpts) {
@@ -23,6 +24,7 @@ func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersi
 		cli:                        client,
 		mintingDefinitionTxVersion: mintingDefinitionTxVersion,
 		coinCreationTxVersion:      coinCreationTxVersion,
+		requireMinerFees:           opts != nil && opts.RequireMinerFees,
 	}
 
 	// create root explore command and all subs
@@ -126,6 +128,8 @@ type walletCmd struct {
 		RefundAddress    string
 		RefundAddressNew bool
 	}
+
+	requireMinerFees bool
 }
 
 func (walletCmd *walletCmd) createMinterDefinitionTxCmd(cmd *cobra.Command, args []string) {
@@ -136,8 +140,10 @@ func (walletCmd *walletCmd) createMinterDefinitionTxCmd(cmd *cobra.Command, args
 
 	// create a minter definition tx with a random nonce and the minimum required miner fee
 	tx := minting.MinterDefinitionTransaction{
-		Nonce:     types.RandomTransactionNonce(),
-		MinerFees: []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
+		Nonce: types.RandomTransactionNonce(),
+	}
+	if walletCmd.requireMinerFees {
+		tx.MinerFees = []types.Currency{walletCmd.cli.Config.MinimumTransactionFee}
 	}
 
 	if n := len(walletCmd.minterDefinitionTxCfg.Description); n > 0 {
@@ -174,8 +180,10 @@ func (walletCmd *walletCmd) createCoinCreationTxCmd(cmd *cobra.Command, args []s
 	}
 
 	tx := minting.CoinCreationTransaction{
-		Nonce:     types.RandomTransactionNonce(),
-		MinerFees: []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
+		Nonce: types.RandomTransactionNonce(),
+	}
+	if walletCmd.requireMinerFees {
+		tx.MinerFees = []types.Currency{walletCmd.cli.Config.MinimumTransactionFee}
 	}
 
 	if n := len(walletCmd.coinCreationTxCfg.Description); n > 0 {
@@ -228,7 +236,9 @@ func (walletCmd *walletCmd) burnCoinsCmd(cmd *cobra.Command, args []string) {
 	cdTx := minting.CoinDestructionTransaction{
 		CoinInputs:       coinInputs,
 		RefundCoinOutput: refundCoinOutput,
-		MinerFees:        []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
+	}
+	if walletCmd.requireMinerFees {
+		cdTx.MinerFees = []types.Currency{walletCmd.cli.Config.MinimumTransactionFee}
 	}
 	if n := len(walletCmd.coinCreationTxCfg.Description); n > 0 {
 		cdTx.ArbitraryData = make([]byte, n)
