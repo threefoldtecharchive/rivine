@@ -30,7 +30,7 @@ type MissingCoinOutputError struct {
 }
 
 func (err MissingCoinOutputError) Error() string {
-	return "transaction spends a nonexisting coin output" + err.ID.String()
+	return "transaction spends a nonexisting coin output " + err.ID.String()
 }
 
 // MissingBlockStakeOutputError is returned in case a non-existing blockstake output is spend by a Tx.
@@ -39,7 +39,7 @@ type MissingBlockStakeOutputError struct {
 }
 
 func (err MissingBlockStakeOutputError) Error() string {
-	return "transaction spends a nonexisting blockstake output" + err.ID.String()
+	return "transaction spends a nonexisting blockstake output " + err.ID.String()
 }
 
 // TransactionFitsInABlock checks if the transaction is likely to fit in a block.
