@@ -7,8 +7,9 @@ all: install
 run = Test
 daemonpkgs = ./cmd/rivined
 clientpkgs = ./cmd/rivinec
-pkgs = ./build ./modules/gateway $(daemonpkgs) $(clientpkgs)
-testpkgs = ./build ./crypto ./pkg/encoding/siabin ./pkg/encoding/rivbin ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./modules/explorer ./modules/consensus ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types ./pkg/cli ./pkg/client ./pkg/daemon
+rivinecgpkgs = ./cmd/rivinecg
+pkgs = ./build ./modules/gateway $(daemonpkgs) $(clientpkgs) $(rivinecgpkgs)
+testpkgs = ./build ./crypto ./pkg/encoding/siabin ./pkg/encoding/rivbin ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./modules/explorer ./modules/consensus ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types ./pkg/cli ./pkg/client ./pkg/daemon ./cmd/rivinecg/cmd
 
 version = $(shell git describe | cut -d '-' -f 1)
 commit = $(shell git rev-parse --short HEAD)
@@ -25,6 +26,7 @@ ldflagsversion = -X github.com/threefoldtech/rivine/build.rawVersion=$(fullversi
 stdoutput = $(GOPATH)/bin
 daemonbin = $(stdoutput)/rivined
 clientbin = $(stdoutput)/rivinec
+rivinecgbin = $(stdoutput)/rivinecg
 
 # fmt calls go fmt on all packages.
 fmt:
@@ -44,6 +46,7 @@ install:
 install-std:
 	go build -ldflags '$(ldflagsversion)' -o $(daemonbin) $(daemonpkgs)
 	go build -ldflags '$(ldflagsversion)' -o $(clientbin) $(clientpkgs)
+	go build -ldflags '$(ldflagsversion)' -o $(rivinecgbin) $(rivinecgpkgs)
 
 # release builds and installs release binaries.
 release:
