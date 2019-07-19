@@ -2,12 +2,13 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
-	"math/big"
+	"path"
 	"time"
 
-	"os"
-
+	"github.com/pelletier/go-toml"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
@@ -114,7 +115,26 @@ type Network struct {
 
 // Fraction represents ratio.
 type Fraction struct {
-	Numerator, Denominator int
+	Denominator, Numerator int
+}
+
+// MarshalJSON will marshall Fraction struct into our specific format
+func (f Fraction) MarshalJSON() ([]byte, error) {
+	buffer := bytes.NewBuffer(nil)
+	buffer.WriteString(fmt.Sprintf("\"%d/%d\"", f.Denominator, f.Numerator))
+	return buffer.Bytes(), nil
+}
+
+// MarshalTOML will marshall Fraction struct into our specific format
+func (f Fraction) MarshalTOML() ([]byte, error) {
+	buffer := bytes.NewBuffer(nil)
+	buffer.WriteString(fmt.Sprintf("%d/%d", f.Denominator, f.Numerator))
+	return buffer.Bytes(), nil
+}
+
+// MarshalYAML will marshall Fraction struct into our specific format
+func (f Fraction) MarshalYAML() (interface{}, error) {
+	return fmt.Sprintf("%d/%d", f.Denominator, f.Numerator), nil
 }
 
 type TransactionPool struct {
@@ -123,13 +143,45 @@ type TransactionPool struct {
 	PoolSizeLimit           uint64
 }
 
-type Rational struct {
-	Value *big.Rat
+// GenerateConfigFile generates a blockchain config file
+func GenerateConfigFile(filepath string, filetype string) error {
+	marshalledConfig, err := generateMarshalledConfig(filetype)
+	if err != nil {
+		return err
+	}
+
+	viper.SetConfigType(filetype) // or viper.SetConfigType("YAML")
+
+	err = viper.ReadConfig(bytes.NewBuffer(marshalledConfig))
+	if err != nil {
+		return err
+	}
+
+	filepath = path.Join(filepath, "blockchaincfg."+filetype)
+	fmt.Println(filepath)
+	return viper.WriteConfigAs(filepath)
 }
 
-func GenerateConfigFileYaml(filepath string) error {
-	fmt.Println(filepath)
-	config := &Config{
+// generateMarshalledConfig generates a marshalledConfig with default values
+func generateMarshalledConfig(filetype string) ([]byte, error) {
+	config := buildConfigStruct()
+	var marshaller func(interface{}) ([]byte, error)
+	switch filetype {
+	case "yaml":
+		marshaller = yaml.Marshal
+	case "json":
+		marshaller = json.Marshal
+	case "toml":
+		marshaller = toml.Marshal
+	default:
+		return nil, errors.New("Filetype not supported")
+	}
+	return marshaller(config)
+}
+
+// buildConfigStruct builds to default values in our config struct
+func buildConfigStruct() *Config {
+	return &Config{
 		Template{
 			Repository: "https://github.com/threefoldtech/rivine-chain-template",
 			Version:    "Master",
@@ -200,12 +252,12 @@ func GenerateConfigFileYaml(filepath string) error {
 					MedianTimestampWindow:  uint(11),
 					TargetWindow:           uint(1e3),
 					MaxAdjustmentUp: Fraction{
-						Numerator:   25,
 						Denominator: 10,
+						Numerator:   25,
 					},
 					MaxAdjustmentDown: Fraction{
-						Numerator:   25,
 						Denominator: 10,
+						Numerator:   25,
 					},
 					FutureThreshold:        time.Hour,
 					ExtremeFutureThreshold: time.Hour * 2,
@@ -220,22 +272,4 @@ func GenerateConfigFileYaml(filepath string) error {
 			},
 		},
 	}
-	y, err := yaml.Marshal(config)
-	if err != nil {
-		return err
-	}
-	viper.SetConfigType("yaml") // or viper.SetConfigType("YAML")
-	viper.SetConfigName("blockchainConfig")
-
-	err = viper.ReadConfig(bytes.NewBuffer(y))
-	if err != nil {
-		return err
-	}
-	f, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	return viper.WriteConfigAs(filepath)
 }

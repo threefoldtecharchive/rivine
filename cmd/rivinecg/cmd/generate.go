@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/threefoldtech/rivine/modules"
 
@@ -34,10 +35,6 @@ var generateConfigCmd = &cobra.Command{
 	Short: "Generate blockchain config file",
 	Args:  cobra.ExactArgs(0),
 	RunE:  generateConfigFile,
-}
-
-func generateConfigFile(cmd *cobra.Command, args []string) error {
-	return config.GenerateConfigFileYaml(generateConfigCfg.filePath)
 }
 
 var generateConfigCfg struct {
@@ -71,7 +68,7 @@ func init() {
 	// adds a address-amount flag to generate seed command
 	generateSeedCmd.Flags().Uint64VarP(&generateSeedCfg.NumberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
-	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.fileType, "file-type", "f", "", "file type can be (YAML, TOML, JSON)")
+	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.fileType, "file-type", "f", "YAML", "file type can be (YAML, TOML, JSON)")
 	home, err := os.UserHomeDir()
 	if err != nil {
 		panic(err)
@@ -118,4 +115,8 @@ func generateAddressesFromMnemonic(mnemonic string, n uint64) ([]types.UnlockHas
 		unlockhashes = append(unlockhashes, types.NewPubKeyUnlockHash(types.Ed25519PublicKey(pkey)))
 	}
 	return unlockhashes, nil
+}
+
+func generateConfigFile(cmd *cobra.Command, args []string) error {
+	return config.GenerateConfigFile(generateConfigCfg.filePath, strings.ToLower(generateConfigCfg.fileType))
 }
