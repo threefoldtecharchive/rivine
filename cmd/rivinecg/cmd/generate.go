@@ -3,8 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/threefoldtech/rivine/modules"
 
@@ -38,7 +36,6 @@ var generateConfigCmd = &cobra.Command{
 }
 
 var generateConfigCfg struct {
-	fileType string
 	filePath string
 }
 
@@ -68,12 +65,7 @@ func init() {
 	// adds a address-amount flag to generate seed command
 	generateSeedCmd.Flags().Uint64VarP(&generateSeedCfg.NumberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
-	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.fileType, "file-type", "f", "YAML", "file type can be (YAML, TOML, JSON)")
-	home, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
-	}
-	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.filePath, "file-path", "p", home, "file path where to config file will be stored")
+	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.filePath, "file-path", "p", "blockchaincfg.yaml", "file path where the config file will be stored (default current working directory), ecoding is based on the file extension. Can be yaml, json or toml")
 
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
@@ -118,5 +110,10 @@ func generateAddressesFromMnemonic(mnemonic string, n uint64) ([]types.UnlockHas
 }
 
 func generateConfigFile(cmd *cobra.Command, args []string) error {
-	return config.GenerateConfigFile(generateConfigCfg.filePath, strings.ToLower(generateConfigCfg.fileType))
+	err := config.GenerateConfigFile(generateConfigCfg.filePath)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Config written in: %s\n", generateConfigCfg.filePath)
+	return nil
 }

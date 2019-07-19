@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path"
 	"time"
 
 	"github.com/pelletier/go-toml"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
 
@@ -21,102 +21,116 @@ const (
 	Standard
 )
 
-type Config struct {
-	Template   Template
-	Blockchain Blockchain
-}
+type (
+	Config struct {
+		Template   Template
+		Blockchain Blockchain
+	}
 
-type Template struct {
-	Repository string
-	Version    string
-}
+	Template struct {
+		Repository string
+		Version    string
+	}
 
-type Blockchain struct {
-	Name         string
-	Repository   string
-	Currency     Currency
-	Ports        Ports
-	Binaries     Binaries
-	Transactions Transactions
-	Network      []Network
-}
+	Blockchain struct {
+		Name         string
+		Repository   string
+		Currency     Currency
+		Ports        Ports
+		Binaries     Binaries
+		Transactions Transactions
+		Network      []Network
+	}
 
-type Currency struct {
-	Unit      string
-	Precision uint
-}
+	Currency struct {
+		Unit      string
+		Precision uint
+	}
 
-type Ports struct {
-	Api uint
-	Rpc uint
-}
+	Ports struct {
+		Api uint
+		Rpc uint
+	}
 
-type Binaries struct {
-	Client string
-	Deamon string
-}
+	Binaries struct {
+		Client string
+		Deamon string
+	}
 
-type Transactions struct {
-	Default Version
-	Minting Minting
-}
+	Transactions struct {
+		Default Version
+		Minting Minting
+	}
 
-type Minting struct {
-	MintConditionUpdate Version
-	CoinCreation        Version
-	CoinDestruction     Version
-	RequireMinerFees    bool
-}
+	Minting struct {
+		MintConditionUpdate Version
+		CoinCreation        Version
+		CoinDestruction     Version
+		RequireMinerFees    bool
+	}
 
-type Version struct {
-	Version uint
-}
+	Version struct {
+		Version uint
+	}
 
-type Genesis struct {
-	CoinOutputs       []Output
-	BlockStakeOutputs []Output
-	Minting           GenesisMinting
-}
+	Genesis struct {
+		CoinOutputs       []Output
+		BlockStakeOutputs []Output
+		Minting           GenesisMinting
+	}
 
-type Output struct {
-	Value     uint
-	Condition string
-}
+	Output struct {
+		Value     uint
+		Condition string
+	}
 
-type GenesisMinting struct {
-	Condition          Condition
-	SignaturesRequired uint
-}
+	GenesisMinting struct {
+		Condition          Condition
+		SignaturesRequired uint
+	}
 
-type Condition struct {
-	Addresses []string
-}
+	Condition struct {
+		Addresses []string
+	}
 
-type Network struct {
-	NetworkType            NetworkType
-	Genesis                Genesis
-	TransactionFeePool     string
-	BlockSizeLimit         uint64
-	ArbitraryDataSizeLimit uint
-	BlockCreatorFee        float32
-	MinimumTransactionFee  float32
-	BlockFrequency         uint
-	MaturityDelay          uint
-	MedianTimestampWindow  uint
-	TargetWindow           uint
-	MaxAdjustmentUp        Fraction
-	MaxAdjustmentDown      Fraction
-	FutureThreshold        time.Duration
-	ExtremeFutureThreshold time.Duration
-	StakeModifierDelay     time.Duration
-	BlockStakeAging        time.Duration
-	TransactionPool        TransactionPool
-}
+	Network struct {
+		NetworkType            NetworkType
+		Genesis                Genesis
+		TransactionFeePool     string
+		BlockSizeLimit         uint64
+		ArbitraryDataSizeLimit uint
+		BlockCreatorFee        float32
+		MinimumTransactionFee  float32
+		BlockFrequency         uint
+		MaturityDelay          uint
+		MedianTimestampWindow  uint
+		TargetWindow           uint
+		MaxAdjustmentUp        Fraction
+		MaxAdjustmentDown      Fraction
+		FutureThreshold        time.Duration
+		ExtremeFutureThreshold time.Duration
+		StakeModifierDelay     time.Duration
+		BlockStakeAging        time.Duration
+		TransactionPool        TransactionPool
+	}
 
-// Fraction represents ratio.
-type Fraction struct {
-	Denominator, Numerator int
-}
+	// Fraction represents ratio.
+	Fraction struct {
+		Denominator, Numerator int
+	}
+
+	TransactionPool struct {
+		TransactionSizeLimit    uint
+		TransactionSetSizeLimit uint
+		PoolSizeLimit           uint64
+	}
+)
+
+var (
+	// ErrUnsupportedFileType is returned in case generation of a config is requested for
+	// an unsupported file type
+	ErrUnsupportedFileType = errors.New("file type not supported")
+)
 
 // MarshalJSON will marshall Fraction struct into our specific format
 func (f Fraction) MarshalJSON() ([]byte, error) {
@@ -137,46 +151,43 @@ func (f Fraction) MarshalYAML() (interface{}, error) {
 	return fmt.Sprintf("%d/%d", f.Denominator, f.Numerator), nil
 }
 
-type TransactionPool struct {
-	TransactionSizeLimit    uint
-	TransactionSetSizeLimit uint
-	PoolSizeLimit           uint64
+func LoadConfigFile(filepath string) error {
+	fmt.Println(filepath)
+	return nil
 }
 
 // GenerateConfigFile generates a blockchain config file
-func GenerateConfigFile(filepath string, filetype string) error {
-	marshalledConfig, err := generateMarshalledConfig(filetype)
+func GenerateConfigFile(filepath string) error {
+	typ := path.Ext(filepath)
+	file, err := os.Create(path.Join(filepath))
 	if err != nil {
 		return err
 	}
 
-	viper.SetConfigType(filetype) // or viper.SetConfigType("YAML")
-
-	err = viper.ReadConfig(bytes.NewBuffer(marshalledConfig))
-	if err != nil {
-		return err
-	}
-
-	filepath = path.Join(filepath, "blockchaincfg."+filetype)
-	fmt.Println(filepath)
-	return viper.WriteConfigAs(filepath)
+	return generateConfig(typ, file)
 }
 
-// generateMarshalledConfig generates a marshalledConfig with default values
-func generateMarshalledConfig(filetype string) ([]byte, error) {
+// generatConfig generates a default config, encodes it according
+// to the given type, and writes it to the provided file
+func generateConfig(typ string, file *os.File) error {
 	config := buildConfigStruct()
-	var marshaller func(interface{}) ([]byte, error)
-	switch filetype {
-	case "yaml":
-		marshaller = yaml.Marshal
-	case "json":
-		marshaller = json.Marshal
-	case "toml":
-		marshaller = toml.Marshal
-	default:
-		return nil, errors.New("Filetype not supported")
+	var enc interface {
+		Encode(interface{}) error
 	}
-	return marshaller(config)
+	switch typ {
+	case ".yaml":
+		enc = yaml.NewEncoder(file)
+	case ".json":
+		// properly format json file
+		t := json.NewEncoder(file)
+		t.SetIndent("", "    ")
+		enc = t
+	case ".toml":
+		enc = toml.NewEncoder(file)
+	default:
+		return ErrUnsupportedFileType
+	}
+	return enc.Encode(config)
 }
 
 // buildConfigStruct builds to default values in our config struct

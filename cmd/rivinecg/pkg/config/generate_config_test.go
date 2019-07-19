@@ -10,19 +10,20 @@ import (
 // Check if the file is created properly
 func TestGenerateConfigFileAndCheckFileExists(t *testing.T) {
 	for _, typ := range []string{"toml", "yaml", "json"} {
-		err := GenerateConfigFile(os.TempDir(), typ)
+		filepath := path.Join(os.TempDir(), "blockchaincfg."+typ)
+		err := GenerateConfigFile(filepath)
 		if err != nil {
 			t.Errorf("Error occured: %s", err)
 		}
 
-		_, err = os.Stat(path.Join(os.TempDir(), "blockchaincfg."+typ))
+		_, err = os.Stat(filepath)
 		if os.IsNotExist(err) {
 			t.Errorf("File is not created, %s", err)
 		}
 		if err != nil {
 			t.Errorf("Error occured: %s", err)
 		}
-		err = os.Remove(path.Join(os.TempDir(), "blockchaincfg."+typ))
+		err = os.Remove(filepath)
 		if err != nil {
 			t.Errorf("Error occured removing file: %s", err)
 		}
@@ -33,9 +34,10 @@ func TestGenerateConfigFileAndCheckFileExists(t *testing.T) {
 // Should throw an error
 func TestGenerateConfigFileWithUnknownFileType(t *testing.T) {
 	typ := "test"
-	err := GenerateConfigFile(os.TempDir(), typ)
+	filepath := path.Join(os.TempDir(), "blockchaincfg."+typ)
+	err := GenerateConfigFile(filepath)
 	expectedError := "Filetype not supported"
-	if err.Error() != expectedError {
+	if err != ErrUnsupportedFileType {
 		t.Errorf("Error actual: %s - and error expected: %s", err, expectedError)
 	}
 }
