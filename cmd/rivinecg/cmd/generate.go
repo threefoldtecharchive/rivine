@@ -17,21 +17,21 @@ import (
 // root generate command
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "generate blockchains and related content",
+	Short: "Generate blockchains and related content",
 	Args:  cobra.ExactArgs(0),
 }
 
 // sub generate seed command
 var generateSeedCmd = &cobra.Command{
 	Use:   "seed",
-	Short: "generate a seed and one or multiple addresses",
+	Short: "Generate a seed and one or multiple addresses",
 	Args:  cobra.ExactArgs(0),
 	RunE:  generateSeed,
 }
 
 var generateConfigCmd = &cobra.Command{
 	Use:   "config",
-	Short: "generate blockchain config file",
+	Short: "Generate blockchain config file",
 	Args:  cobra.ExactArgs(0),
 	RunE:  generateConfigFile,
 }
@@ -109,8 +109,8 @@ func generateMnemonicAndAddresses(n uint64) (string, []types.UnlockHash, error) 
 // generateAddressesFromMnemonic generates amount of addresses based on mnemonic and amount provided
 func generateAddressesFromMnemonic(mnemonic string, n uint64) ([]types.UnlockHash, error) {
 	unlockhashes := make([]types.UnlockHash, 0, n)
+	seed, err := modules.InitialSeedFromMnemonic(mnemonic)
 	for index := uint64(0); index < n; index++ {
-		seed, err := modules.InitialSeedFromMnemonic(mnemonic)
 		if err != nil {
 			return nil, err
 		}
