@@ -3,10 +3,12 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/threefoldtech/rivine/modules"
 
 	"github.com/spf13/cobra"
+	"github.com/threefoldtech/rivine/cmd/rivinecg/pkg/config"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/types"
 	"github.com/tyler-smith/go-bip39"
@@ -25,6 +27,22 @@ var generateSeedCmd = &cobra.Command{
 	Short: "generate a seed and one or multiple addresses",
 	Args:  cobra.ExactArgs(0),
 	RunE:  generateSeed,
+}
+
+var generateConfigCmd = &cobra.Command{
+	Use:   "config",
+	Short: "generate blockchain config file",
+	Args:  cobra.ExactArgs(0),
+	RunE:  generateConfigFile,
+}
+
+func generateConfigFile(cmd *cobra.Command, args []string) error {
+	return config.GenerateConfigFileYaml(generateConfigCfg.filePath)
+}
+
+var generateConfigCfg struct {
+	fileType string
+	filePath string
 }
 
 // sub generate seed command config
@@ -53,9 +71,17 @@ func init() {
 	// adds a address-amount flag to generate seed command
 	generateSeedCmd.Flags().Uint64VarP(&generateSeedCfg.NumberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
+	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.fileType, "file-type", "f", "", "file type can be (YAML, TOML, JSON)")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.filePath, "file-path", "p", home, "file path where to config file will be stored")
+
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
 		generateSeedCmd,
+		generateConfigCmd,
 	)
 }
 
