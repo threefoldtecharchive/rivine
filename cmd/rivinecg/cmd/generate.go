@@ -35,6 +35,13 @@ var generateConfigCmd = &cobra.Command{
 	RunE:  generateConfigFile,
 }
 
+var generateBlockchainCmd = &cobra.Command{
+	Use:   "generate-blockchain",
+	Short: "Generate blockchain from a config file",
+	Args:  cobra.ExactArgs(1),
+	RunE:  generateBlockchain,
+}
+
 var generateConfigCfg struct {
 	filePath string
 }
@@ -66,11 +73,11 @@ func init() {
 	generateSeedCmd.Flags().Uint64VarP(&generateSeedCfg.NumberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
 	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.filePath, "file-path", "p", "blockchaincfg.yaml", "file path where the config file will be stored (default current working directory), ecoding is based on the file extension. Can be yaml, json or toml")
-
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
 		generateSeedCmd,
 		generateConfigCmd,
+		generateBlockchainCmd,
 	)
 }
 
@@ -115,5 +122,13 @@ func generateConfigFile(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	fmt.Printf("Config written in: %s\n", generateConfigCfg.filePath)
+	return nil
+}
+
+func generateBlockchain(cmd *cobra.Command, args []string) error {
+	err := config.LoadConfigFile(args[0])
+	if err != nil {
+		return err
+	}
 	return nil
 }
