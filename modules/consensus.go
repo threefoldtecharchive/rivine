@@ -100,6 +100,13 @@ type (
 		// An error should be returned in case something went wrong.
 		RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 
+		// TransactionValidatorFunctions allows the plugin to provide validation rules for all transactions it cares about
+		TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]PluginTransactionValidationFunction
+
+		// TransactionCreationValidatorVersionFunctionMapping allows the plugin to provide validation rules for
+		// all transactions it cares about at block creation time
+		TransactionCreationValidatorVersionFunctionMapping() map[types.TransactionVersion][]PluginTransactionCreationValidationFunction
+
 		// Close releases any resources helt by the plugin like the PluginViewStorage
 		Close() error
 	}
@@ -111,6 +118,33 @@ type (
 	PluginViewStorage interface {
 		View(callback func(bucket *bolt.Bucket) error) error
 		Close() error
+	}
+
+	// PluginTransactionValidationFunction is the signature of a validator function that
+	// can be used to provide plugin-driven transaction validation, provided by (and linked to) a plugin.
+	PluginTransactionValidationFunction func(tx types.Transaction, ctx types.TransactionValidationContext, css ConsensusStateGetter, bucket *persist.LazyBoltBucket) error
+
+	// PluginTransactionCreationValidationFunction is the signature of a validator function that
+	// can be used to provide plugin-driven transaction validation at block creation time, provided by (and linked to) a plugin.
+	PluginTransactionCreationValidationFunction func(tx types.Transaction, ctx types.TransactionCreationValidationContext, css ConsensusStateGetter, bucket *persist.LazyBoltBucket) error
+
+	// TransactionValidationFunction is the signature of a validator function that
+	// can be used to provide validation rules for transactions.
+	TransactionValidationFunction func(tx types.Transaction, ctx types.TransactionValidationContext, css ConsensusStateGetter) error
+
+	// TransactionCreationValidationFunction is the signature of a validator function that
+	// can be used to provide validation rules for transactions at block creation time.
+	TransactionCreationValidationFunction func(tx types.Transaction, ctx types.TransactionCreationValidationContext, css ConsensusStateGetter) error
+
+	// ConsensusStateGetter allows looking up of consensus set data at a given state
+	// (as accessed using a single open database Transaction).
+	ConsensusStateGetter interface {
+		BlockAtHeight(height types.BlockHeight) (types.Block, error)
+		TransactionAtID(id types.TransactionID) (types.Transaction, error)
+		TransactionAtShortID(id types.TransactionShortID) (types.Transaction, error)
+
+		UnspentCoinOutputGet(id types.CoinOutputID) (types.CoinOutput, error)
+		UnspentBlockStakeOutputGet(id types.BlockStakeOutputID) (types.BlockStakeOutput, error)
 	}
 
 	// A ConsensusChange enumerates a set of changes that occurred to the consensus set.

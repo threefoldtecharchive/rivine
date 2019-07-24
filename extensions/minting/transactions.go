@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
@@ -117,16 +116,12 @@ var (
 	// implements the desired interfaces
 	_ types.TransactionController      = CoinCreationTransactionController{}
 	_ types.TransactionExtensionSigner = CoinCreationTransactionController{}
-	_ types.TransactionValidator       = CoinCreationTransactionController{}
-	_ types.CoinOutputValidator        = CoinCreationTransactionController{}
-	_ types.BlockStakeOutputValidator  = CoinCreationTransactionController{}
 	_ types.TransactionSignatureHasher = CoinCreationTransactionController{}
 	_ types.TransactionIDEncoder       = CoinCreationTransactionController{}
 
 	// ensure at compile time that CoinDestructionTransactionController
 	// implements the desired interfaces
 	_ types.TransactionController      = CoinDestructionTransactionController{}
-	_ types.TransactionValidator       = CoinDestructionTransactionController{}
 	_ types.TransactionSignatureHasher = CoinDestructionTransactionController{}
 	_ types.TransactionIDEncoder       = CoinDestructionTransactionController{}
 
@@ -134,9 +129,6 @@ var (
 	// implements the desired interfaces
 	_ types.TransactionController                = MinterDefinitionTransactionController{}
 	_ types.TransactionExtensionSigner           = MinterDefinitionTransactionController{}
-	_ types.TransactionValidator                 = MinterDefinitionTransactionController{}
-	_ types.CoinOutputValidator                  = MinterDefinitionTransactionController{}
-	_ types.BlockStakeOutputValidator            = MinterDefinitionTransactionController{}
 	_ types.TransactionSignatureHasher           = MinterDefinitionTransactionController{}
 	_ types.TransactionIDEncoder                 = MinterDefinitionTransactionController{}
 	_ types.TransactionCommonExtensionDataGetter = MinterDefinitionTransactionController{}
@@ -208,72 +200,6 @@ func (cctc CoinCreationTransactionController) SignExtension(extension interface{
 		return nil, fmt.Errorf("failed to sign mint fulfillment of coin creation tx: %v", err)
 	}
 	return ccTxExtension, nil
-}
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (cctc CoinCreationTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) (err error) {
-	err = types.TransactionFitsInABlock(t, constants.BlockSizeLimit)
-	if err != nil {
-		return err
-	}
-
-	// get CoinCreationTxn
-	cctx, err := CoinCreationTransactionFromTransaction(t, cctc.TransactionVersion, cctc.RequireMinerFees)
-	if err != nil {
-		return fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
-	}
-
-	// get MintCondition
-	mintCondition, err := cctc.MintConditionGetter.GetMintConditionAt(ctx.BlockHeight)
-	if err != nil {
-		return fmt.Errorf("failed to get mint condition at block height %d: %v", ctx.BlockHeight, err)
-	}
-
-	// check if MintFulfillment fulfills the Globally defined MintCondition for the context-defined block height
-	err = mintCondition.Fulfill(cctx.MintFulfillment, types.FulfillContext{
-		BlockHeight: ctx.BlockHeight,
-		BlockTime:   ctx.BlockTime,
-		Transaction: t,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to fulfill mint condition: %v", err)
-	}
-	// ensure the Nonce is not Nil
-	if cctx.Nonce == (types.TransactionNonce{}) {
-		return errors.New("nil nonce is not allowed for a coin creation transaction")
-	}
-
-	// validate the rest of the content
-	err = types.ArbitraryDataFits(cctx.ArbitraryData, constants.ArbitraryDataSizeLimit)
-	if err != nil {
-		return
-	}
-	for _, fee := range cctx.MinerFees {
-		if fee.Cmp(constants.MinimumMinerFee) == -1 {
-			return types.ErrTooSmallMinerFee
-		}
-	}
-	// check if all condtions are standard and that the parent outputs have non-zero values
-	for _, sco := range cctx.CoinOutputs {
-		if sco.Value.IsZero() {
-			return types.ErrZeroOutput
-		}
-		err = sco.Condition.IsStandardCondition(ctx)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs
-func (cctc CoinCreationTransactionController) ValidateCoinOutputs(t types.Transaction, ctx types.FundValidationContext, coinInputs map[types.CoinOutputID]types.CoinOutput) (err error) {
-	return nil // always valid, coin outputs are created not backed
-}
-
-// ValidateBlockStakeOutputs implements BlockStakeOutputValidator.ValidateBlockStakeOutputs
-func (cctc CoinCreationTransactionController) ValidateBlockStakeOutputs(t types.Transaction, ctx types.FundValidationContext, blockStakeInputs map[types.BlockStakeOutputID]types.BlockStakeOutput) (err error) {
-	return nil // always valid, no block stake inputs/outputs exist within a coin creation transaction
 }
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
@@ -358,99 +284,6 @@ func (cdtc CoinDestructionTransactionController) JSONDecodeTransactionData(data 
 	}
 	// return coin destruction tx as regular rivine tx data
 	return cdtx.TransactionData(), nil
-}
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (cdtc CoinDestructionTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) error {
-	err := types.TransactionFitsInABlock(t, constants.BlockSizeLimit)
-	if err != nil {
-		return err
-	}
-
-	// get CoinDestructionTxn
-	cdtx, err := CoinDestructionTransactionFromTransaction(t, cdtc.TransactionVersion, cdtc.RequireMinerFees)
-	if err != nil {
-		return fmt.Errorf("failed to use tx as a coin destruction tx: %v", err)
-	}
-
-	// validate the arbitirary data
-	err = types.ArbitraryDataFits(cdtx.ArbitraryData, constants.ArbitraryDataSizeLimit)
-	if err != nil {
-		return err
-	}
-
-	if cdtc.RequireMinerFees {
-		for _, fee := range cdtx.MinerFees {
-			if fee.Cmp(constants.MinimumMinerFee) == -1 {
-				return types.ErrTooSmallMinerFee
-			}
-		}
-	} else {
-		if len(cdtx.MinerFees) > 0 {
-			return errors.New("undesired miner fees: no miner fees required, yet they are defined")
-		}
-	}
-
-	// if the refund coin output is given, ensure that
-	if cdtx.RefundCoinOutput != nil {
-		if cdtx.RefundCoinOutput.Value.IsZero() {
-			return types.ErrZeroOutput
-		}
-		err = cdtx.RefundCoinOutput.Condition.IsStandardCondition(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
-	// NOTE: the lower bound of the coin inputs sum is checked in the ValidateCoinOutputs function
-	return nil
-}
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs
-func (cdtc CoinDestructionTransactionController) ValidateCoinOutputs(t types.Transaction, ctx types.FundValidationContext, coinInputs map[types.CoinOutputID]types.CoinOutput) error {
-	var (
-		err      error
-		inputSum types.Currency
-	)
-	for index, sci := range t.CoinInputs {
-		sco, ok := coinInputs[sci.ParentID]
-		if !ok {
-			return types.MissingCoinOutputError{ID: sci.ParentID}
-		}
-		// check if the referenced output's condition has been fulfilled
-		err = sco.Condition.Fulfill(sci.Fulfillment, types.FulfillContext{
-			ExtraObjects: []interface{}{uint64(index)},
-			BlockHeight:  ctx.BlockHeight,
-			BlockTime:    ctx.BlockTime,
-			Transaction:  t,
-		})
-		if err != nil {
-			return err
-		}
-		inputSum = inputSum.Add(sco.Value)
-	}
-
-	// compute the lower bound
-	var lowerBound types.Currency
-	if cdtc.RequireMinerFees {
-		lowerBound = t.CoinOutputSum()
-	} else {
-		for _, sco := range t.CoinOutputs {
-			lowerBound = lowerBound.Add(sco.Value)
-		}
-	}
-
-	// ensure input sum is above lowerBound
-	rcmp := lowerBound.Cmp(inputSum)
-	if rcmp == 0 {
-		return errors.New("all coin outputs (minus miner fees) are refunded, this is not allowed for a coin destruction transaction")
-	}
-	if rcmp > 0 {
-		return errors.New("more coin outputs (including miner fees) are refunded than there are coin inputs, this is not allowed")
-	}
-
-	// all valid
-	return nil
 }
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
@@ -561,117 +394,6 @@ func (mdtc MinterDefinitionTransactionController) SignExtension(extension interf
 		return nil, fmt.Errorf("failed to sign mint fulfillment of MinterDefinitionTx: %v", err)
 	}
 	return mdTxExtension, nil
-}
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (mdtc MinterDefinitionTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) (err error) {
-	err = types.TransactionFitsInABlock(t, constants.BlockSizeLimit)
-	if err != nil {
-		return err
-	}
-
-	// get MinterDefinitionTx
-	mdtx, err := MinterDefinitionTransactionFromTransaction(t, mdtc.TransactionVersion, mdtc.RequireMinerFees)
-	if err != nil {
-		return fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
-	}
-
-	// check if the MintCondition is valid
-	err = mdtx.MintCondition.IsStandardCondition(ctx)
-	if err != nil {
-		return fmt.Errorf("defined mint condition is not standard within the given blockchain context: %v", err)
-	}
-	// check if the valid mint condition has a type we want to support, one of:
-	//   * PubKey-UnlockHashCondtion
-	//   * MultiSigConditions
-	//   * TimeLockConditions (if the internal condition type is supported)
-	err = validateMintCondition(mdtx.MintCondition)
-	if err != nil {
-		return err
-	}
-
-	// get MintCondition
-	mintCondition, err := mdtc.MintConditionGetter.GetMintConditionAt(ctx.BlockHeight)
-	if err != nil {
-		return fmt.Errorf("failed to get mint condition at block height %d: %v", ctx.BlockHeight, err)
-	}
-
-	// check if MintFulfillment fulfills the Globally defined MintCondition for the context-defined block height
-	err = mintCondition.Fulfill(mdtx.MintFulfillment, types.FulfillContext{
-		BlockHeight: ctx.BlockHeight,
-		BlockTime:   ctx.BlockTime,
-		Transaction: t,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to fulfill mint condition: %v", err)
-	}
-	// ensure the Nonce is not Nil
-	if mdtx.Nonce == (types.TransactionNonce{}) {
-		return errors.New("nil nonce is not allowed for a mint condition transaction")
-	}
-
-	// validate the rest of the content
-	err = types.ArbitraryDataFits(mdtx.ArbitraryData, constants.ArbitraryDataSizeLimit)
-	if err != nil {
-		return
-	}
-	if mdtc.RequireMinerFees {
-		for _, fee := range mdtx.MinerFees {
-			if fee.Cmp(constants.MinimumMinerFee) == -1 {
-				return types.ErrTooSmallMinerFee
-			}
-		}
-	} else {
-		if len(mdtx.MinerFees) > 0 {
-			return errors.New("undesired miner fees: no miner fees required, yet they are defined")
-		}
-	}
-	return
-}
-
-func validateMintCondition(condition types.UnlockCondition) error {
-	switch ct := condition.ConditionType(); ct {
-	case types.ConditionTypeMultiSignature:
-		// always valid
-		return nil
-
-	case types.ConditionTypeUnlockHash:
-		// only valid for unlock hash type 1 (PubKey)
-		if condition.UnlockHash().Type == types.UnlockTypePubKey {
-			return nil
-		}
-		return errors.New("unlockHash conditions can be used as mint conditions, if the unlock hash type is PubKey")
-
-	case types.ConditionTypeTimeLock:
-		// ensure to unpack a proxy condition first
-		if cp, ok := condition.(types.UnlockConditionProxy); ok {
-			condition = cp.Condition
-		}
-		// time lock conditions are allowed as long as the internal condition is allowed
-		cg, ok := condition.(types.MarshalableUnlockConditionGetter)
-		if !ok {
-			err := fmt.Errorf("unexpected Go-type for TimeLockCondition: %T", condition)
-			if build.DEBUG {
-				panic(err)
-			}
-			return err
-		}
-		return validateMintCondition(cg.GetMarshalableUnlockCondition())
-
-	default:
-		// all other types aren't allowed
-		return fmt.Errorf("condition type %d cannot be used as a mint condition", ct)
-	}
-}
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs
-func (mdtc MinterDefinitionTransactionController) ValidateCoinOutputs(t types.Transaction, ctx types.FundValidationContext, coinInputs map[types.CoinOutputID]types.CoinOutput) (err error) {
-	return nil // always valid, no block stake inputs/outputs exist within a minter definition transaction
-}
-
-// ValidateBlockStakeOutputs implements BlockStakeOutputValidator.ValidateBlockStakeOutputs
-func (mdtc MinterDefinitionTransactionController) ValidateBlockStakeOutputs(t types.Transaction, ctx types.FundValidationContext, blockStakeInputs map[types.BlockStakeOutputID]types.BlockStakeOutput) (err error) {
-	return nil // always valid, no block stake inputs/outputs exist within a minter definition transaction
 }
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash

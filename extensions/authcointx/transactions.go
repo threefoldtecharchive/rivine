@@ -157,9 +157,6 @@ var (
 	// implements the desired interfaces
 	_ types.TransactionController                = AuthAddressUpdateTransactionController{}
 	_ types.TransactionExtensionSigner           = AuthAddressUpdateTransactionController{}
-	_ types.TransactionValidator                 = AuthAddressUpdateTransactionController{}
-	_ types.CoinOutputValidator                  = AuthAddressUpdateTransactionController{}
-	_ types.BlockStakeOutputValidator            = AuthAddressUpdateTransactionController{}
 	_ types.TransactionSignatureHasher           = AuthAddressUpdateTransactionController{}
 	_ types.TransactionIDEncoder                 = AuthAddressUpdateTransactionController{}
 	_ types.TransactionCommonExtensionDataGetter = AuthAddressUpdateTransactionController{}
@@ -241,114 +238,6 @@ func (autc AuthAddressUpdateTransactionController) SignExtension(extension inter
 		return nil, fmt.Errorf("failed to sign auth fulfillment of auth address update tx: %v", err)
 	}
 	return auTxExtension, nil
-}
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (autc AuthAddressUpdateTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) (err error) {
-	err = types.TransactionFitsInABlock(t, constants.BlockSizeLimit)
-	if err != nil {
-		return err
-	}
-
-	// get AuthAddressUpdateTx
-	autx, err := AuthAddressUpdateTransactionFromTransaction(t, autc.TransactionVersion)
-	if err != nil {
-		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
-		return fmt.Errorf("failed to use tx as a auth address update tx: %v", err)
-	}
-
-	// get AuthCondition
-	authCondition, err := autc.AuthInfoGetter.GetAuthConditionAt(ctx.BlockHeight)
-	if err != nil {
-		return fmt.Errorf("failed to get auth condition at block height %d: %v", ctx.BlockHeight, err)
-	}
-
-	// check if AuthFulfillment fulfills the Globally defined AuthCondition for the context-defined block height
-	err = authCondition.Fulfill(autx.AuthFulfillment, types.FulfillContext{
-		BlockHeight: ctx.BlockHeight,
-		BlockTime:   ctx.BlockTime,
-		Transaction: t,
-	})
-	if err != nil {
-		return types.NewClientError(fmt.Errorf("failed to fulfill mint condition: %v", err), types.ClientErrorUnauthorized)
-	}
-	// ensure the Nonce is not Nil
-	if autx.Nonce == (types.TransactionNonce{}) {
-		return errors.New("nil nonce is not allowed for a auth address update transaction")
-	}
-
-	// validate the rest of the content
-	err = types.ArbitraryDataFits(autx.ArbitraryData, constants.ArbitraryDataSizeLimit)
-	if err != nil {
-		return
-	}
-
-	// ensure we have at least one address to (de)authorize
-	lAuthAddresses := len(autx.AuthAddresses)
-	lDeauthAddresses := len(autx.DeauthAddresses)
-	if lAuthAddresses == 0 && lDeauthAddresses == 0 {
-		err = errors.New("at least one address is required to be authorized or deauthorized")
-	}
-	// ensure all addresses are unique and no address is both authorized and deauthorized
-	addressesSeen := map[types.UnlockHash]struct{}{}
-	var ok bool
-	for _, address := range autx.AuthAddresses {
-		if _, ok = addressesSeen[address]; ok {
-			err = fmt.Errorf("an address can only be defined once per AuthAddressUpdate transaction: %s was seen twice", address.String())
-			return
-		}
-		addressesSeen[address] = struct{}{}
-	}
-	for _, address := range autx.DeauthAddresses {
-		if _, ok = addressesSeen[address]; ok {
-			err = fmt.Errorf("an address can only be defined once per AuthAddressUpdate transaction: %s was seen twice", address.String())
-			return
-		}
-		addressesSeen[address] = struct{}{}
-	}
-
-	var stateSlice []bool
-	if lAuthAddresses > 0 {
-		// ensure all addresses to authorize are for now deauthorized
-		stateSlice, err = autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.AuthAddresses, func(_ int, state bool) bool { return state })
-		if err != nil {
-			err = fmt.Errorf("failed to check if any address to auth are at block height %d not authed already: %v", ctx.BlockHeight, err)
-			return
-		}
-		for index, state := range stateSlice {
-			if state {
-				err = types.NewClientError(fmt.Errorf("address %s (to auth) is already authorized", autx.AuthAddresses[index]), types.ClientErrorForbidden)
-				return
-			}
-		}
-	}
-	if lDeauthAddresses > 0 {
-		// ensure all addresses to deauthorize are for now authorized
-		stateSlice, err = autc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, autx.DeauthAddresses, func(_ int, state bool) bool { return !state })
-		if err != nil {
-			err = fmt.Errorf("failed to check if any address to deauth are at block height %d still authed: %v", ctx.BlockHeight, err)
-			return
-		}
-		for index, state := range stateSlice {
-			if !state {
-				err = types.NewClientError(fmt.Errorf("address %s (to auth) is already deauthorized", autx.DeauthAddresses[index]), types.ClientErrorForbidden)
-				return
-			}
-		}
-	}
-
-	// no error to return
-	return nil
-}
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs
-func (autc AuthAddressUpdateTransactionController) ValidateCoinOutputs(t types.Transaction, ctx types.FundValidationContext, coinInputs map[types.CoinOutputID]types.CoinOutput) (err error) {
-	return nil // always valid, no coin inputs/outputs exist within a coin creation transaction
-}
-
-// ValidateBlockStakeOutputs implements BlockStakeOutputValidator.ValidateBlockStakeOutputs
-func (autc AuthAddressUpdateTransactionController) ValidateBlockStakeOutputs(t types.Transaction, ctx types.FundValidationContext, blockStakeInputs map[types.BlockStakeOutputID]types.BlockStakeOutput) (err error) {
-	return nil // always valid, no block stake inputs/outputs exist within a coin creation transaction
 }
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
@@ -521,9 +410,6 @@ var (
 	// implements the desired interfaces
 	_ types.TransactionController                = AuthConditionUpdateTransactionController{}
 	_ types.TransactionExtensionSigner           = AuthConditionUpdateTransactionController{}
-	_ types.TransactionValidator                 = AuthConditionUpdateTransactionController{}
-	_ types.CoinOutputValidator                  = AuthConditionUpdateTransactionController{}
-	_ types.BlockStakeOutputValidator            = AuthConditionUpdateTransactionController{}
 	_ types.TransactionSignatureHasher           = AuthConditionUpdateTransactionController{}
 	_ types.TransactionIDEncoder                 = AuthConditionUpdateTransactionController{}
 	_ types.TransactionCommonExtensionDataGetter = AuthConditionUpdateTransactionController{}
@@ -605,70 +491,6 @@ func (cutc AuthConditionUpdateTransactionController) SignExtension(extension int
 		return nil, fmt.Errorf("failed to sign auth fulfillment of auth address update tx: %v", err)
 	}
 	return cuTxExtension, nil
-}
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (cutc AuthConditionUpdateTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) (err error) {
-	err = types.TransactionFitsInABlock(t, constants.BlockSizeLimit)
-	if err != nil {
-		return err
-	}
-
-	// get AuthConditionUpdateTx
-	cutx, err := AuthConditionUpdateTransactionFromTransaction(t, cutc.TransactionVersion)
-	if err != nil {
-		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
-		return fmt.Errorf("failed to use tx as a auth condition update tx: %v", err)
-	}
-
-	// get AuthCondition
-	authCondition, err := cutc.AuthInfoGetter.GetAuthConditionAt(ctx.BlockHeight)
-	if err != nil {
-		return fmt.Errorf("failed to get auth condition at block height %d: %v", ctx.BlockHeight, err)
-	}
-
-	// check if AuthFulfillment fulfills the Globally defined AuthCondition for the context-defined block height
-	err = authCondition.Fulfill(cutx.AuthFulfillment, types.FulfillContext{
-		BlockHeight: ctx.BlockHeight,
-		BlockTime:   ctx.BlockTime,
-		Transaction: t,
-	})
-	if err != nil {
-		return types.NewClientError(fmt.Errorf("failed to fulfill mint condition: %v", err), types.ClientErrorUnauthorized)
-	}
-	// ensure the Nonce is not Nil
-	if cutx.Nonce == (types.TransactionNonce{}) {
-		return errors.New("nil nonce is not allowed for a auth address update transaction")
-	}
-
-	// validate the rest of the content
-	err = types.ArbitraryDataFits(cutx.ArbitraryData, constants.ArbitraryDataSizeLimit)
-	if err != nil {
-		return
-	}
-
-	// ensure the defined condition is not equal to the current active auth condition
-	if authCondition.Equal(cutx.AuthCondition) {
-		return errors.New("defined condition is already used as the currently active auth condition (nop update not allowed)")
-	}
-	// ensure the defined condition maps to an acceptable uh
-	uh := cutx.AuthCondition.UnlockHash()
-	if uh.Type != types.UnlockTypePubKey && uh.Type != types.UnlockTypeMultiSig {
-		return fmt.Errorf("defined condition maps to an invalid unlock hash type %d", uh.Type)
-	}
-
-	// no error to return
-	return nil
-}
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs
-func (cutc AuthConditionUpdateTransactionController) ValidateCoinOutputs(t types.Transaction, ctx types.FundValidationContext, coinInputs map[types.CoinOutputID]types.CoinOutput) (err error) {
-	return nil // always valid, no coin inputs/outputs exist within a coin creation transaction
-}
-
-// ValidateBlockStakeOutputs implements BlockStakeOutputValidator.ValidateBlockStakeOutputs
-func (cutc AuthConditionUpdateTransactionController) ValidateBlockStakeOutputs(t types.Transaction, ctx types.FundValidationContext, blockStakeInputs map[types.BlockStakeOutputID]types.BlockStakeOutput) (err error) {
-	return nil // always valid, no block stake inputs/outputs exist within a coin creation transaction
 }
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
