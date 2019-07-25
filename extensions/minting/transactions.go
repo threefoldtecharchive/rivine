@@ -40,6 +40,14 @@ type (
 		UseLegacySiaEncoding bool
 		RequireMinerFees     bool
 	}
+
+	// MintingMinerFeeBaseTransactionController is the base controller for all minting controllers,
+	// that require miner fees.
+	MintingMinerFeeBaseTransactionController struct {
+		MintingBaseTransactionController
+
+		RequireMinerFees bool
+	}
 )
 
 type binaryEncoder interface {
@@ -70,7 +78,7 @@ type (
 	// for a CoinCreation Transaction. It allows for the creation of Coin Outputs,
 	// without requiring coin inputs, but can only be used by the defined Coin Minters.
 	CoinCreationTransactionController struct {
-		MintingBaseTransactionController
+		MintingMinerFeeBaseTransactionController
 
 		// MintConditionGetter is used to get a mint condition at the context-defined block height.
 		//
@@ -96,7 +104,7 @@ type (
 	// MinterDefinitionTransactionController defines a rivine-specific transaction controller,
 	// for a MinterDefinition Transaction. It allows the transfer of coin minting powers.
 	MinterDefinitionTransactionController struct {
-		MintingBaseTransactionController
+		MintingMinerFeeBaseTransactionController
 
 		// MintConditionGetter is used to get a mint condition at the context-defined block height.
 		//
@@ -288,7 +296,7 @@ func (cdtc CoinDestructionTransactionController) JSONDecodeTransactionData(data 
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (cdtc CoinDestructionTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	cdtx, err := CoinDestructionTransactionFromTransaction(t, cdtc.TransactionVersion, cdtc.RequireMinerFees)
+	cdtx, err := CoinDestructionTransactionFromTransaction(t, cdtc.TransactionVersion)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as a coin desruction tx: %v", err)
 	}
@@ -585,7 +593,7 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `CoinCreationTransactionFromTransactionData` constructor.
-func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion, requireMinerFees bool) (CoinDestructionTransaction, error) {
+func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (CoinDestructionTransaction, error) {
 	if tx.Version != expectedVersion {
 		return CoinDestructionTransaction{}, fmt.Errorf(
 			"a coin destruction transaction requires tx version %d",
@@ -599,7 +607,7 @@ func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVer
 		MinerFees:         tx.MinerFees,
 		ArbitraryData:     tx.ArbitraryData,
 		Extension:         tx.Extension,
-	}, requireMinerFees)
+	})
 }
 
 // CoinDestructionTransactionFromTransactionData creates a CoinDestructionTransaction,
