@@ -38,7 +38,6 @@ type (
 	// MintingBaseTransactionController is the base controller for all minting controllers
 	MintingBaseTransactionController struct {
 		UseLegacySiaEncoding bool
-		RequireMinerFees     bool
 	}
 
 	// MintingMinerFeeBaseTransactionController is the base controller for all minting controllers,
@@ -313,14 +312,17 @@ func (cdtc CoinDestructionTransactionController) SignatureHash(t types.Transacti
 		enc.EncodeAll(extraObjects...)
 	}
 
-	enc.EncodeAll(
-		cdtx.CoinInputs,
-		cdtx.RefundCoinOutput,
-	)
-	if cdtc.RequireMinerFees {
-		enc.Encode(cdtx.MinerFees)
+	parentIDSlice := make([]types.CoinOutputID, 0, len(cdtx.CoinInputs))
+	for _, ci := range cdtx.CoinInputs {
+		parentIDSlice = append(parentIDSlice, ci.ParentID)
 	}
-	enc.Encode(cdtx.ArbitraryData)
+
+	enc.EncodeAll(
+		parentIDSlice,
+		cdtx.RefundCoinOutput,
+		cdtx.MinerFees,
+		cdtx.ArbitraryData,
+	)
 
 	var hash crypto.Hash
 	h.Sum(hash[:0])
@@ -424,11 +426,11 @@ func (mdtc MinterDefinitionTransactionController) SignatureHash(t types.Transact
 		enc.EncodeAll(extraObjects...)
 	}
 
-	enc.Encode(mdtx.MintCondition)
-	if mdtc.RequireMinerFees {
-		enc.Encode(mdtx.MinerFees)
-	}
-	enc.Encode(mdtx.ArbitraryData)
+	enc.EncodeAll(
+		mdtx.MintCondition,
+		mdtx.MinerFees,
+		mdtx.ArbitraryData,
+	)
 
 	var hash crypto.Hash
 	h.Sum(hash[:0])
