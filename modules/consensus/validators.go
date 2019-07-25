@@ -135,13 +135,36 @@ func ValidateDoubleBlockStakeSpends(tx types.Transaction, ctx types.TransactionV
 	return nil
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/// Transaction Creation Validators (Validation upon block creation)
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ValidateCoinInputsAreFulfilled validates that all coin outputs are validated
+func ValidateCoinInputsAreFulfilled(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+	var (
+		err error
+		co  types.CoinOutput
+	)
+	for index, ci := range tx.CoinInputs {
+		co, err = css.UnspentCoinOutputGet(ci.ParentID)
+		if err != nil {
+			return fmt.Errorf(
+				"unable to find parent ID %s as an unspent coin output in the current consensus state at block height %d",
+				ci.ParentID.String(), ctx.BlockHeight)
+		}
+		// check if the referenced output's condition has been fulfilled
+		err = co.Condition.Fulfill(ci.Fulfillment, types.FulfillContext{
+			ExtraObjects: []interface{}{uint64(index)},
+			BlockHeight:  ctx.BlockHeight,
+			BlockTime:    ctx.BlockTime,
+			Transaction:  tx,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // ValidateCoinOutputsAreBalanced is a validator function that checks if the sum of
 // all types of coin outputs equals the sum of coin inputs.
-func ValidateCoinOutputsAreBalanced(tx types.Transaction, ctx types.TransactionCreationValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateCoinOutputsAreBalanced(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
 	// collect the coin input sum
 	var coinInputSum types.Currency
 	for _, ci := range tx.CoinInputs {
@@ -172,9 +195,36 @@ func ValidateCoinOutputsAreBalanced(tx types.Transaction, ctx types.TransactionC
 	return nil
 }
 
+// ValidateBlockStakeInputsAreFulfilled validates that all block stake inputs are fulfilled
+func ValidateBlockStakeInputsAreFulfilled(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+	var (
+		err error
+		bso types.BlockStakeOutput
+	)
+	for index, bsi := range tx.BlockStakeInputs {
+		bso, err = css.UnspentBlockStakeOutputGet(bsi.ParentID)
+		if err != nil {
+			return fmt.Errorf(
+				"unable to find parent ID %s as an unspent block stake output in the current consensus state at block height %d",
+				bsi.ParentID.String(), ctx.BlockHeight)
+		}
+		// check if the referenced output's condition has been fulfilled
+		err = bso.Condition.Fulfill(bsi.Fulfillment, types.FulfillContext{
+			ExtraObjects: []interface{}{uint64(index)},
+			BlockHeight:  ctx.BlockHeight,
+			BlockTime:    ctx.BlockTime,
+			Transaction:  tx,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ValidateBlockStakeOutputsAreBalanced is a validator function that checks if the sum of
 // all block stakes outputs equals the sum of all block stake inputs.
-func ValidateBlockStakeOutputsAreBalanced(tx types.Transaction, ctx types.TransactionCreationValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateBlockStakeOutputsAreBalanced(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
 	// collect the block stake input sum
 	var blockStakeInputSum types.Currency
 	for _, bsi := range tx.BlockStakeInputs {

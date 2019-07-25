@@ -158,9 +158,6 @@ func TestBinaryExampleAuthConditionUpdateTransaction(t *testing.T) {
 }
 
 func TestAuthStandardTransactionEncodingDocExamples(t *testing.T) {
-	types.RegisterTransactionVersion(types.TransactionVersionOne, AuthStandardTransferTransactionController{})
-	defer types.RegisterTransactionVersion(types.TransactionVersionOne, types.DefaultTransactionController{})
-
 	// utility funcs
 	hbs := func(str string) []byte { // hexStr -> byte slice
 		bs, _ := hex.DecodeString(str)
@@ -429,9 +426,6 @@ func TestAuthStandardTransactionEncodingDocExamples(t *testing.T) {
 // standard tests copied and modified from Rivine's types/transactions.test
 
 func TestAuthStandardTransactionJSONEncodingExamples(t *testing.T) {
-	types.RegisterTransactionVersion(types.TransactionVersionOne, AuthStandardTransferTransactionController{})
-	defer types.RegisterTransactionVersion(types.TransactionVersionOne, types.DefaultTransactionController{})
-
 	// utility funcs
 	hbs := func(str string) []byte { // hexStr -> byte slice
 		bs, _ := hex.DecodeString(str)

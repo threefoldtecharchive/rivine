@@ -43,9 +43,6 @@ func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdat
 		authConditionUpdateTransactionVersion: authConditionUpdateTransactionVersion,
 	}
 	types.RegisterTransactionVersion(types.TransactionVersionZero, DisabledTransactionController{})
-	types.RegisterTransactionVersion(types.TransactionVersionOne, AuthStandardTransferTransactionController{
-		AuthInfoGetter: p,
-	})
 	types.RegisterTransactionVersion(authAddressUpdateTransactionVersion, AuthAddressUpdateTransactionController{
 		AuthInfoGetter:     p,
 		TransactionVersion: authAddressUpdateTransactionVersion,
@@ -485,9 +482,15 @@ func (p *Plugin) getAuthAddressStateFromBucketWithContextInfo(authAddressBucket 
 	return state, nil
 }
 
-// TransactionValidatorVersionFunctionMapping returns all tx validators linked to this plugin
+// TransactionValidatorVersionFunctionMapping returns all tx validators for specific tx versions linked to this plugin
 func (p *Plugin) TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionValidationFunction {
 	return map[types.TransactionVersion][]modules.PluginTransactionValidationFunction{
+		types.TransactionVersionZero: []modules.PluginTransactionValidationFunction{
+			p.validateDisabledversionZeroTx,
+		},
+		types.TransactionVersionOne: []modules.PluginTransactionValidationFunction{
+			p.validateDisabledversionZeroTx,
+		},
 		p.authAddressUpdateTransactionVersion: []modules.PluginTransactionValidationFunction{
 			p.validateAuthAddressUpdateTx,
 		},
@@ -497,8 +500,53 @@ func (p *Plugin) TransactionValidatorVersionFunctionMapping() map[types.Transact
 	}
 }
 
-// TransactionCreationValidatorVersionFunctionMapping returns all tx creation validators linked to this plugin
-func (p *Plugin) TransactionCreationValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionCreationValidationFunction {
+// TransactionValidators returns all tx validators linked to this plugin
+func (p *Plugin) TransactionValidators() []modules.PluginTransactionValidationFunction {
+	return []modules.PluginTransactionValidationFunction{
+		p.validateAuthorizedCoinFlowForAllTxs,
+	}
+}
+
+func (p *Plugin) validateDisabledversionZeroTx(_ types.Transaction, _ types.TransactionValidationContext, _ modules.ConsensusStateGetter, _ *persist.LazyBoltBucket) error {
+	return errors.New("DisabledTransactionController: transaction is disabled: invalid by default")
+}
+
+func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+	// collect all dedupAddresses
+	dedupAddresses := map[types.UnlockHash]struct{}{}
+	for _, co := range tx.CoinOutputs {
+		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
+	}
+	for _, ci := range tx.CoinInputs {
+		co, err := css.UnspentCoinOutputGet(ci.ParentID)
+		if err != nil {
+			return fmt.Errorf(
+				"unable to find parent ID %s as an unspent coin output in the current consensus state at block height %d",
+				ci.ParentID.String(), ctx.BlockHeight)
+		}
+		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
+	}
+
+	addressLength := len(dedupAddresses)
+	if addressLength == 0 || (addressLength == 1 && len(tx.CoinOutputs) <= 1) {
+		return nil // nothing to do
+	}
+
+	// get authAddressBucket from plugin bucket, so we can check the state of addresses
+	authAddressBucket, err := bucket.Bucket(bucketAuthAddresses)
+	if err != nil {
+		return err
+	}
+	// validate that all used addresses are authorized
+	for addr := range dedupAddresses {
+		state, err := p.getAuthAddressStateFromBucketWithContextInfo(authAddressBucket, addr, ctx.Confirmed, ctx.BlockHeight)
+		if err != nil {
+			return fmt.Errorf("failed to check if address %s is authorized at the moment: %v", addr.String(), err)
+		}
+		if !state {
+			return types.NewClientError(fmt.Errorf("address %s is not authorized", addr), types.ClientErrorForbidden)
+		}
+	}
 	return nil
 }
 

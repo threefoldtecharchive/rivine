@@ -2,12 +2,10 @@ package consensus
 
 import (
 	"errors"
-	"fmt"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/persist"
 )
 
 var (
@@ -118,24 +116,9 @@ func (cs *ConsensusSet) rewindBlock(tx *bolt.Tx, pb *processedBlock) error {
 }
 
 func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
-	// update plugins
-	pluginBuckets := map[string]*persist.LazyBoltBucket{}
-	for name := range cs.plugins {
-		name := name
-		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-			rootbucket := tx.Bucket(BucketPlugins)
-			if rootbucket == nil {
-				return nil, fmt.Errorf("plugin bucket does not exist")
-			}
-			b := rootbucket.Bucket([]byte(name))
-			if b == nil {
-				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
-			}
-			return b, nil
-		})
-	}
 	for name, plugin := range cs.plugins {
-		err := plugin.RevertBlock(pb.Block, pb.Height, pluginBuckets[name])
+		bucket := cs.bucketForPlugin(tx, name)
+		err := plugin.RevertBlock(pb.Block, pb.Height, bucket)
 		if err != nil {
 			return err
 		}
@@ -153,24 +136,9 @@ func (cs *ConsensusSet) forwardBlock(tx *bolt.Tx, pb *processedBlock) error {
 }
 
 func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
-	// update plugins
-	pluginBuckets := map[string]*persist.LazyBoltBucket{}
-	for name := range cs.plugins {
-		name := name
-		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-			rootbucket := tx.Bucket(BucketPlugins)
-			if rootbucket == nil {
-				return nil, fmt.Errorf("plugin bucket does not exist")
-			}
-			b := rootbucket.Bucket([]byte(name))
-			if b == nil {
-				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
-			}
-			return b, nil
-		})
-	}
 	for name, plugin := range cs.plugins {
-		err := plugin.ApplyBlock(pb.Block, pb.Height, pluginBuckets[name])
+		bucket := cs.bucketForPlugin(tx, name)
+		err := plugin.ApplyBlock(pb.Block, pb.Height, bucket)
 		if err != nil {
 			return err
 		}

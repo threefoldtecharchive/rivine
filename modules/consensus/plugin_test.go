@@ -48,6 +48,16 @@ func (plugin *testPlugin) RevertTransaction(txn types.Transaction, block types.B
 	return nil
 }
 
+// TransactionValidatorFunctions allows the plugin to provide validation rules for all transaction versions it mapped to
+func (plugin *testPlugin) TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionValidationFunction {
+	return nil
+}
+
+// TransactionValidators allows the plugin to provide validation rules for all transactions versions it wants
+func (plugin *testPlugin) TransactionValidators() []modules.PluginTransactionValidationFunction {
+	return nil
+}
+
 func TestPluginCloseCalled(t *testing.T) {
 	cst, err := blankConsensusSetTester("testconsensus")
 	if err != nil {

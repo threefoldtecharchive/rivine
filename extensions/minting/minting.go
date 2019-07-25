@@ -303,7 +303,7 @@ func (p *Plugin) getMintConditionFromBucketWithContextInfo(mintConditionBucket *
 
 // TransactionValidatorVersionFunctionMapping returns all tx validators linked to this plugin
 func (p *Plugin) TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionValidationFunction {
-	return map[types.TransactionVersion][]modules.PluginTransactionValidationFunction{
+	m := map[types.TransactionVersion][]modules.PluginTransactionValidationFunction{
 		p.minterDefinitionTransactionVersion: []modules.PluginTransactionValidationFunction{
 			p.validateMinterDefinitionTx,
 		},
@@ -311,18 +311,17 @@ func (p *Plugin) TransactionValidatorVersionFunctionMapping() map[types.Transact
 			p.validateCoinCreationTx,
 		},
 	}
+	if p.coinDestructionTransactionVersion != nil {
+		m[*p.coinDestructionTransactionVersion] = []modules.PluginTransactionValidationFunction{
+			p.validateCoinDestructionTxCreation,
+		}
+	}
+	return m
 }
 
-// TransactionCreationValidatorVersionFunctionMapping returns all tx creation validators linked to this plugin
-func (p *Plugin) TransactionCreationValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionCreationValidationFunction {
-	if p.coinDestructionTransactionVersion == nil {
-		return nil
-	}
-	return map[types.TransactionVersion][]modules.PluginTransactionCreationValidationFunction{
-		*p.coinDestructionTransactionVersion: []modules.PluginTransactionCreationValidationFunction{
-			p.validateCoinDestructionTxCreation,
-		},
-	}
+// TransactionValidators returns all tx validators linked to this plugin
+func (p *Plugin) TransactionValidators() []modules.PluginTransactionValidationFunction {
+	return nil
 }
 
 func (p *Plugin) validateMinterDefinitionTx(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
@@ -442,7 +441,7 @@ func validateMintCondition(condition types.UnlockCondition) error {
 	}
 }
 
-func (p *Plugin) validateCoinDestructionTxCreation(tx types.Transaction, ctx types.TransactionCreationValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) validateCoinDestructionTxCreation(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
 	// collect the coin input sum
 	var coinInputSum types.Currency
 	for _, ci := range tx.CoinInputs {

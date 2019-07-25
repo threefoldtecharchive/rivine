@@ -544,74 +544,12 @@ func (cutc AuthConditionUpdateTransactionController) GetCommonExtensionData(exte
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-// TRANSACTION	CONTROLLER	///		Auth Standard Transaction					///
-///////////////////////////////////////////////////////////////////////////////////
-
-// ensures at compile time that the Auth Condition Update Transaction Controller implement all desired interfaces
-var (
-	// ensure at compile time that AuthConditionUpdateTransactionController
-	// implements the desired interfaces
-	_ types.CoinOutputValidator = AuthStandardTransferTransactionController{}
-)
-
-type (
-	// AuthStandardTransferTransactionController defines a custom transaction controller,
-	// for the regular Rivine (0x01) transaction. It adds validation to the transaction,
-	// as well as coin outputs to ensure that all coin inputs/outputs are from/to authorized addresses.
-	AuthStandardTransferTransactionController struct {
-		types.DefaultTransactionController
-
-		// AuthInfoGetter is used to get (coin) authorization information.
-		AuthInfoGetter AuthInfoGetter
-	}
-)
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs
-func (sttc AuthStandardTransferTransactionController) ValidateCoinOutputs(t types.Transaction, ctx types.FundValidationContext, coinInputs map[types.CoinOutputID]types.CoinOutput) error {
-	// collect all dedupAddresses
-	dedupAddresses := map[types.UnlockHash]struct{}{}
-	for _, co := range t.CoinOutputs {
-		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
-	}
-	for _, co := range coinInputs {
-		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
-	}
-	addressLength := len(dedupAddresses)
-	if addressLength > 1 || len(t.CoinOutputs) > 1 {
-		// considered value as this indicates ether no coin outputs, or a single refund coin output
-		// (both of which require no coin auth).
-		// Transferring block stakes for example requires no auth state if that is the only thing done
-		addresses := make([]types.UnlockHash, 0, addressLength)
-		for uh := range dedupAddresses {
-			addresses = append(addresses, uh)
-		}
-
-		// validate them all at once
-		stateSlice, err := sttc.AuthInfoGetter.GetAddressesAuthStateAt(ctx.BlockHeight, addresses, func(_ int, state bool) bool { return !state })
-		if err != nil {
-			return fmt.Errorf("address(s) cannot participate in a coin transfer as state is unclear due to error: %v", err)
-		}
-		for index, state := range stateSlice {
-			if !state {
-				return types.NewClientError(fmt.Errorf("unauthorized address %s cannot participate in a coin transfer", addresses[index]), types.ClientErrorForbidden)
-			}
-		}
-	}
-
-	// apply now the regular coin output validation
-	return types.DefaultCoinOutputValidation(t, ctx, coinInputs)
-}
-
-///////////////////////////////////////////////////////////////////////////////////
 // TRANSACTION	CONTROLLER	///		Disabld v0 Transaction						///
 ///////////////////////////////////////////////////////////////////////////////////
 
 // ensures at compile time that the Transaction Controller implement all desired interfaces
 var (
-	_ types.TransactionController     = DisabledTransactionController{}
-	_ types.TransactionValidator      = DisabledTransactionController{}
-	_ types.CoinOutputValidator       = DisabledTransactionController{}
-	_ types.BlockStakeOutputValidator = DisabledTransactionController{}
+	_ types.TransactionController = DisabledTransactionController{}
 )
 
 // DisabledTransactionController is used for transaction versions that are disabled but still need to be JSON decodable.
@@ -696,19 +634,4 @@ func (dtc DisabledTransactionController) validateTransactionData(t types.Transac
 		return errors.New("DisabledTransactionController allows only empty (nil) transactions: extension data not allowed")
 	}
 	return nil
-}
-
-// ValidateTransaction implements TransactionValidator.ValidateTransaction
-func (dtc DisabledTransactionController) ValidateTransaction(t types.Transaction, ctx types.ValidationContext, constants types.TransactionValidationConstants) (err error) {
-	return errors.New("DisabledTransactionController: transaction is disabled: invalid by default")
-}
-
-// ValidateCoinOutputs implements CoinOutputValidator.ValidateCoinOutputs
-func (dtc DisabledTransactionController) ValidateCoinOutputs(t types.Transaction, ctx types.FundValidationContext, coinInputs map[types.CoinOutputID]types.CoinOutput) error {
-	return errors.New("DisabledTransactionController: transaction is disabled: coin outputs invalid by default")
-}
-
-// ValidateBlockStakeOutputs implements BlockStakeOutputValidator.ValidateBlockStakeOutputs
-func (dtc DisabledTransactionController) ValidateBlockStakeOutputs(t types.Transaction, ctx types.FundValidationContext, blockStakeInputs map[types.BlockStakeOutputID]types.BlockStakeOutput) (err error) {
-	return errors.New("DisabledTransactionController: transaction is disabled: block stake outputs invalid by default")
 }
