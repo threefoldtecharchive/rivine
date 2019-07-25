@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
@@ -299,6 +300,95 @@ func (ltc LegacyTransactionController) SignatureHash(t Transaction, extraObjects
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (ltc LegacyTransactionController) EncodeTransactionIDInput(w io.Writer, td TransactionData) error {
 	return ltc.EncodeTransactionData(w, td)
+}
+
+// ensures at compile time that the Transaction Controller implement all desired interfaces
+var (
+	_ TransactionController = DisabledTransactionController{}
+)
+
+// DisabledTransactionController is used for transaction versions that are disabled but still need to be JSON decodable.
+type DisabledTransactionController struct {
+	DefaultTransactionController
+}
+
+// EncodeTransactionData implements TransactionController.EncodeTransactionData
+func (dtc DisabledTransactionController) EncodeTransactionData(w io.Writer, td TransactionData) error {
+	err := dtc.validateTransactionData(td) // ensure txdata is undefined
+	if err != nil {
+		return err
+	}
+	return dtc.DefaultTransactionController.EncodeTransactionData(w, td)
+}
+
+// DecodeTransactionData implements TransactionController.DecodeTransactionData
+func (dtc DisabledTransactionController) DecodeTransactionData(r io.Reader) (TransactionData, error) {
+	td, err := dtc.DefaultTransactionController.DecodeTransactionData(r)
+	if err != nil {
+		return td, err
+	}
+	return td, dtc.validateTransactionData(td) // ensure txdata is undefined
+}
+
+// JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
+func (dtc DisabledTransactionController) JSONEncodeTransactionData(td TransactionData) ([]byte, error) {
+	err := dtc.validateTransactionData(td) // ensure txdata is undefined
+	if err != nil {
+		return nil, err
+	}
+	return dtc.DefaultTransactionController.JSONEncodeTransactionData(td)
+}
+
+// JSONDecodeTransactionData implements TransactionController.JSONDecodeTransactionData
+func (dtc DisabledTransactionController) JSONDecodeTransactionData(b []byte) (TransactionData, error) {
+	var td TransactionData
+	err := json.Unmarshal(b, &td)
+	if err != nil {
+		return td, err
+	}
+	return td, dtc.validateTransactionData(td) // ensure txdata is undefined
+}
+
+// EncodeTransactionData imple
+
+func (dtc DisabledTransactionController) validateTransaction(t Transaction) error {
+	if t.Version != 0 {
+		return fmt.Errorf("DisabledTransactionController allows only empty (nil) transactions: invalid %d tx version", t.Version)
+	}
+	return dtc.validateTransactionData(TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+		Extension:         t.Extension,
+	})
+}
+
+func (dtc DisabledTransactionController) validateTransactionData(t TransactionData) error {
+	if len(t.CoinInputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: coin inputs not allowed")
+	}
+	if len(t.CoinOutputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: coin outputs not allowed")
+	}
+	if len(t.BlockStakeInputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: block stake inputs not allowed")
+	}
+	if len(t.BlockStakeOutputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: block stake outputs not allowed")
+	}
+	if len(t.MinerFees) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: miner fees not allowed")
+	}
+	if len(t.ArbitraryData) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: arbitrary data not allowed")
+	}
+	if t.Extension != nil {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: extension data not allowed")
+	}
+	return nil
 }
 
 func init() {

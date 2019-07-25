@@ -26,23 +26,51 @@ var (
 type (
 	// Plugin is a struct defines the Auth. Coin Transfer plugin
 	Plugin struct {
-		genesisAuthCondition                  types.UnlockConditionProxy
-		authAddressUpdateTransactionVersion   types.TransactionVersion
-		authConditionUpdateTransactionVersion types.TransactionVersion
-		storage                               modules.PluginViewStorage
-		unregisterCallback                    modules.PluginUnregisterCallback
+		genesisAuthCondition                         types.UnlockConditionProxy
+		authAddressUpdateTransactionVersion          types.TransactionVersion
+		authConditionUpdateTransactionVersion        types.TransactionVersion
+		storage                                      modules.PluginViewStorage
+		unregisterCallback                           modules.PluginUnregisterCallback
+		unauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
 	}
+
+	// PluginOpts are extra optional configurations one can make to the AuthCoin Plugin
+	PluginOpts struct {
+		// UnauthorizedCoinTransactionExceptionCallback is a callback that can be defined,
+		// in case your chain requires custom logic to define what transaction can be considered valid for
+		// coin transfers with unauthorized addresses due to whatever rules (e.g. version, pure refund coin flow, ...)
+		UnauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
+	}
+
+	// UnauthorizedCoinTransactionExceptionCallback is the function signature for the callback that can be used
+	// for chains that requires custom logic to define what transaction can be considered valid for
+	// coin transfers with unauthorized addresses due to whatever rules (e.g. version, pure refund coin flow, ...)
+	// True is returned in case this tx does not require an authorization check, False otherwise.
+	UnauthorizedCoinTransactionExceptionCallback func(tx types.Transaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) (bool, error)
 )
+
+// DefaultUnauthorizedCoinTransactionExceptionCallback is the default callback that is used in ase the auth coin plugin
+// does not define a custom callback.
+func DefaultUnauthorizedCoinTransactionExceptionCallback(tx types.Transaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) (bool, error) {
+	if tx.Version != types.TransactionVersionZero && tx.Version != types.TransactionVersionOne {
+		return false, nil
+	}
+	return (len(dedupAddresses) == 1 && len(tx.CoinOutputs) <= 1), nil
+}
 
 // NewPlugin creates a new Plugin with a genesisAuthCondition and correct transaction versions.
 // NOTE: do not register the default rivine transaction versions (0x00 and 0x01) if you use this plugin!!!
-func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdateTransactionVersion, authConditionUpdateTransactionVersion types.TransactionVersion) *Plugin {
+func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdateTransactionVersion, authConditionUpdateTransactionVersion types.TransactionVersion, opts *PluginOpts) *Plugin {
 	p := &Plugin{
 		genesisAuthCondition:                  genesisAuthCondition,
 		authAddressUpdateTransactionVersion:   authAddressUpdateTransactionVersion,
 		authConditionUpdateTransactionVersion: authConditionUpdateTransactionVersion,
 	}
-	types.RegisterTransactionVersion(types.TransactionVersionZero, DisabledTransactionController{})
+	if opts != nil && opts.UnauthorizedCoinTransactionExceptionCallback != nil {
+		p.unauthorizedCoinTransactionExceptionCallback = opts.UnauthorizedCoinTransactionExceptionCallback
+	} else {
+		p.unauthorizedCoinTransactionExceptionCallback = DefaultUnauthorizedCoinTransactionExceptionCallback
+	}
 	types.RegisterTransactionVersion(authAddressUpdateTransactionVersion, AuthAddressUpdateTransactionController{
 		AuthInfoGetter:     p,
 		TransactionVersion: authAddressUpdateTransactionVersion,
@@ -333,8 +361,7 @@ func (p *Plugin) GetAddressesAuthStateAt(height types.BlockHeight, addresses []t
 func (p *Plugin) getAuthConditionFromBucketAt(authConditionBucket *bolt.Bucket, height types.BlockHeight) (types.UnlockConditionProxy, error) {
 	var b []byte
 	err := func() error {
-		authBucket := authConditionBucket.Bucket([]byte(bucketAuthConditions))
-		cursor := authBucket.Cursor()
+		cursor := authConditionBucket.Cursor()
 		var k []byte
 		k, b = cursor.Seek(encodeBlockheight(height))
 		if len(k) == 0 {
@@ -485,12 +512,6 @@ func (p *Plugin) getAuthAddressStateFromBucketWithContextInfo(authAddressBucket 
 // TransactionValidatorVersionFunctionMapping returns all tx validators for specific tx versions linked to this plugin
 func (p *Plugin) TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionValidationFunction {
 	return map[types.TransactionVersion][]modules.PluginTransactionValidationFunction{
-		types.TransactionVersionZero: []modules.PluginTransactionValidationFunction{
-			p.validateDisabledversionZeroTx,
-		},
-		types.TransactionVersionOne: []modules.PluginTransactionValidationFunction{
-			p.validateDisabledversionZeroTx,
-		},
 		p.authAddressUpdateTransactionVersion: []modules.PluginTransactionValidationFunction{
 			p.validateAuthAddressUpdateTx,
 		},
@@ -505,10 +526,6 @@ func (p *Plugin) TransactionValidators() []modules.PluginTransactionValidationFu
 	return []modules.PluginTransactionValidationFunction{
 		p.validateAuthorizedCoinFlowForAllTxs,
 	}
-}
-
-func (p *Plugin) validateDisabledversionZeroTx(_ types.Transaction, _ types.TransactionValidationContext, _ modules.ConsensusStateGetter, _ *persist.LazyBoltBucket) error {
-	return errors.New("DisabledTransactionController: transaction is disabled: invalid by default")
 }
 
 func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
@@ -528,8 +545,19 @@ func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx types.Transaction, ctx t
 	}
 
 	addressLength := len(dedupAddresses)
-	if addressLength == 0 || (addressLength == 1 && len(tx.CoinOutputs) <= 1) {
+	if addressLength == 0 {
 		return nil // nothing to do
+	}
+	dedupAddressesSlice := make([]types.UnlockHash, 0, len(dedupAddresses))
+	for uh := range dedupAddresses {
+		dedupAddressesSlice = append(dedupAddressesSlice, uh)
+	}
+	allowedToBeUnauthorized, err := p.unauthorizedCoinTransactionExceptionCallback(tx, dedupAddressesSlice, ctx, css)
+	if err != nil {
+		return fmt.Errorf("failed to check if transaction is allowed to be a potential unauthorized coin transfer: %v", err)
+	}
+	if allowedToBeUnauthorized {
+		return nil // nothing to validate, whether it is authorized or not is no longer important
 	}
 
 	// get authAddressBucket from plugin bucket, so we can check the state of addresses

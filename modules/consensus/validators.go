@@ -37,13 +37,14 @@ func (cs *ConsensusSet) SetTransactionVersionMappedValidators(version types.Tran
 // if no custom set of transaction validators (effecitively rules that apply to every transaction)
 // are defined, or if `nil` rules are set, in which case these default validators will be used as well.
 func StandardTransactionVersionMappedValidators() map[types.TransactionVersion][]modules.TransactionValidationFunction {
-	validators := []modules.TransactionValidationFunction{
-		ValidateCoinOutputsAreBalanced,
-		ValidateBlockStakeOutputsAreBalanced,
-	}
 	return map[types.TransactionVersion][]modules.TransactionValidationFunction{
-		types.TransactionVersionZero: validators,
-		types.TransactionVersionOne:  validators,
+		types.TransactionVersionZero: []modules.TransactionValidationFunction{
+			ValidateInvalidByDefault,
+		},
+		types.TransactionVersionOne: []modules.TransactionValidationFunction{
+			ValidateCoinOutputsAreBalanced,
+			ValidateBlockStakeOutputsAreBalanced,
+		},
 	}
 }
 
@@ -191,6 +192,11 @@ func ValidateDoubleBlockStakeSpends(tx types.Transaction, ctx types.TransactionV
 		spendBlockStakes[bsi.ParentID] = struct{}{}
 	}
 	return nil
+}
+
+// ValidateInvalidByDefault returns always an error and can be used to not allow transactions to be validated.
+func ValidateInvalidByDefault(_ types.Transaction, _ types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
+	return errors.New("transaction is invalid as it has been disabled for validation using the ValidateInvalidByDefault function")
 }
 
 // ValidateCoinInputsAreFulfilled validates that all coin outputs are validated
