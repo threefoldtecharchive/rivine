@@ -137,6 +137,9 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 			DiffsGenerated: true,
 		},
 
+		txVersionMappedValidators: StandardTransactionVersionMappedValidators(),
+		txValidators:              StandardTransactionValidators(),
+
 		dosBlocks: make(map[types.BlockID]struct{}),
 
 		bootstrap: bootstrap,

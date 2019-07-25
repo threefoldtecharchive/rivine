@@ -8,6 +8,64 @@ import (
 	"github.com/threefoldtech/rivine/types"
 )
 
+// SetTransactionValidators sets the transaction validators used by the ConsensusSet as rules for all transactions,
+// regardless of the version. Use SetTransactionVersionMappedValidators in case you want rules that only apply to a specific tx version.
+// If no validators are passed, the validators returned by the `consensus.StandardTransactionValidators` function are used.
+func (cs *ConsensusSet) SetTransactionValidators(validators ...modules.TransactionValidationFunction) {
+	if len(validators) == 0 {
+		cs.txValidators = StandardTransactionValidators()
+		return
+	}
+	cs.txValidators = validators
+}
+
+// SetTransactionVersionMappedValidators sets the transaction validators used by the ConsensusSet as rules for
+// the transactions of the defined version. If no validators are passed, the validators for the given transaction version,
+// as returned by the `consensus.StandardTransactionVersionMappedValidators` function, are used.
+func (cs *ConsensusSet) SetTransactionVersionMappedValidators(version types.TransactionVersion, validators ...modules.TransactionValidationFunction) {
+	if len(validators) == 0 {
+		validators := StandardTransactionVersionMappedValidators()
+		if verValidators, ok := validators[version]; ok {
+			cs.txVersionMappedValidators[version] = verValidators
+		}
+		return
+	}
+	cs.txVersionMappedValidators[version] = validators
+}
+
+// StandardTransactionVersionMappedValidators returns the standard version-mapped transaction validators that are used
+// if no custom set of transaction validators (effecitively rules that apply to every transaction)
+// are defined, or if `nil` rules are set, in which case these default validators will be used as well.
+func StandardTransactionVersionMappedValidators() map[types.TransactionVersion][]modules.TransactionValidationFunction {
+	validators := []modules.TransactionValidationFunction{
+		ValidateCoinOutputsAreBalanced,
+		ValidateBlockStakeOutputsAreBalanced,
+	}
+	return map[types.TransactionVersion][]modules.TransactionValidationFunction{
+		types.TransactionVersionZero: validators,
+		types.TransactionVersionOne:  validators,
+	}
+}
+
+// StandardTransactionValidators returns the standard transaction validators that are used
+// if no custom set of transaction validators (effecitively rules that apply to every transaction)
+// are defined, or if `nil` rules are set, in which case these default validators will be used as well.
+func StandardTransactionValidators() []modules.TransactionValidationFunction {
+	return []modules.TransactionValidationFunction{
+		ValidateTransactionFitsInABlock,
+		ValidateTransactionArbitraryData,
+		ValidateCoinInputsAreValid,
+		ValidateCoinOutputsAreValid,
+		ValidateBlockStakeInputsAreValid,
+		ValidateBlockStakeOutputsAreValid,
+		ValidateMinerFeesAreValid,
+		ValidateDoubleCoinSpends,
+		ValidateDoubleBlockStakeSpends,
+		ValidateCoinInputsAreFulfilled,
+		ValidateBlockStakeInputsAreFulfilled,
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Transaction Validators (Validation at any height/time)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
