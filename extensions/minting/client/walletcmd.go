@@ -24,7 +24,10 @@ func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersi
 		cli:                        client,
 		mintingDefinitionTxVersion: mintingDefinitionTxVersion,
 		coinCreationTxVersion:      coinCreationTxVersion,
-		requireMinerFees:           opts != nil && opts.RequireMinerFees,
+	}
+	if opts != nil {
+		walletCmd.requireMinerFees = opts.RequireMinerFees
+		walletCmd.coinDestructionTxVersion = opts.CoinDestructionTxVersion
 	}
 
 	// create root explore command and all subs
@@ -236,9 +239,7 @@ func (walletCmd *walletCmd) burnCoinsCmd(cmd *cobra.Command, args []string) {
 	cdTx := minting.CoinDestructionTransaction{
 		CoinInputs:       coinInputs,
 		RefundCoinOutput: refundCoinOutput,
-	}
-	if walletCmd.requireMinerFees {
-		cdTx.MinerFees = []types.Currency{walletCmd.cli.Config.MinimumTransactionFee}
+		MinerFees:        []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
 	}
 	if n := len(walletCmd.coinCreationTxCfg.Description); n > 0 {
 		cdTx.ArbitraryData = make([]byte, n)

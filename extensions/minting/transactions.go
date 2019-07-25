@@ -246,7 +246,7 @@ func (cctc CoinCreationTransactionController) EncodeTransactionIDInput(w io.Writ
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (cdtc CoinDestructionTransactionController) EncodeTransactionData(w io.Writer, txData types.TransactionData) error {
-	cdtx, err := CoinDestructionTransactionFromTransactionData(txData, cdtc.RequireMinerFees)
+	cdtx, err := CoinDestructionTransactionFromTransactionData(txData)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a CoinDestructionTx: %v", err)
 	}
@@ -267,7 +267,7 @@ func (cdtc CoinDestructionTransactionController) DecodeTransactionData(r io.Read
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (cdtc CoinDestructionTransactionController) JSONEncodeTransactionData(txData types.TransactionData) ([]byte, error) {
-	cdtx, err := CoinDestructionTransactionFromTransactionData(txData, cdtc.RequireMinerFees)
+	cdtx, err := CoinDestructionTransactionFromTransactionData(txData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert txData to a CoinDestructionTx: %v", err)
 	}
@@ -321,7 +321,7 @@ func (cdtc CoinDestructionTransactionController) SignatureHash(t types.Transacti
 
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (cdtc CoinDestructionTransactionController) EncodeTransactionIDInput(w io.Writer, txData types.TransactionData) error {
-	cdtx, err := CoinDestructionTransactionFromTransactionData(txData, cdtc.RequireMinerFees)
+	cdtx, err := CoinDestructionTransactionFromTransactionData(txData)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a CoinDestructionTx: %v", err)
 	}
@@ -604,15 +604,13 @@ func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVer
 
 // CoinDestructionTransactionFromTransactionData creates a CoinDestructionTransaction,
 // using the TransactionData from a regular in-memory rivine transaction.
-func CoinDestructionTransactionFromTransactionData(txData types.TransactionData, requireMinerFees bool) (CoinDestructionTransaction, error) {
+func CoinDestructionTransactionFromTransactionData(txData types.TransactionData) (CoinDestructionTransaction, error) {
 	// at least one coin output as well as one miner fee is required
 	if len(txData.CoinOutputs) > 1 {
 		return CoinDestructionTransaction{}, errors.New("maximum one coin output is allowed for a CoinDestructionTransaction")
 	}
-	if requireMinerFees && len(txData.MinerFees) == 0 {
+	if len(txData.MinerFees) == 0 {
 		return CoinDestructionTransaction{}, errors.New("at least one miner fee is required for a CoinDestructionTransaction")
-	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
-		return CoinDestructionTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
 	// at least one coin input is required
 	if len(txData.CoinInputs) == 0 {
