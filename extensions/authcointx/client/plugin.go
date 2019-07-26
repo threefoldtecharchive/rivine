@@ -96,7 +96,7 @@ func (cli *PluginClient) GetAddressesAuthStateNow(addresses []types.UnlockHash, 
 
 	resource := fmt.Sprintf("%s/authcoin/status?", cli.rootEndpoint)
 	for _, addr := range addresses {
-		resource += fmt.Sprintf("a=%s&", addr.String())
+		resource += fmt.Sprintf("addr=%s&", addr.String())
 	}
 	resource = resource[:len(resource)-1] // remove trailing '&'
 
@@ -113,7 +113,7 @@ func (cli *PluginClient) GetAddressesAuthStateAt(height types.BlockHeight, addre
 
 	resource := fmt.Sprintf("%s/authcoin/status?height=%d&", cli.rootEndpoint, height)
 	for _, addr := range addresses {
-		resource += fmt.Sprintf("a=%s&", addr.String())
+		resource += fmt.Sprintf("addr=%s&", addr.String())
 	}
 	resource = resource[:len(resource)-1] // remove trailing '&'
 

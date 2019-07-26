@@ -2,88 +2,90 @@ package consensus
 
 import (
 	"errors"
-	"fmt"
 
 	bolt "github.com/rivine/bbolt"
-	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/persist"
-	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
 
-// validCoins checks that the coin inputs and outputs are valid in the
-// context of the current consensus set, meaning that total coin input sum
-// equals the total coin output sum, as well as the fact that all conditions referenced coin outputs,
-// have been correctly fulfilled by the child coin inputs.
-func validCoins(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockHeight, blockTimestamp types.Timestamp) (err error) {
-	coinInputs := make(map[types.CoinOutputID]types.CoinOutput, len(t.CoinInputs))
-	for _, sci := range t.CoinInputs {
-		// Check that the input spends an existing output.
-		scoBytes := tx.Bucket(CoinOutputs).Get(sci.ParentID[:])
-		if scoBytes == nil {
-			continue // ignore, up to transaction to define if this is invalid
-		}
-		// unmarshall the output bytes
-		var sco types.CoinOutput
-		err = siabin.Unmarshal(scoBytes, &sco)
-		if err != nil {
-			build.Severe(err)
-		}
-		coinInputs[sci.ParentID] = sco
-	}
-	return t.ValidateCoinOutputs(types.FundValidationContext{
-		BlockHeight: blockHeight,
-		BlockTime:   blockTimestamp,
-	}, coinInputs)
+type consensusStateGetter struct {
+	tx *bolt.Tx
 }
 
-// validBlockStakes checks that the blockstake portions of the transaction are valid
-// in the context of the consensus set, meaning that block stake input sum
-// equals the block stake output sum, as well as the fact that all conditions
-// of referenced block stake outputs, have been correctly fulfilled by the child block stkae inputs.
-func validBlockStakes(tx *bolt.Tx, t types.Transaction, blockHeight types.BlockHeight, blockTimestamp types.Timestamp) (err error) {
-	blockStakeInputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput, len(t.BlockStakeInputs))
-	for _, bsi := range t.BlockStakeInputs {
-		// Check that the input spends an existing output.
-		bso, err := getBlockStakeOutput(tx, bsi.ParentID)
-		if err == errNilItem {
-			continue // ignore, up to transaction to define if this is invalid
-		}
-		blockStakeInputs[bsi.ParentID] = bso
+func newConsensusStateGetter(tx *bolt.Tx) *consensusStateGetter {
+	return &consensusStateGetter{tx: tx}
+}
+
+var _ modules.ConsensusStateGetter = (*consensusStateGetter)(nil)
+
+func (csg *consensusStateGetter) BlockAtID(id types.BlockID) (modules.ConsensusBlock, error) {
+	pb, err := getBlockMap(csg.tx, id)
+	if err != nil {
+		return modules.ConsensusBlock{}, err
 	}
-	return t.ValidateBlockStakeOutputs(types.FundValidationContext{
-		BlockHeight: blockHeight,
-		BlockTime:   blockTimestamp,
-	}, blockStakeInputs)
+	return modules.ConsensusBlock{
+		Block:       pb.Block,
+		Height:      pb.Height,
+		Depth:       pb.Depth,
+		ChildTarget: pb.ChildTarget,
+	}, nil
+}
+
+func (csg *consensusStateGetter) BlockAtHeight(height types.BlockHeight) (modules.ConsensusBlock, error) {
+	id, err := getPath(csg.tx, height)
+	if err != nil {
+		return modules.ConsensusBlock{}, err
+	}
+	return csg.BlockAtID(id)
+}
+
+func (csg *consensusStateGetter) UnspentCoinOutputGet(id types.CoinOutputID) (types.CoinOutput, error) {
+	return getCoinOutput(csg.tx, id)
+}
+
+func (csg *consensusStateGetter) UnspentBlockStakeOutputGet(id types.BlockStakeOutputID) (types.BlockStakeOutput, error) {
+	return getBlockStakeOutput(csg.tx, id)
 }
 
 // validTransaction checks that all fields are valid within the current
 // consensus state. If not an error is returned.
-func validTransaction(tx *bolt.Tx, t types.Transaction, constants types.TransactionValidationConstants, blockHeight types.BlockHeight, blockTimestamp types.Timestamp, isBlockCreatingTx bool) error {
-	// StandaloneValid will check things like signatures and properties that
-	// should be inherent to the transaction. (storage proof rules, etc.)
-	err := t.ValidateTransaction(types.ValidationContext{
-		Confirmed:         true,
-		BlockHeight:       blockHeight,
-		BlockTime:         blockTimestamp,
-		IsBlockCreatingTx: isBlockCreatingTx,
-	}, constants)
-	if err != nil {
-		return err
+func (cs *ConsensusSet) validTransaction(tx *bolt.Tx, t types.Transaction, constants types.TransactionValidationConstants, blockHeight types.BlockHeight, blockTimestamp types.Timestamp, isBlockCreatingTx bool) error {
+	csg := newConsensusStateGetter(tx)
+	ctx := types.TransactionValidationContext{
+		ValidationContext: types.ValidationContext{
+			Confirmed:         true,
+			BlockHeight:       blockHeight,
+			BlockTime:         blockTimestamp,
+			IsBlockCreatingTx: isBlockCreatingTx,
+		},
+		BlockSizeLimit:         constants.BlockSizeLimit,
+		ArbitraryDataSizeLimit: constants.ArbitraryDataSizeLimit,
+		MinimumMinerFee:        constants.MinimumMinerFee,
 	}
 
-	// Check that each portion of the transaction is legal given the current
-	// consensus set.
-	err = validCoins(tx, t, blockHeight, blockTimestamp)
-	if err != nil {
-		return err
+	// return the first error reported by a validator
+	var err error
+
+	// check if we have stand alone validators specific for this tx version, if so apply them
+	if validators, ok := cs.txVersionMappedValidators[t.Version]; ok {
+		for _, validator := range validators {
+			err = validator(t, ctx, csg)
+			if err != nil {
+				return err
+			}
+		}
 	}
-	err = validBlockStakes(tx, t, blockHeight, blockTimestamp)
-	if err != nil {
-		return err
+
+	// validate all transactions using the stand alone validators
+	for _, validator := range cs.txValidators {
+		err = validator(t, ctx, csg)
+		if err != nil {
+			return err
+		}
 	}
-	return nil
+
+	// validate using the plugins, both version-specific as well as global
+	return cs.validateTransactionUsingPlugins(t, ctx, csg, tx)
 }
 
 // TryTransactionSet applies the input transactions to the consensus set to
@@ -118,27 +120,12 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 		if err != nil {
 			return err
 		}
-		pluginBuckets := map[string]*persist.LazyBoltBucket{}
-		for name := range cs.plugins {
-			name := name
-			pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-				mdBucket := tx.Bucket(BucketPlugins)
-				if mdBucket == nil {
-					return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
-				}
-				b := mdBucket.Bucket([]byte(name))
-				if b == nil {
-					return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
-				}
-				return b, nil
-			})
-		}
 		for _, txn := range txns {
 			// a transaction can only be "block creating" in the context of a block,
 			// which we don't have here, so just pass in false for the "isBlockCreatingTx"
 			// argument. In other words, a block creating transaction can never be part
 			// of a transaction pool and must be inserted when the block is actually created
-			err := validTransaction(tx, txn, types.TransactionValidationConstants{
+			err := cs.validTransaction(tx, txn, types.TransactionValidationConstants{
 				BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
 				ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
 				MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
@@ -151,7 +138,8 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 
 			// apply transaction for all plugins
 			for name, plugin := range cs.plugins {
-				err := plugin.ApplyTransaction(txn, diffHolder.Block, diffHolder.Height, pluginBuckets[name])
+				bucket := cs.bucketForPlugin(tx, name)
+				err := plugin.ApplyTransaction(txn, diffHolder.Block, diffHolder.Height, bucket)
 				if err != nil {
 					return err
 				}

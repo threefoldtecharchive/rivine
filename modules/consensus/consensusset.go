@@ -58,6 +58,11 @@ type ConsensusSet struct {
 	// the function of adding a subscriber should not be exposed.
 	subscribers []modules.ConsensusSetSubscriber
 
+	// Stand-Alone transaction validators, linked to a version
+	txVersionMappedValidators map[types.TransactionVersion][]modules.TransactionValidationFunction
+	// Stand-Alone transaction validators, applied to any transaction
+	txValidators []modules.TransactionValidationFunction
+
 	// plugins to the consensus set will receive updates to the consensus set.
 	// At initialization, they receive all changes that they are missing.
 	plugins map[string]modules.ConsensusSetPlugin
@@ -131,6 +136,9 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 
 			DiffsGenerated: true,
 		},
+
+		txVersionMappedValidators: StandardTransactionVersionMappedValidators(),
+		txValidators:              StandardTransactionValidators(),
 
 		dosBlocks: make(map[types.BlockID]struct{}),
 

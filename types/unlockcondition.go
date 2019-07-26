@@ -180,6 +180,28 @@ type (
 		IsBlockCreatingTx bool
 	}
 
+	// TransactionValidationContext is given to any transaction validator function,
+	// as to be able to validate with a full overview of the context it validates within.
+	// It contains relevant constants as well as state-related variables for this Txn in specific.
+	TransactionValidationContext struct {
+		ValidationContext
+
+		BlockSizeLimit         uint64
+		ArbitraryDataSizeLimit uint64
+		MinimumMinerFee        Currency
+	}
+
+	// TransactionCreationValidationContext is given to any transaction creation validator function,
+	// as to be able to validate with a full overview of the context it validates within.
+	// It contains relevant constants as well as state-related variables for this Txn in specific.
+	TransactionCreationValidationContext struct {
+		FundValidationContext
+
+		BlockSizeLimit         uint64
+		ArbitraryDataSizeLimit uint64
+		MinimumMinerFee        Currency
+	}
+
 	// FulfillmentSignContext is given as part of the sign call of an UnlockFullment,
 	// as to provide the necessary context required for signing a fulfillment.
 	FulfillmentSignContext struct {

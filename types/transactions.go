@@ -462,65 +462,6 @@ var (
 	_ json.Unmarshaler = (*Transaction)(nil)
 )
 
-// ValidateTransaction validates this transaction in the given context.
-//
-// By default it checks for a transaction whether the transaction fits within a block,
-// that the arbitrary data is within a limited size, there are no outputs
-// spent multiple times, all defined values adhere to a network-constant defined
-// minimum value (e.g. miner fees having to be at least the MinimumMinerFee),
-// and also validates that all used Conditions and Fulfillments are standard.
-//
-// Each transaction Version however can also choose to overwrite this logic,
-// and implement none, some or all of these default rules, optionally
-// adding some version-specific rules to it.
-func (t Transaction) ValidateTransaction(ctx ValidationContext, constants TransactionValidationConstants) error {
-	controller, exists := _RegisteredTransactionVersions[t.Version]
-	if !exists {
-		return ErrUnknownTransactionType
-	}
-	validator, ok := controller.(TransactionValidator)
-	if !ok {
-		return DefaultTransactionValidation(t, ctx, constants)
-	}
-	return validator.ValidateTransaction(t, ctx, constants)
-}
-
-// ValidateCoinOutputs validates the coin outputs within the current blockchain context.
-// This behaviour can be overwritten by the used Transaction Controller.
-//
-// The default validation logic ensures that the total amount of output coins (including fees),
-// equals the total amount of input coins. It also ensures that all coin inputs refer with their given ParentID
-// to an existing unspent coin output.
-func (t Transaction) ValidateCoinOutputs(ctx FundValidationContext, coinInputs map[CoinOutputID]CoinOutput) error {
-	controller, exists := _RegisteredTransactionVersions[t.Version]
-	if !exists {
-		return ErrUnknownTransactionType
-	}
-	validator, ok := controller.(CoinOutputValidator)
-	if !ok {
-		return DefaultCoinOutputValidation(t, ctx, coinInputs)
-	}
-	return validator.ValidateCoinOutputs(t, ctx, coinInputs)
-}
-
-// ValidateBlockStakeOutputs validates the blockstake outputs within the current blockchain context.
-// This behaviour can be overwritten by the used Transaction Controller.
-//
-// The default validation logic ensures that the total amount of output blockstakes,
-// equals the total amount of input blockstakes. It also ensures that all blockstake inputs refer with their given ParentID
-// to an existing unspent blockstake output.
-func (t Transaction) ValidateBlockStakeOutputs(ctx FundValidationContext, blockStakeInputs map[BlockStakeOutputID]BlockStakeOutput) error {
-	controller, exists := _RegisteredTransactionVersions[t.Version]
-	if !exists {
-		return ErrUnknownTransactionType
-	}
-	validator, ok := controller.(BlockStakeOutputValidator)
-	if !ok {
-		return DefaultBlockStakeOutputValidation(t, ctx, blockStakeInputs)
-	}
-	return validator.ValidateBlockStakeOutputs(t, ctx, blockStakeInputs)
-}
-
 // SignExtension allows the transaction to sign —using the given sign callback—
 // any fulfillment defined within the extension data of the transaction that has to be signed.
 func (t *Transaction) SignExtension(sign func(*UnlockFulfillmentProxy, UnlockConditionProxy, ...interface{}) error) error {

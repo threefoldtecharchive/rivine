@@ -2,12 +2,10 @@ package consensus
 
 import (
 	"errors"
-	"fmt"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
@@ -154,28 +152,11 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	// applied.
 	createDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
 
-	// gather all lazy plugin buckets, so we can use them when applying
-	pluginBuckets := map[string]*persist.LazyBoltBucket{}
-	for name := range cs.plugins {
-		name := name
-		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-			mdBucket := tx.Bucket(BucketPlugins)
-			if mdBucket == nil {
-				return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
-			}
-			b := mdBucket.Bucket([]byte(name))
-			if b == nil {
-				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
-			}
-			return b, nil
-		})
-	}
-
 	// Validate and apply each transaction in the block. They cannot be
 	// validated all at once because some transactions may not be valid until
 	// previous transactions have been applied.
 	for idx, txn := range pb.Block.Transactions {
-		err := validTransaction(tx, txn, types.TransactionValidationConstants{
+		err := cs.validTransaction(tx, txn, types.TransactionValidationConstants{
 			BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
 			ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
 			MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
@@ -189,7 +170,8 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 
 		// apply the transaction for each of the plugins
 		for name, plugin := range cs.plugins {
-			err := plugin.ApplyTransaction(txn, pb.Block, pb.Height, pluginBuckets[name])
+			bucket := cs.bucketForPlugin(tx, name)
+			err := plugin.ApplyTransaction(txn, pb.Block, pb.Height, bucket)
 			if err != nil {
 				return err
 			}

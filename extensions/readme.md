@@ -72,9 +72,15 @@ ApplyBlocks applies blocks processed by the consensus. In this method the extens
 
 ### RevertBlock
 
-RevertBlock reverts blocks processed by the consensus. In this method the extension has access to the entire reverted block and can do a range of operations on it. For an example implementation look at [ApplyBlockMintingPlugin](https://github.com/threefoldtech/rivine/blob/75993ba4f451b08b970e593ba6c3e99d5fb492e9/extensions/minting/minting.go#L105). In this method the minting plugin looks for `Transactions` that applies to itself and reverts these transactions data from the designated buckets.
+RevertBlock reverts blocks processed by the consensus. In this method the extension has access to the entire reverted block and can do a range of operations on it. For an example implementation look at [RevertBlockMintingPlugin](https://github.com/threefoldtech/rivine/blob/75993ba4f451b08b970e593ba6c3e99d5fb492e9/extensions/minting/minting.go#L105). In this method the minting plugin looks for `Transactions` that applies to itself and reverts these transactions data from the designated buckets.
 
 ### Other methods that are useful
 
 * `NewPlugin()` creates a new plugin and registers the transaction types.
 * `Close()` closes the plugin when the consensus is closed. This should release any rsources and call  `p.storage.close()`.
+* `TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]PluginTransactionValidationFunction`:
+  * Allows the plugin to apply transaction rules to the consensus that are linked to specific tx versions and that allow the plugin to fetch state
+    from its own database internal to consensus as well as specific consensus-owned content.
+* `TransactionValidators() []PluginTransactionValidationFunction`:
+  * Allows the plugin to apply transaction rules to the consensus that allow the plugin to fetch state
+    from its own database internal to consensus as well as specific consensus-owned content.

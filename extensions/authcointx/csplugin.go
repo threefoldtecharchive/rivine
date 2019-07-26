@@ -26,26 +26,51 @@ var (
 type (
 	// Plugin is a struct defines the Auth. Coin Transfer plugin
 	Plugin struct {
-		genesisAuthCondition                  types.UnlockConditionProxy
-		authAddressUpdateTransactionVersion   types.TransactionVersion
-		authConditionUpdateTransactionVersion types.TransactionVersion
-		storage                               modules.PluginViewStorage
-		unregisterCallback                    modules.PluginUnregisterCallback
+		genesisAuthCondition                         types.UnlockConditionProxy
+		authAddressUpdateTransactionVersion          types.TransactionVersion
+		authConditionUpdateTransactionVersion        types.TransactionVersion
+		storage                                      modules.PluginViewStorage
+		unregisterCallback                           modules.PluginUnregisterCallback
+		unauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
 	}
+
+	// PluginOpts are extra optional configurations one can make to the AuthCoin Plugin
+	PluginOpts struct {
+		// UnauthorizedCoinTransactionExceptionCallback is a callback that can be defined,
+		// in case your chain requires custom logic to define what transaction can be considered valid for
+		// coin transfers with unauthorized addresses due to whatever rules (e.g. version, pure refund coin flow, ...)
+		UnauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
+	}
+
+	// UnauthorizedCoinTransactionExceptionCallback is the function signature for the callback that can be used
+	// for chains that requires custom logic to define what transaction can be considered valid for
+	// coin transfers with unauthorized addresses due to whatever rules (e.g. version, pure refund coin flow, ...)
+	// True is returned in case this tx does not require an authorization check, False otherwise.
+	UnauthorizedCoinTransactionExceptionCallback func(tx types.Transaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) (bool, error)
 )
+
+// DefaultUnauthorizedCoinTransactionExceptionCallback is the default callback that is used in ase the auth coin plugin
+// does not define a custom callback.
+func DefaultUnauthorizedCoinTransactionExceptionCallback(tx types.Transaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) (bool, error) {
+	if tx.Version != types.TransactionVersionZero && tx.Version != types.TransactionVersionOne {
+		return false, nil
+	}
+	return (len(dedupAddresses) == 1 && len(tx.CoinOutputs) <= 1), nil
+}
 
 // NewPlugin creates a new Plugin with a genesisAuthCondition and correct transaction versions.
 // NOTE: do not register the default rivine transaction versions (0x00 and 0x01) if you use this plugin!!!
-func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdateTransactionVersion, authConditionUpdateTransactionVersion types.TransactionVersion) *Plugin {
+func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdateTransactionVersion, authConditionUpdateTransactionVersion types.TransactionVersion, opts *PluginOpts) *Plugin {
 	p := &Plugin{
 		genesisAuthCondition:                  genesisAuthCondition,
 		authAddressUpdateTransactionVersion:   authAddressUpdateTransactionVersion,
 		authConditionUpdateTransactionVersion: authConditionUpdateTransactionVersion,
 	}
-	types.RegisterTransactionVersion(types.TransactionVersionZero, DisabledTransactionController{})
-	types.RegisterTransactionVersion(types.TransactionVersionOne, AuthStandardTransferTransactionController{
-		AuthInfoGetter: p,
-	})
+	if opts != nil && opts.UnauthorizedCoinTransactionExceptionCallback != nil {
+		p.unauthorizedCoinTransactionExceptionCallback = opts.UnauthorizedCoinTransactionExceptionCallback
+	} else {
+		p.unauthorizedCoinTransactionExceptionCallback = DefaultUnauthorizedCoinTransactionExceptionCallback
+	}
 	types.RegisterTransactionVersion(authAddressUpdateTransactionVersion, AuthAddressUpdateTransactionController{
 		AuthInfoGetter:     p,
 		TransactionVersion: authAddressUpdateTransactionVersion,
@@ -250,64 +275,34 @@ func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, hei
 // GetActiveAuthCondition implements types.AuthInfoGetter.GetActiveAuthCondition
 func (p *Plugin) GetActiveAuthCondition() (types.UnlockConditionProxy, error) {
 	var authCondition types.UnlockConditionProxy
-	err := p.storage.View(func(bucket *bolt.Bucket) error {
-		var b []byte
+	err := p.storage.View(func(bucket *bolt.Bucket) (err error) {
 		authBucket := bucket.Bucket([]byte(bucketAuthConditions))
-		// return the last cursor
-		cursor := authBucket.Cursor()
-
-		var k []byte
-		k, b = cursor.Last()
-		if len(k) == 0 {
-			return errors.New("no matching auth condition could be found")
+		if authBucket == nil {
+			return errors.New("auth condition bucket could not be found")
 		}
-
-		err := rivbin.Unmarshal(b, &authCondition)
-		if err != nil {
-			return fmt.Errorf("failed to decode found auth condition: %v", err)
-		}
-		return nil
+		authCondition, err = p.getAuthConditionFromBucket(authBucket)
+		return err
 	})
-
-	return authCondition, err
+	if err != nil {
+		return types.UnlockConditionProxy{}, err
+	}
+	return authCondition, nil
 }
 
 // GetAuthConditionAt implements types.AuthInfoGetter.GetAuthConditionAt
 func (p *Plugin) GetAuthConditionAt(height types.BlockHeight) (types.UnlockConditionProxy, error) {
 	var authCondition types.UnlockConditionProxy
-	var b []byte
-	err := p.storage.View(func(bucket *bolt.Bucket) error {
+	err := p.storage.View(func(bucket *bolt.Bucket) (err error) {
 		authBucket := bucket.Bucket([]byte(bucketAuthConditions))
-		cursor := authBucket.Cursor()
-		var k []byte
-		k, b = cursor.Seek(encodeBlockheight(height))
-		if len(k) == 0 {
-			// could be that we're past the last key, let's try the last key first
-			k, b = cursor.Last()
-			if len(k) == 0 {
-				return errors.New("corrupt plugin DB: no matching auth condition could be found")
-			}
-			return nil
+		if authBucket == nil {
+			return errors.New("auth condition bucket could not be found")
 		}
-		foundHeight := decodeBlockheight(k)
-		if foundHeight <= height {
-			return nil
-		}
-		k, b = cursor.Prev()
-		if len(k) == 0 {
-			return errors.New("corrupt plugin DB: no matching auth condition could be found")
-		}
-		return nil
+		authCondition, err = p.getAuthConditionFromBucketAt(authBucket, height)
+		return err
 	})
 	if err != nil {
 		return types.UnlockConditionProxy{}, err
 	}
-
-	err = rivbin.Unmarshal(b, &authCondition)
-	if err != nil {
-		return types.UnlockConditionProxy{}, fmt.Errorf("corrupt plugin DB: failed to decode found mint condition: %v", err)
-	}
-
 	return authCondition, nil
 }
 
@@ -322,22 +317,11 @@ func (p *Plugin) GetAddressesAuthStateNow(addresses []types.UnlockHash, exitEarl
 	stateSlice := make([]bool, l)
 	err := p.storage.View(func(bucket *bolt.Bucket) error {
 		authBucket := bucket.Bucket([]byte(bucketAuthAddresses))
-		var b []byte
+		var err error
 		for index, address := range addresses {
-			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
-			if addressAuthBucket != nil {
-				// return the last cursor
-				cursor := addressAuthBucket.Cursor()
-				var k []byte
-				k, b = cursor.Last()
-				if len(k) != 0 {
-					var authState bool
-					err := rivbin.Unmarshal(b, &authState)
-					if err != nil {
-						return fmt.Errorf("failed to decode found auth condition for address %s: %v", address.String(), err)
-					}
-					stateSlice[index] = authState
-				}
+			stateSlice[index], err = p.getAuthAddressStateFromBucket(authBucket, address)
+			if err != nil {
+				return err
 			}
 			if exitEarlyFn != nil && exitEarlyFn(index, stateSlice[index]) {
 				return nil
@@ -361,33 +345,9 @@ func (p *Plugin) GetAddressesAuthStateAt(height types.BlockHeight, addresses []t
 		authBucket := bucket.Bucket([]byte(bucketAuthAddresses))
 		var err error
 		for index, address := range addresses {
-			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
-			if addressAuthBucket != nil {
-				stateSlice[index], err = func() (bool, error) {
-					cursor := addressAuthBucket.Cursor()
-					var k, b []byte
-					k, b = cursor.Seek(encodeBlockheight(height))
-					if len(k) == 0 {
-						// could be that we're past the last key, let's try the last key first
-						k, b = cursor.Last()
-						if len(k) == 0 {
-							return false, nil
-						}
-					}
-					foundHeight := decodeBlockheight(k)
-					if foundHeight > height {
-						k, b = cursor.Prev()
-						if len(k) == 0 {
-							return false, nil
-						}
-					}
-					var authState bool
-					err = rivbin.Unmarshal(b, &authState)
-					if err != nil {
-						return false, fmt.Errorf("failed to decode found address (%s) auth condition for address: %v", address.String(), err)
-					}
-					return authState, nil
-				}()
+			stateSlice[index], err = p.getAuthAddressStateFromBucket(authBucket, address)
+			if err != nil {
+				return err
 			}
 			if exitEarlyFn != nil && exitEarlyFn(index, stateSlice[index]) {
 				return nil
@@ -396,6 +356,354 @@ func (p *Plugin) GetAddressesAuthStateAt(height types.BlockHeight, addresses []t
 		return nil
 	})
 	return stateSlice, err
+}
+
+func (p *Plugin) getAuthConditionFromBucketAt(authConditionBucket *bolt.Bucket, height types.BlockHeight) (types.UnlockConditionProxy, error) {
+	var b []byte
+	err := func() error {
+		cursor := authConditionBucket.Cursor()
+		var k []byte
+		k, b = cursor.Seek(encodeBlockheight(height))
+		if len(k) == 0 {
+			// could be that we're past the last key, let's try the last key first
+			k, b = cursor.Last()
+			if len(k) == 0 {
+				return errors.New("corrupt plugin DB: no matching auth condition could be found")
+			}
+			return nil
+		}
+		foundHeight := decodeBlockheight(k)
+		if foundHeight <= height {
+			return nil
+		}
+		k, b = cursor.Prev()
+		if len(k) == 0 {
+			return errors.New("corrupt plugin DB: no matching auth condition could be found")
+		}
+		return nil
+	}()
+	if err != nil {
+		return types.UnlockConditionProxy{}, err
+	}
+	var authCondition types.UnlockConditionProxy
+	err = rivbin.Unmarshal(b, &authCondition)
+	if err != nil {
+		return types.UnlockConditionProxy{}, fmt.Errorf("corrupt transaction DB: failed to decode found auth condition: %v", err)
+	}
+	return authCondition, nil
+}
+
+func (p *Plugin) getAuthConditionFromBucket(authConditionBucket *bolt.Bucket) (types.UnlockConditionProxy, error) {
+	cursor := authConditionBucket.Cursor()
+	k, b := cursor.Last()
+	if len(k) == 0 {
+		return types.UnlockConditionProxy{}, errors.New("no matching auth condition could be found")
+	}
+	var authCondition types.UnlockConditionProxy
+	err := rivbin.Unmarshal(b, &authCondition)
+	if err != nil {
+		return types.UnlockConditionProxy{}, fmt.Errorf("failed to decode found auth condition: %v", err)
+	}
+	return authCondition, nil
+}
+
+func (p *Plugin) getAuthConditionFromBucketWithContextInfo(authConditionBucket *bolt.Bucket, confirmed bool, blockHeight types.BlockHeight) (types.UnlockConditionProxy, error) {
+	if confirmed || blockHeight > 0 {
+		mintCondition, err := p.getAuthConditionFromBucketAt(authConditionBucket, blockHeight)
+		if err != nil {
+			return types.UnlockConditionProxy{}, fmt.Errorf("failed to get auth condition at block height %d", blockHeight)
+		}
+		return mintCondition, nil
+	}
+	mintCondition, err := p.getAuthConditionFromBucket(authConditionBucket)
+	if err != nil {
+		return types.UnlockConditionProxy{}, errors.New("failed to get the latest auth condition")
+	}
+	return mintCondition, nil
+}
+
+func (p *Plugin) getAuthAddressStateFromBucketAt(authAddressBucket *bolt.Bucket, uh types.UnlockHash, height types.BlockHeight) (bool, error) {
+	var b []byte
+	err := func() error {
+		addressAuthBucket := authAddressBucket.Bucket(rivbin.Marshal(uh))
+		if addressAuthBucket == nil {
+			return nil // nothing to do, state will be fals by default
+		}
+		cursor := addressAuthBucket.Cursor()
+		var k []byte
+		k, b = cursor.Seek(encodeBlockheight(height))
+		if len(k) == 0 {
+			// could be that we're past the last key, let's try the last key first
+			k, b = cursor.Last()
+			if len(k) == 0 {
+				b = nil
+				return nil
+			}
+		}
+		foundHeight := decodeBlockheight(k)
+		if foundHeight > height {
+			k, b = cursor.Prev()
+			if len(k) == 0 {
+				b = nil
+				return nil
+			}
+		}
+		return nil
+	}()
+	if err != nil {
+		return false, err
+	}
+	if b == nil {
+		return false, nil
+	}
+	var state bool
+	err = rivbin.Unmarshal(b, &state)
+	if err != nil {
+		return false, fmt.Errorf("corrupt transaction DB: failed to decode found address auth state for address %s at height %d: %v", uh.String(), height, err)
+	}
+	return state, nil
+}
+
+func (p *Plugin) getAuthAddressStateFromBucket(authAddressBucket *bolt.Bucket, uh types.UnlockHash) (bool, error) {
+	var b []byte
+	err := func() error {
+		addressAuthBucket := authAddressBucket.Bucket(rivbin.Marshal(uh))
+		if addressAuthBucket == nil {
+			return nil
+		}
+		// return the last cursor
+		cursor := addressAuthBucket.Cursor()
+		var k []byte
+		k, b = cursor.Last()
+		if len(k) == 0 {
+			b = nil
+		}
+		return nil
+	}()
+	if err != nil {
+		return false, err
+	}
+	if b == nil {
+		return false, nil
+	}
+	var state bool
+	err = rivbin.Unmarshal(b, &state)
+	if err != nil {
+		return false, fmt.Errorf("corrupt transaction DB: failed to decode found address auth state for address %s: %v", uh.String(), err)
+	}
+	return state, nil
+}
+
+func (p *Plugin) getAuthAddressStateFromBucketWithContextInfo(authAddressBucket *bolt.Bucket, uh types.UnlockHash, confirmed bool, blockHeight types.BlockHeight) (bool, error) {
+	if confirmed || blockHeight > 0 {
+		state, err := p.getAuthAddressStateFromBucketAt(authAddressBucket, uh, blockHeight)
+		if err != nil {
+			return false, fmt.Errorf("failed to get auth address state for address %s at block height %d", uh.String(), blockHeight)
+		}
+		return state, nil
+	}
+	state, err := p.getAuthAddressStateFromBucket(authAddressBucket, uh)
+	if err != nil {
+		return false, fmt.Errorf("failed to get the latest auth address state for address %s", uh.String())
+	}
+	return state, nil
+}
+
+// TransactionValidatorVersionFunctionMapping returns all tx validators for specific tx versions linked to this plugin
+func (p *Plugin) TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionValidationFunction {
+	return map[types.TransactionVersion][]modules.PluginTransactionValidationFunction{
+		p.authAddressUpdateTransactionVersion: []modules.PluginTransactionValidationFunction{
+			p.validateAuthAddressUpdateTx,
+		},
+		p.authConditionUpdateTransactionVersion: []modules.PluginTransactionValidationFunction{
+			p.validateAuthConditionUpdateTx,
+		},
+	}
+}
+
+// TransactionValidators returns all tx validators linked to this plugin
+func (p *Plugin) TransactionValidators() []modules.PluginTransactionValidationFunction {
+	return []modules.PluginTransactionValidationFunction{
+		p.validateAuthorizedCoinFlowForAllTxs,
+	}
+}
+
+func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+	// collect all dedupAddresses
+	dedupAddresses := map[types.UnlockHash]struct{}{}
+	for _, co := range tx.CoinOutputs {
+		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
+	}
+	for _, ci := range tx.CoinInputs {
+		co, err := css.UnspentCoinOutputGet(ci.ParentID)
+		if err != nil {
+			return fmt.Errorf(
+				"unable to find parent ID %s as an unspent coin output in the current consensus state at block height %d",
+				ci.ParentID.String(), ctx.BlockHeight)
+		}
+		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
+	}
+
+	addressLength := len(dedupAddresses)
+	if addressLength == 0 {
+		return nil // nothing to do
+	}
+	dedupAddressesSlice := make([]types.UnlockHash, 0, len(dedupAddresses))
+	for uh := range dedupAddresses {
+		dedupAddressesSlice = append(dedupAddressesSlice, uh)
+	}
+	allowedToBeUnauthorized, err := p.unauthorizedCoinTransactionExceptionCallback(tx, dedupAddressesSlice, ctx, css)
+	if err != nil {
+		return fmt.Errorf("failed to check if transaction is allowed to be a potential unauthorized coin transfer: %v", err)
+	}
+	if allowedToBeUnauthorized {
+		return nil // nothing to validate, whether it is authorized or not is no longer important
+	}
+
+	// get authAddressBucket from plugin bucket, so we can check the state of addresses
+	authAddressBucket, err := bucket.Bucket(bucketAuthAddresses)
+	if err != nil {
+		return err
+	}
+	// validate that all used addresses are authorized
+	for addr := range dedupAddresses {
+		state, err := p.getAuthAddressStateFromBucketWithContextInfo(authAddressBucket, addr, ctx.Confirmed, ctx.BlockHeight)
+		if err != nil {
+			return fmt.Errorf("failed to check if address %s is authorized at the moment: %v", addr.String(), err)
+		}
+		if !state {
+			return types.NewClientError(fmt.Errorf("address %s is not authorized", addr), types.ClientErrorForbidden)
+		}
+	}
+	return nil
+}
+
+func (p *Plugin) validateAuthAddressUpdateTx(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+	// get AuthAddressUpdateTx
+	autx, err := AuthAddressUpdateTransactionFromTransaction(tx, p.authAddressUpdateTransactionVersion)
+	if err != nil {
+		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
+		return fmt.Errorf("failed to use tx as a auth address update tx: %v", err)
+	}
+
+	// ensure the Nonce is not Nil
+	if autx.Nonce == (types.TransactionNonce{}) {
+		return errors.New("nil nonce is not allowed for a auth address update transaction")
+	}
+
+	// get AuthCondition from auth bucket
+	authConditionBucket, err := bucket.Bucket(bucketAuthConditions)
+	if err != nil {
+		return err
+	}
+	authCondition, err := p.getAuthConditionFromBucketWithContextInfo(authConditionBucket, ctx.Confirmed, ctx.BlockHeight)
+	if err != nil {
+		return fmt.Errorf("failed to get auth condition at block height %d: %v", ctx.BlockHeight, err)
+	}
+	// check if AuthFulfillment fulfills the Globally defined AuthCondition for the context-defined block height
+	err = authCondition.Fulfill(autx.AuthFulfillment, types.FulfillContext{
+		BlockHeight: ctx.BlockHeight,
+		BlockTime:   ctx.BlockTime,
+		Transaction: tx,
+	})
+	if err != nil {
+		return types.NewClientError(fmt.Errorf("cannot update address states: failed to fulfill auth condition: %v", err), types.ClientErrorUnauthorized)
+	}
+
+	// ensure we have at least one address to (de)authorize
+	lAuthAddresses := len(autx.AuthAddresses)
+	lDeauthAddresses := len(autx.DeauthAddresses)
+	if lAuthAddresses == 0 && lDeauthAddresses == 0 {
+		return errors.New("at least one address is required to be authorized or deauthorized")
+	}
+	// ensure all addresses are unique and thus also that no address is both authorized and deauthorized
+	addressesSeen := map[types.UnlockHash]struct{}{}
+	var ok bool
+	for _, address := range autx.AuthAddresses {
+		if _, ok = addressesSeen[address]; ok {
+			return fmt.Errorf("an address can only be defined once per AuthAddressUpdate transaction: %s was seen twice", address.String())
+		}
+		addressesSeen[address] = struct{}{}
+	}
+	for _, address := range autx.DeauthAddresses {
+		if _, ok = addressesSeen[address]; ok {
+			return fmt.Errorf("an address can only be defined once per AuthAddressUpdate transaction: %s was seen twice", address.String())
+		}
+		addressesSeen[address] = struct{}{}
+	}
+	// get authAddressBucket from plugin bucket, so we can check the state of addresses
+	authAddressBucket, err := bucket.Bucket(bucketAuthAddresses)
+	if err != nil {
+		return err
+	}
+	// ensure all address to be authorized are currently deauthorized
+	for _, addr := range autx.AuthAddresses {
+		state, err := p.getAuthAddressStateFromBucketWithContextInfo(authAddressBucket, addr, ctx.Confirmed, ctx.BlockHeight)
+		if err != nil {
+			return fmt.Errorf("failed to check if address %s is deauthorized at the moment: %v", addr.String(), err)
+		}
+		if state {
+			return types.NewClientError(fmt.Errorf("address %s (to auth) is already authorized", addr), types.ClientErrorForbidden)
+		}
+	}
+	// ensure all address to be deauthroized are currently authorized
+	for _, addr := range autx.DeauthAddresses {
+		state, err := p.getAuthAddressStateFromBucketWithContextInfo(authAddressBucket, addr, ctx.Confirmed, ctx.BlockHeight)
+		if err != nil {
+			return fmt.Errorf("failed to check if address %s is authorized at the moment: %v", addr.String(), err)
+		}
+		if !state {
+			return types.NewClientError(fmt.Errorf("address %s (to auth) is already deauthorized", addr), types.ClientErrorForbidden)
+		}
+	}
+
+	return nil // tx is valid according to this tx validator
+}
+
+func (p *Plugin) validateAuthConditionUpdateTx(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+	// get AuthConditionUpdateTx
+	cutx, err := AuthConditionUpdateTransactionFromTransaction(tx, p.authConditionUpdateTransactionVersion)
+	if err != nil {
+		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
+		return fmt.Errorf("failed to use tx as a auth condition update tx: %v", err)
+	}
+
+	// ensure the Nonce is not Nil
+	if cutx.Nonce == (types.TransactionNonce{}) {
+		return errors.New("nil nonce is not allowed for a auth condition update transaction")
+	}
+
+	// get AuthCondition from auth bucket
+	authConditionBucket, err := bucket.Bucket(bucketAuthConditions)
+	if err != nil {
+		return err
+	}
+	authCondition, err := p.getAuthConditionFromBucketWithContextInfo(authConditionBucket, ctx.Confirmed, ctx.BlockHeight)
+	if err != nil {
+		return fmt.Errorf("failed to get auth condition at block height %d: %v", ctx.BlockHeight, err)
+	}
+
+	// ensure the defined condition is not equal to the current active auth condition
+	if authCondition.Equal(cutx.AuthCondition) {
+		return errors.New("defined condition is already used as the currently active auth condition (nop update not allowed)")
+	}
+	// ensure the defined condition maps to an acceptable uh
+	uh := cutx.AuthCondition.UnlockHash()
+	if uh.Type != types.UnlockTypePubKey && uh.Type != types.UnlockTypeMultiSig {
+		return fmt.Errorf("defined condition maps to an invalid unlock hash type %d", uh.Type)
+	}
+
+	// check if AuthFulfillment fulfills the Globally defined AuthCondition for the context-defined block height
+	err = authCondition.Fulfill(cutx.AuthFulfillment, types.FulfillContext{
+		BlockHeight: ctx.BlockHeight,
+		BlockTime:   ctx.BlockTime,
+		Transaction: tx,
+	})
+	if err != nil {
+		return types.NewClientError(fmt.Errorf("failed to fulfill auth condition: %v", err), types.ClientErrorUnauthorized)
+	}
+
+	return nil // tx is valid according to this tx validator
 }
 
 // Close unregisters the plugin from the consensus

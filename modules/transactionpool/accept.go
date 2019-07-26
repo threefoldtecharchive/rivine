@@ -76,7 +76,7 @@ func (tp *TransactionPool) validateTransactionSetComposition(ts []types.Transact
 	// it also validates that the transaction is valid according to the consensus,
 	// meaning all properties are standard, known and valid. It does however check this within the context
 	// that the validation code knows the transaction is still unconfirmed, and thus not yet part of a created block.
-	err := tp.ValidateTransactionSet(ts)
+	err := tp.ValidateTransactionSetSize(ts)
 	if err != nil {
 		return err
 	}

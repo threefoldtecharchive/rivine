@@ -100,6 +100,12 @@ type (
 		// An error should be returned in case something went wrong.
 		RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 
+		// TransactionValidatorFunctions allows the plugin to provide validation rules for all transaction versions it mapped to
+		TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]PluginTransactionValidationFunction
+
+		// TransactionValidators allows the plugin to provide validation rules for all transactions versions it wants
+		TransactionValidators() []PluginTransactionValidationFunction
+
 		// Close releases any resources helt by the plugin like the PluginViewStorage
 		Close() error
 	}
@@ -111,6 +117,33 @@ type (
 	PluginViewStorage interface {
 		View(callback func(bucket *bolt.Bucket) error) error
 		Close() error
+	}
+
+	// PluginTransactionValidationFunction is the signature of a validator function that
+	// can be used to provide plugin-driven transaction validation, provided by (and linked to) a plugin.
+	PluginTransactionValidationFunction func(tx types.Transaction, ctx types.TransactionValidationContext, css ConsensusStateGetter, bucket *persist.LazyBoltBucket) error
+
+	// TransactionValidationFunction is the signature of a validator function that
+	// can be used to provide validation rules for transactions.
+	TransactionValidationFunction func(tx types.Transaction, ctx types.TransactionValidationContext, css ConsensusStateGetter) error
+
+	// ConsensusBlock is the block type as exposed by the consensus module
+	ConsensusBlock struct {
+		types.Block
+
+		Height      types.BlockHeight
+		Depth       types.Target
+		ChildTarget types.Target
+	}
+
+	// ConsensusStateGetter allows looking up of consensus set data at a given state
+	// (as accessed using a single open database Transaction).
+	ConsensusStateGetter interface {
+		BlockAtID(id types.BlockID) (ConsensusBlock, error)
+		BlockAtHeight(height types.BlockHeight) (ConsensusBlock, error)
+
+		UnspentCoinOutputGet(id types.CoinOutputID) (types.CoinOutput, error)
+		UnspentBlockStakeOutputGet(id types.BlockStakeOutputID) (types.BlockStakeOutput, error)
 	}
 
 	// A ConsensusChange enumerates a set of changes that occurred to the consensus set.

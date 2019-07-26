@@ -8,6 +8,7 @@ import (
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/types"
 
 	bolt "github.com/rivine/bbolt"
 )
@@ -293,6 +294,54 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 
 	// return the consensus change ID that we already have, for further usage
 	return pluginMetadata.ConsensusChangeID, nil
+}
+
+func (cs *ConsensusSet) validateTransactionUsingPlugins(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, btx *bolt.Tx) error {
+	if len(cs.plugins) == 0 {
+		return nil // if there are no errors, there is nothing to validate using plugins
+	}
+	var err error
+	for name, plugin := range cs.plugins {
+		validators := plugin.TransactionValidators()
+		validatorMapping := plugin.TransactionValidatorVersionFunctionMapping()
+		if len(validators) == 0 && len(validatorMapping) == 0 {
+			continue // no validators attached to this plugin
+		}
+		txValidators, ok := validatorMapping[tx.Version]
+		if !ok && len(validators) == 0 {
+			continue // no validators attached to this plugin for this tx's version
+		}
+		// return the first error that occurs
+		bucket := cs.bucketForPlugin(btx, name)
+		for _, txValidator := range txValidators {
+			err = txValidator(tx, ctx, css, bucket)
+			if err != nil {
+				return err
+			}
+		}
+		for _, txValidator := range validators {
+			err = txValidator(tx, ctx, css, bucket)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// return the root bucket for a plugin using name in the form of a LazyBoltBucket
+func (cs *ConsensusSet) bucketForPlugin(tx *bolt.Tx, name string) *persist.LazyBoltBucket {
+	return persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
+		mdBucket := tx.Bucket(BucketPlugins)
+		if mdBucket == nil {
+			return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
+		}
+		b := mdBucket.Bucket([]byte(name))
+		if b == nil {
+			return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
+		}
+		return b, nil
+	})
 }
 
 //closePlugins calls Close on all registered plugins
