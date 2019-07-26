@@ -283,3 +283,31 @@ func TestValidateConfigWithLeavingOutBinariesShouldFillItIn(t *testing.T) {
 		t.Errorf("Something went wrong with setting default value for blockchain binaries client")
 	}
 }
+
+func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *testing.T) {
+	var err error
+	conf := BuildConfigStruct()
+	conf.Blockchain.Network["testnet"].BootstapPeers = nil
+
+	err = validateConfig(conf)
+	expectedError := "Key: 'Config.Blockchain.Network[testnet].BootstapPeers' Error:Field validation for 'BootstapPeers' failed on the 'required' tag"
+	if err != nil && err.Error() != expectedError {
+		t.Errorf("%s", err.Error())
+	}
+}
+
+// TEST OUR CUSTOM VALIDATOR FOR A FALSY VALUE IN NETADDRESS (should throw error)
+
+// func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testing.T) {
+// 	var err error
+// 	conf := BuildConfigStruct()
+// 	conf.Blockchain.Network["testnet"].BootstapPeers = []*NetAddress{
+// 		&NetAddress{"notvalid"},
+// 	}
+
+// 	err = validateConfig(conf)
+// 	expectedError := "Key: 'Config.Blockchain.Network[testnet].BootstapPeers' Error:Field validation for 'BootstapPeers' failed on the 'required' tag"
+// 	if err != nil && err.Error() != expectedError {
+// 		t.Errorf("%s", err.Error())
+// 	}
+// }
