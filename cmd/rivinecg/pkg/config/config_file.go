@@ -8,13 +8,16 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/threefoldtech/rivine/types"
 	"gopkg.in/go-playground/validator.v9"
 	"gopkg.in/yaml.v2"
+
+	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 type NetworkType int
@@ -32,8 +35,13 @@ type (
 	}
 
 	Template struct {
-		Repository string `json:"repository,omitempty" yaml:"repository,omitempty"`
-		Version    string `json:"version,omitempty" yaml:"version,omitempty"`
+		Repository *Repository `json:"repository,omitempty" yaml:"repository,omitempty"`
+		Version    string      `json:"version,omitempty" yaml:"version,omitempty"`
+	}
+
+	Repository struct {
+		Owner string `json:"owner,omitempty" yaml:"owner,omitempty"`
+		Repo  string `json:"repo,omitempty" yaml:"repo,omitempty"`
 	}
 
 	Blockchain struct {
@@ -58,7 +66,7 @@ type (
 
 	Binaries struct {
 		Client string `json:"client,omitempty" yaml:"client,omitempty"`
-		Deamon string `json:"deamon,omitempty" yaml:"deamon,omitempty"`
+		Daemon string `json:"daemon,omitempty" yaml:"daemon,omitempty"`
 	}
 
 	Transactions struct {
@@ -124,6 +132,11 @@ type (
 		StakeModifierDelay     time.Duration   `json:"stakeModifierDelay,omitempty" yaml:"stakeModifierDelay,omitempty"`
 		BlockStakeAging        time.Duration   `json:"blockStakeAging,omitempty" yaml:"blockStakeAging,omitempty"`
 		TransactionPool        TransactionPool `json:"transactionPool,omitempty" yaml:"transactionPool,omitempty"`
+		BootstapPeers          []*NetAddress   `json:"bootstrapPeers" yaml:"bootstrapPeers" validate:"required"`
+	}
+
+	NetAddress struct {
+		modules.NetAddress `json:"bootstrapPeer" yaml:"bootstrapPeer" validate:"InvalidAddress"`
 	}
 
 	// Fraction represents ratio.
@@ -148,6 +161,17 @@ var (
 
 func init() {
 	validate = validator.New()
+	validate.RegisterValidation("InvalidAddress", customNetAddressValidation)
+}
+
+func customNetAddressValidation(fl validator.FieldLevel) bool {
+	netAddress := modules.NetAddress(fl.Field().String())
+	err := netAddress.IsValid()
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 // MarshalText will marshall JSON/YAML fraction type
@@ -351,6 +375,23 @@ func LoadConfigFile(filePath string) error {
 		return err
 	}
 
+	// Get the absolute filepath of the config to know where to generate blockchain code
+	relativeFilePath, err := filepath.Abs(filePath)
+	if err != nil {
+		return err
+	}
+	relativeCodeDestinationDir := filepath.Dir(relativeFilePath) + "/" + config.Template.Repository.Owner + "-" + config.Template.Repository.Repo
+
+	commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, filepath.Dir(relativeFilePath))
+	if err != nil {
+		return err
+	}
+
+	err = generateBlockchainTemplate(relativeCodeDestinationDir, commitHash, config)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("\nBlockchain code succesfully generated: %s\n", relativeCodeDestinationDir)
 	return nil
 }
 
@@ -373,8 +414,17 @@ func assignDefaultValues(conf *Config) (*Config, error) {
 }
 
 func assignDefaultTemplateValues(templ Template) Template {
-	if templ.Repository == "" {
-		templ.Repository = "https://github.com/threefoldtech/rivine-chain-template"
+	if templ.Repository == nil {
+		templ.Repository = &Repository{
+			Owner: "threefoldtech",
+			Repo:  "rivine-chain-template",
+		}
+	}
+	if templ.Repository.Owner == "" {
+		templ.Repository.Owner = "threefoldtech"
+	}
+	if templ.Repository.Repo == "" {
+		templ.Repository.Repo = "rivine-chain-template"
 	}
 	if templ.Version == "" {
 		templ.Version = "master"
@@ -386,14 +436,14 @@ func assignDefaultBlockchainValues(blockc *Blockchain) *Blockchain {
 	if blockc.Binaries == nil {
 		blockc.Binaries = &Binaries{
 			Client: blockc.Name + "c",
-			Deamon: blockc.Name + "d",
+			Daemon: blockc.Name + "d",
 		}
 	}
 	if blockc.Binaries.Client == "" {
 		blockc.Binaries.Client = blockc.Name + "c"
 	}
-	if blockc.Binaries.Deamon == "" {
-		blockc.Binaries.Deamon = blockc.Name + "d"
+	if blockc.Binaries.Daemon == "" {
+		blockc.Binaries.Daemon = blockc.Name + "d"
 	}
 	if blockc.Transactions.Default == nil {
 		blockc.Transactions.Default = &Version{
@@ -550,12 +600,22 @@ func BuildConfigStruct() *Config {
 			TransactionSetSizeLimit: uint(250e3),
 			PoolSizeLimit:           uint64(2e6 - 5e3 - 250e3),
 		},
+		BootstapPeers: []*NetAddress{
+			&NetAddress{"bootstrap1.testnet.threefoldtoken.com:23112"},
+			&NetAddress{"bootstrap2.testnet.threefoldtoken.com:23112"},
+			&NetAddress{"bootstrap3.testnet.threefoldtoken.com:23112"},
+			&NetAddress{"bootstrap4.testnet.threefoldtoken.com:24112"},
+			&NetAddress{"bootstrap5.testnet.threefoldtoken.com:24112"},
+		},
 	}
 
 	return &Config{
 		Template{
-			Repository: "https://github.com/threefoldtech/rivine-chain-template",
-			Version:    "master",
+			Repository: &Repository{
+				Owner: "threefoldtech",
+				Repo:  "rivine-chain-template",
+			},
+			Version: "master",
 		},
 		&Blockchain{
 			Name:       "rivine",
@@ -570,7 +630,7 @@ func BuildConfigStruct() *Config {
 			},
 			Binaries: &Binaries{
 				Client: "rivinec",
-				Deamon: "rivined",
+				Daemon: "rivined",
 			},
 			Transactions: &Transactions{
 				Default: &Version{

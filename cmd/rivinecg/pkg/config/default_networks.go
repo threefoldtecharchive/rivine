@@ -3,6 +3,8 @@ package config
 import (
 	"reflect"
 	"time"
+
+	"github.com/threefoldtech/rivine/modules"
 )
 
 var (
@@ -22,6 +24,13 @@ var (
 		"ExtremeFutureThreshold": time.Hour * 2,
 		"StakeModifierDelay":     time.Second * 2000,
 		"BlockStakeAging":        time.Hour * 24,
+		// "BootstrapPeers": []modules.NetAddress{
+		// 	"bootstrap1.threefoldtoken.com:23112",
+		// 	"bootstrap2.threefoldtoken.com:23112",
+		// 	"bootstrap3.threefoldtoken.com:23112",
+		// 	"bootstrap4.threefoldtoken.com:23112",
+		// 	"bootstrap5.threefoldtoken.com:23112",
+		// },
 	}
 
 	// networkRootPropsTestnet are sane defaults for testnet network configuration
@@ -40,6 +49,13 @@ var (
 		"ExtremeFutureThreshold": time.Second * 6,
 		"StakeModifierDelay":     time.Second * 20,
 		"BlockStakeAging":        time.Second * 1024,
+		// "BootstrapPeers": []modules.NetAddress{
+		// 	"bootstrap1.testnet.threefoldtoken.com:23112",
+		// 	"bootstrap2.testnet.threefoldtoken.com:23112",
+		// 	"bootstrap3.testnet.threefoldtoken.com:23112",
+		// 	"bootstrap4.testnet.threefoldtoken.com:24112",
+		// 	"bootstrap5.testnet.threefoldtoken.com:23112",
+		// },
 	}
 
 	// networkRootPropsDevnet are sane defaults for devnet network configuration
@@ -58,6 +74,9 @@ var (
 		"ExtremeFutureThreshold": time.Minute * 3,
 		"StakeModifierDelay":     time.Second * 2000,
 		"BlockStakeAging":        time.Second * 1024,
+		"BootstrapPeers": []modules.NetAddress{
+			"localhost:23112",
+		},
 	}
 
 	// networkTransactionPoolProps are sane defaults for standard network transactionPool configuration
@@ -68,10 +87,10 @@ var (
 	}
 )
 
-func assignDefaultNetworkProps(config *Network) *Network {
-	networkCfgValue := reflect.ValueOf(&config).Elem()
+func assignDefaultNetworkProps(networkConfig *Network) *Network {
+	networkCfgValue := reflect.ValueOf(&networkConfig).Elem()
 	var rootMap = map[string]interface{}{}
-	switch config.NetworkType {
+	switch networkConfig.NetworkType {
 	case 1:
 		rootMap = networkRootPropsStandard
 	case 2:
@@ -86,7 +105,7 @@ func assignDefaultNetworkProps(config *Network) *Network {
 			pValue.Set(reflect.ValueOf(propValue))
 		}
 	}
-	networkTransactionPoolCfgValue := reflect.ValueOf(&config.TransactionPool)
+	networkTransactionPoolCfgValue := reflect.ValueOf(&networkConfig.TransactionPool)
 	for propName, propValue := range networkTransactionPoolProps {
 		pValue := networkTransactionPoolCfgValue.Elem().FieldByName(propName)
 		if isZero(pValue) {

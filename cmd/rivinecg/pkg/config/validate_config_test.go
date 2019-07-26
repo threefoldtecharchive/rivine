@@ -223,8 +223,8 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 	var err error
 	conf := BuildConfigStruct()
 	conf.Template.Version = ""
-	conf.Template.Repository = ""
-	conf.Blockchain.Binaries.Deamon = ""
+	conf.Template.Repository = nil
+	conf.Blockchain.Binaries.Daemon = ""
 	conf.Blockchain.Binaries.Client = ""
 	conf.Blockchain.Transactions.Default.Version = 0
 
@@ -236,10 +236,13 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 	if conf.Template.Version != "master" {
 		t.Errorf("Something went wrong with setting default value for template version")
 	}
-	if conf.Template.Repository != "https://github.com/threefoldtech/rivine-chain-template" {
-		t.Errorf("Something went wrong with setting default value for template repository")
+	if conf.Template.Repository.Owner != "threefoldtech" {
+		t.Errorf("Something went wrong with setting default value for template repository owner")
 	}
-	if conf.Blockchain.Binaries.Deamon != "rivined" {
+	if conf.Template.Repository.Repo != "rivine-chain-template" {
+		t.Errorf("Something went wrong with setting default value for template repository repo")
+	}
+	if conf.Blockchain.Binaries.Daemon != "rivined" {
 		t.Errorf("Something went wrong with setting default value for blockchain binaries daemon")
 	}
 	if conf.Blockchain.Binaries.Client != "rivinec" {
@@ -273,8 +276,8 @@ func TestValidateConfigWithLeavingOutBinariesShouldFillItIn(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err.Error())
 	}
-	if conf.Blockchain.Binaries.Deamon != "rivined" {
-		t.Errorf("Something went wrong with setting default value for blockchain binaries deamon")
+	if conf.Blockchain.Binaries.Daemon != "rivined" {
+		t.Errorf("Something went wrong with setting default value for blockchain binaries daemon")
 	}
 	if conf.Blockchain.Binaries.Client != "rivinec" {
 		t.Errorf("Something went wrong with setting default value for blockchain binaries client")
