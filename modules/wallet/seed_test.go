@@ -25,7 +25,11 @@ func TestPrimarySeed(t *testing.T) {
 	defer wt.closeWt()
 
 	// Create a seed and unlock the wallet.
-	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
+	h, err := crypto.HashObject("TREZOR")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encryptionKey := crypto.TwofishKey(h)
 	seed, err := wt.wallet.Encrypt(encryptionKey, modules.Seed{})
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +94,11 @@ func TestPrimarySeed(t *testing.T) {
 	}
 	defer wt2.closeWt()
 
-	encryptionKey2 := crypto.TwofishKey(crypto.HashObject("TREZOR 2"))
+	h2, err := crypto.HashObject("TREZOR 2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encryptionKey2 := crypto.TwofishKey(h2)
 	seedDup, err := wt2.wallet.Encrypt(encryptionKey2, seed)
 	if err != nil {
 		t.Fatal(err)
@@ -218,7 +226,12 @@ func TestLoadSeed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	encryptionKey := crypto.TwofishKey(crypto.HashObject("TREZOR"))
+
+	h, err := crypto.HashObject("TREZOR")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encryptionKey := crypto.TwofishKey(h)
 	newSeed, err := w.Encrypt(encryptionKey, modules.Seed{})
 	if err != nil {
 		t.Fatal(err)

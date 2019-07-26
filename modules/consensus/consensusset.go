@@ -28,12 +28,12 @@ var (
 // marshaler marshals objects into byte slices and unmarshals byte
 // slices into objects.
 type marshaler interface {
-	Marshal(interface{}) []byte
+	Marshal(interface{}) ([]byte, error)
 	Unmarshal([]byte, interface{}) error
 }
 type stdMarshaler struct{}
 
-func (stdMarshaler) Marshal(v interface{}) []byte            { return siabin.Marshal(v) }
+func (stdMarshaler) Marshal(v interface{}) ([]byte, error)            { return siabin.Marshal(v) }
 func (stdMarshaler) Unmarshal(b []byte, v interface{}) error { return siabin.Unmarshal(b, v) }
 
 // The ConsensusSet is the object responsible for tracking the current status

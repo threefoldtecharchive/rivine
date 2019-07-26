@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
@@ -61,7 +62,11 @@ type (
 
 // ID returns the ID of a Block, which is calculated by hashing the header.
 func (h BlockHeader) ID() BlockID {
-	return BlockID(crypto.HashObject(h))
+	hash, err := crypto.HashObject(h)
+	if err != nil {
+		build.Severe(fmt.Errorf("failed to crypto-hash block header into a block ID: %v", err))
+	}
+	return BlockID(hash)
 }
 
 // Header returns the header of a block.
@@ -97,11 +102,18 @@ func (b Block) ID() BlockID {
 // transactions (one leaf per transaction).
 func (b Block) MerkleRoot() crypto.Hash {
 	tree := crypto.NewTree()
+	var err error
 	for _, payout := range b.MinerPayouts {
-		tree.PushObject(payout)
+		err = tree.PushObject(payout)
+		if err != nil {
+			build.Severe(err)
+		}
 	}
 	for _, txn := range b.Transactions {
-		tree.PushObject(txn)
+		err = tree.PushObject(txn)
+		if err != nil {
+			build.Severe(err)
+		}
 	}
 	return tree.Root()
 }
@@ -110,10 +122,12 @@ func (b Block) MerkleRoot() crypto.Hash {
 // is calculated by hashing the concatenation of the BlockID and the payout
 // index.
 func (b Block) MinerPayoutID(i uint64) CoinOutputID {
-	return CoinOutputID(crypto.HashAll(
-		b.ID(),
-		i,
-	))
+	id := b.ID()
+	hash, err := crypto.HashAll(id, i)
+	if err != nil {
+		build.Severe("failed to crypto hash block ID and the miner payout index as a crypto hash", err)
+	}
+	return CoinOutputID(hash)
 }
 
 // MarshalSia implements the siabin.SiaMarshaler interface.

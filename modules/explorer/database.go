@@ -2,11 +2,11 @@ package explorer
 
 import (
 	"errors"
+	"fmt"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 var (
@@ -45,7 +45,9 @@ var (
 //
 //   var height types.BlockHeight
 //   db.View(func(tx *bolt.Tx) error {
-//       bytes := tx.Bucket(bucketBlockIDs).Get(siabin.Marshal(id))
+//       idBytes, err := siabin.Marshal(id)
+//       if err != nil { return err }
+//       bytes := tx.Bucket(bucketBlockIDs).Get()
 //       return siabin.Unmarshal(bytes, &height)
 //   })
 
@@ -54,7 +56,11 @@ var (
 // dbGetAndDecode returns errNotExist.
 func dbGetAndDecode(bucket []byte, key, val interface{}) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		valBytes := tx.Bucket(bucket).Get(siabin.Marshal(key))
+		keyBytes, err := siabin.Marshal(key)
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal key bytes: %v", err)
+		}
+		valBytes := tx.Bucket(bucket).Get(keyBytes)
 		if valBytes == nil {
 			return errNotExist
 		}
@@ -67,13 +73,17 @@ func dbGetAndDecode(bucket []byte, key, val interface{}) func(*bolt.Tx) error {
 // dbGetTransactionIDSet returns errNotExist.
 func dbGetTransactionIDSet(bucket []byte, key interface{}, ids *[]types.TransactionID) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucket).Bucket(siabin.Marshal(key))
+		keyBytes, err := siabin.Marshal(key)
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal key bytes: %v", err)
+		}
+		b := tx.Bucket(bucket).Bucket(keyBytes)
 		if b == nil {
 			return errNotExist
 		}
 		// decode into a local slice
 		var txids []types.TransactionID
-		err := b.ForEach(func(txid, _ []byte) error {
+		err = b.ForEach(func(txid, _ []byte) error {
 			var id types.TransactionID
 			err := siabin.Unmarshal(txid, &id)
 			if err != nil {
@@ -106,7 +116,11 @@ func (e *Explorer) dbGetBlockFacts(height types.BlockHeight, bf *blockFacts) fun
 // dbSetInternal sets the specified key of bucketInternal to the encoded value.
 func dbSetInternal(key []byte, val interface{}) func(*bolt.Tx) error {
 	return func(tx *bolt.Tx) error {
-		return tx.Bucket(bucketInternal).Put(key, siabin.Marshal(val))
+		valBytes, err := siabin.Marshal(val)
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal value: %v", err)
+		}
+		return tx.Bucket(bucketInternal).Put(key, valBytes)
 	}
 }
 

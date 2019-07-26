@@ -45,11 +45,14 @@ func NewHash() hash.Hash {
 
 // HashAll takes a set of objects as input, encodes them all using the encoding
 // package, and then hashes the result.
-func HashAll(objs ...interface{}) (hash Hash) {
+func HashAll(objs ...interface{}) (hash Hash, err error) {
 	h := NewHash()
 	enc := siabin.NewEncoder(h)
 	for _, obj := range objs {
-		enc.Encode(obj)
+		err = enc.Encode(obj)
+		if err != nil {
+			return
+		}
 	}
 	h.Sum(hash[:0])
 	return
@@ -62,9 +65,12 @@ func HashBytes(data []byte) Hash {
 
 // HashObject takes an object as input, encodes it using the encoding package,
 // and then hashes the result.
-func HashObject(obj interface{}) (hash Hash) {
+func HashObject(obj interface{}) (hash Hash, err error) {
 	h := NewHash()
-	siabin.NewEncoder(h).Encode(obj)
+	err = siabin.NewEncoder(h).Encode(obj)
+	if err != nil {
+		return
+	}
 	h.Sum(hash[:0])
 	return
 }

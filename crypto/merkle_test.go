@@ -9,8 +9,14 @@ import (
 // TestTreeBuilder builds a tree and gets the merkle root.
 func TestTreeBuilder(t *testing.T) {
 	tree := NewTree()
-	tree.PushObject("a")
-	tree.PushObject("b")
+	err := tree.PushObject("a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tree.PushObject("b")
+	if err != nil {
+		t.Fatal(err)
+	}
 	_ = tree.Root()
 
 	// Correctness is assumed, as it's tested by the merkletree package. This

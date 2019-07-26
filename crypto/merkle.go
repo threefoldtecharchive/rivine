@@ -30,8 +30,13 @@ func NewTree() *MerkleTree {
 
 // PushObject encodes and adds the hash of the encoded object to the tree as a
 // leaf.
-func (t *MerkleTree) PushObject(obj interface{}) {
-	t.Push(siabin.Marshal(obj))
+func (t *MerkleTree) PushObject(obj interface{}) error {
+	b, err := siabin.Marshal(obj)
+	if err != nil {
+		return err
+	}
+	t.Push(b)
+	return nil
 }
 
 // Root is a redefinition of merkletree.Tree.Root, returning a Hash instead of

@@ -122,9 +122,11 @@ func (consensusCmd *consensusCmd) transactionCmd(id string) {
 		encode = json.NewEncoder(os.Stdout).Encode
 	case cli.EncodingTypeHex:
 		encode = func(v interface{}) error {
-			b := siabin.Marshal(v)
-			fmt.Println(hex.EncodeToString(b))
-			return nil
+			b, err := siabin.Marshal(v)
+			if err == nil {
+				fmt.Println(hex.EncodeToString(b))
+			}
+			return err
 		}
 	}
 

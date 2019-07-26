@@ -60,7 +60,10 @@ func main() {
 		panic(fmt.Sprintf("Failed to decode seed: %s", err))
 	}
 	// Now create the wallet
-	w := NewWallet(seed)
+	w, err := NewWallet(seed)
+	if err != nil {
+		panc(err)
+	}
 	// Sync it with the chain
 	if err = w.SyncWallet(); err != nil {
 		panic(err)
@@ -239,17 +242,24 @@ type MyWallet struct {
 }
 
 // NewWallet initializes a new wallet from a given seed. It assumes the seed is valid
-func NewWallet(seed modules.Seed) *MyWallet {
+func NewWallet(seed modules.Seed) (*MyWallet, error) {
 	w := MyWallet{}
 	w.seed = seed
 	w.unspentCoinOutputs = make(map[types.CoinOutputID]types.CoinOutput)
 	w.keys = make(map[types.UnlockHash]spendableKey)
 	// Create the address -> key map
 	for i := 0; i < generateAddressAmount; i++ {
-		key := generateSpendableKey(w.seed, uint64(i))
-		w.keys[key.UnlockHash()] = key
+		key, err := generateSpendableKey(w.seed, uint64(i))
+		if err != nil {
+			return nil, err
+		}
+		uh, err := key.UnlockHash()
+		if err != nil {
+			return nil, err
+		}
+		w.keys[uh] = key
 	}
-	return &w
+	return &w, nil
 }
 
 // SyncWallet syncs the wallet with the chain
@@ -369,18 +379,21 @@ type spendableKey struct {
 	SecretKey crypto.SecretKey
 }
 
-func (sk spendableKey) UnlockHash() types.UnlockHash {
+func (sk spendableKey) UnlockHash() (types.UnlockHash, error) {
 	return types.NewEd25519PubKeyUnlockHash(sk.PublicKey)
 }
 
 // generateSpendableKey creates the keys and unlock conditions a given index of a
 // seed. Copied as the function is not exported
-func generateSpendableKey(seed modules.Seed, index uint64) spendableKey {
+func generateSpendableKey(seed modules.Seed, index uint64) (spendableKey, error) {
 	// Generate the keys and unlock conditions.
-	entropy := crypto.HashAll(seed, index)
+	entropy, err := crypto.HashAll(seed, index)
+	if err != nil {
+		return spendablekey{}, err
+	}
 	sk, pk := crypto.GenerateKeyPairDeterministic(entropy)
 	return spendableKey{
 		PublicKey: pk,
 		SecretKey: sk,
-	}
+	}, nil
 }

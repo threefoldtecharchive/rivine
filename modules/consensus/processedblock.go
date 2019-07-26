@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"fmt"
 	"math/big"
 
 	bolt "github.com/rivine/bbolt"
@@ -131,7 +132,11 @@ func (cs *ConsensusSet) newChild(tx *bolt.Tx, pb *processedBlock, b types.Block)
 	}
 	blockMap := tx.Bucket(BlockMap)
 	cs.setChildTarget(blockMap, child)
-	err := blockMap.Put(childID[:], siabin.Marshal(*child))
+	childBytes, err := siabin.Marshal(*child)
+	if err != nil {
+		build.Severe(fmt.Errorf("failed to (siabin) marshal child processed block: %v", err))
+	}
+	err = blockMap.Put(childID[:], childBytes)
 	if err != nil {
 		build.Severe(err)
 	}

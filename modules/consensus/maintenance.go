@@ -45,7 +45,11 @@ func applyMaturedCoinOutputs(tx *bolt.Tx, pb *processedBlock) {
 	// the bucket (and sometimes not - nondeterministic), so all of the
 	// elements are collected into an array and then deleted after the bucket
 	// scan is complete.
-	bucketID := append(prefixDCO, siabin.Marshal(pb.Height)...)
+	pbHeightBytes, err := siabin.Marshal(pb.Height)
+	if err != nil {
+		build.Severe(err)
+	}
+	bucketID := append(prefixDCO, pbHeightBytes...)
 	var scods []modules.CoinOutputDiff
 	var dscods []modules.DelayedCoinOutputDiff
 	bucket := tx.Bucket(bucketID)

@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	bolt "github.com/rivine/bbolt"
@@ -200,7 +201,11 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 
 				// save the new metadata
 				pluginMetadata.ConsensusChangeID = consensusChangeID
-				err = metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
+				pluginMetadataBytes, err = rivbin.Marshal(pluginMetadata)
+				if err != nil {
+					return fmt.Errorf("failed to marshal plugin metadata: %v", err)
+				}
+				err = metadataBucket.Put([]byte(name), pluginMetadataBytes)
 				if err != nil {
 					return err
 				}

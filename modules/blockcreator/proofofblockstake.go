@@ -39,10 +39,14 @@ func (bc *BlockCreator) SolveBlocks() {
 		bc.log.Debugln("[BC] Attempting to solve blocks")
 		b := bc.solveBlock(uint64(now), 10)
 		if b != nil {
-			bjson, _ := json.Marshal(b)
-			bc.log.Println("Solved block:", string(bjson))
+			bjson, err := json.Marshal(b)
+			if err != nil {
+				bc.log.Println("Solved block but failed to JSON-marshal it for logging purposes:", err)
+			} else {
+				bc.log.Println("Solved block:", string(bjson))
+			}
 
-			err := bc.submitBlock(*b)
+			err = bc.submitBlock(*b)
 			if err != nil {
 				bc.log.Println("ERROR: An error occurred while submitting a solved block:", err)
 			}
@@ -83,7 +87,11 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 				continue
 			}
 			// Calculate the hash for the given unspent output and timestamp
-			pobshash := crypto.HashAll(stakemodifier.Bytes(), ubso.Indexes.BlockHeight, ubso.Indexes.TransactionIndex, ubso.Indexes.OutputIndex, blocktime)
+			pobshash, err := crypto.HashAll(stakemodifier.Bytes(), ubso.Indexes.BlockHeight, ubso.Indexes.TransactionIndex, ubso.Indexes.OutputIndex, blocktime)
+			if err != nil {
+				bc.log.Printf("solveBlock failed due to failed crypto hash All %q: %v", ubso.BlockStakeOutputID.String(), err)
+				return nil
+			}
 			// Check if it meets the difficulty
 			pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
 			pobshashvalue.Div(pobshashvalue, ubso.Value.Big()) //TODO rivine : this div can be mul on the other side of the compare

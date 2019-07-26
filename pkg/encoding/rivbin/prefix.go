@@ -41,7 +41,11 @@ func ReadDataSlice(r io.Reader, maxLen int) ([]byte, error) {
 
 // WriteObject writes a length-prefixed object to w.
 func WriteObject(w io.Writer, v interface{}) error {
-	return WriteDataSlice(w, Marshal(v))
+	b, err := Marshal(v)
+	if err != nil {
+		return err
+	}
+	return WriteDataSlice(w, b)
 }
 
 // ReadObject reads and decodes a length-prefixed and marshalled object.

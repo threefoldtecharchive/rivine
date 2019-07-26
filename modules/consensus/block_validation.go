@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/threefoldtech/rivine/crypto"
@@ -53,7 +54,10 @@ func checkTarget(b types.Block, target types.Target, value types.Currency, heigh
 
 	// Calculate the hash for the given unspent output and timestamp
 
-	pobshash := crypto.HashAll(stakemodifier.Bytes(), b.POBSOutput.BlockHeight, b.POBSOutput.TransactionIndex, b.POBSOutput.OutputIndex, b.Timestamp)
+	pobshash, err := crypto.HashAll(stakemodifier.Bytes(), b.POBSOutput.BlockHeight, b.POBSOutput.TransactionIndex, b.POBSOutput.OutputIndex, b.Timestamp)
+	if err != nil {
+		return false
+	}
 	// Check if it meets the difficulty
 	pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
 	pobshashvalue.Div(pobshashvalue, value.Big()) //TODO rivine : this div can be mul on the other side of the compare
@@ -148,7 +152,11 @@ func (bv stdBlockValidator) ValidateBlock(b types.Block, minTimestamp types.Time
 	}
 
 	// Check that the block is below the size limit.
-	if uint64(len(bv.marshaler.Marshal(b))) > bv.cs.chainCts.BlockSizeLimit {
+	bb, err := bv.marshaler.Marshal(b)
+	if err != nil {
+		return fmt.Errorf("failed to marshal block: %v", err)
+	}
+	if uint64(len(bb)) > bv.cs.chainCts.BlockSizeLimit {
 		return errLargeBlock
 	}
 

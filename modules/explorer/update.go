@@ -171,7 +171,11 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 			}
 
 			// calculate and add new block facts, if possible
-			if tx.Bucket(bucketBlockFacts).Get(siabin.Marshal(block.ParentID)) != nil {
+			blockParentIDBytes, err := siabin.Marshal(block.ParentID)
+			if err != nil {
+				return fmt.Errorf("failed to (siabin) marshal block parent ID: %v", err)
+			}
+			if tx.Bucket(bucketBlockFacts).Get(blockParentIDBytes) != nil {
 				facts := e.dbCalculateBlockFacts(tx, block)
 				dbAddBlockFacts(tx, facts)
 			}
@@ -190,7 +194,15 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 		var facts blockFacts
 		err = dbGetAndDecode(bucketBlockFacts, currentID, &facts)(tx)
 		if err == nil {
-			err = tx.Bucket(bucketBlockFacts).Put(siabin.Marshal(currentID), siabin.Marshal(facts))
+			currentIDBytes, err := siabin.Marshal(currentID)
+			if err != nil {
+				return fmt.Errorf("failed to (siabin) marshal block parent ID: %v", err)
+			}
+			factsBytes, err := siabin.Marshal(facts)
+			if err != nil {
+				return fmt.Errorf("failed to (siabin) marshalfacts: %v", err)
+			}
+			err = tx.Bucket(bucketBlockFacts).Put(currentIDBytes, factsBytes)
 			if err != nil {
 				return err
 			}
@@ -327,14 +339,19 @@ func assertNil(err error) {
 		build.Critical(err)
 	}
 }
+func assertSiaMarshal(val interface{}) []byte {
+	b, err := siabin.Marshal(val)
+	assertNil(err)
+	return b
+}
 func mustPut(bucket *bolt.Bucket, key, val interface{}) {
-	assertNil(bucket.Put(siabin.Marshal(key), siabin.Marshal(val)))
+	assertNil(bucket.Put(assertSiaMarshal(key), assertSiaMarshal(val)))
 }
 func mustPutSet(bucket *bolt.Bucket, key interface{}) {
-	assertNil(bucket.Put(siabin.Marshal(key), nil))
+	assertNil(bucket.Put(assertSiaMarshal(key), nil))
 }
 func mustDelete(bucket *bolt.Bucket, key interface{}) {
-	assertNil(bucket.Delete(siabin.Marshal(key)))
+	assertNil(bucket.Delete(assertSiaMarshal(key)))
 }
 func bucketIsEmpty(bucket *bolt.Bucket) bool {
 	k, _ := bucket.Cursor().First()
@@ -378,16 +395,16 @@ func dbRemoveCoinOutput(tx *bolt.Tx, id types.CoinOutputID) {
 
 // Add/Remove txid from siacoin output ID bucket
 func dbAddCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketCoinOutputIDs).CreateBucketIfNotExists(siabin.Marshal(id))
+	b, err := tx.Bucket(bucketCoinOutputIDs).CreateBucketIfNotExists(assertSiaMarshal(id))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
 
 func dbRemoveCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.TransactionID) {
-	bucket := tx.Bucket(bucketCoinOutputIDs).Bucket(siabin.Marshal(id))
+	bucket := tx.Bucket(bucketCoinOutputIDs).Bucket(assertSiaMarshal(id))
 	mustDelete(bucket, txid)
 	if bucketIsEmpty(bucket) {
-		tx.Bucket(bucketCoinOutputIDs).DeleteBucket(siabin.Marshal(id))
+		tx.Bucket(bucketCoinOutputIDs).DeleteBucket(assertSiaMarshal(id))
 	}
 }
 
@@ -401,16 +418,16 @@ func dbRemoveBlockStakeOutput(tx *bolt.Tx, id types.BlockStakeOutputID) {
 
 // Add/Remove txid from blockstake output ID bucket
 func dbAddBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketBlockStakeOutputIDs).CreateBucketIfNotExists(siabin.Marshal(id))
+	b, err := tx.Bucket(bucketBlockStakeOutputIDs).CreateBucketIfNotExists(assertSiaMarshal(id))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
 
 func dbRemoveBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid types.TransactionID) {
-	bucket := tx.Bucket(bucketBlockStakeOutputIDs).Bucket(siabin.Marshal(id))
+	bucket := tx.Bucket(bucketBlockStakeOutputIDs).Bucket(assertSiaMarshal(id))
 	mustDelete(bucket, txid)
 	if bucketIsEmpty(bucket) {
-		tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(siabin.Marshal(id))
+		tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(assertSiaMarshal(id))
 	}
 }
 
@@ -542,13 +559,13 @@ func unmapUnlockConditionMultiSigAddress(tx *bolt.Tx, muh types.UnlockHash, cond
 
 // Add/Remove txid from unlock hash bucket
 func dbAddUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
-	b, err := tx.Bucket(bucketUnlockHashes).CreateBucketIfNotExists(siabin.Marshal(uh))
+	b, err := tx.Bucket(bucketUnlockHashes).CreateBucketIfNotExists(assertSiaMarshal(uh))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
 func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.TransactionID) {
 	uhb := tx.Bucket(bucketUnlockHashes)
-	muh := siabin.Marshal(uh)
+	muh := assertSiaMarshal(uh)
 	b := uhb.Bucket(muh)
 	mustDelete(b, txid)
 	if bucketIsEmpty(b) {
@@ -566,9 +583,9 @@ func dbAddWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, mult
 			build.Critical(fmt.Errorf("multisig address has wrong type: %d", multiSigAddress.Type))
 		}
 	}
-	wab, err := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).CreateBucketIfNotExists(siabin.Marshal(walletAddress))
+	wab, err := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).CreateBucketIfNotExists(assertSiaMarshal(walletAddress))
 	assertNil(err)
-	b, err := wab.CreateBucketIfNotExists(siabin.Marshal(multiSigAddress))
+	b, err := wab.CreateBucketIfNotExists(assertSiaMarshal(multiSigAddress))
 	assertNil(err)
 	mustPutSet(b, txid)
 }
@@ -582,9 +599,9 @@ func dbRemoveWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, m
 		}
 	}
 	mb := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping)
-	wa := siabin.Marshal(walletAddress)
+	wa := assertSiaMarshal(walletAddress)
 	wb := mb.Bucket(wa)
-	msa := siabin.Marshal(multiSigAddress)
+	msa := assertSiaMarshal(multiSigAddress)
 	msb := wb.Bucket(msa)
 	mustDelete(msb, txid)
 	if bucketIsEmpty(msb) {

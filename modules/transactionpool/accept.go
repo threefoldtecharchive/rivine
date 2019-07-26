@@ -55,7 +55,11 @@ func relatedObjectIDs(ts []types.Transaction) []ObjectID {
 // is valid given the state of the pool.
 func (tp *TransactionPool) validateTransactionSetComposition(ts []types.Transaction) error {
 	// Check that the transaction set is not already known.
-	setID := TransactionSetID(crypto.HashObject(ts))
+	tsH, err := crypto.HashObject(ts)
+	if err != nil {
+		return err
+	}
+	setID := TransactionSetID(tsH)
 	_, exists := tp.transactionSets[setID]
 	if exists {
 		return modules.ErrDuplicateTransactionSet
@@ -76,7 +80,7 @@ func (tp *TransactionPool) validateTransactionSetComposition(ts []types.Transact
 	// it also validates that the transaction is valid according to the consensus,
 	// meaning all properties are standard, known and valid. It does however check this within the context
 	// that the validation code knows the transaction is still unconfirmed, and thus not yet part of a created block.
-	err := tp.ValidateTransactionSetSize(ts)
+	err = tp.ValidateTransactionSetSize(ts)
 	if err != nil {
 		return err
 	}
@@ -161,13 +165,21 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 	// be removed, they will be overwritten later in the function.
 	for _, conflict := range conflictMap {
 		conflictSet := tp.transactionSets[conflict]
-		tp.transactionListSize -= len(siabin.Marshal(conflictSet))
+		conflictSetBytes, err := siabin.Marshal(conflictSet)
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal conflict set: %v", err)
+		}
+		tp.transactionListSize -= len(conflictSetBytes)
 		delete(tp.transactionSets, conflict)
 		delete(tp.transactionSetDiffs, conflict)
 	}
 
 	// Add the transaction set to the pool.
-	setID := TransactionSetID(crypto.HashObject(superset))
+	ssh, err := crypto.HashObject(superset)
+	if err != nil {
+		return err
+	}
+	setID := TransactionSetID(ssh)
 	tp.transactionSets[setID] = superset
 	for _, diff := range cc.CoinOutputDiffs {
 		tp.knownObjects[ObjectID(diff.ID)] = setID
@@ -176,7 +188,11 @@ func (tp *TransactionPool) handleConflicts(ts []types.Transaction, conflicts []T
 		tp.knownObjects[ObjectID(diff.ID)] = setID
 	}
 	tp.transactionSetDiffs[setID] = cc
-	tp.transactionListSize += len(siabin.Marshal(superset))
+	supersetBytes, err := siabin.Marshal(superset)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal superset: %v", err)
+	}
+	tp.transactionListSize += len(supersetBytes)
 	return nil
 }
 
@@ -209,7 +225,11 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 		return modules.ErrDuplicateTransactionSet
 	}
 
-	setID := TransactionSetID(crypto.HashObject(ts))
+	tsh, err := crypto.HashObject(ts)
+	if err != nil {
+		return err
+	}
+	setID := TransactionSetID(tsh)
 
 	// Validate the composition of the transaction set
 	tp.log.Debug(fmt.Sprintf("validation transaction set %v composition", crypto.Hash(setID).String()))
@@ -250,7 +270,11 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	// remember when the transaction was added
 	tp.broadcastCache.add(setID, tp.consensusSet.Height())
 	tp.transactionSetDiffs[setID] = cc
-	tp.transactionListSize += len(siabin.Marshal(ts))
+	tsBytes, err := siabin.Marshal(ts)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal transaction set: %v", err)
+	}
+	tp.transactionListSize += len(tsBytes)
 	return nil
 }
 
@@ -267,10 +291,10 @@ func (tp *TransactionPool) AcceptTransactionSet(ts []types.Transaction) error {
 	}
 
 	// Notify subscribers and broadcast the transaction set.
-	tp.log.Debug(fmt.Sprintf("Relaying transaction set %v to peers", crypto.HashObject(ts)))
+	tsh, _ := crypto.HashObject(ts)
+	tp.log.Debug(fmt.Sprintf("Relaying transaction set %v to peers", tsh))
 	go tp.gateway.Broadcast("RelayTransactionSet", ts, tp.gateway.Peers())
-	tp.updateSubscribersTransactions()
-	return nil
+	return tp.updateSubscribersTransactions()
 }
 
 // relayTransactionSet is an RPC that accepts a transaction set from a peer. If

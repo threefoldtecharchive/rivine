@@ -91,7 +91,11 @@ func (e *Explorer) MultiSigAddresses(uh types.UnlockHash) (uhs []types.UnlockHas
 		return nil
 	}
 	err := e.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).Bucket(siabin.Marshal(uh))
+		uhb, err := siabin.Marshal(uh)
+		if err != nil {
+			return fmt.Errorf("failed to siabin marshal uh: %v", err)
+		}
+		b := tx.Bucket(bucketWalletAddressToMultiSigAddressMapping).Bucket(uhb)
 		if b == nil {
 			return errors.New("not found")
 		}

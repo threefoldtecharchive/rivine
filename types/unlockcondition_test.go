@@ -472,11 +472,11 @@ func TestNilUnlockConditionProxy(t *testing.T) {
 	if b, err := c.MarshalJSON(); err != nil || string(b) != "{}" {
 		t.Error("MarshalJSON", b, err)
 	}
-	if b := siabin.Marshal(c); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
-		t.Error("MarshalSia", b)
+	if b, err := siabin.Marshal(c); err != nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+		t.Error("MarshalSia", b, err)
 	}
-	if b := rivbin.Marshal(c); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
-		t.Error("MarshalRivine", b)
+	if b, err := rivbin.Marshal(c); err!= nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+		t.Error("MarshalRivine", b, err)
 	}
 	if !c.Equal(nil) {
 		t.Error("should equal to nil implicitly")
@@ -500,11 +500,11 @@ func TestNilUnlockFulfillmentProxy(t *testing.T) {
 	if b, err := f.MarshalJSON(); err != nil || string(b) != "{}" {
 		t.Error("MarshalJSON", b, err)
 	}
-	if b := siabin.Marshal(f); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
-		t.Error("MarshalSia", b)
+	if b, err := siabin.Marshal(f); err != nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+		t.Error("MarshalSia", b, err)
 	}
-	if b := rivbin.Marshal(f); bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
-		t.Error("MarshalRivine", b)
+	if b, err := rivbin.Marshal(f); err != nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+		t.Error("MarshalRivine", b, err)
 	}
 	if !f.Equal(nil) {
 		t.Error("should equal to nil implicitly")
@@ -1907,6 +1907,21 @@ func TestValidFulFill(t *testing.T) {
 	// future time stamp
 	futureTimeStamp := CurrentTimestamp() + 123456
 
+	mustSiaBinMarshal := func(obj interface{}) []byte {
+		b, err := siabin.Marshal(obj)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return b
+	}
+	mustCryptoHashObject := func(obj interface{}) crypto.Hash {
+		h, err := crypto.HashObject(obj)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+
 	testCases := []signAndFulfillInput{
 		{ // nil -> single signature
 			&NilCondition{},
@@ -1919,7 +1934,7 @@ func TestValidFulFill(t *testing.T) {
 		},
 		{ // unlock hash -> single signature
 			&UnlockHashCondition{
-				TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 			},
 			func() MarshalableUnlockFulfillment {
 				return &SingleSignatureFulfillment{
@@ -1931,7 +1946,7 @@ func TestValidFulFill(t *testing.T) {
 		{ // [LEGACY] unlock hash -> atomic swap (refund)
 			&UnlockHashCondition{
 				TargetUnlockHash: (&AtomicSwapCondition{
-					Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+					Sender:       NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 					Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 					HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 					TimeLock:     42, // we are waaaaay beyond this
@@ -1939,7 +1954,7 @@ func TestValidFulFill(t *testing.T) {
 			},
 			func() MarshalableUnlockFulfillment {
 				return &LegacyAtomicSwapFulfillment{
-					Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+					Sender:       NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 					Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 					HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 					TimeLock:     42, // we are waaaaay beyond this
@@ -1953,7 +1968,7 @@ func TestValidFulFill(t *testing.T) {
 		{ // [LEGACY] unlock hash -> atomic swap (refund)
 			&UnlockHashCondition{
 				TargetUnlockHash: (&AtomicSwapCondition{
-					Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+					Sender:       NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 					Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 					HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 					TimeLock:     42, // we are waaaaay beyond this
@@ -1962,7 +1977,7 @@ func TestValidFulFill(t *testing.T) {
 			func() MarshalableUnlockFulfillment {
 				return &anyAtomicSwapFulfillment{
 					&LegacyAtomicSwapFulfillment{
-						Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+						Sender:       NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 						Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 						HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 						TimeLock:     42, // we are waaaaay beyond this
@@ -1977,7 +1992,7 @@ func TestValidFulFill(t *testing.T) {
 		{ // [LEGACY] unlock hash -> atomic swap (claim)
 			&UnlockHashCondition{
 				TargetUnlockHash: (&AtomicSwapCondition{
-					Receiver:     NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+					Receiver:     NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 					Sender:       unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 					HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 					TimeLock:     futureTimeStamp,
@@ -1985,7 +2000,7 @@ func TestValidFulFill(t *testing.T) {
 			},
 			func() MarshalableUnlockFulfillment {
 				return &LegacyAtomicSwapFulfillment{
-					Receiver:     NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+					Receiver:     NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 					Sender:       unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 					HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 					TimeLock:     futureTimeStamp,
@@ -1998,7 +2013,7 @@ func TestValidFulFill(t *testing.T) {
 		},
 		{ // atomic swap -> atomic swap (refund)
 			&AtomicSwapCondition{
-				Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				Sender:       NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 				Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 				HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 				TimeLock:     42, // we are waaaaay beyond this
@@ -2014,7 +2029,7 @@ func TestValidFulFill(t *testing.T) {
 		},
 		{ // atomic swap -> atomic swap (claim)
 			&AtomicSwapCondition{
-				Receiver:     NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				Receiver:     NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 				Sender:       unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 				HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 				TimeLock:     futureTimeStamp,
@@ -2030,7 +2045,7 @@ func TestValidFulFill(t *testing.T) {
 		},
 		{ // atomic swap -> atomic swap (claim, possible even when expired)
 			&AtomicSwapCondition{
-				Receiver:     NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				Receiver:     NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 				Sender:       unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 				HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 				TimeLock:     42,
@@ -2046,7 +2061,7 @@ func TestValidFulFill(t *testing.T) {
 		},
 		{ // atomic swap -> atomic swap (refund)
 			&AtomicSwapCondition{
-				Sender:       NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				Sender:       NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 				Receiver:     unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 				HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 				TimeLock:     42, // we are waaaaay beyond this
@@ -2064,7 +2079,7 @@ func TestValidFulFill(t *testing.T) {
 		},
 		{ // atomic swap -> atomic swap (claim)
 			&AtomicSwapCondition{
-				Receiver:     NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+				Receiver:     NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 				Sender:       unlockHashFromHex("01437c56286c76dec14e87f5da5e5a436651006e6cd46bee5865c9060ba178f7296ed843b70a57"),
 				HashedSecret: NewAtomicSwapHashedSecret(AtomicSwapSecret{4, 2}),
 				TimeLock:     futureTimeStamp,
@@ -2096,7 +2111,7 @@ func TestValidFulFill(t *testing.T) {
 			&TimeLockCondition{
 				LockTime: uint64(CurrentTimestamp()),
 				Condition: &UnlockHashCondition{
-					TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
+					TargetUnlockHash: NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
 				},
 			},
 			func() MarshalableUnlockFulfillment {
@@ -2111,8 +2126,8 @@ func TestValidFulFill(t *testing.T) {
 				LockTime: uint64(CurrentTimestamp()),
 				Condition: &MultiSignatureCondition{
 					UnlockHashes: UnlockHashSlice{
-						NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
-						NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk2))),
+						NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
+						NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk2))),
 					},
 					MinimumSignatureCount: 1,
 				},
@@ -2128,8 +2143,8 @@ func TestValidFulFill(t *testing.T) {
 		{
 			&MultiSignatureCondition{
 				UnlockHashes: UnlockHashSlice{
-					NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk))),
-					NewUnlockHash(UnlockTypePubKey, crypto.HashObject(siabin.Marshal(ed25519pk2))),
+					NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk))),
+					NewUnlockHash(UnlockTypePubKey, mustCryptoHashObject(mustSiaBinMarshal(ed25519pk2))),
 				},
 				MinimumSignatureCount: 1,
 			},

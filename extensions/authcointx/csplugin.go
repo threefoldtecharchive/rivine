@@ -105,8 +105,11 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 			}
 		}
 
-		mintcond := rivbin.Marshal(p.genesisAuthCondition)
-		err := authBucket.Put(encodeBlockheight(0), mintcond)
+		mintcond, err := rivbin.Marshal(p.genesisAuthCondition)
+		if err != nil {
+			return persist.Metadata{}, fmt.Errorf("failed to (rivbin) marshal genesis auth condition: %v", err)
+		}
+		err = authBucket.Put(encodeBlockheight(0), mintcond)
 		if err != nil {
 			return persist.Metadata{}, fmt.Errorf("failed to store genesis auth condition: %v", err)
 		}
@@ -153,7 +156,13 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 		if err != nil {
 			return errors.New("auth conditions bucket does not exist")
 		}
-		err = authBucket.Put(encodeBlockheight(height), rivbin.Marshal(acutx.AuthCondition))
+		authConditionBytes, err := rivbin.Marshal(acutx.AuthCondition)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to (rivbin) marshal auth condition for block height %d: %v",
+				height, err)
+		}
+		err = authBucket.Put(encodeBlockheight(height), authConditionBytes)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to put auth condition for block height %d: %v",
@@ -172,11 +181,19 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 		// store all new (de)auth address info
 		// an address can only appear once per tx, so no need to do intermediate bucket caching
 		for _, address := range aautx.AuthAddresses {
-			addressAuthBucket, err := authBucket.CreateBucketIfNotExists(rivbin.Marshal(address))
+			addressBytes, err := rivbin.Marshal(address)
+			if err != nil {
+				return fmt.Errorf("failed to (rivbin) marshal auth address: %v", err)
+			}
+			addressAuthBucket, err := authBucket.CreateBucketIfNotExists(addressBytes)
 			if err != nil {
 				return fmt.Errorf("auth address (%s) condition bucket does not exist and could not be created: %v", address.String(), err)
 			}
-			err = addressAuthBucket.Put(encodeBlockheight(height), rivbin.Marshal(true))
+			stateBytes, err := rivbin.Marshal(true)
+			if err != nil {
+				return fmt.Errorf("failed to (rivbin) marshal auth address state (true): %v", err)
+			}
+			err = addressAuthBucket.Put(encodeBlockheight(height), stateBytes)
 			if err != nil {
 				return fmt.Errorf(
 					"failed to put auth condition for address %s block height %d: %v",
@@ -184,11 +201,19 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 			}
 		}
 		for _, address := range aautx.DeauthAddresses {
-			addressAuthBucket, err := authBucket.CreateBucketIfNotExists(rivbin.Marshal(address))
+			addressBytes, err := rivbin.Marshal(address)
+			if err != nil {
+				return fmt.Errorf("failed to (rivbin) marshal auth address: %v", err)
+			}
+			addressAuthBucket, err := authBucket.CreateBucketIfNotExists(addressBytes)
 			if err != nil {
 				return fmt.Errorf("auth address (%s) condition bucket does not exist and could not be created: %v", address.String(), err)
 			}
-			err = addressAuthBucket.Put(encodeBlockheight(height), rivbin.Marshal(false))
+			stateBytes, err := rivbin.Marshal(false)
+			if err != nil {
+				return fmt.Errorf("failed to (rivbin) marshal auth address state (false): %v", err)
+			}
+			err = addressAuthBucket.Put(encodeBlockheight(height), stateBytes)
 			if err != nil {
 				return fmt.Errorf(
 					"failed to put deauth condition for address %s block height %d: %v",
@@ -245,7 +270,11 @@ func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, hei
 		// delete all reverted (de)auth address info
 		// an address can only appear once per tx, so no need to do intermediate bucket caching
 		for _, address := range aautx.AuthAddresses {
-			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
+			addressBytes, err := rivbin.Marshal(address)
+			if err != nil {
+				return fmt.Errorf("cannot get auth address (%s) condition bucket: failed to (rivbin) marshal auth address: %v", address.String(), err)
+			}
+			addressAuthBucket := authBucket.Bucket(addressBytes)
 			if addressAuthBucket == nil {
 				return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
 			}
@@ -257,7 +286,11 @@ func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, hei
 			}
 		}
 		for _, address := range aautx.DeauthAddresses {
-			addressAuthBucket := authBucket.Bucket(rivbin.Marshal(address))
+			addressBytes, err := rivbin.Marshal(address)
+			if err != nil {
+				return fmt.Errorf("cannot get auth address (%s) condition bucket: failed to (rivbin) marshal auth address: %v", address.String(), err)
+			}
+			addressAuthBucket := authBucket.Bucket(addressBytes)
 			if addressAuthBucket == nil {
 				return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
 			}
@@ -425,7 +458,11 @@ func (p *Plugin) getAuthConditionFromBucketWithContextInfo(authConditionBucket *
 func (p *Plugin) getAuthAddressStateFromBucketAt(authAddressBucket *bolt.Bucket, uh types.UnlockHash, height types.BlockHeight) (bool, error) {
 	var b []byte
 	err := func() error {
-		addressAuthBucket := authAddressBucket.Bucket(rivbin.Marshal(uh))
+		uhBytes, err := rivbin.Marshal(uh)
+		if err != nil {
+			return fmt.Errorf("failed to (rivbin) marshal unlockhash %s: %v", uh.String(), err)
+		}
+		addressAuthBucket := authAddressBucket.Bucket(uhBytes)
 		if addressAuthBucket == nil {
 			return nil // nothing to do, state will be fals by default
 		}
@@ -467,7 +504,11 @@ func (p *Plugin) getAuthAddressStateFromBucketAt(authAddressBucket *bolt.Bucket,
 func (p *Plugin) getAuthAddressStateFromBucket(authAddressBucket *bolt.Bucket, uh types.UnlockHash) (bool, error) {
 	var b []byte
 	err := func() error {
-		addressAuthBucket := authAddressBucket.Bucket(rivbin.Marshal(uh))
+		uhBytes, err := rivbin.Marshal(uh)
+		if err != nil {
+			return fmt.Errorf("failed to (rivbin) marshal unlockhash %s: %v", uh.String(), err)
+		}
+		addressAuthBucket := authAddressBucket.Bucket(uhBytes)
 		if addressAuthBucket == nil {
 			return nil
 		}

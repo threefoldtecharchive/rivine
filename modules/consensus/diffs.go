@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"errors"
+	"fmt"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
@@ -206,7 +207,11 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 		pb.ConsensusChecksum = consensusChecksum(tx)
 	}
 
-	return blockMap.Put(bid[:], siabin.Marshal(*pb))
+	pbb, err := siabin.Marshal(*pb)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal processed block: %v", err)
+	}
+	return blockMap.Put(bid[:], pbb)
 }
 
 // isBlockCreatingTx checks if a transaction at a given index in the block is considered to

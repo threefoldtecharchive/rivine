@@ -7,6 +7,7 @@ package types
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 )
@@ -30,7 +31,11 @@ var (
 func TransactionFitsInABlock(t Transaction, blockSizeLimit uint64) error {
 	// Check that the transaction will fit inside of a block, leaving 5kb for
 	// overhead.
-	if uint64(len(siabin.Marshal(t))) > blockSizeLimit-5e3 {
+	tb, err := siabin.Marshal(t)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal transaction: %v", err)
+	}
+	if uint64(len(tb)) > blockSizeLimit-5e3 {
 		return ErrTransactionTooLarge
 	}
 	return nil

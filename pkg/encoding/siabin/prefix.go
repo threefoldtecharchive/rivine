@@ -47,5 +47,9 @@ func WritePrefix(w io.Writer, data []byte) error {
 
 // WriteObject writes a length-prefixed object to w.
 func WriteObject(w io.Writer, v interface{}) error {
-	return WritePrefix(w, Marshal(v))
+	b, err := Marshal(v)
+	if err != nil {
+		return err
+	}
+	return WritePrefix(w, b)
 }
