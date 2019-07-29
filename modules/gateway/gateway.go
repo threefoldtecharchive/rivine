@@ -116,9 +116,10 @@ var (
 
 // Gateway implements the modules.Gateway interface.
 type Gateway struct {
-	listener net.Listener
-	myAddr   modules.NetAddress
-	port     string
+	listener             net.Listener
+	myAddr               modules.NetAddress
+	port                 string
+	concurrentRPCPerPeer uint64
 
 	// handlers are the RPCs that the Gateway can handle.
 	//
@@ -191,7 +192,7 @@ func (g *Gateway) Close() error {
 }
 
 // New returns an initialized Gateway.
-func New(addr string, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress, verboseLogging bool) (*Gateway, error) {
+func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress, verboseLogging bool) (*Gateway, error) {
 	// Create the directory if it doesn't exist.
 	err := os.MkdirAll(persistDir, 0700)
 	if err != nil {
@@ -199,6 +200,8 @@ func New(addr string, bootstrap bool, persistDir string, bcInfo types.Blockchain
 	}
 
 	g := &Gateway{
+		concurrentRPCPerPeer: concurrentRPCPerPeer,
+
 		handlers: make(map[rpcID]modules.RPCFunc),
 		initRPCs: make(map[string]modules.RPCFunc),
 
