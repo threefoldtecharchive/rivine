@@ -40,7 +40,7 @@ func createWalletTester(name string) (*walletTester, error) {
 	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func createBlankWalletTester(name string) (*walletTester, error) {
 	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func TestNilInputs(t *testing.T) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.TestnetChainConstants()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,7 +306,7 @@ func TestCloseWallet(t *testing.T) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.TestnetChainConstants()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}

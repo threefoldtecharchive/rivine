@@ -71,8 +71,10 @@ func TestAcceptPeer(t *testing.T) {
 				Inbound:    false,
 				Local:      false,
 			},
-			sess: newSmuxClient(new(dummyConn)),
+			sess:  newSmuxClient(new(dummyConn)),
+			token: make(chan struct{}, 1),
 		}
+		p.token <- struct{}{}
 		unkickablePeers = append(unkickablePeers, p)
 	}
 	for i := 0; i < fullyConnectedThreshold+1; i++ {
@@ -756,7 +758,7 @@ func TestPeerManagerPriority(t *testing.T) {
 
 	// Restart g1. It should immediately reconnect to g2, and then g3 after a
 	// delay.
-	g1, err = New(string(g1.myAddr), false, g1.persistDir,
+	g1, err = New(string(g1.myAddr), false, 1, g1.persistDir,
 		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
 	if err != nil {
 		t.Fatal(err)
