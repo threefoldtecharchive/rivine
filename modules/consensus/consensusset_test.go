@@ -83,7 +83,7 @@ func blankConsensusSetTester(name string) (*consensusSetTester, error) {
 	testdir := build.TempDir(modules.ConsensusDir, name)
 
 	// Create modules.
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
 	if err != nil {
 		return nil, err
 	}

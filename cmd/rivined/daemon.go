@@ -22,6 +22,11 @@ import (
 	"github.com/threefoldtech/rivine/pkg/daemon"
 )
 
+const (
+	// maxConcurrentRPC is the maximum number of concurrent RPC calls allowed for a single daemon
+	maxConcurrentRPC = 1
+)
+
 func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentifiers daemon.ModuleIdentifierSet) error {
 	// Print a startup message.
 	fmt.Println("Loading...")
@@ -58,7 +63,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	var g modules.Gateway
 	if moduleIdentifiers.Contains(daemon.GatewayModule.Identifier()) {
 		printModuleIsLoading("gateway")
-		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap,
+		g, err = gateway.New(cfg.RPCaddr, !cfg.NoBootstrap, maxConcurrentRPC,
 			filepath.Join(cfg.RootPersistentDir, modules.GatewayDir),
 			cfg.BlockchainInfo, networkCfg.Constants, networkCfg.BootstrapPeers, cfg.VerboseLogging)
 		if err != nil {

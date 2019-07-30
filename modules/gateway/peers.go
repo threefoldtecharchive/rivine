@@ -37,6 +37,8 @@ func (s insufficientVersionError) Error() string {
 type peer struct {
 	modules.Peer
 	sess streamSession
+	// rate limiting channel
+	token chan struct{}
 }
 
 // sessionHeader is sent as the initial exchange between peers.
@@ -179,7 +181,12 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) er
 			NetAddress: remoteAddr,
 			Version:    remoteInfo.Version,
 		},
-		sess: newSmuxServer(conn),
+		sess:  newSmuxServer(conn),
+		token: make(chan struct{}, g.concurrentRPCPerPeer),
+	}
+	for i := 0; uint64(i) < g.concurrentRPCPerPeer; i++ {
+		// Fill the channel wit htokens
+		peer.token <- struct{}{}
 	}
 
 	g.mu.Lock()
@@ -661,15 +668,22 @@ func (g *Gateway) managedConnect(addr modules.NetAddress) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	g.addPeer(&peer{
+	peer := &peer{
 		Peer: modules.Peer{
 			Inbound:    false,
 			Local:      addr.IsLocal(),
 			NetAddress: addr,
 			Version:    remoteInfo.Version,
 		},
-		sess: newSmuxClient(conn),
-	})
+		sess:  newSmuxClient(conn),
+		token: make(chan struct{}, g.concurrentRPCPerPeer),
+	}
+	for i := 0; uint64(i) < g.concurrentRPCPerPeer; i++ {
+		// Fill the channel with tokens
+		peer.token <- struct{}{}
+	}
+
+	g.addPeer(peer)
 	g.addNode(addr)
 	g.nodes[addr].WasOutboundPeer = true
 
