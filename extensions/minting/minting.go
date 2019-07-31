@@ -34,7 +34,7 @@ type (
 		storage                            modules.PluginViewStorage
 		unregisterCallback                 modules.PluginUnregisterCallback
 
-		binMarshal   func(v interface{}) []byte
+		binMarshal   func(v interface{}) ([]byte, error)
 		binUnmarshal func(b []byte, v interface{}) error
 
 		requireMinerFees bool
@@ -100,8 +100,11 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 			}
 		}
 
-		mintcond := p.binMarshal(p.genesisMintCondition)
-		err := mintingBucket.Put(encodeBlockheight(0), mintcond)
+		mintcond, err := p.binMarshal(p.genesisMintCondition)
+		if err != nil {
+			return persist.Metadata{}, fmt.Errorf("failed to marshal genesis mint condition: %v", err)
+		}
+		err = mintingBucket.Put(encodeBlockheight(0), mintcond)
 		if err != nil {
 			return persist.Metadata{}, fmt.Errorf("failed to store genesis mint condition: %v", err)
 		}
@@ -151,7 +154,11 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 				return errors.New("mintcondition bucket does not exist")
 			}
 		}
-		err = mintingBucket.Put(encodeBlockheight(height), p.binMarshal(mdtx.MintCondition))
+		mintcond, err := p.binMarshal(mdtx.MintCondition)
+		if err != nil {
+			return fmt.Errorf("failed to marshal mint condition: %v", err)
+		}
+		err = mintingBucket.Put(encodeBlockheight(height), mintcond)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to put mint condition for block height %d: %v",
