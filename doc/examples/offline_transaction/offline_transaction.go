@@ -62,7 +62,7 @@ func main() {
 	// Now create the wallet
 	w, err := NewWallet(seed)
 	if err != nil {
-		panc(err)
+		panic(err)
 	}
 	// Sync it with the chain
 	if err = w.SyncWallet(); err != nil {
@@ -389,7 +389,7 @@ func generateSpendableKey(seed modules.Seed, index uint64) (spendableKey, error)
 	// Generate the keys and unlock conditions.
 	entropy, err := crypto.HashAll(seed, index)
 	if err != nil {
-		return spendablekey{}, err
+		return spendableKey{}, err
 	}
 	sk, pk := crypto.GenerateKeyPairDeterministic(entropy)
 	return spendableKey{
