@@ -99,7 +99,10 @@ var testEncodings = [][]byte{
 func TestEncode(t *testing.T) {
 	// use Marshal for convenience
 	for i := range testStructs {
-		b := Marshal(testStructs[i])
+		b, err := Marshal(testStructs[i])
+		if err != nil {
+			t.Error(err)
+		}
 		if !bytes.Equal(b, testEncodings[i]) {
 			t.Errorf("bad encoding of testStructs[%d]: \nexp:\t%v\ngot:\t%v", i, testEncodings[i], b)
 		}
@@ -160,7 +163,11 @@ func TestDecode(t *testing.T) {
 
 	// many small slices (total larger than maxDecodeLen)
 	bigSlice := strings.Split(strings.Repeat("0123456789abcdefghijklmnopqrstuvwxyz", (MaxSliceSize/16)-1), "0")
-	err = Unmarshal(Marshal(bigSlice), new([]string))
+	bcb, err := Marshal(bigSlice)
+	if err != nil {
+		t.Error(err)
+	}
+	err = Unmarshal(bcb, new([]string))
 	if err == nil || !strings.Contains(err.Error(), "could not decode type []string") {
 		t.Error("expected size limit error, got", err)
 	}
@@ -186,8 +193,11 @@ func TestDecode(t *testing.T) {
 func TestMarshalUnmarshal(t *testing.T) {
 	var emptyStructs = []interface{}{&test0{}, &test1{}, &test2{}, &test3{}, &test4{}, &test5{}, &test6{}}
 	for i := range testStructs {
-		b := Marshal(testStructs[i])
-		err := Unmarshal(b, emptyStructs[i])
+		b, err := Marshal(testStructs[i])
+		if err != nil {
+			t.Error(err)
+		}
+		err = Unmarshal(b, emptyStructs[i])
 		if err != nil {
 			t.Error(err)
 		}
@@ -279,17 +289,27 @@ func TestMarshalAll(t *testing.T) {
 	// each object
 	var expected []byte
 	for i := range testStructs {
-		expected = append(expected, Marshal(testStructs[i])...)
+		tsb, err := Marshal(testStructs[i])
+		if err != nil {
+			t.Error(err)
+		}
+		expected = append(expected, tsb...)
 	}
 
-	b := MarshalAll(testStructs...)
+	b, err := MarshalAll(testStructs...)
+	if err != nil {
+		t.Error(err)
+	}
 	if !bytes.Equal(b, expected) {
 		t.Errorf("expected %v, got %v", expected, b)
 	}
 
 	// hardcoded check
 	exp := []byte{1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 'f', 'o', 'o', 1}
-	b = MarshalAll(1, 2, "foo", true)
+	b, err = MarshalAll(1, 2, "foo", true)
+	if err != nil {
+		t.Error(err)
+	}
 	if !bytes.Equal(b, exp) {
 		t.Errorf("expected %v, got %v", exp, b)
 	}
@@ -297,10 +317,13 @@ func TestMarshalAll(t *testing.T) {
 
 // TestUnmarshalAll tests the UnmarshalAll function.
 func TestUnmarshalAll(t *testing.T) {
-	b := MarshalAll(testStructs...)
+	b, err := MarshalAll(testStructs...)
+	if err != nil {
+		t.Error(err)
+	}
 
 	var emptyStructs = []interface{}{&test0{}, &test1{}, &test2{}, &test3{}, &test4{}, &test5{}, &test6{}}
-	err := UnmarshalAll(b, emptyStructs...)
+	err = UnmarshalAll(b, emptyStructs...)
 	if err != nil {
 		t.Error(err)
 	}
@@ -392,7 +415,10 @@ func BenchmarkDecode(b *testing.B) {
 // i5-4670K, 2059112: 44 MB/s
 func BenchmarkMarshalAll(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		_ = MarshalAll(testStructs...)
+		_, err := MarshalAll(testStructs...)
+		if err != nil {
+			b.Error(err)
+		}
 	}
 	b.SetBytes(int64(len(bytes.Join(testEncodings, nil))))
 }

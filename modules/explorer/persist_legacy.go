@@ -171,12 +171,16 @@ func updateLegacyCoinOutputBucket(bucket *bolt.Bucket) error {
 			}
 		}
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, siabin.Marshal(types.CoinOutput{
+		cob, err := siabin.Marshal(types.CoinOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),
 			},
-		}))
+		})
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal coin output: %v", err)
+		}
+		err = bucket.Put(k, cob)
 		if err != nil {
 			return err
 		}
@@ -202,12 +206,16 @@ func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket) error {
 			}
 		}
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, siabin.Marshal(types.BlockStakeOutput{
+		bsoBytes, err := siabin.Marshal(types.BlockStakeOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),
 			},
-		}))
+		})
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal block stake output: %v", err)
+		}
+		err = bucket.Put(k, bsoBytes)
 		if err != nil {
 			return err
 		}

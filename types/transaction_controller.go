@@ -183,7 +183,10 @@ type (
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (dtc DefaultTransactionController) EncodeTransactionData(w io.Writer, td TransactionData) error {
 	// encode to a byte slice first
-	b := siabin.Marshal(td)
+	b, err := siabin.Marshal(td)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal transaction data: %v", err)
+	}
 	// copy those bytes together with its prefixed length, as the final encoding
 	return siabin.NewEncoder(w).Encode(b)
 }

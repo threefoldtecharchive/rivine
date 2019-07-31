@@ -19,9 +19,12 @@ func TestUnitSignatureEncoding(t *testing.T) {
 	pk := sk.PublicKey()
 
 	// Marshal and unmarshal the public key.
-	marshalledPK := siabin.Marshal(pk)
+	marshalledPK, err := siabin.Marshal(pk)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var unmarshalledPK PublicKey
-	err := siabin.Unmarshal(marshalledPK, &unmarshalledPK)
+	err = siabin.Unmarshal(marshalledPK, &unmarshalledPK)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +40,10 @@ func TestUnitSignatureEncoding(t *testing.T) {
 	sig := SignHash(signedData, sk)
 
 	// Marshal and unmarshal the signature.
-	marshalledSig := siabin.Marshal(sig)
+	marshalledSig, err := siabin.Marshal(sig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var unmarshalledSig Signature
 	err = siabin.Unmarshal(marshalledSig, &unmarshalledSig)
 	if err != nil {

@@ -3,11 +3,11 @@ package transactionpool
 import (
 	"fmt"
 
+	bolt "github.com/rivine/bbolt"
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 // purge removes all transactions from the transaction pool.
@@ -46,13 +46,17 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		return tp.putRecentConsensusChange(tx, cc.ID)
 	})
 	if err != nil {
-		// TODO: Handle error
+		build.Severe("update consensus change in tx pool failed", err)
 	}
 
 	// Remove all transactions confirmed in the block from the cache
 	for _, block := range cc.AppliedBlocks {
 		for _, txn := range block.Transactions {
-			setID := TransactionSetID(crypto.HashObject([]types.Transaction{txn}))
+			tsh, err := crypto.HashObject([]types.Transaction{txn})
+			if err != nil {
+				build.Severe("update consensus change in tx pool failed: error while hashing txn set to be removed", err)
+			}
+			setID := TransactionSetID(tsh)
 			tp.broadcastCache.delete(setID)
 			tp.log.Debug(fmt.Sprintf("Remove accepted tx set %v from broadcast cache", crypto.Hash(setID).String()))
 		}
@@ -130,7 +134,11 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		if err := tp.acceptTransactionSet(set); err != nil {
 			// the transaction is now invalid and no longer in the pool,
 			// so remove it from the cache as well
-			setID := TransactionSetID(crypto.HashObject(set))
+			tsh, err := crypto.HashObject(set)
+			if err != nil {
+				build.Severe("update consensus change in tx pool failed: error while hashing txn set to be accepted", err)
+			}
+			setID := TransactionSetID(tsh)
 			tp.broadcastCache.delete(setID)
 			tp.log.Println(fmt.Sprintf("[WARN] Failed to accept transaction set %v, was previously in pool but not in latest block, and is now invalid", crypto.Hash(setID).String()))
 			continue
@@ -148,8 +156,11 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 	// Inform subscribers that an update has executed.
 	tp.mu.Demote()
-	tp.updateSubscribersTransactions()
+	err = tp.updateSubscribersTransactions()
 	tp.mu.DemotedUnlock()
+	if err != nil {
+		build.Severe("update consensus change in tx pool failed: error while updating txpool subscribers", err)
+	}
 }
 
 // PurgeTransactionPool deletes all transactions from the transaction pool.

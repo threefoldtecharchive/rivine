@@ -39,12 +39,16 @@ type (
 
 // generateSpendableKey creates the keys and unlock conditions for seed at a
 // given index.
-func generateSpendableKey(seed modules.Seed, index uint64) spendableKey {
-	sk, pk := crypto.GenerateKeyPairDeterministic(crypto.HashAll(seed, index))
+func generateSpendableKey(seed modules.Seed, index uint64) (spendableKey, error) {
+	h, err := crypto.HashAll(seed, index)
+	if err != nil {
+		return spendableKey{}, err
+	}
+	sk, pk := crypto.GenerateKeyPairDeterministic(h)
 	return spendableKey{
 		PublicKey: pk,
 		SecretKey: sk,
-	}
+	}, nil
 }
 
 // encryptAndSaveSeedFile encrypts and saves a seed file.
@@ -54,7 +58,10 @@ func (w *Wallet) encryptAndSaveSeedFile(masterKey crypto.TwofishKey, seed module
 	if err != nil {
 		return SeedFile{}, err
 	}
-	sek := uidEncryptionKey(masterKey, uid)
+	sek, err := uidEncryptionKey(masterKey, uid)
+	if err != nil {
+		return SeedFile{}, err
+	}
 	plaintextVerification := make([]byte, encryptionVerificationLen)
 	verification := sek.EncryptBytes(plaintextVerification)
 	encryptedSeed := sek.EncryptBytes(seed[:])
@@ -92,7 +99,10 @@ func (w *Wallet) saveSeedFile(uid UniqueID, seed, verification crypto.Ciphertext
 // decryptSeedFile decrypts a seed file using the encryption key.
 func decryptSeedFile(masterKey crypto.TwofishKey, sf SeedFile) (seed modules.Seed, err error) {
 	// Verify that the provided master key is the correct key.
-	decryptionKey := uidEncryptionKey(masterKey, sf.UID)
+	decryptionKey, err := uidEncryptionKey(masterKey, sf.UID)
+	if err != nil {
+		return modules.Seed{}, err
+	}
 	expectedDecryptedVerification := make([]byte, crypto.EntropySize)
 	decryptedVerification, err := decryptionKey.DecryptBytes(sf.EncryptionVerification)
 	if err != nil {
@@ -124,13 +134,21 @@ func loadPlainSeedFile(sf SeedFile) (modules.Seed, error) {
 // integrateSeed takes an address seed as input and from that generates
 // 'publicKeysPerSeed' addresses that the wallet is able to spend.
 // integrateSeed should not be called with the primary seed.
-func (w *Wallet) integrateSeed(seed modules.Seed) {
+func (w *Wallet) integrateSeed(seed modules.Seed) error {
 	for i := uint64(0); i < modules.PublicKeysPerSeed; i++ {
 		// Generate the key and check it is new to the wallet.
-		spendableKey := generateSpendableKey(seed, i)
-		w.keys[spendableKey.UnlockHash()] = spendableKey
+		spendableKey, err := generateSpendableKey(seed, i)
+		if err != nil {
+			return err
+		}
+		uh, err := spendableKey.UnlockHash()
+		if err != nil {
+			return err
+		}
+		w.keys[uh] = spendableKey
 	}
 	w.seeds = append(w.seeds, seed)
+	return nil
 }
 
 // recoverSeed integrates a recovery seed into the wallet.
@@ -177,8 +195,7 @@ func (w *Wallet) recoverSeed(seed modules.Seed, fs func(modules.Seed) (SeedFile,
 	if err != nil {
 		return err
 	}
-	w.integrateSeed(seed)
-	return nil
+	return w.integrateSeed(seed)
 }
 
 // createEncryptedSeed creates a wallet seed and encrypts it using a key derived from
@@ -210,8 +227,15 @@ func (w *Wallet) createSeed(seed modules.Seed, depth uint64, fs func(modules.See
 	// The wallet preloads keys to prevent confusion for people using the same
 	// seed/wallet file in multiple places.
 	for i := uint64(0); i < depth; i++ {
-		spendableKey := generateSpendableKey(seed, i)
-		w.keys[spendableKey.UnlockHash()] = spendableKey
+		spendableKey, err := generateSpendableKey(seed, i)
+		if err != nil {
+			return err
+		}
+		uh, err := spendableKey.UnlockHash()
+		if err != nil {
+			return err
+		}
+		w.keys[uh] = spendableKey
 	}
 	return w.saveSettingsSync()
 }
@@ -239,8 +263,15 @@ func (w *Wallet) initPrimarySeed(sf func(SeedFile) (modules.Seed, error)) error 
 	// The wallet preloads keys to prevent confusion when using the same wallet
 	// in multiple places.
 	for i := uint64(0); i < w.persist.PrimarySeedProgress+modules.WalletSeedPreloadDepth; i++ {
-		spendableKey := generateSpendableKey(seed, i)
-		w.keys[spendableKey.UnlockHash()] = spendableKey
+		spendableKey, err := generateSpendableKey(seed, i)
+		if err != nil {
+			return err
+		}
+		uh, err := spendableKey.UnlockHash()
+		if err != nil {
+			return err
+		}
+		w.keys[uh] = spendableKey
 	}
 	w.primarySeed = seed
 	w.seeds = append(w.seeds, seed)
@@ -272,7 +303,10 @@ func (w *Wallet) initAuxiliarySeeds(sf func(SeedFile) (modules.Seed, error)) err
 			w.log.Println("UNLOCK: failed to load an auxiliary seed:", err)
 			continue
 		}
-		w.integrateSeed(seed)
+		err = w.integrateSeed(seed)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -287,14 +321,21 @@ func (w *Wallet) nextPrimarySeedAddress() (types.UnlockHash, error) {
 	// Integrate the next key into the wallet, and return the unlock
 	// conditions. Because the wallet preloads keys, the progress used is
 	// 'PrimarySeedProgress+modules.WalletSeedPreloadDepth'.
-	spendableKey := generateSpendableKey(w.primarySeed, w.persist.PrimarySeedProgress+modules.WalletSeedPreloadDepth)
-	w.keys[spendableKey.UnlockHash()] = spendableKey
-	w.persist.PrimarySeedProgress++
-	err := w.saveSettingsSync()
+	spendableKey, err := generateSpendableKey(w.primarySeed, w.persist.PrimarySeedProgress+modules.WalletSeedPreloadDepth)
 	if err != nil {
 		return types.UnlockHash{}, err
 	}
-	return spendableKey.UnlockHash(), nil
+	uh, err := spendableKey.UnlockHash()
+	if err != nil {
+		return types.UnlockHash{}, err
+	}
+	w.keys[uh] = spendableKey
+	w.persist.PrimarySeedProgress++
+	err = w.saveSettingsSync()
+	if err != nil {
+		return types.UnlockHash{}, err
+	}
+	return spendableKey.UnlockHash()
 }
 
 // AllSeeds returns a list of all seeds known to and used by the wallet.

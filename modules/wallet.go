@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/types"
 	bip39 "github.com/tyler-smith/go-bip39"
@@ -431,7 +432,11 @@ type (
 // CalculateWalletTransactionID is a helper function for determining the id of
 // a wallet transaction.
 func CalculateWalletTransactionID(tid types.TransactionID, oid types.OutputID) WalletTransactionID {
-	return WalletTransactionID(crypto.HashAll(tid, oid))
+	h, err := crypto.HashAll(tid, oid)
+	if err != nil {
+		build.Severe("failed to crypto hash transaction id and output id as a single wallet tx id", err)
+	}
+	return WalletTransactionID(h)
 }
 
 // NewMnemonic converts a wallet seed to a mnemonic, a human friendly string.

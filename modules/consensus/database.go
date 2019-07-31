@@ -108,7 +108,11 @@ func (cs *ConsensusSet) initDB(tx *bolt.Tx) error {
 
 	// Place a 'false' in the consistency bucket to indicate that no
 	// inconsistencies have been found.
-	err = tx.Bucket(Consistency).Put(Consistency, siabin.Marshal(false))
+	consBytes, err := siabin.Marshal(false)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal bool (false): %v", err)
+	}
+	err = tx.Bucket(Consistency).Put(Consistency, consBytes)
 	if err != nil {
 		return err
 	}
@@ -131,7 +135,11 @@ func inconsistencyDetected(tx *bolt.Tx) (detected bool) {
 func markInconsistency(tx *bolt.Tx) {
 	// Place a 'true' in the consistency bucket to indicate that
 	// inconsistencies have been found.
-	err := tx.Bucket(Consistency).Put(Consistency, siabin.Marshal(true))
+	consBytes, err := siabin.Marshal(true)
+	if err != nil {
+		build.Severe(err)
+	}
+	err = tx.Bucket(Consistency).Put(Consistency, consBytes)
 	if err != nil {
 		build.Severe(err)
 	}

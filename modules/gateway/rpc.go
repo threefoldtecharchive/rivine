@@ -242,7 +242,11 @@ func (g *Gateway) Broadcast(name string, obj interface{}, peers []modules.Peer) 
 	g.log.Debugf("INFO: broadcasting RPC %q to %v peers", name, len(peers))
 
 	// only encode obj once, instead of using WriteObject
-	enc := siabin.Marshal(obj)
+	enc, err := siabin.Marshal(obj)
+	if err != nil {
+		g.log.Debugf("failed to siabin marshal obj, aborting broadcast %s: %v", name, err)
+		return
+	}
 	fn := func(conn modules.PeerConn) error {
 		return siabin.WritePrefix(conn, enc)
 	}

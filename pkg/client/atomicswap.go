@@ -940,7 +940,10 @@ func (atomicSwapCmd *atomicSwapCmd) spendAtomicSwapContract(outputID types.CoinO
 	}
 	pk, sk := atomicSwapCmd.getSpendableKey(ourUH)
 	// quickly validate if returned sk matches the known unlock hash (sanity check)
-	uh := types.NewPubKeyUnlockHash(pk)
+	uh, err := types.NewPubKeyUnlockHash(pk)
+	if err != nil {
+		cli.Die("error while creating new public-key-based unlockhash", err)
+	}
 	if uh.Cmp(ourUH) != 0 {
 		cli.Die("unexpected wallet public key returned:", sk)
 	}

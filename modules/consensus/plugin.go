@@ -114,8 +114,11 @@ func (cs *ConsensusSet) RegisterPlugin(ctx context.Context, name string, plugin 
 
 			// save the new metadata
 			pluginMetadata.ConsensusChangeID = newConsensusChangeID
-
-			return metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
+			metadataBytes, err := rivbin.Marshal(pluginMetadata)
+			if err != nil {
+				return fmt.Errorf("failed to (rivbin) marshal plugin metadata: %v", err)
+			}
+			return metadataBucket.Put([]byte(name), metadataBytes)
 		})
 		if err != nil {
 			return err
@@ -248,7 +251,11 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 		if len(data) != 0 {
 			return modules.ConsensusChangeID{}, ErrPluginGhostMetadata
 		}
-		err = metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata{}))
+		pluginMetadataBytes, err := rivbin.Marshal(pluginMetadata{})
+		if err != nil {
+			return modules.ConsensusChangeID{}, fmt.Errorf("failed to rivbin marshal nil plugin metadata: %v", err)
+		}
+		err = metadataBucket.Put([]byte(name), pluginMetadataBytes)
 		if err != nil {
 			return modules.ConsensusChangeID{}, err
 		}
@@ -287,7 +294,11 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	}
 	// save the new metadata
 	pluginMetadata.Version = &pluginVersion
-	err = metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
+	pluginMetadataBytes, err = rivbin.Marshal(pluginMetadata)
+	if err != nil {
+		return modules.ConsensusChangeID{}, fmt.Errorf("failed to rivbin marshal updated plugin metadata: %v", err)
+	}
+	err = metadataBucket.Put([]byte(name), pluginMetadataBytes)
 	if err != nil {
 		return modules.ConsensusChangeID{}, err
 	}

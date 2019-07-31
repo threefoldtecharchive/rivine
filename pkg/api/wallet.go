@@ -395,7 +395,12 @@ func NewWalletInitHandler(wallet modules.Wallet) httprouter.Handle {
 				return
 			}
 		} else {
-			encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
+			ph, err := crypto.HashObject(passphrase)
+			if err != nil {
+				WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
+				return
+			}
+			encryptionKey := crypto.TwofishKey(ph)
 			seed, err = wallet.Encrypt(encryptionKey, seed)
 			if err != nil {
 				WriteError(w, Error{"error when calling /wallet/init: " + err.Error()}, http.StatusBadRequest)
@@ -431,13 +436,20 @@ func NewWalletSeedHandler(wallet modules.Wallet) httprouter.Handle {
 			if err != nil {
 				WriteError(w, Error{"error when calling /wallet/seed: " +
 					modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+				return
 			}
 		} else {
-			encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
+			ph, err := crypto.HashObject(passphrase)
+			if err != nil {
+				WriteError(w, Error{"error when calling /wallet/seed: " + err.Error()}, http.StatusBadRequest)
+				return
+			}
+			encryptionKey := crypto.TwofishKey(ph)
 			err = wallet.LoadSeed(encryptionKey, seed)
 			if err == modules.ErrBadEncryptionKey {
 				WriteError(w, Error{"error when calling /wallet/seed: " +
 					modules.ErrBadEncryptionKey.Error()}, http.StatusBadRequest)
+				return
 			}
 			if err != nil {
 				WriteError(w, Error{"error when calling /wallet/seed: " +
@@ -712,8 +724,14 @@ func NewWalletUnlockHandler(wallet modules.Wallet) httprouter.Handle {
 				http.StatusUnauthorized)
 			return
 		}
-		encryptionKey := crypto.TwofishKey(crypto.HashObject(passphrase))
-		err := wallet.Unlock(encryptionKey)
+		ph, err := crypto.HashObject(passphrase)
+		if err != nil {
+			WriteError(w, Error{"error when calling /wallet/unlock:" + err.Error()},
+				http.StatusUnauthorized)
+			return
+		}
+		encryptionKey := crypto.TwofishKey(ph)
+		err = wallet.Unlock(encryptionKey)
 		if err == nil {
 			WriteSuccess(w)
 			return

@@ -348,9 +348,12 @@ func TestCurrencyScan(t *testing.T) {
 // error.
 func TestCurrencyEncoding(t *testing.T) {
 	c := NewCurrency64(351)
-	cMar := siabin.Marshal(c)
+	cMar, err := siabin.Marshal(c)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var cUmar Currency
-	err := siabin.Unmarshal(cMar, &cUmar)
+	err = siabin.Unmarshal(cMar, &cUmar)
 	if err != nil {
 		t.Error("Error unmarshalling a currency:", err)
 	}
@@ -483,7 +486,11 @@ func TestCurrencyUnsafeDecode(t *testing.T) {
 
 	// UnmarshalSia
 	c = cts.CurrencyUnits.OneCoin
-	err = siabin.Unmarshal(siabin.Marshal(NewCurrency64(7)), &c)
+	cb, err := siabin.Marshal(NewCurrency64(7))
+	if err != nil {
+		t.Error(err)
+	}
+	err = siabin.Unmarshal(cb, &c)
 	if err != nil {
 		t.Error(err)
 	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {
@@ -508,7 +515,11 @@ func TestCurrencyUnsafeRivineDecode(t *testing.T) {
 
 	// UnmarshalRivine
 	c = cts.CurrencyUnits.OneCoin
-	err = rivbin.Unmarshal(rivbin.Marshal(NewCurrency64(7)), &c)
+	cb, err := rivbin.Marshal(NewCurrency64(7))
+	if err != nil {
+		t.Error(err)
+	}
+	err = rivbin.Unmarshal(cb, &c)
 	if err != nil {
 		t.Error(err)
 	} else if !cts.CurrencyUnits.OneCoin.Equals(backup) {

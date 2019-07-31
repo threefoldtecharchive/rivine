@@ -7,7 +7,7 @@ import (
 
 // updateSubscribersTransactions sends a new transaction pool update to all
 // subscribers.
-func (tp *TransactionPool) updateSubscribersTransactions() {
+func (tp *TransactionPool) updateSubscribersTransactions() error {
 	var txns []types.Transaction
 	var cc modules.ConsensusChange
 	for _, tSet := range tp.transactionSets {
@@ -17,8 +17,12 @@ func (tp *TransactionPool) updateSubscribersTransactions() {
 		cc = cc.Append(tSetDiff)
 	}
 	for _, subscriber := range tp.subscribers {
-		subscriber.ReceiveUpdatedUnconfirmedTransactions(txns, cc)
+		err := subscriber.ReceiveUpdatedUnconfirmedTransactions(txns, cc)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // TransactionPoolSubscribe adds a subscriber to the transaction pool.

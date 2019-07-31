@@ -79,7 +79,10 @@ func TestBinaryExampleAuthAddressUpdateTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b = siabin.Marshal(tx)
+	b, err = siabin.Marshal(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	output := hex.EncodeToString(b)
 	if hexEncodedExample != output {
 		t.Fatal(hexEncodedExample, "!=", output)
@@ -150,7 +153,10 @@ func TestBinaryExampleAuthConditionUpdateTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b = siabin.Marshal(tx)
+	b, err = siabin.Marshal(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
 	output := hex.EncodeToString(b)
 	if hexEncodedExample != output {
 		t.Fatal(hexEncodedExample, "!=", output)
@@ -373,7 +379,10 @@ func TestAuthStandardTransactionEncodingDocExamples(t *testing.T) {
 		}
 
 		jms := func(v interface{}) string {
-			bs, _ := json.Marshal(v)
+			bs, err := json.Marshal(v)
+			if err != nil {
+				t.Error(err)
+			}
 			return string(bs)
 		}
 

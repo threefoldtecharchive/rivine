@@ -1,6 +1,8 @@
 package blockcreator
 
 import (
+	"fmt"
+
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
@@ -51,25 +53,34 @@ func (bc *BlockCreator) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 // ReceiveUpdatedUnconfirmedTransactions will replace the current unconfirmed
 // set of transactions with the input transactions.
-func (bc *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransactions []types.Transaction, _ modules.ConsensusChange) {
+func (bc *BlockCreator) ReceiveUpdatedUnconfirmedTransactions(unconfirmedTransactions []types.Transaction, _ modules.ConsensusChange) error {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 	// Edge case - if there are no transactions, set the block's transactions
 	// to nil and return.
 	if len(unconfirmedTransactions) == 0 {
 		bc.unsolvedBlock.Transactions = nil
-		return
+		return nil
 	}
 
 	// Add transactions to the block until the block size limit is reached.
 	// Transactions are assumed to be in a sensible order.
 	var i int
 	remainingSize := int(bc.chainCts.BlockSizeLimit - 5e3) //check this 5k for the first extra
+	var (
+		err     error
+		txBytes []byte
+	)
 	for i = range unconfirmedTransactions {
-		remainingSize -= len(siabin.Marshal(unconfirmedTransactions[i]))
+		txBytes, err = siabin.Marshal(unconfirmedTransactions[i])
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal tx %d: %v", i, err)
+		}
+		remainingSize -= len(txBytes)
 		if remainingSize < 0 {
 			break
 		}
 	}
 	bc.unsolvedBlock.Transactions = unconfirmedTransactions[:i+1]
+	return nil
 }

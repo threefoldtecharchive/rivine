@@ -70,11 +70,13 @@ func (e *Explorer) initPersist(verbose bool) error {
 		}
 
 		// set default values for the bucketInternal
+		blockHeightBytes, _ := siabin.Marshal(types.BlockHeight(0))
+		consensusChangeIDBytes, _ := siabin.Marshal(modules.ConsensusChangeID{})
 		internalDefaults := []struct {
 			key, val []byte
 		}{
-			{internalBlockHeight, siabin.Marshal(types.BlockHeight(0))},
-			{internalRecentChange, siabin.Marshal(modules.ConsensusChangeID{})},
+			{internalBlockHeight, blockHeightBytes},
+			{internalRecentChange, consensusChangeIDBytes},
 		}
 		b := tx.Bucket(bucketInternal)
 		for _, d := range internalDefaults {
