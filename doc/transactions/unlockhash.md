@@ -152,10 +152,10 @@ defines the address of a multisig wallet, and is s computed as follows:
 
 ```plain
 tree = newMerkleTree()
-err := tree.Push(binaryEncoding(len(unlockhashes)))
-err := tree.Push(binaryEncoding(uh)) foreach uh in unlockhashes
-err := tree.Push(binaryEncoding(MinimumSignatureCount))
-hash, err = tree.Root()
+tree.Push(binaryEncoding(len(unlockhashes)))
+tree.Push(binaryEncoding(uh)) foreach uh in unlockhashes
+tree.Push(binaryEncoding(MinimumSignatureCount))
+hash = tree.Root()
 ```
 
 Read [the "binary encoding" chapter](#binary-encoding) to learn how each unlock hash is binary encoded.
