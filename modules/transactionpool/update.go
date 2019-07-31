@@ -13,7 +13,6 @@ import (
 // purge removes all transactions from the transaction pool.
 func (tp *TransactionPool) purge() {
 	tp.log.Debug("Purging transactionpool")
-	tp.knownObjects = make(map[ObjectID]TransactionSetID)
 	tp.transactionSets = make(map[TransactionSetID][]types.Transaction)
 	tp.transactionSetDiffs = make(map[TransactionSetID]modules.ConsensusChange)
 	tp.transactionListSize = 0
@@ -161,11 +160,4 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	if err != nil {
 		build.Severe("update consensus change in tx pool failed: error while updating txpool subscribers", err)
 	}
-}
-
-// PurgeTransactionPool deletes all transactions from the transaction pool.
-func (tp *TransactionPool) PurgeTransactionPool() {
-	tp.mu.Lock()
-	tp.purge()
-	tp.mu.Unlock()
 }
