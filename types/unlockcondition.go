@@ -684,11 +684,11 @@ func (n *NilFulfillment) IsStandardFulfillment(ValidationContext) error {
 
 // Marshal implements MarshalableUnlockFulfillment.Marshal
 func (n *NilFulfillment) Marshal(MarshalFunc) ([]byte, error) {
-	return nil, ErrNilFulfillmentType // nothing to marshal
+	return nil, nil
 }
 
 // Unmarshal implements MarshalableUnlockFulfillment.Unmarshal
-func (n *NilFulfillment) Unmarshal([]byte, UnmarshalFunc) error { return ErrNilFulfillmentType } // cannot be unmarshaled
+func (n *NilFulfillment) Unmarshal([]byte, UnmarshalFunc) error { return nil }
 
 // NewUnlockHashCondition creates a new unlock condition,
 // using a (target) unlock hash as the condtion to be fulfilled.
