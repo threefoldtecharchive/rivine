@@ -10,15 +10,6 @@ import (
 	"github.com/threefoldtech/rivine/types"
 )
 
-// purge removes all transactions from the transaction pool.
-func (tp *TransactionPool) purge() {
-	tp.log.Debug("Purging transactionpool")
-	tp.knownObjects = make(map[ObjectID]TransactionSetID)
-	tp.transactionSets = make(map[TransactionSetID][]types.Transaction)
-	tp.transactionSetDiffs = make(map[TransactionSetID]modules.ConsensusChange)
-	tp.transactionListSize = 0
-}
-
 // ProcessConsensusChange gets called to inform the transaction pool of changes
 // to the consensus set.
 func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
@@ -110,10 +101,6 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		unconfirmedSets = append(unconfirmedSets, newTSet)
 	}
 
-	// Purge the transaction pool. Some of the transactions sets may be invalid
-	// after the consensus change.
-	tp.purge()
-
 	// Add all of the unconfirmed transaction sets back to the transaction
 	// pool. The ones that are invalid will throw an error and will not be
 	// re-added.
@@ -161,11 +148,4 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 	if err != nil {
 		build.Severe("update consensus change in tx pool failed: error while updating txpool subscribers", err)
 	}
-}
-
-// PurgeTransactionPool deletes all transactions from the transaction pool.
-func (tp *TransactionPool) PurgeTransactionPool() {
-	tp.mu.Lock()
-	tp.purge()
-	tp.mu.Unlock()
 }
