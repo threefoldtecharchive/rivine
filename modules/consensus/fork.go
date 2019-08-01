@@ -123,19 +123,13 @@ func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) e
 		SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 	}
 	for _, diff := range pb.CoinOutputDiffs {
-		if diff.Direction {
-			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
-		}
+		cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
 	}
 	for _, diff := range pb.DelayedCoinOutputDiffs {
-		if diff.Direction {
-			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
-		}
+		cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
 	}
 	for _, diff := range pb.BlockStakeOutputDiffs {
-		if diff.Direction {
-			cBlock.SpentBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
-		}
+		cBlock.SpentBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
 	}
 
 	for name, plugin := range cs.plugins {
@@ -164,19 +158,13 @@ func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) 
 		SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 	}
 	for _, diff := range pb.CoinOutputDiffs {
-		if !diff.Direction {
-			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
-		}
+		cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
 	}
 	for _, diff := range pb.DelayedCoinOutputDiffs {
-		if !diff.Direction {
-			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
-		}
+		cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
 	}
 	for _, diff := range pb.BlockStakeOutputDiffs {
-		if !diff.Direction {
-			cBlock.SpentBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
-		}
+		cBlock.SpentBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
 	}
 
 	for name, plugin := range cs.plugins {

@@ -201,23 +201,13 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 					return err
 				}
 
-				appliedCoinOutputs := make(map[types.CoinOutputID]types.CoinOutput)
-				appliedBlockStakeOutputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
-				revertedCoinOutputs := make(map[types.CoinOutputID]types.CoinOutput)
-				revertedBlockStakeOutputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
+				coinOutputDiffs := make(map[types.CoinOutputID]types.CoinOutput)
+				blockStakeOutputDiffs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
 				for _, diff := range cc.CoinOutputDiffs {
-					if !diff.Direction {
-						revertedCoinOutputs[diff.ID] = diff.CoinOutput
-					} else {
-						appliedCoinOutputs[diff.ID] = diff.CoinOutput
-					}
+					coinOutputDiffs[diff.ID] = diff.CoinOutput
 				}
 				for _, diff := range cc.BlockStakeOutputDiffs {
-					if !diff.Direction {
-						revertedBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
-					} else {
-						appliedBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
-					}
+					blockStakeOutputDiffs[diff.ID] = diff.BlockStakeOutput
 				}
 
 				var ok bool
@@ -231,15 +221,15 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 						}
 						for _, txn := range block.Transactions {
 							for _, ci := range txn.CoinInputs {
-								cBlock.SpentCoinOutputs[ci.ParentID], ok = appliedCoinOutputs[ci.ParentID]
+								cBlock.SpentCoinOutputs[ci.ParentID], ok = coinOutputDiffs[ci.ParentID]
 								if !ok {
-									return fmt.Errorf("failed to find reverted coin input %s as applied coin output in consensus change", ci.ParentID.String())
+									return fmt.Errorf("failed to find reverted coin input %s as coin output in consensus change", ci.ParentID.String())
 								}
 							}
 							for _, bsi := range txn.BlockStakeInputs {
-								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = appliedBlockStakeOutputs[bsi.ParentID]
+								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = blockStakeOutputDiffs[bsi.ParentID]
 								if !ok {
-									return fmt.Errorf("failed to find reverted block stake input %s as applied block stake output in consensus change", bsi.ParentID.String())
+									return fmt.Errorf("failed to find reverted block stake input %s as block stake output in consensus change", bsi.ParentID.String())
 								}
 							}
 						}
@@ -260,15 +250,15 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 						}
 						for _, txn := range block.Transactions {
 							for _, ci := range txn.CoinInputs {
-								cBlock.SpentCoinOutputs[ci.ParentID], ok = revertedCoinOutputs[ci.ParentID]
+								cBlock.SpentCoinOutputs[ci.ParentID], ok = coinOutputDiffs[ci.ParentID]
 								if !ok {
-									return fmt.Errorf("failed to find applied coin input %s as reverted coin output in consensus change", ci.ParentID.String())
+									return fmt.Errorf("failed to find applied coin input %s as coin output in consensus change", ci.ParentID.String())
 								}
 							}
 							for _, bsi := range txn.BlockStakeInputs {
-								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = revertedBlockStakeOutputs[bsi.ParentID]
+								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = blockStakeOutputDiffs[bsi.ParentID]
 								if !ok {
-									return fmt.Errorf("failed to find applied block stake input %s as reverted block stake output in consensus change", bsi.ParentID.String())
+									return fmt.Errorf("failed to find applied block stake input %s as block stake output in consensus change", bsi.ParentID.String())
 								}
 							}
 						}
