@@ -119,13 +119,18 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 }
 
 // ApplyBlock applies a block's minting transactions to the minting bucket.
-func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("minting bucket does not exist")
 	}
 	var err error
 	for _, txn := range block.Transactions {
-		err = p.ApplyTransaction(txn, block, height, bucket)
+		cTxn := modules.ConsensusTransaction{
+			Transaction:            txn,
+			SpentCoinOutputs:       block.SpentCoinOutputs,
+			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
+		}
+		err = p.ApplyTransaction(cTxn, height, bucket)
 		if err != nil {
 			return err
 		}
@@ -134,7 +139,7 @@ func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket 
 }
 
 // ApplyTransaction applies a minting transactions to the minting bucket.
-func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("minting bucket does not exist")
 	}
@@ -144,7 +149,7 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 	// check the version and handle the ones we care about
 	switch txn.Version {
 	case p.minterDefinitionTransactionVersion:
-		mdtx, err := MinterDefinitionTransactionFromTransaction(txn, p.minterDefinitionTransactionVersion, p.requireMinerFees)
+		mdtx, err := MinterDefinitionTransactionFromTransaction(txn.Transaction, p.minterDefinitionTransactionVersion, p.requireMinerFees)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the minter def. tx type: %v" + err.Error())
 		}
@@ -169,14 +174,19 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 }
 
 // RevertBlock reverts a block's minting transaction from the minting bucket
-func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("mint conditions bucket does not exist")
 	}
 	// collect all one-per-block mint conditions
 	var err error
 	for _, txn := range block.Transactions {
-		err = p.RevertTransaction(txn, block, height, bucket)
+		cTxn := modules.ConsensusTransaction{
+			Transaction:            txn,
+			SpentCoinOutputs:       block.SpentCoinOutputs,
+			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
+		}
+		err = p.RevertTransaction(cTxn, height, bucket)
 		if err != nil {
 			return err
 		}
@@ -185,7 +195,7 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 }
 
 // RevertTransaction reverts a minting transactions to the minting bucket.
-func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("minting bucket does not exist")
 	}
@@ -331,8 +341,8 @@ func (p *Plugin) TransactionValidators() []modules.PluginTransactionValidationFu
 	return nil
 }
 
-func (p *Plugin) validateMinterDefinitionTx(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
-	mdtx, err := MinterDefinitionTransactionFromTransaction(tx, p.minterDefinitionTransactionVersion, p.requireMinerFees)
+func (p *Plugin) validateMinterDefinitionTx(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
+	mdtx, err := MinterDefinitionTransactionFromTransaction(tx.Transaction, p.minterDefinitionTransactionVersion, p.requireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to use tx as a minter definition tx: %v", err)
 	}
@@ -370,7 +380,7 @@ func (p *Plugin) validateMinterDefinitionTx(tx types.Transaction, ctx types.Tran
 	err = mintCondition.Fulfill(mdtx.MintFulfillment, types.FulfillContext{
 		BlockHeight: ctx.BlockHeight,
 		BlockTime:   ctx.BlockTime,
-		Transaction: tx,
+		Transaction: tx.Transaction,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to fulfill mint condition for minter definition transaction: %v", err)
@@ -379,8 +389,8 @@ func (p *Plugin) validateMinterDefinitionTx(tx types.Transaction, ctx types.Tran
 	return nil // valid what this validator concerns
 }
 
-func (p *Plugin) validateCoinCreationTx(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
-	cctx, err := CoinCreationTransactionFromTransaction(tx, p.coinCreationTransactionVersion, p.requireMinerFees)
+func (p *Plugin) validateCoinCreationTx(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
+	cctx, err := CoinCreationTransactionFromTransaction(tx.Transaction, p.coinCreationTransactionVersion, p.requireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to use tx as a coin creation tx: %v", err)
 	}
@@ -404,7 +414,7 @@ func (p *Plugin) validateCoinCreationTx(tx types.Transaction, ctx types.Transact
 	err = mintCondition.Fulfill(cctx.MintFulfillment, types.FulfillContext{
 		BlockHeight: ctx.BlockHeight,
 		BlockTime:   ctx.BlockTime,
-		Transaction: tx,
+		Transaction: tx.Transaction,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to fulfill mint condition for coin creation transaction: %v", err)
@@ -448,14 +458,14 @@ func validateMintCondition(condition types.UnlockCondition) error {
 	}
 }
 
-func (p *Plugin) validateCoinDestructionTxCreation(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) validateCoinDestructionTxCreation(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
 	// collect the coin input sum
 	var coinInputSum types.Currency
 	for _, ci := range tx.CoinInputs {
-		co, err := css.UnspentCoinOutputGet(ci.ParentID)
-		if err != nil {
+		co, ok := tx.SpentCoinOutputs[ci.ParentID]
+		if !ok {
 			return fmt.Errorf(
-				"unable to find parent ID %s as an unspent coin output in the current consensus state at block height %d",
+				"unable to find parent ID %s as an unspent coin output in the current consensus transaction at block height %d",
 				ci.ParentID.String(), ctx.BlockHeight)
 		}
 		coinInputSum = coinInputSum.Add(co.Value)

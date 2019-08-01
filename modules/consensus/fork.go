@@ -6,6 +6,7 @@ import (
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/types"
 )
 
 var (
@@ -116,9 +117,30 @@ func (cs *ConsensusSet) rewindBlock(tx *bolt.Tx, pb *processedBlock) error {
 }
 
 func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
+	cBlock := modules.ConsensusBlock{
+		Block:                  pb.Block,
+		SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+		SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+	}
+	for _, diff := range pb.CoinOutputDiffs {
+		if diff.Direction {
+			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
+		}
+	}
+	for _, diff := range pb.DelayedCoinOutputDiffs {
+		if diff.Direction {
+			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
+		}
+	}
+	for _, diff := range pb.BlockStakeOutputDiffs {
+		if diff.Direction {
+			cBlock.SpentBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
+		}
+	}
+
 	for name, plugin := range cs.plugins {
 		bucket := cs.bucketForPlugin(tx, name)
-		err := plugin.RevertBlock(pb.Block, pb.Height, bucket)
+		err := plugin.RevertBlock(cBlock, pb.Height, bucket)
 		if err != nil {
 			return err
 		}
@@ -136,9 +158,30 @@ func (cs *ConsensusSet) forwardBlock(tx *bolt.Tx, pb *processedBlock) error {
 }
 
 func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
+	cBlock := modules.ConsensusBlock{
+		Block:                  pb.Block,
+		SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+		SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+	}
+	for _, diff := range pb.CoinOutputDiffs {
+		if !diff.Direction {
+			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
+		}
+	}
+	for _, diff := range pb.DelayedCoinOutputDiffs {
+		if !diff.Direction {
+			cBlock.SpentCoinOutputs[diff.ID] = diff.CoinOutput
+		}
+	}
+	for _, diff := range pb.BlockStakeOutputDiffs {
+		if !diff.Direction {
+			cBlock.SpentBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
+		}
+	}
+
 	for name, plugin := range cs.plugins {
 		bucket := cs.bucketForPlugin(tx, name)
-		err := plugin.ApplyBlock(pb.Block, pb.Height, bucket)
+		err := plugin.ApplyBlock(cBlock, pb.Height, bucket)
 		if err != nil {
 			return err
 		}

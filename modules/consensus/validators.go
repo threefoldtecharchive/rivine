@@ -73,19 +73,19 @@ func StandardTransactionValidators() []modules.TransactionValidationFunction {
 
 // ValidateTransactionFitsInABlock is a validator function that checks
 // if a transaction fits in a block
-func ValidateTransactionFitsInABlock(tx types.Transaction, ctx types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
-	return types.TransactionFitsInABlock(tx, ctx.BlockSizeLimit)
+func ValidateTransactionFitsInABlock(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
+	return types.TransactionFitsInABlock(tx.Transaction, ctx.BlockSizeLimit)
 }
 
 // ValidateTransactionArbitraryData is a validator function that checks
 // if a transaction's arbitrary data is valid
-func ValidateTransactionArbitraryData(tx types.Transaction, ctx types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
+func ValidateTransactionArbitraryData(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	return types.ArbitraryDataFits(tx.ArbitraryData, ctx.ArbitraryDataSizeLimit)
 }
 
 // ValidateCoinOutputsAreValid is a validator function that checks if all coin outputs are standard,
 // meaning their condition is considered standard (== known) and their (coin) value is individually greater than zero.
-func ValidateCoinOutputsAreValid(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateCoinOutputsAreValid(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	var err error
 	for _, co := range tx.CoinOutputs {
 		if co.Value.IsZero() {
@@ -101,7 +101,7 @@ func ValidateCoinOutputsAreValid(tx types.Transaction, ctx types.TransactionVali
 
 // ValidateCoinInputsAreValid is a validator function that checks if all coin inputs are standard,
 // meaning their fulfillment is considered standard (== known) and their parent ID is defined.
-func ValidateCoinInputsAreValid(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateCoinInputsAreValid(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	var err error
 	for _, ci := range tx.CoinInputs {
 		if ci.ParentID == (types.CoinOutputID{}) {
@@ -117,7 +117,7 @@ func ValidateCoinInputsAreValid(tx types.Transaction, ctx types.TransactionValid
 
 // ValidateBlockStakeOutputsAreValid is a validator function that checks if all block stake output is standard,
 // meaning their condition is considered standard (== known) and their (block stake) value is individually greater than zero.
-func ValidateBlockStakeOutputsAreValid(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateBlockStakeOutputsAreValid(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	var err error
 	for _, bso := range tx.BlockStakeOutputs {
 		if bso.Value.IsZero() {
@@ -133,7 +133,7 @@ func ValidateBlockStakeOutputsAreValid(tx types.Transaction, ctx types.Transacti
 
 // ValidateBlockStakeInputsAreValid is a validator function that checks if all block stake inputs are standard,
 // meaning their fulfillment is considered standard (== known) and their parent ID is defined.
-func ValidateBlockStakeInputsAreValid(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateBlockStakeInputsAreValid(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	var err error
 	for _, bsi := range tx.BlockStakeInputs {
 		if bsi.ParentID == (types.BlockStakeOutputID{}) {
@@ -149,7 +149,7 @@ func ValidateBlockStakeInputsAreValid(tx types.Transaction, ctx types.Transactio
 
 // ValidateMinerFeeIsPresent is a validator function that checks
 // that at least one miner fee is present
-func ValidateMinerFeeIsPresent(tx types.Transaction, ctx types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
+func ValidateMinerFeeIsPresent(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	if ctx.IsBlockCreatingTx {
 		return nil // validation does not apply to to block creation tx
 	}
@@ -161,7 +161,7 @@ func ValidateMinerFeeIsPresent(tx types.Transaction, ctx types.TransactionValida
 
 // ValidateMinerFeesAreValid is a validator function that checks if all miner fees are valid,
 // meaning their (coin) value is individually greater than zero.
-func ValidateMinerFeesAreValid(tx types.Transaction, ctx types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
+func ValidateMinerFeesAreValid(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	for _, fee := range tx.MinerFees {
 		if fee.Cmp(ctx.MinimumMinerFee) == -1 {
 			return types.ErrTooSmallMinerFee
@@ -171,7 +171,7 @@ func ValidateMinerFeesAreValid(tx types.Transaction, ctx types.TransactionValida
 }
 
 // ValidateDoubleCoinSpends validates that no coin output is spent twice.
-func ValidateDoubleCoinSpends(tx types.Transaction, ctx types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
+func ValidateDoubleCoinSpends(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	spendCoins := make(map[types.CoinOutputID]struct{}, len(tx.CoinInputs))
 	for _, ci := range tx.CoinInputs {
 		if _, found := spendCoins[ci.ParentID]; found {
@@ -183,7 +183,7 @@ func ValidateDoubleCoinSpends(tx types.Transaction, ctx types.TransactionValidat
 }
 
 // ValidateDoubleBlockStakeSpends validates that no block stake output is spent twice.
-func ValidateDoubleBlockStakeSpends(tx types.Transaction, ctx types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
+func ValidateDoubleBlockStakeSpends(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	spendBlockStakes := make(map[types.BlockStakeOutputID]struct{}, len(tx.BlockStakeInputs))
 	for _, bsi := range tx.BlockStakeInputs {
 		if _, found := spendBlockStakes[bsi.ParentID]; found {
@@ -195,29 +195,29 @@ func ValidateDoubleBlockStakeSpends(tx types.Transaction, ctx types.TransactionV
 }
 
 // ValidateInvalidByDefault returns always an error and can be used to not allow transactions to be validated.
-func ValidateInvalidByDefault(_ types.Transaction, _ types.TransactionValidationContext, _ modules.ConsensusStateGetter) error {
+func ValidateInvalidByDefault(_ modules.ConsensusTransaction, _ types.TransactionValidationContext) error {
 	return errors.New("transaction is invalid as it has been disabled for validation using the ValidateInvalidByDefault function")
 }
 
 // ValidateCoinInputsAreFulfilled validates that all coin outputs are validated
-func ValidateCoinInputsAreFulfilled(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateCoinInputsAreFulfilled(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	var (
-		err error
-		co  types.CoinOutput
+		ok bool
+		co types.CoinOutput
 	)
 	for index, ci := range tx.CoinInputs {
-		co, err = css.UnspentCoinOutputGet(ci.ParentID)
-		if err != nil {
+		co, ok = tx.SpentCoinOutputs[ci.ParentID]
+		if !ok {
 			return fmt.Errorf(
-				"unable to find parent ID %s as an unspent coin output in the current consensus state at block height %d",
+				"unable to find parent ID %s as an unspent coin output in the current consensus transaction at block height %d",
 				ci.ParentID.String(), ctx.BlockHeight)
 		}
 		// check if the referenced output's condition has been fulfilled
-		err = co.Condition.Fulfill(ci.Fulfillment, types.FulfillContext{
+		err := co.Condition.Fulfill(ci.Fulfillment, types.FulfillContext{
 			ExtraObjects: []interface{}{uint64(index)},
 			BlockHeight:  ctx.BlockHeight,
 			BlockTime:    ctx.BlockTime,
-			Transaction:  tx,
+			Transaction:  tx.Transaction,
 		})
 		if err != nil {
 			return err
@@ -228,14 +228,14 @@ func ValidateCoinInputsAreFulfilled(tx types.Transaction, ctx types.TransactionV
 
 // ValidateCoinOutputsAreBalanced is a validator function that checks if the sum of
 // all types of coin outputs equals the sum of coin inputs.
-func ValidateCoinOutputsAreBalanced(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateCoinOutputsAreBalanced(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	// collect the coin input sum
 	var coinInputSum types.Currency
 	for _, ci := range tx.CoinInputs {
-		co, err := css.UnspentCoinOutputGet(ci.ParentID)
-		if err != nil {
+		co, ok := tx.SpentCoinOutputs[ci.ParentID]
+		if !ok {
 			return fmt.Errorf(
-				"unable to find parent ID %s as an unspent coin output in the current consensus state at block height %d",
+				"unable to find parent ID %s as an unspent coin output in the current consensus transaction at block height %d",
 				ci.ParentID.String(), ctx.BlockHeight)
 		}
 		coinInputSum = coinInputSum.Add(co.Value)
@@ -260,16 +260,17 @@ func ValidateCoinOutputsAreBalanced(tx types.Transaction, ctx types.TransactionV
 }
 
 // ValidateBlockStakeInputsAreFulfilled validates that all block stake inputs are fulfilled
-func ValidateBlockStakeInputsAreFulfilled(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateBlockStakeInputsAreFulfilled(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	var (
+		ok  bool
 		err error
 		bso types.BlockStakeOutput
 	)
 	for index, bsi := range tx.BlockStakeInputs {
-		bso, err = css.UnspentBlockStakeOutputGet(bsi.ParentID)
-		if err != nil {
+		bso, ok = tx.SpentBlockStakeOutputs[bsi.ParentID]
+		if !ok {
 			return fmt.Errorf(
-				"unable to find parent ID %s as an unspent block stake output in the current consensus state at block height %d",
+				"unable to find parent ID %s as an unspent blockstake output in the current consensus transaction at block height %d",
 				bsi.ParentID.String(), ctx.BlockHeight)
 		}
 		// check if the referenced output's condition has been fulfilled
@@ -277,7 +278,7 @@ func ValidateBlockStakeInputsAreFulfilled(tx types.Transaction, ctx types.Transa
 			ExtraObjects: []interface{}{uint64(index)},
 			BlockHeight:  ctx.BlockHeight,
 			BlockTime:    ctx.BlockTime,
-			Transaction:  tx,
+			Transaction:  tx.Transaction,
 		})
 		if err != nil {
 			return err
@@ -288,14 +289,14 @@ func ValidateBlockStakeInputsAreFulfilled(tx types.Transaction, ctx types.Transa
 
 // ValidateBlockStakeOutputsAreBalanced is a validator function that checks if the sum of
 // all block stakes outputs equals the sum of all block stake inputs.
-func ValidateBlockStakeOutputsAreBalanced(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) error {
+func ValidateBlockStakeOutputsAreBalanced(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext) error {
 	// collect the block stake input sum
 	var blockStakeInputSum types.Currency
 	for _, bsi := range tx.BlockStakeInputs {
-		bso, err := css.UnspentBlockStakeOutputGet(bsi.ParentID)
-		if err != nil {
+		bso, ok := tx.SpentBlockStakeOutputs[bsi.ParentID]
+		if !ok {
 			return fmt.Errorf(
-				"unable to find parent ID %s as an unspent block stake output in the current consensus state at block height %d",
+				"unable to find parent ID %s as an unspent blockstake output in the current consensus transaction at block height %d",
 				bsi.ParentID.String(), ctx.BlockHeight)
 		}
 		blockStakeInputSum = blockStakeInputSum.Add(bso.Value)

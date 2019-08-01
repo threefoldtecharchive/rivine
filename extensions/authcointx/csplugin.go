@@ -46,12 +46,12 @@ type (
 	// for chains that requires custom logic to define what transaction can be considered valid for
 	// coin transfers with unauthorized addresses due to whatever rules (e.g. version, pure refund coin flow, ...)
 	// True is returned in case this tx does not require an authorization check, False otherwise.
-	UnauthorizedCoinTransactionExceptionCallback func(tx types.Transaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) (bool, error)
+	UnauthorizedCoinTransactionExceptionCallback func(tx modules.ConsensusTransaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext) (bool, error)
 )
 
 // DefaultUnauthorizedCoinTransactionExceptionCallback is the default callback that is used in ase the auth coin plugin
 // does not define a custom callback.
-func DefaultUnauthorizedCoinTransactionExceptionCallback(tx types.Transaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter) (bool, error) {
+func DefaultUnauthorizedCoinTransactionExceptionCallback(tx modules.ConsensusTransaction, dedupAddresses []types.UnlockHash, ctx types.TransactionValidationContext) (bool, error) {
 	if tx.Version != types.TransactionVersionZero && tx.Version != types.TransactionVersionOne {
 		return false, nil
 	}
@@ -126,13 +126,18 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 }
 
 // ApplyBlock applies a block's minting transactions to the minting bucket.
-func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
 	var err error
 	for _, txn := range block.Transactions {
-		err = p.ApplyTransaction(txn, block, height, bucket)
+		cTxn := modules.ConsensusTransaction{
+			Transaction:            txn,
+			SpentCoinOutputs:       block.SpentCoinOutputs,
+			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
+		}
+		err = p.ApplyTransaction(cTxn, height, bucket)
 		if err != nil {
 			return err
 		}
@@ -141,14 +146,14 @@ func (p *Plugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket 
 }
 
 // ApplyTransaction applies a minting transactions to the minting bucket.
-func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
 	// check the version and handle the ones we care about
 	switch txn.Version {
 	case p.authConditionUpdateTransactionVersion:
-		acutx, err := AuthConditionUpdateTransactionFromTransaction(txn, p.authConditionUpdateTransactionVersion)
+		acutx, err := AuthConditionUpdateTransactionFromTransaction(txn.Transaction, p.authConditionUpdateTransactionVersion)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the auth condition update tx type: %v" + err.Error())
 		}
@@ -170,7 +175,7 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 		}
 
 	case p.authAddressUpdateTransactionVersion:
-		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn, p.authAddressUpdateTransactionVersion)
+		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn.Transaction, p.authAddressUpdateTransactionVersion)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
 		}
@@ -225,13 +230,18 @@ func (p *Plugin) ApplyTransaction(txn types.Transaction, block types.Block, heig
 }
 
 // RevertBlock reverts a block's minting transaction from the minting bucket
-func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
 	var err error
 	for _, txn := range block.Transactions {
-		err = p.RevertTransaction(txn, block, height, bucket)
+		cTxn := modules.ConsensusTransaction{
+			Transaction:            txn,
+			SpentCoinOutputs:       block.SpentCoinOutputs,
+			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
+		}
+		err = p.RevertTransaction(cTxn, height, bucket)
 		if err != nil {
 			return err
 		}
@@ -240,7 +250,7 @@ func (p *Plugin) RevertBlock(block types.Block, height types.BlockHeight, bucket
 }
 
 // RevertTransaction reverts a  minting transaction from the minting bucket
-func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
@@ -259,7 +269,7 @@ func (p *Plugin) RevertTransaction(txn types.Transaction, block types.Block, hei
 		}
 
 	case p.authAddressUpdateTransactionVersion:
-		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn, p.authAddressUpdateTransactionVersion)
+		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn.Transaction, p.authAddressUpdateTransactionVersion)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
 		}
@@ -569,17 +579,17 @@ func (p *Plugin) TransactionValidators() []modules.PluginTransactionValidationFu
 	}
 }
 
-func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
 	// collect all dedupAddresses
 	dedupAddresses := map[types.UnlockHash]struct{}{}
 	for _, co := range tx.CoinOutputs {
 		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
 	}
 	for _, ci := range tx.CoinInputs {
-		co, err := css.UnspentCoinOutputGet(ci.ParentID)
-		if err != nil {
+		co, ok := tx.SpentCoinOutputs[ci.ParentID]
+		if !ok {
 			return fmt.Errorf(
-				"unable to find parent ID %s as an unspent coin output in the current consensus state at block height %d",
+				"unable to find parent ID %s as an unspent coin output in the current consensus transaction at block height %d",
 				ci.ParentID.String(), ctx.BlockHeight)
 		}
 		dedupAddresses[co.Condition.UnlockHash()] = struct{}{}
@@ -593,7 +603,7 @@ func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx types.Transaction, ctx t
 	for uh := range dedupAddresses {
 		dedupAddressesSlice = append(dedupAddressesSlice, uh)
 	}
-	allowedToBeUnauthorized, err := p.unauthorizedCoinTransactionExceptionCallback(tx, dedupAddressesSlice, ctx, css)
+	allowedToBeUnauthorized, err := p.unauthorizedCoinTransactionExceptionCallback(tx, dedupAddressesSlice, ctx)
 	if err != nil {
 		return fmt.Errorf("failed to check if transaction is allowed to be a potential unauthorized coin transfer: %v", err)
 	}
@@ -619,9 +629,9 @@ func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx types.Transaction, ctx t
 	return nil
 }
 
-func (p *Plugin) validateAuthAddressUpdateTx(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) validateAuthAddressUpdateTx(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
 	// get AuthAddressUpdateTx
-	autx, err := AuthAddressUpdateTransactionFromTransaction(tx, p.authAddressUpdateTransactionVersion)
+	autx, err := AuthAddressUpdateTransactionFromTransaction(tx.Transaction, p.authAddressUpdateTransactionVersion)
 	if err != nil {
 		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
 		return fmt.Errorf("failed to use tx as a auth address update tx: %v", err)
@@ -645,7 +655,7 @@ func (p *Plugin) validateAuthAddressUpdateTx(tx types.Transaction, ctx types.Tra
 	err = authCondition.Fulfill(autx.AuthFulfillment, types.FulfillContext{
 		BlockHeight: ctx.BlockHeight,
 		BlockTime:   ctx.BlockTime,
-		Transaction: tx,
+		Transaction: tx.Transaction,
 	})
 	if err != nil {
 		return types.NewClientError(fmt.Errorf("cannot update address states: failed to fulfill auth condition: %v", err), types.ClientErrorUnauthorized)
@@ -701,9 +711,9 @@ func (p *Plugin) validateAuthAddressUpdateTx(tx types.Transaction, ctx types.Tra
 	return nil // tx is valid according to this tx validator
 }
 
-func (p *Plugin) validateAuthConditionUpdateTx(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) validateAuthConditionUpdateTx(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
 	// get AuthConditionUpdateTx
-	cutx, err := AuthConditionUpdateTransactionFromTransaction(tx, p.authConditionUpdateTransactionVersion)
+	cutx, err := AuthConditionUpdateTransactionFromTransaction(tx.Transaction, p.authConditionUpdateTransactionVersion)
 	if err != nil {
 		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
 		return fmt.Errorf("failed to use tx as a auth condition update tx: %v", err)
@@ -738,7 +748,7 @@ func (p *Plugin) validateAuthConditionUpdateTx(tx types.Transaction, ctx types.T
 	err = authCondition.Fulfill(cutx.AuthFulfillment, types.FulfillContext{
 		BlockHeight: ctx.BlockHeight,
 		BlockTime:   ctx.BlockTime,
-		Transaction: tx,
+		Transaction: tx.Transaction,
 	})
 	if err != nil {
 		return types.NewClientError(fmt.Errorf("failed to fulfill auth condition: %v", err), types.ClientErrorUnauthorized)
