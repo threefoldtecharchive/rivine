@@ -88,17 +88,17 @@ type (
 
 		// Apply the block to the plugin.
 		// An error should be returned in case something went wrong.
-		ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		ApplyBlock(block ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 		// Revert the block from the plugin.
 		// An error should be returned in case something went wrong.
-		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		RevertBlock(block ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 
 		// Apply the transaction to the plugin.
 		// An error should be returned in case something went wrong.
-		ApplyTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		ApplyTransaction(txn ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 		// Revert the transaction from the plugin.
 		// An error should be returned in case something went wrong.
-		RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		RevertTransaction(txn ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
 
 		// TransactionValidatorFunctions allows the plugin to provide validation rules for all transaction versions it mapped to
 		TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]PluginTransactionValidationFunction
@@ -121,29 +121,30 @@ type (
 
 	// PluginTransactionValidationFunction is the signature of a validator function that
 	// can be used to provide plugin-driven transaction validation, provided by (and linked to) a plugin.
-	PluginTransactionValidationFunction func(tx types.Transaction, ctx types.TransactionValidationContext, css ConsensusStateGetter, bucket *persist.LazyBoltBucket) error
+	PluginTransactionValidationFunction func(tx ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error
 
 	// TransactionValidationFunction is the signature of a validator function that
 	// can be used to provide validation rules for transactions.
-	TransactionValidationFunction func(tx types.Transaction, ctx types.TransactionValidationContext, css ConsensusStateGetter) error
+	TransactionValidationFunction func(tx ConsensusTransaction, ctx types.TransactionValidationContext) error
 
-	// ConsensusBlock is the block type as exposed by the consensus module
+	// ConsensusBlock is the block type as exposed by the consensus module,
+	// allowing you to easily find the spend coin and blockstake outputs,
+	// for any of the by-the-block defined inputs
 	ConsensusBlock struct {
 		types.Block
 
-		Height      types.BlockHeight
-		Depth       types.Target
-		ChildTarget types.Target
+		SpentCoinOutputs       map[types.CoinOutputID]types.CoinOutput
+		SpentBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
 	}
 
-	// ConsensusStateGetter allows looking up of consensus set data at a given state
-	// (as accessed using a single open database Transaction).
-	ConsensusStateGetter interface {
-		BlockAtID(id types.BlockID) (ConsensusBlock, error)
-		BlockAtHeight(height types.BlockHeight) (ConsensusBlock, error)
+	// ConsensusTransaction is the transaction type as exposed by the consensus module
+	// allowing you to easily find the spend coin and blockstake outputs,
+	// for any of the by-the-transaction defined inputs
+	ConsensusTransaction struct {
+		types.Transaction
 
-		UnspentCoinOutputGet(id types.CoinOutputID) (types.CoinOutput, error)
-		UnspentBlockStakeOutputGet(id types.BlockStakeOutputID) (types.BlockStakeOutput, error)
+		SpentCoinOutputs       map[types.CoinOutputID]types.CoinOutput
+		SpentBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
 	}
 
 	// A ConsensusChange enumerates a set of changes that occurred to the consensus set.

@@ -200,10 +200,51 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 				if err != nil {
 					return err
 				}
+
+				appliedCoinOutputs := make(map[types.CoinOutputID]types.CoinOutput)
+				appliedBlockStakeOutputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
+				revertedCoinOutputs := make(map[types.CoinOutputID]types.CoinOutput)
+				revertedBlockStakeOutputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
+				for _, diff := range cc.CoinOutputDiffs {
+					if !diff.Direction {
+						revertedCoinOutputs[diff.ID] = diff.CoinOutput
+					} else {
+						appliedCoinOutputs[diff.ID] = diff.CoinOutput
+					}
+				}
+				for _, diff := range cc.BlockStakeOutputDiffs {
+					if !diff.Direction {
+						revertedBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
+					} else {
+						appliedBlockStakeOutputs[diff.ID] = diff.BlockStakeOutput
+					}
+				}
+
+				var ok bool
 				for _, block := range cc.RevertedBlocks {
 					blockHeight, exists := cs.BlockHeightOfBlock(block)
 					if exists {
-						err = plugin.RevertBlock(block, blockHeight, bucket)
+						cBlock := modules.ConsensusBlock{
+							Block:                  block,
+							SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+							SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+						}
+						for _, txn := range block.Transactions {
+							for _, ci := range txn.CoinInputs {
+								cBlock.SpentCoinOutputs[ci.ParentID], ok = appliedCoinOutputs[ci.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find reverted coin input %s as applied coin output in consensus change", ci.ParentID.String())
+								}
+							}
+							for _, bsi := range txn.BlockStakeInputs {
+								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = appliedBlockStakeOutputs[bsi.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find reverted block stake input %s as applied block stake output in consensus change", bsi.ParentID.String())
+								}
+							}
+						}
+
+						err = plugin.RevertBlock(cBlock, blockHeight, bucket)
 						if err != nil {
 							return err
 						}
@@ -212,7 +253,27 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 				for _, block := range cc.AppliedBlocks {
 					blockHeight, exists := cs.BlockHeightOfBlock(block)
 					if exists {
-						err = plugin.ApplyBlock(block, blockHeight, bucket)
+						cBlock := modules.ConsensusBlock{
+							Block:                  block,
+							SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+							SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+						}
+						for _, txn := range block.Transactions {
+							for _, ci := range txn.CoinInputs {
+								cBlock.SpentCoinOutputs[ci.ParentID], ok = revertedCoinOutputs[ci.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find applied coin input %s as reverted coin output in consensus change", ci.ParentID.String())
+								}
+							}
+							for _, bsi := range txn.BlockStakeInputs {
+								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = revertedBlockStakeOutputs[bsi.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find applied block stake input %s as reverted block stake output in consensus change", bsi.ParentID.String())
+								}
+							}
+						}
+
+						err = plugin.ApplyBlock(cBlock, blockHeight, bucket)
 						if err != nil {
 							return err
 						}
@@ -307,7 +368,7 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	return pluginMetadata.ConsensusChangeID, nil
 }
 
-func (cs *ConsensusSet) validateTransactionUsingPlugins(tx types.Transaction, ctx types.TransactionValidationContext, css modules.ConsensusStateGetter, btx *bolt.Tx) error {
+func (cs *ConsensusSet) validateTransactionUsingPlugins(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, btx *bolt.Tx) error {
 	if len(cs.plugins) == 0 {
 		return nil // if there are no errors, there is nothing to validate using plugins
 	}
@@ -325,13 +386,13 @@ func (cs *ConsensusSet) validateTransactionUsingPlugins(tx types.Transaction, ct
 		// return the first error that occurs
 		bucket := cs.bucketForPlugin(btx, name)
 		for _, txValidator := range txValidators {
-			err = txValidator(tx, ctx, css, bucket)
+			err = txValidator(tx, ctx, bucket)
 			if err != nil {
 				return err
 			}
 		}
 		for _, txValidator := range validators {
-			err = txValidator(tx, ctx, css, bucket)
+			err = txValidator(tx, ctx, bucket)
 			if err != nil {
 				return err
 			}

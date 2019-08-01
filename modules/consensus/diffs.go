@@ -153,11 +153,48 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	// applied.
 	createDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
 
+	var err error
+	spentCoinOutputs := make(map[types.CoinOutputID]types.CoinOutput)
+	spentBlockStakeOutputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
+	for _, txn := range pb.Block.Transactions {
+		for _, ci := range txn.CoinInputs {
+			spentCoinOutputs[ci.ParentID], err = getCoinOutput(tx, ci.ParentID)
+			if err != nil {
+				return fmt.Errorf("failed to find coin input %s as unspent coin output in current consensus state: %v", ci.ParentID.String(), err)
+			}
+		}
+		for _, bsi := range txn.BlockStakeInputs {
+			spentBlockStakeOutputs[bsi.ParentID], err = getBlockStakeOutput(tx, bsi.ParentID)
+			if err != nil {
+				return fmt.Errorf("failed to find block stake input %s as unspent block stake output in current consensus state: %v", bsi.ParentID.String(), err)
+			}
+		}
+	}
+
 	// Validate and apply each transaction in the block. They cannot be
 	// validated all at once because some transactions may not be valid until
 	// previous transactions have been applied.
 	for idx, txn := range pb.Block.Transactions {
-		err := cs.validTransaction(tx, txn, types.TransactionValidationConstants{
+		cTxn := modules.ConsensusTransaction{
+			Transaction:            txn,
+			SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+			SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+		}
+		var ok bool
+		for _, ci := range txn.CoinInputs {
+			cTxn.SpentCoinOutputs[ci.ParentID], ok = spentCoinOutputs[ci.ParentID]
+			if !ok {
+				return fmt.Errorf("unable to find spent coin output %s in processed block", ci.ParentID.String())
+			}
+		}
+		for _, bsi := range txn.BlockStakeInputs {
+			cTxn.SpentBlockStakeOutputs[bsi.ParentID], ok = spentBlockStakeOutputs[bsi.ParentID]
+			if !ok {
+				return fmt.Errorf("unable to find spent block stake output %s in processed block", bsi.ParentID.String())
+			}
+		}
+
+		err := cs.validTransaction(tx, cTxn, types.TransactionValidationConstants{
 			BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
 			ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
 			MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
@@ -172,7 +209,7 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 		// apply the transaction for each of the plugins
 		for name, plugin := range cs.plugins {
 			bucket := cs.bucketForPlugin(tx, name)
-			err := plugin.ApplyTransaction(txn, pb.Block, pb.Height, bucket)
+			err := plugin.ApplyTransaction(cTxn, pb.Height, bucket)
 			if err != nil {
 				return err
 			}
