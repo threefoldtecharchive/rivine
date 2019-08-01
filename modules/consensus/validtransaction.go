@@ -82,24 +82,6 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 			return err
 		}
 
-		spentCoinOutputs := make(map[types.CoinOutputID]types.CoinOutput)
-		spentBlockStakeOutputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
-		for _, txn := range txns {
-			for _, ci := range txn.CoinInputs {
-				spentCoinOutputs[ci.ParentID], err = getCoinOutput(tx, ci.ParentID)
-				if err != nil {
-					return fmt.Errorf("failed to find coin input %s as unspent coin output in current consensus state: %v", ci.ParentID.String(), err)
-				}
-			}
-			for _, bsi := range txn.BlockStakeInputs {
-				spentBlockStakeOutputs[bsi.ParentID], err = getBlockStakeOutput(tx, bsi.ParentID)
-				if err != nil {
-					return fmt.Errorf("failed to find block stake input %s as unspent block stake output in current consensus state: %v", bsi.ParentID.String(), err)
-				}
-			}
-		}
-
-		var ok bool
 		for _, txn := range txns {
 			cTxn := modules.ConsensusTransaction{
 				Transaction:            txn,
@@ -107,15 +89,15 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 				SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 			}
 			for _, ci := range txn.CoinInputs {
-				cTxn.SpentCoinOutputs[ci.ParentID], ok = spentCoinOutputs[ci.ParentID]
-				if !ok {
-					return fmt.Errorf("failed to find coin input %s from txn %s as unspent coin output in the block map", ci.ParentID.String(), txn.ID().String())
+				cTxn.SpentCoinOutputs[ci.ParentID], err = getCoinOutput(tx, ci.ParentID)
+				if err != nil {
+					return fmt.Errorf("failed to find coin input %s from txn %s as unspent coin output in the consensus state: %v", ci.ParentID.String(), txn.ID().String(), err)
 				}
 			}
 			for _, bsi := range txn.BlockStakeInputs {
-				cTxn.SpentBlockStakeOutputs[bsi.ParentID], ok = spentBlockStakeOutputs[bsi.ParentID]
-				if !ok {
-					return fmt.Errorf("failed to find block stake input %s from txn %s as unspent block stake output in the block map", bsi.ParentID.String(), txn.ID().String())
+				cTxn.SpentBlockStakeOutputs[bsi.ParentID], err = getBlockStakeOutput(tx, bsi.ParentID)
+				if err != nil {
+					return fmt.Errorf("failed to find block stake input %s from txn %s as unspent block stake output in the consensus state: %v", bsi.ParentID.String(), txn.ID().String(), err)
 				}
 			}
 
