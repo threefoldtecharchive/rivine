@@ -67,6 +67,13 @@ type TransactionPool interface {
 	// Close is necessary for clean shutdown (e.g. during testing).
 	Close() error
 
+	// PurgeTransactionPool is a temporary function available to the miner. In
+	// the event that a miner mines an unacceptable block, the transaction pool
+	// will be purged to clear out the transaction pool and get rid of the
+	// illegal transaction. This should never happen, however there are bugs
+	// that make this condition necessary.
+	PurgeTransactionPool()
+
 	// TransactionList returns a list of all transactions in the transaction
 	// pool. The transactions are provided in an order that can acceptably be
 	// put into a block.

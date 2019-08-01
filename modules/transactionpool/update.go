@@ -161,3 +161,10 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		build.Severe("update consensus change in tx pool failed: error while updating txpool subscribers", err)
 	}
 }
+
+// PurgeTransactionPool deletes all transactions from the transaction pool.
+func (tp *TransactionPool) PurgeTransactionPool() {
+	tp.mu.Lock()
+	defer tp.mu.Unlock()
+	tp.purge()
+}

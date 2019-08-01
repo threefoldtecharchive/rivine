@@ -27,5 +27,10 @@ func (m *BlockCreator) submitBlock(blockToSubmit types.Block) error {
 		m.log.Println("Created a block that is already known in the consensusset")
 		return err
 	}
+	if err != nil {
+		m.tpool.PurgeTransactionPool()
+		m.log.Critical("ERROR: an invalid block was submitted:", err)
+		return err
+	}
 	return nil
 }
