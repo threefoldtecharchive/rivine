@@ -2,17 +2,13 @@ package transactionpool
 
 import (
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/types"
 )
 
 // updateSubscribersTransactions sends a new transaction pool update to all
 // subscribers.
 func (tp *TransactionPool) updateSubscribersTransactions() error {
-	var txns []types.Transaction
 	var cc modules.ConsensusChange
-	for _, tSet := range tp.transactionSets {
-		txns = append(txns, tSet...)
-	}
+	txns := tp.transactionList()
 	for _, tSetDiff := range tp.transactionSetDiffs {
 		cc = cc.Append(tSetDiff)
 	}
@@ -36,10 +32,7 @@ func (tp *TransactionPool) TransactionPoolSubscribe(subscriber modules.Transacti
 	tp.subscribers = append(tp.subscribers, subscriber)
 
 	// Send the new subscriber the transaction pool set.
-	var txns []types.Transaction
-	for _, tSet := range tp.transactionSets {
-		txns = append(txns, tSet...)
-	}
+	txns := tp.transactionList()
 	var cc modules.ConsensusChange
 	for _, tSetDiff := range tp.transactionSetDiffs {
 		cc = cc.Append(tSetDiff)

@@ -35,7 +35,7 @@ func (tp *TransactionPool) validateTransactionSetComposition(ts []types.Transact
 		return err
 	}
 	setID := TransactionSetID(tsH)
-	_, exists := tp.transactionSets[setID]
+	_, exists := tp.transactionSetByID(setID)
 	if exists {
 		return modules.ErrDuplicateTransactionSet
 	}
@@ -117,7 +117,11 @@ func (tp *TransactionPool) acceptTransactionSet(ts []types.Transaction) error {
 	}
 
 	// Add the transaction set to the pool.
-	tp.transactionSets[setID] = ts
+	tp.transactionSetMapping[setID] = len(tp.transactionSets)
+	tp.transactionSets = append(tp.transactionSets, poolTransactionSet{
+		ID:           setID,
+		Transactions: ts,
+	})
 	tp.log.Println(fmt.Sprintf("Accepted transaction set %v in pool", crypto.Hash(setID).String()))
 	// remember when the transaction was added
 	tp.broadcastCache.add(setID, tp.consensusSet.Height())
@@ -162,6 +166,10 @@ func (tp *TransactionPool) relayTransactionSet(conn modules.PeerConn) error {
 	return tp.AcceptTransactionSet(ts)
 }
 
-func (tp *TransactionPool) transactionMinFee() types.Currency {
-	return tp.chainCts.MinimumTransactionFee
+func (tp *TransactionPool) transactionSetByID(id TransactionSetID) (poolTransactionSet, bool) {
+	index, ok := tp.transactionSetMapping[id]
+	if !ok {
+		return poolTransactionSet{}, false
+	}
+	return tp.transactionSets[index], true
 }

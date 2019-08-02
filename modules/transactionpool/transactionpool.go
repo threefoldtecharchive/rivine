@@ -28,11 +28,13 @@ var (
 )
 
 type (
-	// ObjectIDs are the IDs of objects such as siacoin outputs and file
-	// contracts, and are used to see if there are conflicts or overlaps within
-	// the transaction pool. A TransactionSetID is the hash of a transaction
-	// set.
+	// TransactionSetID is the hash of a transaction set.
 	TransactionSetID crypto.Hash
+
+	poolTransactionSet struct {
+		ID           TransactionSetID
+		Transactions []types.Transaction
+	}
 
 	// The TransactionPool tracks incoming transactions, accepting them or
 	// rejecting them based on internal criteria such as fees and unconfirmed
@@ -44,9 +46,10 @@ type (
 
 		// transactionSetDiffs map form a transaction set id to the set of
 		// diffs that resulted from the transaction set.
-		transactionSets     map[TransactionSetID][]types.Transaction
-		transactionSetDiffs map[TransactionSetID]modules.ConsensusChange
-		transactionListSize int
+		transactionSets       []poolTransactionSet
+		transactionSetMapping map[TransactionSetID]int
+		transactionSetDiffs   map[TransactionSetID]modules.ConsensusChange
+		transactionListSize   int
 		// TODO: Write a consistency check comparing transactionSets,
 		// transactionSetDiffs.
 		//
@@ -89,8 +92,9 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 		consensusSet: cs,
 		gateway:      g,
 
-		transactionSets:     make(map[TransactionSetID][]types.Transaction),
-		transactionSetDiffs: make(map[TransactionSetID]modules.ConsensusChange),
+		transactionSets:       make([]poolTransactionSet, 0),
+		transactionSetMapping: make(map[TransactionSetID]int),
+		transactionSetDiffs:   make(map[TransactionSetID]modules.ConsensusChange),
 
 		broadcastCache: newTransactionCache(),
 
@@ -138,7 +142,7 @@ func (tp *TransactionPool) TransactionList() []types.Transaction {
 func (tp *TransactionPool) transactionList() []types.Transaction {
 	var txns []types.Transaction
 	for _, tSet := range tp.transactionSets {
-		txns = append(txns, tSet...)
+		txns = append(txns, tSet.Transactions...)
 	}
 	return txns
 }
@@ -148,7 +152,7 @@ func (tp *TransactionPool) Transaction(id types.TransactionID) (types.Transactio
 	tp.mu.RLock()
 	defer tp.mu.RUnlock()
 	for _, tSet := range tp.transactionSets {
-		for _, txn := range tSet {
+		for _, txn := range tSet.Transactions {
 			if id == txn.ID() {
 				return txn, nil
 			}
