@@ -13,7 +13,8 @@ import (
 // purge removes all transactions from the transaction pool.
 func (tp *TransactionPool) purge() {
 	tp.log.Debug("Purging transactionpool")
-	tp.transactionSets = make(map[TransactionSetID][]types.Transaction)
+	tp.transactionSets = make([]poolTransactionSet, 0)
+	tp.transactionSetMapping = make(map[TransactionSetID]int)
 	tp.transactionSetDiffs = make(map[TransactionSetID]modules.ConsensusChange)
 	tp.transactionListSize = 0
 }
@@ -99,7 +100,7 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		// out duplicate transactions with no dependencies (arbitrary data only
 		// transactions)
 		var newTSet []types.Transaction
-		for _, txn := range tSet {
+		for _, txn := range tSet.Transactions {
 			_, exists := txids[txn.ID()]
 			if !exists {
 				tp.log.Println(fmt.Sprintf("Remembering tx %v, in pool but not in latest block", txn.ID()))
@@ -149,7 +150,11 @@ func (tp *TransactionPool) ProcessConsensusChange(cc modules.ConsensusChange) {
 		currentheight := tp.consensusSet.Height()
 		for _, id := range tp.broadcastCache.getTransactionsToBroadcast(currentheight) {
 			tp.log.Println(fmt.Sprintf("Rebroadcasting transaction %v to peers", crypto.Hash(id).String()))
-			go tp.gateway.Broadcast("RelayTransactionSet", tp.transactionSets[id], tp.gateway.Peers())
+			tSet, ok := tp.transactionSetByID(id)
+			if !ok {
+				tp.log.Println(fmt.Sprintf("failed to find transaction set for", crypto.Hash(id).String()))
+			}
+			go tp.gateway.Broadcast("RelayTransactionSet", tSet.Transactions, tp.gateway.Peers())
 		}
 	}
 
