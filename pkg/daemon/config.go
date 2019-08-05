@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/types"
 	"github.com/threefoldtech/rivine/pkg/cli"
+	"github.com/threefoldtech/rivine/types"
 )
 
 const (
@@ -101,7 +101,7 @@ func (cfg *Config) RegisterAsFlags(flagSet *pflag.FlagSet) {
 	flagSet.StringVarP(&cfg.ProfileDir, "profile-directory", "", cfg.ProfileDir, "location of the profiling directory")
 	flagSet.StringVarP(&cfg.APIaddr, "api-addr", "", cfg.APIaddr, "which host:port the API server listens on")
 	flagSet.StringVarP(&cfg.RootPersistentDir, "persistent-directory", "d", cfg.RootPersistentDir,
-		"location of the root diretory used to store persistent data of the daemon of"+
+		"location of the root directory used to store persistent data of the daemon of "+
 			cfg.BlockchainInfo.Name)
 
 	flagSet.BoolVarP(&cfg.VerboseLogging, "verboselogging", "v", false, "enable logging of debug information in the logfiles of the modules")
