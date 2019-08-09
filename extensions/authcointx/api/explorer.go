@@ -23,12 +23,12 @@ type GetAddressesAuthStateResponse struct {
 	AuthStates []bool `json:"auths"`
 }
 
-// RegisterConsensusuthCoinHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
-func RegisterConsensusuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin) {
+// RegisterConsensusAuthCoinHTTPHandlers registers the default Rivine handlers for all default Rivine Consensus HTTP endpoints.
+func RegisterConsensusAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin) {
 	registerAuthCoinHTTPHandlers(router, "/consensus", plugin)
 }
 
-// RegisterExplorerAuthCoinHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
+// RegisterExplorerAuthCoinHTTPHandlers registers the default Rivine handlers for all default Rivine Explorer HTTP endpoints.
 func RegisterExplorerAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin) {
 	registerAuthCoinHTTPHandlers(router, "/explorer", plugin)
 }

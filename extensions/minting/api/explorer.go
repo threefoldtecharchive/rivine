@@ -17,13 +17,13 @@ type TransactionDBGetMintCondition struct {
 	MintCondition types.UnlockConditionProxy `json:"mintcondition"`
 }
 
-// RegisterExplorerMintingHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
+// RegisterExplorerMintingHTTPHandlers registers the default Rivine handlers for all default Rivine explorer endpoints.
 func RegisterExplorerMintingHTTPHandlers(router rapi.Router, plugin *minting.Plugin) {
 	router.GET("/explorer/mintcondition", NewTransactionDBGetActiveMintConditionHandler(plugin))
 	router.GET("/explorer/mintcondition/:height", NewTransactionDBGetMintConditionAtHandler(plugin))
 }
 
-// RegisterConsensusMintingHTTPHandlers registers the default Rivine handlers for all default Rivine Explprer HTTP endpoints.
+// RegisterConsensusMintingHTTPHandlers registers the default Rivine handlers for all default Rivine consensus HTTP endpoints.
 func RegisterConsensusMintingHTTPHandlers(router rapi.Router, plugin *minting.Plugin) {
 	router.GET("/consensus/mintcondition", NewTransactionDBGetActiveMintConditionHandler(plugin))
 	router.GET("/consensus/mintcondition/:height", NewTransactionDBGetMintConditionAtHandler(plugin))
