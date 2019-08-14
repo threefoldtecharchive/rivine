@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
+
+	"github.com/otiai10/copy"
 )
 
 const rootGithubAPIurl = "https://api.github.com"
@@ -48,33 +51,71 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		return err
 	}
 
-	// Open the destination directory with our template contents
-	f, _ := os.Open(destinationDirPath)
-	fis, _ := f.Readdir(-1)
-	f.Close()
-
-	// For every file in this directory create our template code
-	for _, fi := range fis {
-		filePath := path.Join(destinationDirPath, fi.Name())
-		isTemplate := path.Ext(fi.Name()) == ".template"
-		if isTemplate {
-			// First read the template file as string in order to write our generated code to a new file
-			templateText, err := readTemplateFileAsString(filePath)
-			if err != nil {
-				return err
-			}
-			err = writeTemplateToFile(templateText, filePath, fi.Name(), config)
-			if err != nil {
-				return err
-			}
-			// Remove template file and keep generated one
-			err = os.Remove(filePath)
-			if err != nil {
-				return err
-			}
-		}
+	err = writeTemplateValues(destinationDirPath, config)
+	if err != nil {
+		return err
 	}
 	return nil
+}
+
+func generateBlockchainTemplateLocal(destinationDirPath string, config *Config) error {
+	// Remove everything in the destination directory path if it exists, since it would only contain what we generate
+	err := os.RemoveAll(destinationDirPath)
+	if err != nil {
+		return err
+	}
+
+	templateRepoPath := "/Users/dylan/rivine-chain-template"
+	err = copy.Copy(templateRepoPath, destinationDirPath)
+	if err != nil {
+		return err
+	}
+
+	err = writeTemplateValues(destinationDirPath, config)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeTemplateValues(destinationDirPath string, config *Config) error {
+	fmap := template.FuncMap{
+		"formatConditionAsString": formatConditionAsString,
+	}
+
+	err := filepath.Walk(destinationDirPath,
+		func(fPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			fmt.Println(fPath, info.Size())
+			isTemplate := path.Ext(info.Name()) == ".template"
+			if isTemplate {
+				// First read the template file as string in order to write our generated code to a new file
+				templateText, err := readTemplateFileAsString(fPath)
+				if err != nil {
+					return err
+				}
+				err = writeTemplateToFile(templateText, fPath, info.Name(), config, fmap)
+				if err != nil {
+					return err
+				}
+				// Remove template file and keep generated one
+				err = os.Remove(fPath)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	if err != nil {
+		log.Println(err)
+	}
+	return nil
+}
+
+func formatConditionAsString(c Condition) (string, error) {
+	return fmt.Sprintf("%s", string(c.UnlockHash().String())), nil
 }
 
 func readTemplateFileAsString(filepath string) (string, error) {
@@ -90,7 +131,7 @@ func readTemplateFileAsString(filepath string) (string, error) {
 	return string(b), nil
 }
 
-func writeTemplateToFile(templateText, filepath, filename string, config *Config) error {
+func writeTemplateToFile(templateText, filepath, filename string, config *Config, fmap template.FuncMap) error {
 	// Create a new file where will store generated code of this file
 	newFilePath := strings.TrimSuffix(filepath, path.Ext(filename))
 	file, err := os.Create(newFilePath)
@@ -98,7 +139,7 @@ func writeTemplateToFile(templateText, filepath, filename string, config *Config
 		return err
 	}
 	// Create a new template and parse our template text
-	t := template.Must(template.New("template").Parse(templateText))
+	t := template.Must(template.New("template").Funcs(fmap).Parse(templateText))
 	// Execute this template, which will fill in all templated values read from config
 	return t.ExecuteTemplate(file, "template", config)
 }

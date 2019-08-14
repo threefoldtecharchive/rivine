@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"gopkg.in/go-playground/validator.v9"
 	"gopkg.in/yaml.v2"
@@ -86,14 +85,19 @@ type (
 	}
 
 	Genesis struct {
-		CoinOutputs       []Output   `json:"coinOuput" yaml:"coinOutput" validate:"required"`
-		BlockStakeOutputs []Output   `json:"blockStakeOutputs" yaml:"blockStakeOutputs" validate:"required"`
-		Minting           *Condition `json:"minting,omitempty" yaml:"minting,omitempty" validate:"required_with=blockchain.transactions.minting"`
+		CoinOutputs           []Output   `json:"coinOuput" yaml:"coinOutput" validate:"required"`
+		BlockStakeOutputs     []Output   `json:"blockStakeOutputs" yaml:"blockStakeOutputs" validate:"required"`
+		Minting               *Condition `json:"minting,omitempty" yaml:"minting,omitempty" validate:"required_with=blockchain.transactions.minting"`
+		GenesisBlockTimestamp int64      `json:"genesisBlockTimestamp" yaml:"genesisBlockTimestamp" validate:"required"`
 	}
 
 	Output struct {
 		Value     CurrencyValue `json:"value" yaml:"value" validate:"required"`
 		Condition Condition     `json:"condition" yaml:"condition" validate:"required"`
+	}
+
+	CurrencyValue struct {
+		types.Currency
 	}
 
 	Condition struct {
@@ -109,34 +113,30 @@ type (
 		types.UnlockHash
 	}
 
-	CurrencyValue struct {
-		types.Currency
-	}
-
 	Network struct {
-		NetworkType            NetworkType     `json:"networkType" yaml:"networkType" validate:"required"`
-		Genesis                *Genesis        `json:"genesis" yaml:"genesis" validate:"required"`
-		TransactionFeePool     string          `json:"transactionFeePool,omitempty" yaml:"transactionFeePool,omitempty"`
-		BlockSizeLimit         uint64          `json:"blockSizeLimit,omitempty" yaml:"blockSizeLimit,omitempty"`
-		ArbitraryDataSizeLimit uint64          `json:"arbitraryDataSizeLimit,omitempty" yaml:"arbitraryDataSizeLimit,omitempty"`
-		BlockCreatorFee        string          `json:"blockCreatorFee,omitempty" yaml:"blockCreatorFee,omitempty"`
-		MinimumTransactionFee  string          `json:"minimumTransactionFee,omitempty" yaml:"minimumTransactionFee,omitempty"`
-		BlockFrequency         uint64          `json:"blockFrequency,omitempty" yaml:"blockFrequency,omitempty"`
-		MaturityDelay          uint64          `json:"maturityDelay,omitempty" yaml:"maturityDelay,omitempty"`
-		MedianTimestampWindow  uint64          `json:"medianTimestampWindow,omitempty" yaml:"medianTimestampWindow,omitempty"`
-		TargetWindow           uint64          `json:"targetWindow,omitempty" yaml:"targetWindow,omitempty"`
-		MaxAdjustmentUp        Fraction        `json:"maxAdjustmentUp,omitempty" yaml:"maxAdjustmentUp,omitempty"`
-		MaxAdjustmentDown      Fraction        `json:"maxAdjustmentDown,omitempty" yaml:"maxAdjustmentDown,omitempty"`
-		FutureThreshold        time.Duration   `json:"futureTreshold,omitempty" yaml:"futureTreshold,omitempty"`
-		ExtremeFutureThreshold time.Duration   `json:"extremeFutureTreshold,omitempty" yaml:"extremeFutureTreshold,omitempty"`
-		StakeModifierDelay     time.Duration   `json:"stakeModifierDelay,omitempty" yaml:"stakeModifierDelay,omitempty"`
-		BlockStakeAging        time.Duration   `json:"blockStakeAging,omitempty" yaml:"blockStakeAging,omitempty"`
-		TransactionPool        TransactionPool `json:"transactionPool,omitempty" yaml:"transactionPool,omitempty"`
-		BootstapPeers          []*NetAddress   `json:"bootstrapPeers" yaml:"bootstrapPeers" validate:"required"`
+		NetworkType            NetworkType      `json:"networkType" yaml:"networkType" validate:"required"`
+		Genesis                *Genesis         `json:"genesis" yaml:"genesis" validate:"required"`
+		TransactionFeePool     string           `json:"transactionFeePool,omitempty" yaml:"transactionFeePool,omitempty"`
+		BlockSizeLimit         uint64           `json:"blockSizeLimit,omitempty" yaml:"blockSizeLimit,omitempty"`
+		ArbitraryDataSizeLimit uint64           `json:"arbitraryDataSizeLimit,omitempty" yaml:"arbitraryDataSizeLimit,omitempty"`
+		BlockCreatorFee        string           `json:"blockCreatorFee,omitempty" yaml:"blockCreatorFee,omitempty"`
+		MinimumTransactionFee  string           `json:"minimumTransactionFee,omitempty" yaml:"minimumTransactionFee,omitempty"`
+		BlockFrequency         uint64           `json:"blockFrequency,omitempty" yaml:"blockFrequency,omitempty"`
+		MaturityDelay          uint64           `json:"maturityDelay,omitempty" yaml:"maturityDelay,omitempty"`
+		MedianTimestampWindow  uint64           `json:"medianTimestampWindow,omitempty" yaml:"medianTimestampWindow,omitempty"`
+		TargetWindow           uint64           `json:"targetWindow,omitempty" yaml:"targetWindow,omitempty"`
+		MaxAdjustmentUp        Fraction         `json:"maxAdjustmentUp,omitempty" yaml:"maxAdjustmentUp,omitempty"`
+		MaxAdjustmentDown      Fraction         `json:"maxAdjustmentDown,omitempty" yaml:"maxAdjustmentDown,omitempty"`
+		FutureThreshold        uint64           `json:"futureTreshold,omitempty" yaml:"futureTreshold,omitempty"`
+		ExtremeFutureThreshold uint64           `json:"extremeFutureTreshold,omitempty" yaml:"extremeFutureTreshold,omitempty"`
+		StakeModifierDelay     uint64           `json:"stakeModifierDelay,omitempty" yaml:"stakeModifierDelay,omitempty"`
+		BlockStakeAging        uint64           `json:"blockStakeAging,omitempty" yaml:"blockStakeAging,omitempty"`
+		TransactionPool        TransactionPool  `json:"transactionPool,omitempty" yaml:"transactionPool,omitempty"`
+		BootstrapPeers         []*BootstrapPeer `json:"bootstrapPeers" yaml:"bootstrapPeers" validate:"required"`
 	}
 
-	NetAddress struct {
-		modules.NetAddress `json:"bootstrapPeer" yaml:"bootstrapPeer" validate:"InvalidAddress"`
+	BootstrapPeer struct {
+		Address modules.NetAddress `json:"bootstrapPeer" yaml:"bootstrapPeer" validate:"InvalidAddress"`
 	}
 
 	// Fraction represents ratio.
@@ -382,12 +382,16 @@ func LoadConfigFile(filePath string) error {
 	}
 	relativeCodeDestinationDir := filepath.Dir(relativeFilePath) + "/" + config.Template.Repository.Owner + "-" + config.Template.Repository.Repo
 
-	commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, filepath.Dir(relativeFilePath))
-	if err != nil {
-		return err
-	}
+	// commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, filepath.Dir(relativeFilePath))
+	// if err != nil {
+	// 	return err
+	// }
 
-	err = generateBlockchainTemplate(relativeCodeDestinationDir, commitHash, config)
+	// err = generateBlockchainTemplate(relativeCodeDestinationDir, commitHash, config)
+	// if err != nil {
+	// 	return err
+	// }
+	err = generateBlockchainTemplateLocal(relativeCodeDestinationDir, config)
 	if err != nil {
 		return err
 	}
@@ -572,7 +576,8 @@ func BuildConfigStruct() *Config {
 					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
 				},
 			},
-			Minting: &mintCondition,
+			Minting:               &mintCondition,
+			GenesisBlockTimestamp: 1524168391,
 		},
 		TransactionFeePool:     "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
 		BlockSizeLimit:         uint64(2e6),
@@ -591,21 +596,89 @@ func BuildConfigStruct() *Config {
 			Denominator: 10,
 			Numerator:   25,
 		},
-		FutureThreshold:        time.Hour,
-		ExtremeFutureThreshold: time.Hour * 2,
-		StakeModifierDelay:     time.Second * 2000,
-		BlockStakeAging:        time.Hour * 24,
+		FutureThreshold:        60 * 60,
+		ExtremeFutureThreshold: 2 * 60 * 60,
+		StakeModifierDelay:     2000,
+		BlockStakeAging:        24 * 60 * 60,
 		TransactionPool: TransactionPool{
 			TransactionSizeLimit:    uint(16e3),
 			TransactionSetSizeLimit: uint(250e3),
 			PoolSizeLimit:           uint64(2e6 - 5e3 - 250e3),
 		},
-		BootstapPeers: []*NetAddress{
-			&NetAddress{"bootstrap1.testnet.threefoldtoken.com:23112"},
-			&NetAddress{"bootstrap2.testnet.threefoldtoken.com:23112"},
-			&NetAddress{"bootstrap3.testnet.threefoldtoken.com:23112"},
-			&NetAddress{"bootstrap4.testnet.threefoldtoken.com:24112"},
-			&NetAddress{"bootstrap5.testnet.threefoldtoken.com:24112"},
+		BootstrapPeers: []*BootstrapPeer{
+			&BootstrapPeer{"bootstrap1.testnet.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap2.testnet.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap3.testnet.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap4.testnet.threefoldtoken.com:24112"},
+			&BootstrapPeer{"bootstrap5.testnet.threefoldtoken.com:24112"},
+		},
+	}
+
+	networks["standard"] = &Network{
+		NetworkType: Standard,
+		Genesis: &Genesis{
+			CoinOutputs: []Output{
+				{
+					Value: CurrencyValue{
+						types.NewCurrency64(5e6 * 1e9),
+					},
+					Condition: uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
+				},
+				{
+					Value: CurrencyValue{
+						types.NewCurrency64(5e6 * 1e9),
+					},
+					Condition: NewMultisigCondition(
+						2,
+						uhs("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
+						uhs("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
+					),
+					// Condition: uhs("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
+				},
+			},
+			BlockStakeOutputs: []Output{
+				{
+					Value: CurrencyValue{
+						types.NewCurrency64(3000),
+					},
+					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
+				},
+			},
+			Minting:               &mintCondition,
+			GenesisBlockTimestamp: 1524168391,
+		},
+		TransactionFeePool:     "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
+		BlockSizeLimit:         uint64(2e6),
+		ArbitraryDataSizeLimit: 83,
+		BlockCreatorFee:        "1.0",
+		MinimumTransactionFee:  "0.1",
+		BlockFrequency:         120,
+		MaturityDelay:          144,
+		MedianTimestampWindow:  11,
+		TargetWindow:           1e3,
+		MaxAdjustmentUp: Fraction{
+			Denominator: 10,
+			Numerator:   25,
+		},
+		MaxAdjustmentDown: Fraction{
+			Denominator: 10,
+			Numerator:   25,
+		},
+		FutureThreshold:        60 * 60,
+		ExtremeFutureThreshold: 2 * 60 * 60,
+		StakeModifierDelay:     2000,
+		BlockStakeAging:        24 * 60 * 60,
+		TransactionPool: TransactionPool{
+			TransactionSizeLimit:    uint(16e3),
+			TransactionSetSizeLimit: uint(250e3),
+			PoolSizeLimit:           uint64(2e6 - 5e3 - 250e3),
+		},
+		BootstrapPeers: []*BootstrapPeer{
+			&BootstrapPeer{"bootstrap1.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap2.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap3.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap4.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap5.threefoldtoken.com:23112"},
 		},
 	}
 
