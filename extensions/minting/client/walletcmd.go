@@ -19,9 +19,10 @@ type WalletCmdsOpts struct {
 	RequireMinerFees         bool
 }
 
+//CreateWalletCmds adds the wallet cli subcommands for the minting plugin
 func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion, opts *WalletCmdsOpts) {
 	walletCmd := &walletCmd{
-		cli:                        client,
+		cli: client,
 		mintingDefinitionTxVersion: mintingDefinitionTxVersion,
 		coinCreationTxVersion:      coinCreationTxVersion,
 	}

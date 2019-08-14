@@ -12,16 +12,18 @@ import (
 	types "github.com/threefoldtech/rivine/types"
 )
 
+//CreateExploreCmd adds the explorer clisubcommands for the minting plugin
 func CreateExploreCmd(client *client.CommandLineClient) {
-	createExploreCmd(client, client.ExploreCmd, NewPluginExplorerClient(client))
+	createCmd(client, client.ExploreCmd, NewPluginExplorerClient(client))
 }
 
+//CreateConsensusCmd adds the consensus cli subcommands for the minting plugin
 func CreateConsensusCmd(client *client.CommandLineClient) {
-	createExploreCmd(client, client.ConsensusCmd, NewPluginConsensusClient(client))
+	createCmd(client, client.ConsensusCmd, NewPluginConsensusClient(client))
 }
 
-func createExploreCmd(client *client.CommandLineClient, rootCmd *cobra.Command, pluginClient *PluginClient) {
-	exploreCmd := &exploreCmd{
+func createCmd(client *client.CommandLineClient, rootCmd *cobra.Command, pluginClient *PluginClient) {
+	subCmds := &subCmd{
 		cli:          client,
 		pluginClient: pluginClient,
 	}
@@ -35,19 +37,19 @@ func createExploreCmd(client *client.CommandLineClient, rootCmd *cobra.Command, 
 either the one active for the current block height,
 or the one for the given block height.
 `,
-			Run: exploreCmd.getMintCondition,
+			Run: subCmds.getMintCondition,
 		}
 	)
 
 	getMintConditionCmd.Flags().Var(
-		cli.NewEncodingTypeFlag(cli.EncodingTypeHuman, &exploreCmd.getMintConditionCfg.EncodingType, cli.EncodingTypeJSON|cli.EncodingTypeHuman), "encoding",
+		cli.NewEncodingTypeFlag(cli.EncodingTypeHuman, &subCmds.getMintConditionCfg.EncodingType, cli.EncodingTypeJSON|cli.EncodingTypeHuman), "encoding",
 		cli.EncodingTypeFlagDescription(cli.EncodingTypeJSON|cli.EncodingTypeHuman))
 
 	// Add getMintConditionCmd to the ExploreCmd
 	rootCmd.AddCommand(getMintConditionCmd)
 }
 
-type exploreCmd struct {
+type subCmd struct {
 	cli                 *client.CommandLineClient
 	pluginClient        *PluginClient
 	getMintConditionCfg struct {
@@ -55,8 +57,8 @@ type exploreCmd struct {
 	}
 }
 
-func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []string) {
-	pluginReader := NewPluginExplorerClient(explorerSubCmds.cli)
+func (subCmds *subCmd) getMintCondition(cmd *cobra.Command, args []string) {
+	pluginReader := subCmds.pluginClient
 
 	var (
 		mintCondition types.UnlockConditionProxy
@@ -90,7 +92,7 @@ func (explorerSubCmds *exploreCmd) getMintCondition(cmd *cobra.Command, args []s
 
 	// encode depending on the encoding flag
 	var encode func(interface{}) error
-	switch explorerSubCmds.getMintConditionCfg.EncodingType {
+	switch subCmds.getMintConditionCfg.EncodingType {
 	case cli.EncodingTypeHuman:
 		e := json.NewEncoder(os.Stdout)
 		e.SetIndent("", "  ")
