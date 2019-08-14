@@ -87,7 +87,7 @@ type (
 	Genesis struct {
 		CoinOutputs           []Output   `json:"coinOuput" yaml:"coinOutput" validate:"required"`
 		BlockStakeOutputs     []Output   `json:"blockStakeOutputs" yaml:"blockStakeOutputs" validate:"required"`
-		Minting               *Condition `json:"minting,omitempty" yaml:"minting,omitempty" validate:"required_with=blockchain.transactions.minting"`
+		Minting               *Condition `json:"minting,omitempty" yaml:"minting,omitempty"`
 		GenesisBlockTimestamp int64      `json:"genesisBlockTimestamp" yaml:"genesisBlockTimestamp" validate:"required"`
 	}
 
