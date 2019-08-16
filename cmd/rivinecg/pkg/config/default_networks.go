@@ -24,13 +24,6 @@ var (
 		"ExtremeFutureThreshold": time.Hour * 2,
 		"StakeModifierDelay":     time.Second * 2000,
 		"BlockStakeAging":        time.Hour * 24,
-		// "BootstrapPeers": []modules.NetAddress{
-		// 	"bootstrap1.threefoldtoken.com:23112",
-		// 	"bootstrap2.threefoldtoken.com:23112",
-		// 	"bootstrap3.threefoldtoken.com:23112",
-		// 	"bootstrap4.threefoldtoken.com:23112",
-		// 	"bootstrap5.threefoldtoken.com:23112",
-		// },
 	}
 
 	// networkRootPropsTestnet are sane defaults for testnet network configuration
@@ -49,13 +42,6 @@ var (
 		"ExtremeFutureThreshold": time.Second * 6,
 		"StakeModifierDelay":     time.Second * 20,
 		"BlockStakeAging":        time.Second * 1024,
-		// "BootstrapPeers": []modules.NetAddress{
-		// 	"bootstrap1.testnet.threefoldtoken.com:23112",
-		// 	"bootstrap2.testnet.threefoldtoken.com:23112",
-		// 	"bootstrap3.testnet.threefoldtoken.com:23112",
-		// 	"bootstrap4.testnet.threefoldtoken.com:24112",
-		// 	"bootstrap5.testnet.threefoldtoken.com:23112",
-		// },
 	}
 
 	// networkRootPropsDevnet are sane defaults for devnet network configuration

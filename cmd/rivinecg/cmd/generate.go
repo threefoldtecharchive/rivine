@@ -38,6 +38,7 @@ var generateConfigCmd = &cobra.Command{
 var generateBlockchainCmd = &cobra.Command{
 	Use:   "generate-blockchain",
 	Short: "Generate blockchain from a config file",
+	Long:  "Generate a blockchain from a config file, this blockchain will be stored in your GOPATH",
 	Args:  cobra.ExactArgs(1),
 	RunE:  generateBlockchain,
 }

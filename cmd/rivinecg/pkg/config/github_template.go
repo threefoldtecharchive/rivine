@@ -45,38 +45,8 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		return err
 	}
 
-	// Remove everything in the destination directory path if it exists, since it would only contain what we generate
+	// Remove generated files in old path
 	err = os.RemoveAll(dirPath)
-	if err != nil {
-		return err
-	}
-
-	err = writeTemplateValues(destinationDirPath, config)
-	if err != nil {
-		return err
-	}
-
-	err = renameClientAndDaemonFolders(destinationDirPath, config)
-	if err != nil {
-		return err
-	}
-
-	err = removeTodoFolder(destinationDirPath)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func generateBlockchainTemplateLocal(destinationDirPath string, config *Config) error {
-	// Remove everything in the destination directory path if it exists, since it would only contain what we generate
-	err := os.RemoveAll(destinationDirPath)
-	if err != nil {
-		return err
-	}
-
-	templateRepoPath := "/Users/dylan/rivine-chain-template"
-	err = copy.Copy(templateRepoPath, destinationDirPath)
 	if err != nil {
 		return err
 	}
