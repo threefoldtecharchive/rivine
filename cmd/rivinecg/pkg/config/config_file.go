@@ -568,33 +568,33 @@ func BuildConfigStruct() *Config {
 					Value: CurrencyValue{
 						types.NewCurrency64(3000),
 					},
-					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
+					Condition: uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
 				},
 			},
 			Minting:               &mintCondition,
 			GenesisBlockTimestamp: 1524168391,
 		},
-		TransactionFeePool:     "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
+		TransactionFeePool:     "01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51",
 		BlockSizeLimit:         uint64(2e6),
 		ArbitraryDataSizeLimit: 83,
 		BlockCreatorFee:        "1.0",
 		MinimumTransactionFee:  "0.1",
 		BlockFrequency:         120,
-		MaturityDelay:          144,
+		MaturityDelay:          720,
 		MedianTimestampWindow:  11,
 		TargetWindow:           1e3,
 		MaxAdjustmentUp: Fraction{
-			Denominator: 10,
-			Numerator:   25,
+			Denominator: 25,
+			Numerator:   10,
 		},
 		MaxAdjustmentDown: Fraction{
 			Denominator: 10,
 			Numerator:   25,
 		},
-		FutureThreshold:        60 * 60,
-		ExtremeFutureThreshold: 2 * 60 * 60,
+		FutureThreshold:        3,
+		ExtremeFutureThreshold: 6,
 		StakeModifierDelay:     2000,
-		BlockStakeAging:        24 * 60 * 60,
+		BlockStakeAging:        1024,
 		TransactionPool: TransactionPool{
 			TransactionSizeLimit:    uint(16e3),
 			TransactionSetSizeLimit: uint(250e3),
@@ -617,18 +617,7 @@ func BuildConfigStruct() *Config {
 					Value: CurrencyValue{
 						types.NewCurrency64(5e6 * 1e9),
 					},
-					Condition: uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
-				},
-				{
-					Value: CurrencyValue{
-						types.NewCurrency64(5e6 * 1e9),
-					},
-					Condition: NewMultisigCondition(
-						2,
-						uhs("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
-						uhs("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
-					),
-					// Condition: uhs("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
+					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
 				},
 			},
 			BlockStakeOutputs: []Output{
@@ -674,6 +663,59 @@ func BuildConfigStruct() *Config {
 			&BootstrapPeer{"bootstrap3.threefoldtoken.com:23112"},
 			&BootstrapPeer{"bootstrap4.threefoldtoken.com:23112"},
 			&BootstrapPeer{"bootstrap5.threefoldtoken.com:23112"},
+		},
+	}
+
+	networks["devnet"] = &Network{
+		NetworkType: Devnet,
+		Genesis: &Genesis{
+			CoinOutputs: []Output{
+				{
+					Value: CurrencyValue{
+						types.NewCurrency64(5e6 * 1e9),
+					},
+					Condition: uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"),
+				},
+			},
+			BlockStakeOutputs: []Output{
+				{
+					Value: CurrencyValue{
+						types.NewCurrency64(3000),
+					},
+					Condition: uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"),
+				},
+			},
+			Minting:               &mintCondition,
+			GenesisBlockTimestamp: 1524168391,
+		},
+		TransactionFeePool:     "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f",
+		BlockSizeLimit:         uint64(2e6),
+		ArbitraryDataSizeLimit: 83,
+		BlockCreatorFee:        "10",
+		MinimumTransactionFee:  "0.1",
+		BlockFrequency:         12,
+		MaturityDelay:          10,
+		MedianTimestampWindow:  11,
+		TargetWindow:           20,
+		MaxAdjustmentUp: Fraction{
+			Denominator: 120,
+			Numerator:   100,
+		},
+		MaxAdjustmentDown: Fraction{
+			Denominator: 100,
+			Numerator:   120,
+		},
+		FutureThreshold:        2 * 60,
+		ExtremeFutureThreshold: 4 * 60,
+		StakeModifierDelay:     2000,
+		BlockStakeAging:        1024,
+		TransactionPool: TransactionPool{
+			TransactionSizeLimit:    uint(16e3),
+			TransactionSetSizeLimit: uint(250e3),
+			PoolSizeLimit:           uint64(2e6 - 5e3 - 250e3),
+		},
+		BootstrapPeers: []*BootstrapPeer{
+			&BootstrapPeer{"localhost:23111"},
 		},
 	}
 
