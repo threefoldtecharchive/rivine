@@ -38,15 +38,15 @@ func getTemplateRepo(owner, repo, version, destination string) (string, error) {
 
 func generateBlockchainTemplate(destinationDirPath, commitHash string, config *Config) error {
 	// Directory where the contents of template repo is unpackged
-	dirPath := destinationDirPath + "-" + commitHash
+	dirPath := path.Join(destinationDirPath, config.Template.Repository.Owner) + "-" + config.Template.Repository.Repo + "-" + commitHash
 
-	// Remove everything in the destination directory path if it exists, since it would only contain what we generate
-	err := os.RemoveAll(destinationDirPath)
+	err := copy.Copy(dirPath, destinationDirPath)
 	if err != nil {
 		return err
 	}
-	// If destination Directory is not removed and it exists a rename will fail
-	err = os.Rename(dirPath, destinationDirPath)
+
+	// Remove everything in the destination directory path if it exists, since it would only contain what we generate
+	err = os.RemoveAll(dirPath)
 	if err != nil {
 		return err
 	}

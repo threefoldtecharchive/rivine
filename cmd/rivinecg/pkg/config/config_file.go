@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -45,6 +44,7 @@ type (
 
 	Blockchain struct {
 		Name         string              `json:"name" yaml:"name" validate:"required"`
+		Owner        string              `json:"owner" yaml:"owner" validate:"required"`
 		Repository   string              `json:"repository" yaml:"repository" validate:"required"`
 		Currency     *Currency           `json:"currency" yaml:"currency" validate:"required"`
 		Ports        *Ports              `json:"ports" yaml:"ports" validate:"required"`
@@ -375,27 +375,22 @@ func LoadConfigFile(filePath string) error {
 		return err
 	}
 
-	// Get the absolute filepath of the config to know where to generate blockchain code
-	relativeFilePath, err := filepath.Abs(filePath)
+	goPath := os.Getenv("GOPATH")
+
+	// Code will be generated in the gopath in a directory with name owner and subdirectory code dir name
+	relativeCodeDestinationDir := path.Join(goPath, "src", "github.com", config.Blockchain.Owner, config.Blockchain.Name)
+
+	commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, relativeCodeDestinationDir)
 	if err != nil {
 		return err
 	}
-	relativeCodeDestinationDir := filepath.Dir(relativeFilePath) + "/" + config.Template.Repository.Owner + "-" + config.Template.Repository.Repo
 
-	// commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, filepath.Dir(relativeFilePath))
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = generateBlockchainTemplate(relativeCodeDestinationDir, commitHash, config)
-	// if err != nil {
-	// 	return err
-	// }
-	err = generateBlockchainTemplateLocal(relativeCodeDestinationDir, config)
+	err = generateBlockchainTemplate(relativeCodeDestinationDir, commitHash, config)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\nBlockchain code succesfully generated: %s\n", relativeCodeDestinationDir)
+
+	printSteps(relativeCodeDestinationDir, config.Blockchain.Name)
 	return nil
 }
 
@@ -650,7 +645,7 @@ func BuildConfigStruct() *Config {
 		TransactionFeePool:     "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
 		BlockSizeLimit:         uint64(2e6),
 		ArbitraryDataSizeLimit: 83,
-		BlockCreatorFee:        "1.0",
+		BlockCreatorFee:        "1",
 		MinimumTransactionFee:  "0.1",
 		BlockFrequency:         120,
 		MaturityDelay:          144,
@@ -691,7 +686,8 @@ func BuildConfigStruct() *Config {
 			Version: "master",
 		},
 		&Blockchain{
-			Name:       "rivine",
+			Name:       "bctempl",
+			Owner:      "somebody",
 			Repository: "github.com/threefoldtech/rivine",
 			Currency: &Currency{
 				Unit:      "ROC",
@@ -702,8 +698,8 @@ func BuildConfigStruct() *Config {
 				RPC: 23111,
 			},
 			Binaries: &Binaries{
-				Client: "rivinec",
-				Daemon: "rivined",
+				Client: "bctemplc",
+				Daemon: "bctempld",
 			},
 			Transactions: &Transactions{
 				Default: &Version{
@@ -725,4 +721,16 @@ func BuildConfigStruct() *Config {
 			Network: networks,
 		},
 	}
+}
+
+func printSteps(relativeCodeDestinationDir, blockchainName string) {
+	fmt.Printf("Your blockchain code is now available for usage. Please folow next steps \n\n")
+	fmt.Printf("Change directory into: %s \n", relativeCodeDestinationDir)
+	fmt.Println("1. Create a repository on github.com")
+	fmt.Println("2. Folow steps on github.com to upload this code to your github repository")
+	fmt.Println(`3. Create a tag for this repository example: git tag -a v0.1 -m "my version 0.1" `)
+	fmt.Println("4. Push your tags: git push --tags")
+	fmt.Println("5. Fetch dependencies for your repository: dep ensure (in root of project)")
+	fmt.Println("6. Create the binaries: make install-std")
+	fmt.Printf("7. Launch your blockchain localy: %s \n", blockchainName)
 }
