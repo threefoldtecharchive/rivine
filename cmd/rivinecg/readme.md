@@ -10,7 +10,7 @@ Generate tasks
 
 Generate:
 * `rivinecg generate config [-p]` generate blockchain config file
-* `rivinecg generate blockchain` generate blockchain from a config file
+* `rivinecg generate generate-blockchain` generate blockchain from a config file
 * `rivinecg generate seed [-n]` generate a seed and one or multiple addresses
 
 Full Descriptions
