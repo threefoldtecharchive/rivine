@@ -69,7 +69,7 @@ func init() {
 	// adds a address-amount flag to generate seed command
 	generateSeedCmd.Flags().Uint64VarP(&numberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
-	generateConfigCmd.Flags().StringVarP(&filePath, "file-path", "p", "blockchaincfg.yaml", "file path where the config file will be stored (default current working directory), ecoding is based on the file extension. Can be yaml, json or toml")
+	generateConfigCmd.Flags().StringVarP(&filePath, "file-path", "p", "blockchaincfg.yaml", "file path where the config file will be stored (default current working directory), ecoding is based on the file extension. Can be yaml or json")
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
 		generateSeedCmd,
