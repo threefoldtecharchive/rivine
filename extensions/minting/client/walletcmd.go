@@ -14,6 +14,7 @@ import (
 	client "github.com/threefoldtech/rivine/pkg/client"
 )
 
+//WalletCmdsOpts defines chain-specific options for the wallet commands
 type WalletCmdsOpts struct {
 	CoinDestructionTxVersion types.TransactionVersion
 	RequireMinerFees         bool
