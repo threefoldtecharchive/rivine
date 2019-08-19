@@ -455,8 +455,7 @@ func validateConfig(conf *Config) error {
 
 	// validates if a bootstrapPeer is formatted correctly
 	for _, network := range conf.Blockchain.Network {
-		peers := network.BootstrapPeers
-		for _, peer := range peers {
+		for _, peer := range network.BootstrapPeers {
 			err := peer.Address.IsValid()
 			if err != nil {
 				return err

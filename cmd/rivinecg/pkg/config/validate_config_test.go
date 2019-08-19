@@ -297,8 +297,6 @@ func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *te
 	}
 }
 
-// TEST OUR CUSTOM VALIDATOR FOR A FALSY VALUE IN NETADDRESS (should throw error)
-
 func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testing.T) {
 	var err error
 	conf := BuildConfigStruct()
@@ -308,7 +306,10 @@ func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testin
 
 	err = validateConfig(conf)
 	expectedError := "address invalid: missing port in address"
-	if err != nil && err.Error() != expectedError {
+	if err == nil {
+		t.Errorf("no error, expected: %s", expectedError)
+	}
+	if err.Error() != expectedError {
 		t.Errorf("%s", err.Error())
 	}
 }
