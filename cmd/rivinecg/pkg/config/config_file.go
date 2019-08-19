@@ -385,6 +385,7 @@ func LoadConfigFile(filePath string) error {
 	return nil
 }
 
+// assignDefaultValues assign sane default values to missing parameters in config
 func assignDefaultValues(conf *Config) (*Config, error) {
 	// Fill in default values for provided network properties
 	for _, network := range conf.Blockchain.Network {
@@ -395,11 +396,6 @@ func assignDefaultValues(conf *Config) (*Config, error) {
 	conf.Template = assignDefaultTemplateValues(conf.Template)
 	conf.Blockchain = assignDefaultBlockchainValues(conf.Blockchain)
 
-	// Validate against our new config
-	err := validateConfig(conf)
-	if err != nil {
-		return nil, err
-	}
 	return conf, nil
 }
 

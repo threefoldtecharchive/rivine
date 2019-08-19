@@ -304,6 +304,9 @@ func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testin
 		&BootstrapPeer{"invalid"},
 	}
 
+	delete(conf.Blockchain.Network, "devnet")
+	delete(conf.Blockchain.Network, "standard")
+
 	err = validateConfig(conf)
 	expectedError := "address invalid: missing port in address"
 	if err == nil {
