@@ -242,10 +242,11 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 	if conf.Template.Repository.Repo != "rivine-chain-template" {
 		t.Errorf("Something went wrong with setting default value for template repository repo")
 	}
-	if conf.Blockchain.Binaries.Daemon != "rivined" {
+	if conf.Blockchain.Binaries.Daemon != "bctempld" {
+		t.Errorf("%s", conf.Blockchain.Binaries.Daemon)
 		t.Errorf("Something went wrong with setting default value for blockchain binaries daemon")
 	}
-	if conf.Blockchain.Binaries.Client != "rivinec" {
+	if conf.Blockchain.Binaries.Client != "bctemplc" {
 		t.Errorf("Something went wrong with setting default value for blockchain binaries client")
 	}
 	if conf.Blockchain.Transactions.Default.Version != 1 {
@@ -276,10 +277,10 @@ func TestValidateConfigWithLeavingOutBinariesShouldFillItIn(t *testing.T) {
 	if err != nil {
 		t.Errorf("%s", err.Error())
 	}
-	if conf.Blockchain.Binaries.Daemon != "rivined" {
+	if conf.Blockchain.Binaries.Daemon != "bctempld" {
 		t.Errorf("Something went wrong with setting default value for blockchain binaries daemon")
 	}
-	if conf.Blockchain.Binaries.Client != "rivinec" {
+	if conf.Blockchain.Binaries.Client != "bctemplc" {
 		t.Errorf("Something went wrong with setting default value for blockchain binaries client")
 	}
 }
@@ -287,10 +288,10 @@ func TestValidateConfigWithLeavingOutBinariesShouldFillItIn(t *testing.T) {
 func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *testing.T) {
 	var err error
 	conf := BuildConfigStruct()
-	conf.Blockchain.Network["testnet"].BootstapPeers = nil
+	conf.Blockchain.Network["testnet"].BootstrapPeers = nil
 
 	err = validateConfig(conf)
-	expectedError := "Key: 'Config.Blockchain.Network[testnet].BootstapPeers' Error:Field validation for 'BootstapPeers' failed on the 'required' tag"
+	expectedError := "Key: 'Config.Blockchain.Network[testnet].BootstrapPeers' Error:Field validation for 'BootstrapPeers' failed on the 'required' tag"
 	if err != nil && err.Error() != expectedError {
 		t.Errorf("%s", err.Error())
 	}
