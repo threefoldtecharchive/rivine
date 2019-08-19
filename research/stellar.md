@@ -40,6 +40,8 @@ compositions of transactions that are connected and executed using various const
 
 **Seems sufficient for crowdfunding** or other basic financial operations or agreements.
 
+**Atomic swaps** can be implemented since stellar supports multisig, [SHA256 hash](https://www.stellar.org/developers/guides/concepts/multi-sig.html#hashx) and timebounds.
+
 ## Ico's, crowdfunding, ...
 As mentioned above, the stellar platform is suited for for crowdfunding or other basic financial operations or agreements
 
