@@ -299,16 +299,16 @@ func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *te
 
 // TEST OUR CUSTOM VALIDATOR FOR A FALSY VALUE IN NETADDRESS (should throw error)
 
-// func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testing.T) {
-// 	var err error
-// 	conf := BuildConfigStruct()
-// 	conf.Blockchain.Network["testnet"].BootstapPeers = []*NetAddress{
-// 		&NetAddress{"notvalid"},
-// 	}
+func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testing.T) {
+	var err error
+	conf := BuildConfigStruct()
+	conf.Blockchain.Network["testnet"].BootstrapPeers = []*BootstrapPeer{
+		&BootstrapPeer{"invalid"},
+	}
 
-// 	err = validateConfig(conf)
-// 	expectedError := "Key: 'Config.Blockchain.Network[testnet].BootstapPeers' Error:Field validation for 'BootstapPeers' failed on the 'required' tag"
-// 	if err != nil && err.Error() != expectedError {
-// 		t.Errorf("%s", err.Error())
-// 	}
-// }
+	err = validateConfig(conf)
+	expectedError := "address invalid: missing port in address"
+	if err != nil && err.Error() != expectedError {
+		t.Errorf("%s", err.Error())
+	}
+}

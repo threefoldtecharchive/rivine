@@ -7,6 +7,13 @@ import (
 	"github.com/threefoldtech/rivine/modules"
 )
 
+const (
+	MaxPoolSize             = 2e7
+	TransactionSetSizeLimit = 250e3
+	TransactionSizeLimit    = 16e3
+	ActualPoolSize          = MaxPoolSize - TransactionSetSizeLimit
+)
+
 var (
 	// networkRootPropsStandard are sane defaults for standard network configuration
 	networkRootPropsStandard = map[string]interface{}{
@@ -67,9 +74,9 @@ var (
 
 	// networkTransactionPoolProps are sane defaults for standard network transactionPool configuration
 	networkTransactionPoolProps = map[string]interface{}{
-		"TransactionSizeLimit":    uint(16e3),
-		"TransactionSetSizeLimit": uint(250e3),
-		"PoolSizeLimit":           uint64(2e6 - 5e3 - 250e3),
+		"TransactionSizeLimit":    TransactionSizeLimit,
+		"TransactionSetSizeLimit": TransactionSetSizeLimit,
+		"PoolSizeLimit":           uint64(MaxPoolSize - TransactionSetSizeLimit),
 	}
 )
 

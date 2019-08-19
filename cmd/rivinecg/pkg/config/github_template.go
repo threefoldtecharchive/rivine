@@ -189,7 +189,7 @@ func untar(dst string, r io.Reader) error {
 		case err != nil:
 			return err
 
-		// if the header is nil, just skip it (not sure how this happens)
+		// if the header is nil, just skip it
 		case header == nil:
 			continue
 		}
@@ -198,10 +198,6 @@ func untar(dst string, r io.Reader) error {
 		target := filepath.Join(dst, header.Name)
 
 		fmt.Printf("Unpackaged in: %s\n", target)
-
-		// the following switch could also be done using fi.Mode(), not sure if there
-		// a benefit of using one vs. the other.
-		// fi := header.FileInfo()
 
 		// check the file type
 		switch header.Typeflag {

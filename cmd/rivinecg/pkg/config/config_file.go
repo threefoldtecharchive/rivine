@@ -138,7 +138,7 @@ type (
 	}
 
 	BootstrapPeer struct {
-		Address modules.NetAddress `json:"bootstrapPeer" yaml:"bootstrapPeer" validate:"InvalidAddress"`
+		Address modules.NetAddress `json:"bootstrapPeer" yaml:"bootstrapPeer"`
 	}
 
 	// Fraction represents ratio.
@@ -163,17 +163,6 @@ var (
 
 func init() {
 	validate = validator.New()
-	validate.RegisterValidation("InvalidAddress", customNetAddressValidation)
-}
-
-func customNetAddressValidation(fl validator.FieldLevel) bool {
-	netAddress := modules.NetAddress(fl.Field().String())
-	err := netAddress.IsValid()
-	if err != nil {
-		return false
-	}
-
-	return true
 }
 
 // MarshalText will marshall JSON/YAML fraction type
@@ -460,8 +449,19 @@ func assignDefaultBlockchainValues(blockc *Blockchain) *Blockchain {
 func validateConfig(conf *Config) error {
 	// returns nil or ValidationErrors ( []FieldError )
 	err := validate.Struct(conf)
-	if err == nil {
-		return nil
+	if err != nil {
+		return err
+	}
+
+	// validates if a bootstrapPeer is formatted correctly
+	for _, network := range conf.Blockchain.Network {
+		peers := network.BootstrapPeers
+		for _, peer := range peers {
+			err := peer.Address.IsValid()
+			if err != nil {
+				return err
+			}
+		}
 	}
 	// this check is only needed when your code could produce
 	// an invalid value for validation such as interface with nil
@@ -590,21 +590,21 @@ func BuildConfigStruct() *Config {
 			Denominator: 10,
 			Numerator:   25,
 		},
-		FutureThreshold:        3,
-		ExtremeFutureThreshold: 6,
+		FutureThreshold:        2 * 60,
+		ExtremeFutureThreshold: 10 * 60,
 		StakeModifierDelay:     2000,
 		BlockStakeAging:        1024,
 		TransactionPool: TransactionPool{
-			TransactionSizeLimit:    uint(16e3),
-			TransactionSetSizeLimit: uint(250e3),
-			PoolSizeLimit:           uint64(2e7 - 5e3 - 250e3),
+			TransactionSizeLimit:    TransactionSizeLimit,
+			TransactionSetSizeLimit: TransactionSetSizeLimit,
+			PoolSizeLimit:           ActualPoolSize,
 		},
 		BootstrapPeers: []*BootstrapPeer{
-			&BootstrapPeer{"bootstrap1.testnet.threefoldtoken.com:23112"},
-			&BootstrapPeer{"bootstrap2.testnet.threefoldtoken.com:23112"},
-			&BootstrapPeer{"bootstrap3.testnet.threefoldtoken.com:23112"},
-			&BootstrapPeer{"bootstrap4.testnet.threefoldtoken.com:24112"},
-			&BootstrapPeer{"bootstrap5.testnet.threefoldtoken.com:24112"},
+			&BootstrapPeer{"bootstrap1.testnet.example.com:23112"},
+			&BootstrapPeer{"bootstrap2.testnet.example.com:23112"},
+			&BootstrapPeer{"bootstrap3.testnet.example.com:23112"},
+			&BootstrapPeer{"bootstrap4.testnet.example.com:23112"},
+			&BootstrapPeer{"bootstrap5.testnet.example.com:23112"},
 		},
 	}
 
@@ -647,21 +647,21 @@ func BuildConfigStruct() *Config {
 			Denominator: 10,
 			Numerator:   25,
 		},
-		FutureThreshold:        60 * 60,
-		ExtremeFutureThreshold: 2 * 60 * 60,
+		FutureThreshold:        2 * 60,
+		ExtremeFutureThreshold: 10 * 60,
 		StakeModifierDelay:     2000,
 		BlockStakeAging:        24 * 60 * 60,
 		TransactionPool: TransactionPool{
-			TransactionSizeLimit:    uint(16e3),
-			TransactionSetSizeLimit: uint(250e3),
-			PoolSizeLimit:           uint64(2e7 - 5e3 - 250e3),
+			TransactionSizeLimit:    TransactionSizeLimit,
+			TransactionSetSizeLimit: TransactionSetSizeLimit,
+			PoolSizeLimit:           ActualPoolSize,
 		},
 		BootstrapPeers: []*BootstrapPeer{
-			&BootstrapPeer{"bootstrap1.threefoldtoken.com:23112"},
-			&BootstrapPeer{"bootstrap2.threefoldtoken.com:23112"},
-			&BootstrapPeer{"bootstrap3.threefoldtoken.com:23112"},
-			&BootstrapPeer{"bootstrap4.threefoldtoken.com:23112"},
-			&BootstrapPeer{"bootstrap5.threefoldtoken.com:23112"},
+			&BootstrapPeer{"bootstrap1.example.com:23112"},
+			&BootstrapPeer{"bootstrap2.example.com:23112"},
+			&BootstrapPeer{"bootstrap3.example.com:23112"},
+			&BootstrapPeer{"bootstrap4.example.com:23112"},
+			&BootstrapPeer{"bootstrap5.example.com:23112"},
 		},
 	}
 
@@ -704,17 +704,17 @@ func BuildConfigStruct() *Config {
 			Denominator: 100,
 			Numerator:   120,
 		},
-		FutureThreshold:        2 * 60,
-		ExtremeFutureThreshold: 4 * 60,
+		FutureThreshold:        10,
+		ExtremeFutureThreshold: 20,
 		StakeModifierDelay:     2000,
 		BlockStakeAging:        1024,
 		TransactionPool: TransactionPool{
-			TransactionSizeLimit:    uint(16e3),
-			TransactionSetSizeLimit: uint(250e3),
-			PoolSizeLimit:           uint64(2e7 - 5e3 - 250e3),
+			TransactionSizeLimit:    TransactionSizeLimit,
+			TransactionSetSizeLimit: TransactionSetSizeLimit,
+			PoolSizeLimit:           ActualPoolSize,
 		},
 		BootstrapPeers: []*BootstrapPeer{
-			&BootstrapPeer{"localhost:23111"},
+			&BootstrapPeer{"localhost:23112"},
 		},
 	}
 
@@ -735,8 +735,8 @@ func BuildConfigStruct() *Config {
 				Precision: 9,
 			},
 			Ports: &Ports{
-				API: 23112,
-				RPC: 23111,
+				API: 23111,
+				RPC: 23112,
 			},
 			Binaries: &Binaries{
 				Client: "bctemplc",
