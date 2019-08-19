@@ -349,7 +349,6 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 
 func (g *Gateway) connectToBootstapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
 	defer close(closeChan)
-	g.startConnectingToBootstrapPeers(bootstrapPeers)
 	for {
 		select {
 		// If gateway stop, close the closeChannel
