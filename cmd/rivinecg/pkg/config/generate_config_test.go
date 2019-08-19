@@ -34,7 +34,7 @@ func TestGenerateAndLoadConfigFile(t *testing.T) {
 			t.Errorf("Error occured: %s", err)
 		}
 
-		_, err = loadConfig("."+typ, file)
+		_, err = decodeConfig("."+typ, file)
 		if err != nil {
 			t.Errorf("Error occured loading file: %s", err)
 		}
@@ -68,7 +68,7 @@ func TestGenerateAndLoadConfigFileAndGetTemplateRepoAndGenerateBlockchainCode(t 
 			t.Errorf("Error occured: %s", err)
 		}
 
-		conf, err := loadConfig("."+typ, file)
+		conf, err := decodeConfig("."+typ, file)
 		if err != nil {
 			t.Errorf("Error occured loading file: %s", err)
 		}

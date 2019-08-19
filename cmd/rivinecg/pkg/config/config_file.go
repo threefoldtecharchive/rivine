@@ -18,8 +18,10 @@ import (
 	"github.com/threefoldtech/rivine/types"
 )
 
+// NetworkType is the type of the network
 type NetworkType int
 
+// NetworkType start with 1 because 0 breaks tests and serialization
 const (
 	Standard NetworkType = iota + 1
 	Testnet
@@ -359,7 +361,7 @@ func LoadConfigFile(filePath string) error {
 	}
 	defer file.Close()
 
-	config, err := loadConfig(typ, file)
+	config, err := decodeConfig(typ, file)
 	if err != nil {
 		return err
 	}
@@ -481,13 +483,12 @@ func GenerateConfigFile(filepath string) error {
 	}
 	defer file.Close()
 
-	fmt.Println(filepath)
-	return generateConfig(typ, file)
+	return encodeConfig(typ, file)
 }
 
-// generatConfig generates a default config, encodes it according
+// encodeConfig generates a default config, encodes it according
 // to the given type, and writes it to the provided writer
-func generateConfig(typ string, w io.Writer) error {
+func encodeConfig(typ string, w io.Writer) error {
 	config := BuildConfigStruct()
 	var enc interface {
 		Encode(interface{}) error
@@ -506,9 +507,8 @@ func generateConfig(typ string, w io.Writer) error {
 	return enc.Encode(config)
 }
 
-// generatConfig generates a default config, encodes it according
-// to the given type, and writes it to the provided reader
-func loadConfig(typ string, r io.Reader) (*Config, error) {
+// decodeConfig decodes the provided Reader into a config struct
+func decodeConfig(typ string, r io.Reader) (*Config, error) {
 	var config Config
 	var dec interface {
 		Decode(interface{}) error
@@ -560,7 +560,6 @@ func BuildConfigStruct() *Config {
 						uhs("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
 						uhs("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
 					),
-					// Condition: uhs("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
 				},
 			},
 			BlockStakeOutputs: []Output{
@@ -598,7 +597,7 @@ func BuildConfigStruct() *Config {
 		TransactionPool: TransactionPool{
 			TransactionSizeLimit:    uint(16e3),
 			TransactionSetSizeLimit: uint(250e3),
-			PoolSizeLimit:           uint64(2e6 - 5e3 - 250e3),
+			PoolSizeLimit:           uint64(2e7 - 5e3 - 250e3),
 		},
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"bootstrap1.testnet.threefoldtoken.com:23112"},
@@ -655,7 +654,7 @@ func BuildConfigStruct() *Config {
 		TransactionPool: TransactionPool{
 			TransactionSizeLimit:    uint(16e3),
 			TransactionSetSizeLimit: uint(250e3),
-			PoolSizeLimit:           uint64(2e6 - 5e3 - 250e3),
+			PoolSizeLimit:           uint64(2e7 - 5e3 - 250e3),
 		},
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"bootstrap1.threefoldtoken.com:23112"},
@@ -712,7 +711,7 @@ func BuildConfigStruct() *Config {
 		TransactionPool: TransactionPool{
 			TransactionSizeLimit:    uint(16e3),
 			TransactionSetSizeLimit: uint(250e3),
-			PoolSizeLimit:           uint64(2e6 - 5e3 - 250e3),
+			PoolSizeLimit:           uint64(2e7 - 5e3 - 250e3),
 		},
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"localhost:23111"},

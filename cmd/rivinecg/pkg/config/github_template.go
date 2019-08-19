@@ -19,6 +19,8 @@ import (
 
 const rootGithubAPIurl = "https://api.github.com"
 
+// getTemplateRepo fetches the template repository from github and extracts this tar file.
+// At the end of this function we extract the commithash from the headers in order to rename this extracted directory later.
 func getTemplateRepo(owner, repo, version, destination string) (string, error) {
 	endPoint := rootGithubAPIurl + path.Join("/repos", owner, repo, "tarball", version)
 	fmt.Printf("Fetching repository: %s ...\n", endPoint)
