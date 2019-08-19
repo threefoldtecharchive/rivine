@@ -43,21 +43,17 @@ var generateBlockchainCmd = &cobra.Command{
 	RunE:  generateBlockchain,
 }
 
-var generateConfigCfg struct {
-	filePath string
-}
-
-// sub generate seed command config
-var generateSeedCfg struct {
-	NumberOfAddresses uint64
-}
+var (
+	filePath          string
+	numberOfAddresses uint64
+)
 
 // generateSeed generates amount of mnemonic and amount of addresses based on provided amount and outputs this to the cli
 func generateSeed(cmd *cobra.Command, args []string) error {
-	if generateSeedCfg.NumberOfAddresses == 0 {
+	if numberOfAddresses == 0 {
 		return errors.New("Amount of addresses cannot be below 1")
 	}
-	mnemonic, addresses, err := generateMnemonicAndAddresses(generateSeedCfg.NumberOfAddresses)
+	mnemonic, addresses, err := generateMnemonicAndAddresses(numberOfAddresses)
 	if err != nil {
 		return fmt.Errorf("Error when generating mnemonic and addresses: %v", err)
 	}
@@ -71,9 +67,9 @@ func generateSeed(cmd *cobra.Command, args []string) error {
 
 func init() {
 	// adds a address-amount flag to generate seed command
-	generateSeedCmd.Flags().Uint64VarP(&generateSeedCfg.NumberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
+	generateSeedCmd.Flags().Uint64VarP(&numberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
-	generateConfigCmd.Flags().StringVarP(&generateConfigCfg.filePath, "file-path", "p", "blockchaincfg.yaml", "file path where the config file will be stored (default current working directory), ecoding is based on the file extension. Can be yaml, json or toml")
+	generateConfigCmd.Flags().StringVarP(&filePath, "file-path", "p", "blockchaincfg.yaml", "file path where the config file will be stored (default current working directory), ecoding is based on the file extension. Can be yaml, json or toml")
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
 		generateSeedCmd,
@@ -118,11 +114,11 @@ func generateAddressesFromMnemonic(mnemonic string, n uint64) ([]types.UnlockHas
 }
 
 func generateConfigFile(cmd *cobra.Command, args []string) error {
-	err := config.GenerateConfigFile(generateConfigCfg.filePath)
+	err := config.GenerateConfigFile(filePath)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Config written in: %s\n", generateConfigCfg.filePath)
+	fmt.Printf("Config written in: %s\n", filePath)
 	return nil
 }
 
