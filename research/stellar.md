@@ -43,7 +43,7 @@ compositions of transactions that are connected and executed using various const
 ## Ico's, crowdfunding, ...
 As mentioned above, the stellar platform is suited for for crowdfunding or other basic financial operations or agreements
 
-Possible options to issue credit:One needs to have trusted credit:
+Possible options to issue credit:
 - Already be on the stellar platform with trusted credit.
 - Accept fiat or cryptocurrencies directly and issue credit on the stellar platform
 
