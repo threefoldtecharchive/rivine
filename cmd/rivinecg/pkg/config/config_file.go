@@ -71,8 +71,9 @@ type (
 	}
 
 	Transactions struct {
-		Default *Version `json:"default,omitempty" yaml:"default,omitempty"`
-		Minting *Minting `json:"minting,omitempty" yaml:"minting,omitempty"`
+		Default  *Version  `json:"default,omitempty" yaml:"default,omitempty"`
+		Minting  *Minting  `json:"minting,omitempty" yaml:"minting,omitempty"`
+		Authcoin *Authcoin `json:"authcoin,omitempty" yaml:"authcoin,omitempty"`
 	}
 
 	Minting struct {
@@ -80,6 +81,11 @@ type (
 		CoinCreation     Version  `json:"coinCreation" yaml:"coinCreation" validate:"required"`
 		CoinDestruction  *Version `json:"coinDestruction,omitempty" yaml:"coinDestruction,omitempty"`
 		RequireMinerFees bool     `json:"requireMinerFees,omitempty" yaml:"requireMinerFees,omitempty"`
+	}
+
+	Authcoin struct {
+		TransactionVersionAuthAddressUpdateTx   Version `json:"transactionVersionAuthAddressUpdateTx" yaml:"transactionVersionAuthAddressUpdateTx" validate:"required"`
+		TransactionVersionAuthConditionUpdateTx Version `json:"transactionVersionAuthConditionUpdateTx" yaml:"transactionVersionAuthConditionUpdateTx" validate:"required"`
 	}
 
 	Version struct {
@@ -90,6 +96,7 @@ type (
 		CoinOutputs           []Output   `json:"coinOuput" yaml:"coinOutput" validate:"required"`
 		BlockStakeOutputs     []Output   `json:"blockStakeOutputs" yaml:"blockStakeOutputs" validate:"required"`
 		Minting               *Condition `json:"minting,omitempty" yaml:"minting,omitempty"`
+		Authcoin              *Condition `json:"authcoin,omitempty" yaml:"authcoin,omitempty"`
 		GenesisBlockTimestamp int64      `json:"genesisBlockTimestamp" yaml:"genesisBlockTimestamp" validate:"required"`
 	}
 
@@ -452,6 +459,10 @@ func validateConfig(conf *Config) error {
 	// validates if a bootstrapPeer is formatted correctly
 	for _, network := range conf.Blockchain.Network {
 		for _, peer := range network.BootstrapPeers {
+			// allow loopback addresses in devnet network
+			if peer.Address.IsLoopback() && network.NetworkType == Devnet {
+				return peer.Address.IsStdValid()
+			}
 			err := peer.Address.IsValid()
 			if err != nil {
 				return err
