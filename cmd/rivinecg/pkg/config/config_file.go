@@ -646,15 +646,15 @@ func BuildConfigStruct() *Config {
 		MedianTimestampWindow:  11,
 		TargetWindow:           1e3,
 		MaxAdjustmentUp: Fraction{
-			Denominator: 10,
-			Numerator:   25,
+			Denominator: 25,
+			Numerator:   10,
 		},
 		MaxAdjustmentDown: Fraction{
 			Denominator: 10,
 			Numerator:   25,
 		},
-		FutureThreshold:        2 * 60,
-		ExtremeFutureThreshold: 10 * 60,
+		FutureThreshold:        60 * 60,
+		ExtremeFutureThreshold: 2 * 60 * 60,
 		StakeModifierDelay:     2000,
 		BlockStakeAging:        24 * 60 * 60,
 		TransactionPool: TransactionPool{
