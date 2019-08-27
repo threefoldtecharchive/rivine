@@ -9,10 +9,8 @@ package main
 // ```
 
 import (
-	"fmt"
-	"io/ioutil"
+	"flag"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/pelletier/go-toml"
@@ -20,6 +18,10 @@ import (
 )
 
 func main() {
+	var accountname string
+	flag.StringVar(&accountname, "name", "default", " The name of the account to create")
+	flag.Parse()
+
 	pair, err := keypair.Random()
 	if err != nil {
 		log.Fatal(err)
@@ -27,11 +29,23 @@ func main() {
 
 	log.Println("Seed:", pair.Seed())
 	log.Println("Address:", pair.Address())
+	var config *toml.Tree
 
-	config, err := toml.Load("[default]\nseed=\"" + pair.Seed() + "\"")
+	config, err = toml.LoadFile("config.toml")
 	if err != nil {
-		log.Fatal(err)
+		if os.IsNotExist(err) {
+			config, err = toml.Load("")
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
+
+	if config.HasPath([]string{accountname}) {
+		log.Fatal("Account already exists")
+	}
+	config.Set(accountname+".seed", pair.Seed())
+
 	f, err := os.Create("config.toml")
 	if err != nil {
 		log.Fatal(err)
@@ -41,17 +55,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	address := pair.Address()
-	resp, err := http.Get("https://friendbot.stellar.org/?addr=" + address)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println("Friendbot response status:", resp.Status)
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(body))
 
 }

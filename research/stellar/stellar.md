@@ -17,6 +17,10 @@ This works perfectly if your assets only exist on the stellar network as credit 
 _Question is how a credit issuer that acts as an exchange for it's users can control/recuperate free floating real world assets like BTCor TFT that stay in control of the user._
 
 Fees are in XLM.
+## Stellar accounts
+
+Just creating a kepair and an address like is common blockchains is not sufficient to receive funds, a transfer will fail. An account has to be explicitely created and funded with at least 1 XLM.
+
 ## random thoughts
 
 Not completely decentralized,for example sending with kyc, requires knowledge and trust of the counterparty, also 
