@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/threefoldtech/rivine/modules"
 
@@ -70,7 +71,7 @@ func init() {
 	// adds a address-amount flag to generate seed command
 	generateSeedCmd.Flags().Uint64VarP(&numberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
-	for _, cmd := []*cobra.Command{generateConfigCmd, generateBlockchainCmd} {
+	for _, cmd := range []*cobra.Command{generateConfigCmd, generateBlockchainCmd} {
 		cmd.Flags().StringVarP(
 			&filePath, "config", "c", "blockchaincfg.yaml",
 			"file path of the config, ecoding is based on the file extension, can be yaml or json")

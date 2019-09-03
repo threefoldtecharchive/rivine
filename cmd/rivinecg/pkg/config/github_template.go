@@ -62,8 +62,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	if err != nil {
 		return err
 	}
-return err
-	}
+
 	return nil
 }
 
