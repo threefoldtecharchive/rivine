@@ -84,11 +84,11 @@ func assignDefaultNetworkProps(networkConfig *Network) *Network {
 	networkCfgValue := reflect.ValueOf(&networkConfig).Elem()
 	var rootMap = map[string]interface{}{}
 	switch networkConfig.NetworkType {
-	case 1:
+	case NetworkTypeStandard:
 		rootMap = networkRootPropsStandard
-	case 2:
+	case NetworkTypeTestnet:
 		rootMap = networkRootPropsTestnet
-	case 3:
+	case NetworkTypeDevnet:
 		rootMap = networkRootPropsDevnet
 	}
 

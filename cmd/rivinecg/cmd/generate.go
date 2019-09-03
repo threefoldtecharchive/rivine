@@ -36,15 +36,16 @@ var generateConfigCmd = &cobra.Command{
 }
 
 var generateBlockchainCmd = &cobra.Command{
-	Use:   "generate-blockchain",
+	Use:   "blockchain",
 	Short: "Generate blockchain from a config file",
 	Long:  "Generate a blockchain from a config file, this blockchain will be stored in your GOPATH",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(0),
 	RunE:  generateBlockchain,
 }
 
 var (
 	filePath          string
+	outputDir string
 	numberOfAddresses uint64
 )
 
@@ -69,7 +70,15 @@ func init() {
 	// adds a address-amount flag to generate seed command
 	generateSeedCmd.Flags().Uint64VarP(&numberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
-	generateConfigCmd.Flags().StringVarP(&filePath, "file-path", "p", "blockchaincfg.yaml", "file path where the config file will be stored (default current working directory), ecoding is based on the file extension. Can be yaml or json")
+	for _, cmd := []*cobra.Command{generateConfigCmd, generateBlockchainCmd} {
+		cmd.Flags().StringVarP(
+			&filePath, "config", "c", "blockchaincfg.yaml",
+			"file path of the config, ecoding is based on the file extension, can be yaml or json")
+	}
+	generateBlockchainCmd.Flags().StringVarP(
+		&outputDir, "output", "o", "",
+		"file path where the blockchain will be generated to")
+
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
 		generateSeedCmd,
@@ -123,7 +132,11 @@ func generateConfigFile(cmd *cobra.Command, args []string) error {
 }
 
 func generateBlockchain(cmd *cobra.Command, args []string) error {
-	err := config.LoadConfigFile(args[0])
+	dir := outputDir
+	if dir == "" {
+		dir = filepath.Dir(filePath)
+	}
+	err := config.GenerateBlockchain(filePath, dir)
 	if err != nil {
 		return err
 	}

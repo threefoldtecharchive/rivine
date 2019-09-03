@@ -62,10 +62,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	if err != nil {
 		return err
 	}
-
-	err = removeTodoFolder(destinationDirPath)
-	if err != nil {
-		return err
+return err
 	}
 	return nil
 }
@@ -80,7 +77,6 @@ func writeTemplateValues(destinationDirPath string, config *Config) error {
 			if err != nil {
 				return err
 			}
-			// fmt.Println(fPath, info.Size())
 			isTemplate := path.Ext(info.Name()) == ".template"
 			if isTemplate {
 				// First read the template file as string in order to write our generated code to a new file
@@ -107,28 +103,15 @@ func writeTemplateValues(destinationDirPath string, config *Config) error {
 }
 
 func renameClientAndDaemonFolders(destinationDirPath string, config *Config) error {
-	oldClientFolderPath := path.Join(destinationDirPath, "todo", "cmd", "UNDEFINED_CLIENT_NAME")
-	newClientFolderPath := path.Join(destinationDirPath, "todo", "cmd", config.Blockchain.Binaries.Client)
-	daemonFolderPath := path.Join(destinationDirPath, "todo", "cmd", "UNDEFINED_DAEMON_NAME")
-	newDaemonFolderPath := path.Join(destinationDirPath, "todo", "cmd", config.Blockchain.Binaries.Daemon)
+	oldClientFolderPath := path.Join(destinationDirPath, "cmd", "UNDEFINED_CLIENT_NAME")
+	newClientFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Client)
+	daemonFolderPath := path.Join(destinationDirPath, "cmd", "UNDEFINED_DAEMON_NAME")
+	newDaemonFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Daemon)
 	err := os.Rename(oldClientFolderPath, newClientFolderPath)
 	if err != nil {
 		return err
 	}
 	err = os.Rename(daemonFolderPath, newDaemonFolderPath)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func removeTodoFolder(destinationDirPath string) error {
-	todoPath := path.Join(destinationDirPath, "todo")
-	err := copy.Copy(todoPath, destinationDirPath)
-	if err != nil {
-		return err
-	}
-	err = os.RemoveAll(todoPath)
 	if err != nil {
 		return err
 	}

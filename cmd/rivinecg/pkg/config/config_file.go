@@ -23,9 +23,9 @@ type NetworkType int
 
 // NetworkType start with 1 because 0 breaks tests and serialization
 const (
-	Standard NetworkType = iota + 1
-	Testnet
-	Devnet
+	NetworkTypeStandard NetworkType = iota + 1
+	NetworkTypeTestnet
+	NetworkTypeDevnet
 )
 
 type (
@@ -348,10 +348,10 @@ func (c *Condition) UnmarshalYAML(unmarshal func(v interface{}) error) error {
 	return err
 }
 
-// LoadConfigFile loads a config file from a filepath and deserialize it into our Config struct
-func LoadConfigFile(filePath string) error {
-	typ := path.Ext(filePath)
-	file, err := os.Open(filePath)
+// GenerateBlockchain imports a config file and uses it to generate a blockchain
+func GenerateBlockchain(configFilePath, outputDir string) error {
+	typ := path.Ext(configFilePath)
+	file, err := os.Open(configFilePath)
 	if err != nil {
 		return err
 	}
@@ -373,22 +373,17 @@ func LoadConfigFile(filePath string) error {
 		return err
 	}
 
-	goPath := os.Getenv("GOPATH")
-
-	// Code will be generated in the gopath in a directory with name owner and subdirectory code dir name
-	relativeCodeDestinationDir := path.Join(goPath, "src", "github.com", config.Blockchain.Owner, config.Blockchain.Name)
-
-	commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, relativeCodeDestinationDir)
+	commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, outputDir)
 	if err != nil {
 		return err
 	}
 
-	err = generateBlockchainTemplate(relativeCodeDestinationDir, commitHash, config)
+	err = generateBlockchainTemplate(outputDir, commitHash, config)
 	if err != nil {
 		return err
 	}
 
-	printSteps(relativeCodeDestinationDir, config.Blockchain.Name)
+	printSteps(outputDir, config.Blockchain.Name)
 	return nil
 }
 
@@ -442,9 +437,9 @@ func assignDefaultBlockchainValues(blockc *Blockchain) *Blockchain {
 		blockc.Transactions.Default = &Version{
 			Version: 1,
 		}
-	}
-	if blockc.Transactions.Default.Version == 0 {
-		blockc.Transactions.Default.Version = 1
+		if blockc.Transactions.Default.Version == 0 {
+			blockc.Transactions.Default.Version = 1
+		}
 	}
 	return blockc
 }
@@ -460,7 +455,7 @@ func validateConfig(conf *Config) error {
 	for _, network := range conf.Blockchain.Network {
 		for _, peer := range network.BootstrapPeers {
 			// allow loopback addresses in devnet network
-			if peer.Address.IsLoopback() && network.NetworkType == Devnet {
+			if peer.Address.IsLoopback() && network.NetworkType == NetworkTypeDevnet {
 				return peer.Address.IsStdValid()
 			}
 			err := peer.Address.IsValid()
@@ -548,7 +543,7 @@ func BuildConfigStruct() *Config {
 
 	networks := make(map[string]*Network)
 	networks["testnet"] = &Network{
-		NetworkType: Testnet,
+		NetworkType: NetworkTypeTestnet,
 		Genesis: &Genesis{
 			CoinOutputs: []Output{
 				{
@@ -580,31 +575,6 @@ func BuildConfigStruct() *Config {
 			GenesisBlockTimestamp: 1524168391,
 		},
 		TransactionFeePool:     "01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51",
-		BlockSizeLimit:         uint64(2e6),
-		ArbitraryDataSizeLimit: 83,
-		BlockCreatorFee:        "1.0",
-		MinimumTransactionFee:  "0.1",
-		BlockFrequency:         120,
-		MaturityDelay:          720,
-		MedianTimestampWindow:  11,
-		TargetWindow:           1e3,
-		MaxAdjustmentUp: Fraction{
-			Denominator: 25,
-			Numerator:   10,
-		},
-		MaxAdjustmentDown: Fraction{
-			Denominator: 10,
-			Numerator:   25,
-		},
-		FutureThreshold:        2 * 60,
-		ExtremeFutureThreshold: 10 * 60,
-		StakeModifierDelay:     2000,
-		BlockStakeAging:        1024,
-		TransactionPool: TransactionPool{
-			TransactionSizeLimit:    TransactionSizeLimit,
-			TransactionSetSizeLimit: TransactionSetSizeLimit,
-			PoolSizeLimit:           ActualPoolSize,
-		},
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"bootstrap1.testnet.example.com:23112"},
 			&BootstrapPeer{"bootstrap2.testnet.example.com:23112"},
@@ -615,7 +585,7 @@ func BuildConfigStruct() *Config {
 	}
 
 	networks["standard"] = &Network{
-		NetworkType: Standard,
+		NetworkType: NetworkTypeStandard,
 		Genesis: &Genesis{
 			CoinOutputs: []Output{
 				{
@@ -637,31 +607,6 @@ func BuildConfigStruct() *Config {
 			GenesisBlockTimestamp: 1524168391,
 		},
 		TransactionFeePool:     "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
-		BlockSizeLimit:         uint64(2e6),
-		ArbitraryDataSizeLimit: 83,
-		BlockCreatorFee:        "1",
-		MinimumTransactionFee:  "0.1",
-		BlockFrequency:         120,
-		MaturityDelay:          144,
-		MedianTimestampWindow:  11,
-		TargetWindow:           1e3,
-		MaxAdjustmentUp: Fraction{
-			Denominator: 25,
-			Numerator:   10,
-		},
-		MaxAdjustmentDown: Fraction{
-			Denominator: 10,
-			Numerator:   25,
-		},
-		FutureThreshold:        60 * 60,
-		ExtremeFutureThreshold: 2 * 60 * 60,
-		StakeModifierDelay:     2000,
-		BlockStakeAging:        24 * 60 * 60,
-		TransactionPool: TransactionPool{
-			TransactionSizeLimit:    TransactionSizeLimit,
-			TransactionSetSizeLimit: TransactionSetSizeLimit,
-			PoolSizeLimit:           ActualPoolSize,
-		},
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"bootstrap1.example.com:23112"},
 			&BootstrapPeer{"bootstrap2.example.com:23112"},
@@ -672,7 +617,7 @@ func BuildConfigStruct() *Config {
 	}
 
 	networks["devnet"] = &Network{
-		NetworkType: Devnet,
+		NetworkType: NetworkTypeDevnet,
 		Genesis: &Genesis{
 			CoinOutputs: []Output{
 				{
@@ -694,34 +639,13 @@ func BuildConfigStruct() *Config {
 			GenesisBlockTimestamp: 1524168391,
 		},
 		TransactionFeePool:     "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f",
-		BlockSizeLimit:         uint64(2e6),
-		ArbitraryDataSizeLimit: 83,
-		BlockCreatorFee:        "10",
-		MinimumTransactionFee:  "0.1",
-		BlockFrequency:         12,
-		MaturityDelay:          10,
-		MedianTimestampWindow:  11,
-		TargetWindow:           20,
-		MaxAdjustmentUp: Fraction{
-			Denominator: 120,
-			Numerator:   100,
-		},
-		MaxAdjustmentDown: Fraction{
-			Denominator: 100,
-			Numerator:   120,
-		},
-		FutureThreshold:        10,
-		ExtremeFutureThreshold: 20,
-		StakeModifierDelay:     2000,
-		BlockStakeAging:        1024,
-		TransactionPool: TransactionPool{
-			TransactionSizeLimit:    TransactionSizeLimit,
-			TransactionSetSizeLimit: TransactionSetSizeLimit,
-			PoolSizeLimit:           ActualPoolSize,
-		},
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"localhost:23112"},
 		},
+	}
+
+	for _, cfg := range networks {
+		assignDefaultNetworkProps(cfg)
 	}
 
 	return &Config{
@@ -735,7 +659,7 @@ func BuildConfigStruct() *Config {
 		&Blockchain{
 			Name:       "bctempl",
 			Owner:      "somebody",
-			Repository: "github.com/threefoldtech/rivine",
+			Repository: "github.com/somebody/bctempl",
 			Currency: &Currency{
 				Unit:      "ROC",
 				Precision: 9,
@@ -770,14 +694,14 @@ func BuildConfigStruct() *Config {
 	}
 }
 
-func printSteps(relativeCodeDestinationDir, blockchainName string) {
-	fmt.Printf("Your blockchain code is now available for usage. Please folow next steps \n\n")
-	fmt.Printf("Change directory into: %s \n", relativeCodeDestinationDir)
-	fmt.Println("1. Create a repository on github.com")
-	fmt.Println("2. Folow steps on github.com to upload this code to your github repository")
-	fmt.Println(`3. Create a tag for this repository example: git tag -a v0.1 -m "my version 0.1" `)
-	fmt.Println("4. Push your tags: git push --tags")
-	fmt.Println("5. Fetch dependencies for your repository: dep ensure (in root of project)")
-	fmt.Println("6. Create the binaries: make install-std")
-	fmt.Printf("7. Launch your blockchain localy: %s \n", blockchainName)
+func printSteps(destinationDir, blockchainName string) {
+	fmt.Printf("Your blockchain code is now available for usage. In order to publish it to GitHub follow these steps: \n\n")
+	fmt.Printf("1. Change directory into: %s \n", destinationDir)
+	fmt.Println("2. Create a repository on github.com")
+	fmt.Println("3. Folow steps on github.com to upload this code to your github repository")
+	fmt.Println(`4. Create a tag for this repository example: git tag -a v0.1 -m "my version 0.1" `)
+	fmt.Println("5. Push your tags: git push --tags")
+	fmt.Println("6. Fetch dependencies for your repository: dep ensure (in root of project)")
+	fmt.Println("7. Create the binaries: make install-std")
+	fmt.Printf("8. Launch your blockchain localy: %s \n", blockchainName)
 }
