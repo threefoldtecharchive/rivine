@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	MaxPoolSize             = 2e7
-	TransactionSetSizeLimit = 250e3
-	TransactionSizeLimit    = 16e3
-	ActualPoolSize          = MaxPoolSize - TransactionSetSizeLimit
+	MaxPoolSize             uint =  2e7
+	TransactionSetSizeLimit uint =  250e3
+	TransactionSizeLimit    uint =  16e3
+	ActualPoolSize          = uint64(MaxPoolSize - TransactionSetSizeLimit)
 )
 
 var (
@@ -27,10 +27,10 @@ var (
 		"TargetWindow":           uint64(1e3),
 		"MaxAdjustmentUp":        Fraction{Denominator: 25, Numerator: 10},
 		"MaxAdjustmentDown":      Fraction{Denominator: 25, Numerator: 10},
-		"FutureThreshold":        time.Hour,
-		"ExtremeFutureThreshold": time.Hour * 2,
-		"StakeModifierDelay":     time.Second * 2000,
-		"BlockStakeAging":        time.Hour * 24,
+		"FutureThreshold":        uint64(time.Hour),
+		"ExtremeFutureThreshold": uint64(time.Hour * 2),
+		"StakeModifierDelay":     uint64(time.Second * 2000),
+		"BlockStakeAging":        uint64(time.Hour * 24),
 	}
 
 	// networkRootPropsTestnet are sane defaults for testnet network configuration
@@ -45,10 +45,10 @@ var (
 		"TargetWindow":           uint64(1e3),
 		"MaxAdjustmentUp":        Fraction{Denominator: 25, Numerator: 10},
 		"MaxAdjustmentDown":      Fraction{Denominator: 25, Numerator: 10},
-		"FutureThreshold":        time.Second * 3,
-		"ExtremeFutureThreshold": time.Second * 6,
-		"StakeModifierDelay":     time.Second * 20,
-		"BlockStakeAging":        time.Second * 1024,
+		"FutureThreshold":        uint64(time.Second * 3),
+		"ExtremeFutureThreshold": uint64(time.Second * 6),
+		"StakeModifierDelay":     uint64(time.Second * 20),
+		"BlockStakeAging":        uint64(time.Second * 1024),
 	}
 
 	// networkRootPropsDevnet are sane defaults for devnet network configuration
@@ -63,10 +63,10 @@ var (
 		"TargetWindow":           uint64(20),
 		"MaxAdjustmentUp":        Fraction{Denominator: 120, Numerator: 100},
 		"MaxAdjustmentDown":      Fraction{Denominator: 100, Numerator: 120},
-		"FutureThreshold":        time.Minute * 2,
-		"ExtremeFutureThreshold": time.Minute * 3,
-		"StakeModifierDelay":     time.Second * 2000,
-		"BlockStakeAging":        time.Second * 1024,
+		"FutureThreshold":        uint64(time.Minute * 2),
+		"ExtremeFutureThreshold": uint64(time.Minute * 3),
+		"StakeModifierDelay":     uint64(time.Second * 2000),
+		"BlockStakeAging":        uint64(time.Second * 1024),
 		"BootstrapPeers": []modules.NetAddress{
 			"localhost:23112",
 		},

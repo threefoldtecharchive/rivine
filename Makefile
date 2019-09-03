@@ -9,7 +9,7 @@ daemonpkgs = ./cmd/rivined
 clientpkgs = ./cmd/rivinec
 rivinecgpkgs = ./cmd/rivinecg
 pkgs = ./build ./modules/gateway $(daemonpkgs) $(clientpkgs) $(rivinecgpkgs)
-testpkgs = ./build ./crypto ./pkg/encoding/siabin ./pkg/encoding/rivbin ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./modules/explorer ./modules/consensus ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types ./pkg/cli ./pkg/client ./pkg/daemon ./cmd/rivinecg/cmd
+testpkgs = ./build ./crypto ./pkg/encoding/siabin ./pkg/encoding/rivbin ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./modules/explorer ./modules/consensus ./persist ./cmd/rivinec ./cmd/rivined ./sync ./types ./pkg/cli ./pkg/client ./pkg/daemon ./cmd/rivinecg/cmd ./cmd/rivinecg/pkg/config
 
 version = $(shell git describe | cut -d '-' -f 1)
 commit = $(shell git rev-parse --short HEAD)

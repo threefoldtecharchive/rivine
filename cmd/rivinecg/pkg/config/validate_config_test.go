@@ -226,7 +226,6 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 	conf.Template.Repository = nil
 	conf.Blockchain.Binaries.Daemon = ""
 	conf.Blockchain.Binaries.Client = ""
-	conf.Blockchain.Transactions.Default.Version = 0
 
 	conf, err = assignDefaultValues(conf)
 	if err != nil {
@@ -248,9 +247,6 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 	}
 	if conf.Blockchain.Binaries.Client != "bctemplc" {
 		t.Errorf("Something went wrong with setting default value for blockchain binaries client")
-	}
-	if conf.Blockchain.Transactions.Default.Version != 1 {
-		t.Errorf("Something went wrong with setting default value for blockchain transaction default version")
 	}
 }
 

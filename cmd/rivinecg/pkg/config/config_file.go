@@ -46,7 +46,6 @@ type (
 
 	Blockchain struct {
 		Name         string              `json:"name" yaml:"name" validate:"required"`
-		Owner        string              `json:"owner" yaml:"owner" validate:"required"`
 		Repository   string              `json:"repository" yaml:"repository" validate:"required"`
 		Currency     *Currency           `json:"currency" yaml:"currency" validate:"required"`
 		Ports        *Ports              `json:"ports" yaml:"ports" validate:"required"`
@@ -658,7 +657,6 @@ func BuildConfigStruct() *Config {
 		},
 		&Blockchain{
 			Name:       "bctempl",
-			Owner:      "somebody",
 			Repository: "github.com/somebody/bctempl",
 			Currency: &Currency{
 				Unit:      "ROC",
