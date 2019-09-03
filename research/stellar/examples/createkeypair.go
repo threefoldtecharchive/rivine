@@ -9,6 +9,7 @@ package main
 // ```
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -22,13 +23,28 @@ func main() {
 	flag.StringVar(&accountname, "name", "default", " The name of the account to create")
 	flag.Parse()
 
-	pair, err := keypair.Random()
+	pair, err := generateKeyPair(accountname)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = saveSeed(accountname, pair.Seed())
 	if err != nil {
 		log.Fatal(err)
 	}
 
+}
+func generateKeyPair(accountname string) (pair *keypair.Full, err error) {
+
+	pair, err = keypair.Random()
+	return
+
 	log.Println("Seed:", pair.Seed())
 	log.Println("Address:", pair.Address())
+	return
+}
+
+func saveSeed(accountname string, seed string) (err error) {
+
 	var config *toml.Tree
 
 	config, err = toml.LoadFile("config.toml")
@@ -37,23 +53,21 @@ func main() {
 			config, err = toml.Load("")
 		}
 		if err != nil {
-			log.Fatal(err)
+			return
 		}
 	}
 
 	if config.HasPath([]string{accountname}) {
-		log.Fatal("Account already exists")
+		return errors.New("Account already exists")
 	}
-	config.Set(accountname+".seed", pair.Seed())
+
+	config.Set(accountname+".seed", seed)
 
 	f, err := os.Create("config.toml")
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 	defer f.Close()
 	_, err = config.WriteTo(f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	return
 }

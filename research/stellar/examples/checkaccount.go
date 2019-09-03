@@ -25,10 +25,11 @@ func main() {
 		accountnames = config.Keys()
 	}
 	for _, accountname = range accountnames {
-
+		log.Println("Accountname:", accountname)
 		seed := config.Get(accountname + ".seed")
 		if seed == nil {
-			log.Fatal("No such account")
+			log.Println("No such account")
+			continue
 		}
 		newPK, err := keypair.Parse(seed.(string))
 		pair, _ := newPK.(*keypair.Full)
