@@ -15,6 +15,7 @@ import (
 	"text/template"
 
 	"github.com/otiai10/copy"
+	"github.com/Masterminds/sprig"
 )
 
 const rootGithubAPIurl = "https://api.github.com"
@@ -69,6 +70,9 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 func writeTemplateValues(destinationDirPath string, config *Config) error {
 	fmap := template.FuncMap{
 		"formatConditionAsString": formatConditionAsString,
+	}
+	for n, f := range sprig.FuncMap() {
+		fmap[n] = f
 	}
 
 	err := filepath.Walk(destinationDirPath,
