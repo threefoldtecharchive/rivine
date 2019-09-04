@@ -51,7 +51,7 @@ type (
 		Ports        *Ports              `json:"ports" yaml:"ports" validate:"required"`
 		Binaries     *Binaries           `json:"binaries,omitempty" yaml:"binaries,omitempty"`
 		Transactions *Transactions       `json:"transactions,omitempty" yaml:"transactions,omitempty"`
-		Network      map[string]*Network `json:"network,omitempty" yaml:"network,omitempty" validate:"gt=0,dive,required"`
+		Networks     map[string]*Network `json:"networks,omitempty" yaml:"networks,omitempty" validate:"gt=0,dive,required"`
 	}
 
 	Currency struct {
@@ -395,7 +395,7 @@ func GenerateBlockchain(configFilePath, outputDir string) error {
 // assignDefaultValues assign sane default values to missing parameters in config
 func assignDefaultValues(conf *Config) (*Config, error) {
 	// Fill in default values for provided network properties
-	for _, network := range conf.Blockchain.Network {
+	for _, network := range conf.Blockchain.Networks {
 		assignDefaultNetworkProps(network)
 	}
 
@@ -457,18 +457,85 @@ func validateConfig(conf *Config) error {
 	}
 
 	// validates if a bootstrapPeer is formatted correctly
-	for _, network := range conf.Blockchain.Network {
+	for _, network := range conf.Blockchain.Networks {
 		for _, peer := range network.BootstrapPeers {
 			// allow loopback addresses in devnet network
 			if peer.IsLoopback() && network.NetworkType == NetworkTypeDevnet {
-				return peer.IsStdValid()
-			}
-			err := peer.IsValid()
-			if err != nil {
-				return err
+				err := peer.IsStdValid()
+				if err != nil {
+					return err
+				}
+			} else {
+				err := peer.IsValid()
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
+
+	// validate that if minting plugin props are defined, that all minting props are defined
+	var (
+		pluginMintingValidated  = false
+		pluginAuthCoinValidated = false
+	)
+	if conf.Blockchain.Transactions != nil {
+		if conf.Blockchain.Transactions.Minting != nil {
+			for networkName, network := range conf.Blockchain.Networks {
+				if network == nil || network.Genesis == nil || network.Genesis.Minting == nil {
+					return fmt.Errorf("minting transaction versions are configured but network %s is missing the genesis minting condition", networkName)
+				}
+			}
+			pluginMintingValidated = true
+		}
+		if conf.Blockchain.Transactions.Authcoin != nil {
+			for networkName, network := range conf.Blockchain.Networks {
+				if network == nil || network.Genesis == nil || network.Genesis.Authcoin == nil {
+					return fmt.Errorf("auth transaction versions are configured but network %s is missing the genesis auth condition", networkName)
+				}
+			}
+			pluginAuthCoinValidated = true
+		}
+	}
+	// validate minting in other direction, in case it isn't validated yet
+	if conf.Blockchain.Networks != nil {
+		if !pluginMintingValidated {
+			nl := len(conf.Blockchain.Networks)
+			networksThatMissMintingPlugin := make([]string, 0, nl)
+			for networkName, network := range conf.Blockchain.Networks {
+				if network == nil || network.Genesis == nil || network.Genesis.Minting == nil {
+					networksThatMissMintingPlugin = append(networksThatMissMintingPlugin, networkName)
+				}
+			}
+			if lc := len(networksThatMissMintingPlugin); lc < nl {
+				if lc > 0 {
+					return fmt.Errorf("some networks define a genesis mint condition (minting value) but for the following networks this value is missing: %s", strings.Join(networksThatMissMintingPlugin, ", "))
+				}
+				if conf.Blockchain.Transactions == nil || conf.Blockchain.Transactions.Minting == nil {
+					return errors.New("all networks define the genesis mint condition but the minting transaction versions (minting value in transactions property) haven't been configured")
+				}
+			}
+		}
+		// validate auth in other direction, in case it isn't validated yet
+		if !pluginAuthCoinValidated {
+			nl := len(conf.Blockchain.Networks)
+			networksThatMissAuthCoinPlugin := make([]string, 0, nl)
+			for networkName, network := range conf.Blockchain.Networks {
+				if network == nil || network.Genesis == nil || network.Genesis.Authcoin == nil {
+					networksThatMissAuthCoinPlugin = append(networksThatMissAuthCoinPlugin, networkName)
+				}
+			}
+			if lc := len(networksThatMissAuthCoinPlugin); lc < nl {
+				if lc > 0 {
+					return fmt.Errorf("some networks define a genesis auth condition (authcoin value) but for the following networks this value is missing: %s", strings.Join(networksThatMissAuthCoinPlugin, ", "))
+				}
+				if conf.Blockchain.Transactions == nil || conf.Blockchain.Transactions.Authcoin == nil {
+					return errors.New("all networks define the genesis auth condition but the authcoin transaction versions (authcoin value in transactions property) haven't been configured")
+				}
+			}
+		}
+	}
+
 	// this check is only needed when your code could produce
 	// an invalid value for validation such as interface with nil
 	// value most including myself do not usually have code like this.
@@ -679,7 +746,7 @@ func BuildConfigStruct() *Config {
 					RequireMinerFees: false,
 				},
 			},
-			Network: networks,
+			Networks: networks,
 		},
 	}
 }

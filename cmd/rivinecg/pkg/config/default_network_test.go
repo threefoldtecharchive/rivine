@@ -6,7 +6,7 @@ import (
 
 func TestValidateConfigWithAssigningDefaultNetworkValues(t *testing.T) {
 	conf := BuildConfigStruct()
-	network := conf.Blockchain.Network["testnet"]
+	network := conf.Blockchain.Networks["testnet"]
 	network.ArbitraryDataSizeLimit = 0
 	network.BlockCreatorFee = ""
 	network.BlockSizeLimit = 0

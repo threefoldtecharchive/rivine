@@ -3,7 +3,7 @@ package config
 import (
 	"testing"
 
-	"gopkg.in/go-playground/validator.v9"
+	validator "gopkg.in/go-playground/validator.v9"
 )
 
 func TestValidateValidConfigFile(t *testing.T) {
@@ -92,7 +92,7 @@ func TestValidateInvalidConfigFileWithoutCurrencyProperty(t *testing.T) {
 
 func TestValidateInvalidConfigFileWithoutNetworkProperty(t *testing.T) {
 	conf := BuildConfigStruct()
-	conf.Blockchain.Network = nil
+	conf.Blockchain.Networks = nil
 	err := validate.Struct(conf)
 
 	// this check is only needed when your code could produce
@@ -102,7 +102,7 @@ func TestValidateInvalidConfigFileWithoutNetworkProperty(t *testing.T) {
 		t.Errorf("Something went wrong with validating, %s", err)
 	}
 
-	expectedError := "Key: 'Config.Blockchain.Network' Error:Field validation for 'Network' failed on the 'gt' tag"
+	expectedError := "Key: 'Config.Blockchain.Networks' Error:Field validation for 'Networks' failed on the 'gt' tag"
 	if err != nil && err.Error() != expectedError {
 		t.Errorf("%s", err.Error())
 	}
@@ -110,7 +110,7 @@ func TestValidateInvalidConfigFileWithoutNetworkProperty(t *testing.T) {
 
 func TestValidateInvalidConfigFileWithEmptyNetworkProperty(t *testing.T) {
 	conf := BuildConfigStruct()
-	conf.Blockchain.Network = make(map[string]*Network)
+	conf.Blockchain.Networks = make(map[string]*Network)
 	err := validate.Struct(conf)
 
 	// this check is only needed when your code could produce
@@ -120,7 +120,7 @@ func TestValidateInvalidConfigFileWithEmptyNetworkProperty(t *testing.T) {
 		t.Errorf("Something went wrong with validating, %s", err)
 	}
 
-	expectedError := "Key: 'Config.Blockchain.Network' Error:Field validation for 'Network' failed on the 'gt' tag"
+	expectedError := "Key: 'Config.Blockchain.Networks' Error:Field validation for 'Networks' failed on the 'gt' tag"
 	if err != nil && err.Error() != expectedError {
 		t.Errorf("%s", err.Error())
 	}
@@ -128,7 +128,7 @@ func TestValidateInvalidConfigFileWithEmptyNetworkProperty(t *testing.T) {
 
 func TestValidateInvalidConfigFileWithoutGenesisMintingProperty(t *testing.T) {
 	conf := BuildConfigStruct()
-	conf.Blockchain.Network["testnet"].Genesis.Minting = nil
+	conf.Blockchain.Networks["testnet"].Genesis.Minting = nil
 	err := validate.Struct(conf)
 
 	// this check is only needed when your code could produce
@@ -138,7 +138,7 @@ func TestValidateInvalidConfigFileWithoutGenesisMintingProperty(t *testing.T) {
 		t.Errorf("Something went wrong with validating, %s", err)
 	}
 
-	expectedError := "Key: 'Config.Blockchain.Network[testnet].Genesis.Minting' Error:Field validation for 'Minting' failed on the 'required_with' tag"
+	expectedError := "Key: 'Config.Blockchain.Networks[testnet].Genesis.Minting' Error:Field validation for 'Minting' failed on the 'required_with' tag"
 	if err != nil && err.Error() != expectedError {
 		t.Errorf("%s", err.Error())
 	}
@@ -146,7 +146,7 @@ func TestValidateInvalidConfigFileWithoutGenesisMintingProperty(t *testing.T) {
 
 func TestValidateInvalidConfigFileWithoutGenesisProperty(t *testing.T) {
 	conf := BuildConfigStruct()
-	conf.Blockchain.Network["testnet"].Genesis = nil
+	conf.Blockchain.Networks["testnet"].Genesis = nil
 	err := validate.Struct(conf)
 
 	// this check is only needed when your code could produce
@@ -156,7 +156,7 @@ func TestValidateInvalidConfigFileWithoutGenesisProperty(t *testing.T) {
 		t.Errorf("Something went wrong with validating, %s", err)
 	}
 
-	expectedError := "Key: 'Config.Blockchain.Network[testnet].Genesis' Error:Field validation for 'Genesis' failed on the 'required' tag"
+	expectedError := "Key: 'Config.Blockchain.Networks[testnet].Genesis' Error:Field validation for 'Genesis' failed on the 'required' tag"
 	if err != nil && err.Error() != expectedError {
 		t.Errorf("%s", err.Error())
 	}
@@ -204,7 +204,7 @@ func TestValidateValidConfigWithoutOptionalParameters(t *testing.T) {
 	conf := BuildConfigStruct()
 	conf.Blockchain.Binaries = nil
 	conf.Blockchain.Transactions.Default = nil
-	conf.Blockchain.Network["testnet"].TransactionFeePool = ""
+	conf.Blockchain.Networks["testnet"].TransactionFeePool = ""
 	err := validate.Struct(conf)
 
 	// this check is only needed when your code could produce
@@ -284,10 +284,10 @@ func TestValidateConfigWithLeavingOutBinariesShouldFillItIn(t *testing.T) {
 func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *testing.T) {
 	var err error
 	conf := BuildConfigStruct()
-	conf.Blockchain.Network["testnet"].BootstrapPeers = nil
+	conf.Blockchain.Networks["testnet"].BootstrapPeers = nil
 
 	err = validateConfig(conf)
-	expectedError := "Key: 'Config.Blockchain.Network[testnet].BootstrapPeers' Error:Field validation for 'BootstrapPeers' failed on the 'required' tag"
+	expectedError := "Key: 'Config.Blockchain.Networks[testnet].BootstrapPeers' Error:Field validation for 'BootstrapPeers' failed on the 'required' tag"
 	if err != nil && err.Error() != expectedError {
 		t.Errorf("%s", err.Error())
 	}
@@ -296,12 +296,12 @@ func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *te
 func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testing.T) {
 	var err error
 	conf := BuildConfigStruct()
-	conf.Blockchain.Network["testnet"].BootstrapPeers = []*BootstrapPeer{
+	conf.Blockchain.Networks["testnet"].BootstrapPeers = []*BootstrapPeer{
 		&BootstrapPeer{"invalid"},
 	}
 
-	delete(conf.Blockchain.Network, "devnet")
-	delete(conf.Blockchain.Network, "standard")
+	delete(conf.Blockchain.Networks, "devnet")
+	delete(conf.Blockchain.Networks, "standard")
 
 	err = validateConfig(conf)
 	expectedError := "address invalid: missing port in address"
