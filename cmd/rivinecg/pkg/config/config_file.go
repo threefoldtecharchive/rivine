@@ -758,7 +758,7 @@ func printSteps(destinationDir, blockchainName string) {
 	fmt.Println("3. Folow steps on github.com to upload this code to your github repository")
 	fmt.Println(`4. Create a tag for this repository example: git tag -a v0.1 -m "my version 0.1" `)
 	fmt.Println("5. Push your tags: git push --tags")
-	fmt.Println("6. Fetch dependencies for your repository: dep ensure (in root of project)")
+	fmt.Println("6. Fetch dependencies for your repository: dep init (in root of project)")
 	fmt.Println("7. Create the binaries: make install-std")
 	fmt.Printf("8. Launch your blockchain localy: %s \n", blockchainName)
 }
