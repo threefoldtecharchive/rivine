@@ -11,14 +11,13 @@ import (
 	"github.com/threefoldtech/rivine/cmd/rivinecg/pkg/config"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/types"
-	"github.com/tyler-smith/go-bip39"
+	bip39 "github.com/tyler-smith/go-bip39"
 )
 
 // root generate command
 var generateCmd = &cobra.Command{
 	Use:   "generate",
 	Short: "Generate blockchains and related content",
-	Args:  cobra.ExactArgs(0),
 }
 
 // sub generate seed command
@@ -43,12 +42,6 @@ var generateBlockchainCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(0),
 	RunE:  generateBlockchain,
 }
-
-var (
-	filePath          string
-	outputDir string
-	numberOfAddresses uint64
-)
 
 // generateSeed generates amount of mnemonic and amount of addresses based on provided amount and outputs this to the cli
 func generateSeed(cmd *cobra.Command, args []string) error {

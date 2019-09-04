@@ -343,22 +343,32 @@ func (bp *BootstrapPeer) UnmarshalText(text []byte) error {
 	return nil
 }
 
-// GenerateBlockchain imports a config file and uses it to generate a blockchain
-func GenerateBlockchain(configFilePath, outputDir string) error {
+// ImportAndValidateConfig imports a config file and validates it
+func ImportAndValidateConfig(configFilePath string) (*Config, error) {
 	typ := path.Ext(configFilePath)
 	file, err := os.Open(configFilePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer file.Close()
 
 	config, err := decodeConfig(typ, file)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Validate if config provided is formatted correctly
 	err = validateConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+// GenerateBlockchain imports a config file and uses it to generate a blockchain
+func GenerateBlockchain(configFilePath, outputDir string) error {
+	config, err := ImportAndValidateConfig(configFilePath)
 	if err != nil {
 		return err
 	}

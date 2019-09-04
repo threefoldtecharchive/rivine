@@ -27,5 +27,6 @@ func init() {
 	rootCmd.AddCommand(
 		versionCmd,
 		generateCmd,
+		validateCmd,
 	)
 }
