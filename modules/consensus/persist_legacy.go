@@ -3,6 +3,7 @@ package consensus
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
@@ -158,12 +159,16 @@ func updateLegacyCoinOutputBucket(bucket *bolt.Bucket, log *persist.Logger) erro
 		log.Printf("overwriting legacy coin output (%s, %s) with binary ID 0x%s to format as known since %v...\n",
 			out.UnlockHash.String(), out.Value.String(), hex.EncodeToString(k), dbMetadata.Version)
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, siabin.Marshal(types.CoinOutput{
+		coBytes, err := siabin.Marshal(types.CoinOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),
 			},
-		}))
+		})
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal coin output: %v", err)
+		}
+		err = bucket.Put(k, coBytes)
 		if err != nil {
 			return err
 		}
@@ -191,12 +196,16 @@ func updateLegacyBlockstakeOutputBucket(bucket *bolt.Bucket, log *persist.Logger
 		log.Printf("overwriting legacy block stake output (%s, %s) with binary ID 0x%s to format as known since %v...\n",
 			out.UnlockHash.String(), out.Value.String(), hex.EncodeToString(k), dbMetadata.Version)
 		// it's in the legacy format, as expected, we overwrite it using the new format
-		err = bucket.Put(k, siabin.Marshal(types.BlockStakeOutput{
+		bsoBytes, err := siabin.Marshal(types.BlockStakeOutput{
 			Value: out.Value,
 			Condition: types.UnlockConditionProxy{
 				Condition: types.NewUnlockHashCondition(out.UnlockHash),
 			},
-		}))
+		})
+		if err != nil {
+			return fmt.Errorf("failed to (siabin) marshal block stake output: %v", err)
+		}
+		err = bucket.Put(k, bsoBytes)
 		if err != nil {
 			return err
 		}
@@ -311,6 +320,9 @@ func (lpb *legacyProcessedBlock) storeAsNewFormat(bucket *bolt.Bucket, key []byt
 			MaturityHeight: od.MaturityHeight,
 		}
 	}
-
-	return bucket.Put(key, siabin.Marshal(block))
+	blockBytes, err := siabin.Marshal(block)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal block: %v", err)
+	}
+	return bucket.Put(key, blockBytes)
 }

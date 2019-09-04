@@ -46,7 +46,7 @@ func (sk spendableKey) WipeSecret() spendableKey {
 	return sk
 }
 
-func (sk spendableKey) UnlockHash() types.UnlockHash {
+func (sk spendableKey) UnlockHash() (types.UnlockHash, error) {
 	return types.NewEd25519PubKeyUnlockHash(sk.PublicKey)
 }
 

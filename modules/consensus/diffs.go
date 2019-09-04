@@ -7,7 +7,6 @@ import (
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/siabin"
 	"github.com/threefoldtech/rivine/types"
 )
@@ -154,28 +153,30 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	// applied.
 	createDCOBucket(tx, pb.Height+cs.chainCts.MaturityDelay)
 
-	// gather all lazy plugin buckets, so we can use them when applying
-	pluginBuckets := map[string]*persist.LazyBoltBucket{}
-	for name := range cs.plugins {
-		name := name
-		pluginBuckets[name] = persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
-			mdBucket := tx.Bucket(BucketPlugins)
-			if mdBucket == nil {
-				return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
-			}
-			b := mdBucket.Bucket([]byte(name))
-			if b == nil {
-				return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
-			}
-			return b, nil
-		})
-	}
-
 	// Validate and apply each transaction in the block. They cannot be
 	// validated all at once because some transactions may not be valid until
 	// previous transactions have been applied.
 	for idx, txn := range pb.Block.Transactions {
-		err := validTransaction(tx, txn, types.TransactionValidationConstants{
+		cTxn := modules.ConsensusTransaction{
+			Transaction:            txn,
+			SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+			SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+		}
+		var err error
+		for _, ci := range txn.CoinInputs {
+			cTxn.SpentCoinOutputs[ci.ParentID], err = getCoinOutput(tx, ci.ParentID)
+			if err != nil {
+				return fmt.Errorf("failed to find coin input %s as unspent coin output in current consensus state: %v", ci.ParentID.String(), err)
+			}
+		}
+		for _, bsi := range txn.BlockStakeInputs {
+			cTxn.SpentBlockStakeOutputs[bsi.ParentID], err = getBlockStakeOutput(tx, bsi.ParentID)
+			if err != nil {
+				return fmt.Errorf("failed to find block stake input %s as unspent block stake output in current consensus state: %v", bsi.ParentID.String(), err)
+			}
+		}
+
+		err = cs.validTransaction(tx, cTxn, types.TransactionValidationConstants{
 			BlockSizeLimit:         cs.chainCts.BlockSizeLimit,
 			ArbitraryDataSizeLimit: cs.chainCts.ArbitraryDataSizeLimit,
 			MinimumMinerFee:        cs.chainCts.MinimumTransactionFee,
@@ -189,7 +190,8 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 
 		// apply the transaction for each of the plugins
 		for name, plugin := range cs.plugins {
-			err := plugin.ApplyTransaction(txn, pb.Block, pb.Height, pluginBuckets[name])
+			bucket := cs.bucketForPlugin(tx, name)
+			err := plugin.ApplyTransaction(cTxn, pb.Height, bucket)
 			if err != nil {
 				return err
 			}
@@ -224,7 +226,11 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 		pb.ConsensusChecksum = consensusChecksum(tx)
 	}
 
-	return blockMap.Put(bid[:], siabin.Marshal(*pb))
+	pbb, err := siabin.Marshal(*pb)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal processed block: %v", err)
+	}
+	return blockMap.Put(bid[:], pbb)
 }
 
 // isBlockCreatingTx checks if a transaction at a given index in the block is considered to

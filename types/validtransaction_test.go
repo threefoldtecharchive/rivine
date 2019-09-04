@@ -192,91 +192,95 @@ func TestTransactionArbitraryDataFits_Vd(t *testing.T) {
 	}
 }
 
-func TestUnknownTransactionValidation(t *testing.T) {
-	cts := TestnetChainConstants()
+// No longer possible as Tx no longer has a function to validate it,
+// this has now been moved to the consensus itself (validators.go)
+// func TestUnknownTransactionValidation(t *testing.T) {
+// 	cts := TestnetChainConstants()
 
-	// Build a working unknown transaction.
-	txn := Transaction{Version: 42}
+// 	// Build a working unknown transaction.
+// 	txn := Transaction{Version: 42}
 
-	// validation of unknown transactions should never succeed,
-	// as no validation is applied here
-	err := txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
-		BlockSizeLimit:         cts.BlockSizeLimit,
-		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
-	})
-	if err == nil {
-		t.Error("expected an error because unknown txn version, but received none")
-	}
-	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{})
-	if err == nil {
-		t.Error("expected an error because unknown txn version, but received none")
-	}
-}
+// 	// validation of unknown transactions should never succeed,
+// 	// as no validation is applied here
+// 	err := txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+// 		BlockSizeLimit:         cts.BlockSizeLimit,
+// 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+// 	})
+// 	if err == nil {
+// 		t.Error("expected an error because unknown txn version, but received none")
+// 	}
+// 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{})
+// 	if err == nil {
+// 		t.Error("expected an error because unknown txn version, but received none")
+// 	}
+// }
 
+// No longer possible as Tx no longer has a function to validate it,
+// this has now been moved to the consensus itself (validators.go)
 // TestLegacyTransactionValidation probes the validation logic of the
 // Transaction type.
-func TestLegacyTransactionValidation(t *testing.T) {
-	cts := TestnetChainConstants()
+// func TestLegacyTransactionValidation(t *testing.T) {
+// 	cts := TestnetChainConstants()
 
-	// Build a working transaction.
-	var txn Transaction
-	err := txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
-		BlockSizeLimit:         cts.BlockSizeLimit,
-		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
-	})
-	if err != nil {
-		t.Error(err)
-	}
+// 	// Build a working transaction.
+// 	var txn Transaction
+// 	err := txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+// 		BlockSizeLimit:         cts.BlockSizeLimit,
+// 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+// 	})
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
 
-	// Violate fitsInABlock.
-	data := make([]byte, cts.BlockSizeLimit)
-	txn.ArbitraryData = data
-	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
-		BlockSizeLimit:         cts.BlockSizeLimit,
-		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
-	})
-	if err == nil {
-		t.Error("failed to trigger fitsInABlock error")
-	}
-	// Violate arbitraryDataFits
-	data = make([]byte, cts.ArbitraryDataSizeLimit+1)
-	txn.ArbitraryData = data
-	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
-		BlockSizeLimit:         cts.BlockSizeLimit,
-		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
-	})
-	if err == nil {
-		t.Error("failed to trigger arbitraryDataFits error")
-	}
-	txn.ArbitraryData = nil
+// 	// Violate fitsInABlock.
+// 	data := make([]byte, cts.BlockSizeLimit)
+// 	txn.ArbitraryData = data
+// 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+// 		BlockSizeLimit:         cts.BlockSizeLimit,
+// 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+// 	})
+// 	if err == nil {
+// 		t.Error("failed to trigger fitsInABlock error")
+// 	}
+// 	// Violate arbitraryDataFits
+// 	data = make([]byte, cts.ArbitraryDataSizeLimit+1)
+// 	txn.ArbitraryData = data
+// 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+// 		BlockSizeLimit:         cts.BlockSizeLimit,
+// 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+// 	})
+// 	if err == nil {
+// 		t.Error("failed to trigger arbitraryDataFits error")
+// 	}
+// 	txn.ArbitraryData = nil
 
-	// ensure we still validate just fine
-	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
-		BlockSizeLimit:         cts.BlockSizeLimit,
-		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
-	})
-	if err != nil {
-		t.Error(err)
-	}
+// 	// ensure we still validate just fine
+// 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+// 		BlockSizeLimit:         cts.BlockSizeLimit,
+// 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+// 	})
+// 	if err != nil {
+// 		t.Error(err)
+// 	}
 
-	// Violate noRepeats
-	txn.CoinInputs = []CoinInput{{}, {}}
-	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
-		BlockSizeLimit:         cts.BlockSizeLimit,
-		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
-	})
-	if err == nil {
-		t.Error("failed to trigger noRepeats error")
-	}
-	txn.CoinInputs = nil
+// 	// Violate noRepeats
+// 	txn.CoinInputs = []CoinInput{{}, {}}
+// 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+// 		BlockSizeLimit:         cts.BlockSizeLimit,
+// 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+// 	})
+// 	if err == nil {
+// 		t.Error("failed to trigger noRepeats error")
+// 	}
+// 	txn.CoinInputs = nil
 
-	// Violate followsMinimumValues
-	txn.CoinOutputs = []CoinOutput{{}}
-	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
-		BlockSizeLimit:         cts.BlockSizeLimit,
-		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
-	})
-	if err == nil {
-		t.Error("failed to trigger followsMinimumValues error")
-	}
-}
+// 	// Violate followsMinimumValues
+// 	txn.CoinOutputs = []CoinOutput{{}}
+// 	err = txn.ValidateTransaction(ValidationContext{}, TransactionValidationConstants{
+// 		BlockSizeLimit:         cts.BlockSizeLimit,
+// 		ArbitraryDataSizeLimit: cts.ArbitraryDataSizeLimit,
+// 	})
+// 	if err == nil {
+// 		t.Error("failed to trigger followsMinimumValues error")
+// 	}
+// }

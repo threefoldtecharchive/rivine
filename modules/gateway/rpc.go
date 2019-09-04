@@ -177,10 +177,12 @@ func (g *Gateway) threadedListenPeer(p *peer) {
 
 		// The handler is responsible for closing the connection, though a
 		// default deadline has been set.
-		go g.threadedHandleConn(conn)
-		if !g.managedSleep(peerRPCDelay) {
-			break
-		}
+		token := <-p.token
+		go func() {
+			// make sure we always recycle the token
+			defer func() { p.token <- token }()
+			g.threadedHandleConn(conn)
+		}()
 	}
 	// Signal that the goroutine can shutdown.
 	close(peerCloseChan)
@@ -240,7 +242,11 @@ func (g *Gateway) Broadcast(name string, obj interface{}, peers []modules.Peer) 
 	g.log.Debugf("INFO: broadcasting RPC %q to %v peers", name, len(peers))
 
 	// only encode obj once, instead of using WriteObject
-	enc := siabin.Marshal(obj)
+	enc, err := siabin.Marshal(obj)
+	if err != nil {
+		g.log.Debugf("failed to siabin marshal obj, aborting broadcast %s: %v", name, err)
+		return
+	}
 	fn := func(conn modules.PeerConn) error {
 		return siabin.WritePrefix(conn, enc)
 	}

@@ -41,7 +41,10 @@ func TestPointerDecodeValue_Issue477(t *testing.T) {
 		}
 
 		value := reflect.Indirect(reference)
-		b = Marshal(value.Interface())
+		b, err = Marshal(value.Interface())
+		if err != nil {
+			t.Error(err)
+		}
 		output := hex.EncodeToString(b)
 		if output != testCase.HexInput {
 			t.Error(idx, "Marshal", output, "!=", testCase.HexInput)

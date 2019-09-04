@@ -28,13 +28,21 @@ func TestBlockHeader(t *testing.T) {
 	}
 
 	id1 := b.ID()
-	id2 := BlockID(crypto.HashBytes(siabin.Marshal(b.Header())))
-	id3 := BlockID(crypto.HashAll(
+	hb, err := siabin.Marshal(b.Header())
+	if err != nil {
+		t.Fatal(err)
+	}
+	id2 := BlockID(crypto.HashBytes(hb))
+	h, err := crypto.HashAll(
 		b.ParentID,
 		b.POBSOutput,
 		b.Timestamp,
 		b.MerkleRoot(),
-	))
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id3 := BlockID(h)
 
 	if id1 != id2 || id2 != id3 || id3 != id1 {
 		t.Error("Methods for getting block id don't return the same results:", id1, id2, id3)
@@ -231,7 +239,11 @@ func TestBlockSiaEncoding(t *testing.T) {
 		},
 	}
 	var decB Block
-	err := siabin.Unmarshal(siabin.Marshal(b), &decB)
+	bb, err := siabin.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = siabin.Unmarshal(bb, &decB)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +266,11 @@ func TestBlockRivineEncoding(t *testing.T) {
 		},
 	}
 	var decB Block
-	err := rivbin.Unmarshal(rivbin.Marshal(b), &decB)
+	bb, err := rivbin.Marshal(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = rivbin.Unmarshal(bb, &decB)
 	if err != nil {
 		t.Fatal(err)
 	}

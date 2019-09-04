@@ -29,22 +29,32 @@ func (plugin *testPlugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bu
 	}
 	return *metadata, nil
 }
-func (plugin *testPlugin) ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	return nil
 }
-func (plugin *testPlugin) RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	return nil
 }
 
 // Apply the transaction to the plugin.
 // An error should be returned in case something went wrong.
-func (plugin *testPlugin) ApplyTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) ApplyTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
 	return nil
 }
 
 // Revert the transaction from the plugin.
 // An error should be returned in case something went wrong.
-func (plugin *testPlugin) RevertTransaction(txn types.Transaction, block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) RevertTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+	return nil
+}
+
+// TransactionValidatorFunctions allows the plugin to provide validation rules for all transaction versions it mapped to
+func (plugin *testPlugin) TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]modules.PluginTransactionValidationFunction {
+	return nil
+}
+
+// TransactionValidators allows the plugin to provide validation rules for all transactions versions it wants
+func (plugin *testPlugin) TransactionValidators() []modules.PluginTransactionValidationFunction {
 	return nil
 }
 

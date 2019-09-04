@@ -17,8 +17,9 @@ type mockSubscriber struct {
 // transaction pool and stores them in the order they were received.
 // This method allows *mockSubscriber to satisfy the
 // modules.TransactionPoolSubscriber interface.
-func (ms *mockSubscriber) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction, _ modules.ConsensusChange) {
+func (ms *mockSubscriber) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction, _ modules.ConsensusChange) error {
 	ms.txns = append(ms.txns, txns...)
+	return nil
 }
 
 // TestSubscription checks that calling Unsubscribe on a mockSubscriber

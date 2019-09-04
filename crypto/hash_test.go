@@ -34,18 +34,24 @@ func TestHashing(t *testing.T) {
 
 	// Call HashObject on the object.
 	var emptyHash Hash
-	h0 := HashObject(to)
+	h0, err := HashObject(to)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if h0 == emptyHash {
 		t.Error("HashObject returned the zero hash!")
 	}
 
 	// Call HashAll on the test object and some other fields.
-	h1 := HashAll(
+	h1, err := HashAll(
 		int(122),
 		byte(115),
 		string("test"),
 		to,
 	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if h1 == emptyHash {
 		t.Error("HashObject returned the zero hash!")
 	}
@@ -88,7 +94,10 @@ func TestHashSorting(t *testing.T) {
 
 // TestUnitHashMarshalJSON tests that Hashes are correctly marshalled to JSON.
 func TestUnitHashMarshalJSON(t *testing.T) {
-	h := HashObject("an object")
+	h, err := HashObject("an object")
+	if err != nil {
+		t.Fatal(err)
+	}
 	jsonBytes, err := h.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
@@ -126,11 +135,14 @@ func TestUnitHashUnmarshalJSON(t *testing.T) {
 	}
 
 	// Test unmarshalling valid data.
-	expectedH := HashObject("an object")
+	expectedH, err := HashObject("an object")
+	if err != nil {
+		t.Fatal(err)
+	}
 	jsonBytes := []byte(`"` + expectedH.String() + `"`)
 
 	var h Hash
-	err := h.UnmarshalJSON(jsonBytes)
+	err = h.UnmarshalJSON(jsonBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +154,10 @@ func TestUnitHashUnmarshalJSON(t *testing.T) {
 // TestHashMarshalling checks that the marshalling of the hash type works as
 // expected.
 func TestHashMarshalling(t *testing.T) {
-	h := HashObject("an object")
+	h, err := HashObject("an object")
+	if err != nil {
+		t.Fatal(err)
+	}
 	hBytes, err := json.Marshal(h)
 	if err != nil {
 		t.Fatal(err)
@@ -163,12 +178,15 @@ func TestHashMarshalling(t *testing.T) {
 // working properly.
 func TestHashLoadString(t *testing.T) {
 	h1 := Hash{}
-	h2 := HashObject("tame")
+	h2, err := HashObject("tame")
+	if err != nil {
+		t.Fatal(err)
+	}
 	h1e := h1.String()
 	h2e := h2.String()
 
 	var h1d, h2d Hash
-	err := h1d.LoadString(h1e)
+	err = h1d.LoadString(h1e)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -185,7 +185,7 @@ func TestIntegrationBlankEncryption(t *testing.T) {
 	if err != modules.ErrBadEncryptionKey {
 		t.Fatal(err)
 	}
-	//TODO: uncomment
+	//TODO: uncomment (and fix code, e.g. now HashObject returns an error as well)
 	// postEncryptionTesting(wt.miner, wt.wallet, crypto.TwofishKey(crypto.HashObject(seed)))
 }
 

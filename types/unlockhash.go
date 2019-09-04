@@ -81,17 +81,25 @@ var (
 
 // NewEd25519PubKeyUnlockHash creates a new unlock hash of type UnlockTypePubKey,
 // using a given public key which is assumed to be used in combination with the Ed25519 algorithm.
-func NewEd25519PubKeyUnlockHash(pk crypto.PublicKey) UnlockHash {
+func NewEd25519PubKeyUnlockHash(pk crypto.PublicKey) (UnlockHash, error) {
 	return NewPubKeyUnlockHash(Ed25519PublicKey(pk))
 }
 
 // NewPubKeyUnlockHash creates a new unlock hash of type UnlockTypePubKey,
 // using a given Sia-standard Public key.
-func NewPubKeyUnlockHash(pk PublicKey) UnlockHash {
+func NewPubKeyUnlockHash(pk PublicKey) (UnlockHash, error) {
+	pkb, err := siabin.Marshal(pk)
+	if err != nil {
+		return UnlockHash{}, err
+	}
+	h, err := crypto.HashObject(pkb)
+	if err != nil {
+		return UnlockHash{}, err
+	}
 	return UnlockHash{
 		Type: UnlockTypePubKey,
-		Hash: crypto.HashObject(siabin.Marshal(pk)),
-	}
+		Hash: h,
+	}, nil
 }
 
 // NewUnlockHash creates a new unlock hash
@@ -212,7 +220,7 @@ func (uh UnlockHash) String() string {
 		return "" // nil unlock hash
 	}
 
-	uhChecksum := crypto.HashAll(uh.Type, uh.Hash)
+	uhChecksum, _ := crypto.HashAll(uh.Type, uh.Hash)
 	return fmt.Sprintf("%02x%x%x",
 		uh.Type, uh.Hash[:], uhChecksum[:UnlockHashChecksumSize])
 }
@@ -259,7 +267,10 @@ func (uh *UnlockHash) LoadString(strUH string) error {
 		if err != nil {
 			return err
 		}
-		expectedChecksum := crypto.HashAll(ut, unlockHash)
+		expectedChecksum, err := crypto.HashAll(ut, unlockHash)
+		if err != nil {
+			return err
+		}
 		if !bytes.Equal(expectedChecksum[:UnlockHashChecksumSize], checksum) {
 			return ErrInvalidUnlockHashChecksum
 		}

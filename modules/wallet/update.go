@@ -359,11 +359,11 @@ func (w *Wallet) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 // ReceiveUpdatedUnconfirmedTransactions updates the wallet's unconfirmed
 // transaction set.
-func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction, _ modules.ConsensusChange) {
+func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction, _ modules.ConsensusChange) error {
 	if err := w.tg.Add(); err != nil {
 		// Gracefully reject transactions if the wallet's Close method has
 		// closed the wallet's ThreadGroup already.
-		return
+		return err
 	}
 	defer w.tg.Done()
 	w.mu.Lock()
@@ -428,4 +428,5 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			w.unconfirmedProcessedTransactions = append(w.unconfirmedProcessedTransactions, pt)
 		}
 	}
+	return nil
 }

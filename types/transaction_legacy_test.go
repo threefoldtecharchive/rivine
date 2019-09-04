@@ -142,7 +142,10 @@ func TestLegacyTransactionBinaryEncoding(t *testing.T) {
 			t.Error(testIndex, err)
 			continue
 		}
-		b := siabin.Marshal(ltd)
+		b, err := siabin.Marshal(ltd)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		output := hex.EncodeToString(b)
 		if output != testCase {
@@ -437,6 +440,14 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 	}
 	copy(secret[:], b[:])
 
+	mustPubKeyUH := func(publicKey PublicKey) UnlockHash {
+		uh, err := NewPubKeyUnlockHash(pk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return uh
+	}
+
 	testCases := []struct {
 		Transaction                  Transaction
 		ExpectedCoinSignatures       []ByteSlice
@@ -591,7 +602,7 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 									Type: UnlockTypePubKey,
 									Hash: hs("a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35"),
 								},
-								Receiver:     NewPubKeyUnlockHash(pk),
+								Receiver:     mustPubKeyUH(pk),
 								HashedSecret: NewAtomicSwapHashedSecret(secret),
 								TimeLock:     1525549854,
 								PublicKey:    pk,
@@ -631,7 +642,7 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 									Type: UnlockTypePubKey,
 									Hash: hs("a6a6c5584b2bfbd08738996cd7930831f958b9a5ed1595525236e861c1a0dc35"),
 								},
-								Receiver:     NewPubKeyUnlockHash(pk),
+								Receiver:     mustPubKeyUH(pk),
 								HashedSecret: NewAtomicSwapHashedSecret(secret),
 								TimeLock:     1525549854,
 								PublicKey:    pk,

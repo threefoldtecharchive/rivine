@@ -8,6 +8,7 @@ import (
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/types"
 
 	bolt "github.com/rivine/bbolt"
 )
@@ -113,8 +114,11 @@ func (cs *ConsensusSet) RegisterPlugin(ctx context.Context, name string, plugin 
 
 			// save the new metadata
 			pluginMetadata.ConsensusChangeID = newConsensusChangeID
-
-			return metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
+			metadataBytes, err := rivbin.Marshal(pluginMetadata)
+			if err != nil {
+				return fmt.Errorf("failed to (rivbin) marshal plugin metadata: %v", err)
+			}
+			return metadataBucket.Put([]byte(name), metadataBytes)
 		})
 		if err != nil {
 			return err
@@ -196,10 +200,41 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 				if err != nil {
 					return err
 				}
+
+				coinOutputDiffs := make(map[types.CoinOutputID]types.CoinOutput)
+				blockStakeOutputDiffs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
+				for _, diff := range cc.CoinOutputDiffs {
+					coinOutputDiffs[diff.ID] = diff.CoinOutput
+				}
+				for _, diff := range cc.BlockStakeOutputDiffs {
+					blockStakeOutputDiffs[diff.ID] = diff.BlockStakeOutput
+				}
+
+				var ok bool
 				for _, block := range cc.RevertedBlocks {
 					blockHeight, exists := cs.BlockHeightOfBlock(block)
 					if exists {
-						err = plugin.RevertBlock(block, blockHeight, bucket)
+						cBlock := modules.ConsensusBlock{
+							Block:                  block,
+							SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+							SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+						}
+						for _, txn := range block.Transactions {
+							for _, ci := range txn.CoinInputs {
+								cBlock.SpentCoinOutputs[ci.ParentID], ok = coinOutputDiffs[ci.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find reverted coin input %s as coin output in consensus change", ci.ParentID.String())
+								}
+							}
+							for _, bsi := range txn.BlockStakeInputs {
+								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = blockStakeOutputDiffs[bsi.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find reverted block stake input %s as block stake output in consensus change", bsi.ParentID.String())
+								}
+							}
+						}
+
+						err = plugin.RevertBlock(cBlock, blockHeight, bucket)
 						if err != nil {
 							return err
 						}
@@ -208,7 +243,27 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 				for _, block := range cc.AppliedBlocks {
 					blockHeight, exists := cs.BlockHeightOfBlock(block)
 					if exists {
-						err = plugin.ApplyBlock(block, blockHeight, bucket)
+						cBlock := modules.ConsensusBlock{
+							Block:                  block,
+							SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
+							SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
+						}
+						for _, txn := range block.Transactions {
+							for _, ci := range txn.CoinInputs {
+								cBlock.SpentCoinOutputs[ci.ParentID], ok = coinOutputDiffs[ci.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find applied coin input %s as coin output in consensus change", ci.ParentID.String())
+								}
+							}
+							for _, bsi := range txn.BlockStakeInputs {
+								cBlock.SpentBlockStakeOutputs[bsi.ParentID], ok = blockStakeOutputDiffs[bsi.ParentID]
+								if !ok {
+									return fmt.Errorf("failed to find applied block stake input %s as block stake output in consensus change", bsi.ParentID.String())
+								}
+							}
+						}
+
+						err = plugin.ApplyBlock(cBlock, blockHeight, bucket)
 						if err != nil {
 							return err
 						}
@@ -247,7 +302,11 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 		if len(data) != 0 {
 			return modules.ConsensusChangeID{}, ErrPluginGhostMetadata
 		}
-		err = metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata{}))
+		pluginMetadataBytes, err := rivbin.Marshal(pluginMetadata{})
+		if err != nil {
+			return modules.ConsensusChangeID{}, fmt.Errorf("failed to rivbin marshal nil plugin metadata: %v", err)
+		}
+		err = metadataBucket.Put([]byte(name), pluginMetadataBytes)
 		if err != nil {
 			return modules.ConsensusChangeID{}, err
 		}
@@ -286,13 +345,65 @@ func (cs *ConsensusSet) initConsensusSetPlugin(tx *bolt.Tx, name string, plugin 
 	}
 	// save the new metadata
 	pluginMetadata.Version = &pluginVersion
-	err = metadataBucket.Put([]byte(name), rivbin.Marshal(pluginMetadata))
+	pluginMetadataBytes, err = rivbin.Marshal(pluginMetadata)
+	if err != nil {
+		return modules.ConsensusChangeID{}, fmt.Errorf("failed to rivbin marshal updated plugin metadata: %v", err)
+	}
+	err = metadataBucket.Put([]byte(name), pluginMetadataBytes)
 	if err != nil {
 		return modules.ConsensusChangeID{}, err
 	}
 
 	// return the consensus change ID that we already have, for further usage
 	return pluginMetadata.ConsensusChangeID, nil
+}
+
+func (cs *ConsensusSet) validateTransactionUsingPlugins(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, btx *bolt.Tx) error {
+	if len(cs.plugins) == 0 {
+		return nil // if there are no errors, there is nothing to validate using plugins
+	}
+	var err error
+	for name, plugin := range cs.plugins {
+		validators := plugin.TransactionValidators()
+		validatorMapping := plugin.TransactionValidatorVersionFunctionMapping()
+		if len(validators) == 0 && len(validatorMapping) == 0 {
+			continue // no validators attached to this plugin
+		}
+		txValidators, ok := validatorMapping[tx.Version]
+		if !ok && len(validators) == 0 {
+			continue // no validators attached to this plugin for this tx's version
+		}
+		// return the first error that occurs
+		bucket := cs.bucketForPlugin(btx, name)
+		for _, txValidator := range txValidators {
+			err = txValidator(tx, ctx, bucket)
+			if err != nil {
+				return err
+			}
+		}
+		for _, txValidator := range validators {
+			err = txValidator(tx, ctx, bucket)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// return the root bucket for a plugin using name in the form of a LazyBoltBucket
+func (cs *ConsensusSet) bucketForPlugin(tx *bolt.Tx, name string) *persist.LazyBoltBucket {
+	return persist.NewLazyBoltBucket(func() (*bolt.Bucket, error) {
+		mdBucket := tx.Bucket(BucketPlugins)
+		if mdBucket == nil {
+			return nil, errors.New("metadata plugins bucket is missing, while it should exist at this point")
+		}
+		b := mdBucket.Bucket([]byte(name))
+		if b == nil {
+			return nil, fmt.Errorf("bucket %s for plugin does not exist", name)
+		}
+		return b, nil
+	})
 }
 
 //closePlugins calls Close on all registered plugins

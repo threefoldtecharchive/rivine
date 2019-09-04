@@ -102,17 +102,6 @@ func TestIntegrationConflictingTransactionSets(t *testing.T) {
 	if err == nil {
 		t.Error("transaction should not have passed inspection")
 	}
-
-	// Purge and try the sets in the reverse order.
-	tpt.tpool.PurgeTransactionPool()
-	err = tpt.tpool.AcceptTransactionSet(txnSetDoubleSpend)
-	if err != nil {
-		t.Error(err)
-	}
-	err = tpt.tpool.AcceptTransactionSet(txnSet)
-	if err == nil {
-		t.Error("transaction should not have passed inspection")
-	}
 }
 
 // TestIntegrationCheckMinerFees probes the checkMinerFees method of the

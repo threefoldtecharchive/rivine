@@ -62,7 +62,7 @@ import (
     mintingcli "github.com/threefoldtech/rivine/extensions/minting/client"
 )
 
-// Will create the explore mintcondtion command
+// Will create the explore mintcondition command
 // * rivinec explore mintcondition [height] [flags]
 mintingcli.CreateExploreCmd(cliClient)
 

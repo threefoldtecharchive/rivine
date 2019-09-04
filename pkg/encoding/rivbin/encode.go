@@ -18,26 +18,26 @@ type (
 
 // Marshal returns the encoding of v. For encoding details, see the package
 // docstring.
-func Marshal(v interface{}) []byte {
+func Marshal(v interface{}) ([]byte, error) {
 	b := new(bytes.Buffer)
 	err := NewEncoder(b).Encode(v) // no error possible when using a bytes.Buffer
 	if err != nil {
-		build.Critical(err)
+		return nil, err
 	}
-	return b.Bytes()
+	return b.Bytes(), nil
 }
 
 // MarshalAll encodes all of its inputs and returns their concatenation.
-func MarshalAll(vs ...interface{}) []byte {
+func MarshalAll(vs ...interface{}) ([]byte, error) {
 	b := new(bytes.Buffer)
 	enc := NewEncoder(b)
 	// Error from EncodeAll is ignored as encoding cannot fail when writing
 	// to a bytes.Buffer.
 	err := enc.EncodeAll(vs...)
 	if err != nil {
-		build.Critical(err)
+		return nil, err
 	}
-	return b.Bytes()
+	return b.Bytes(), nil
 }
 
 // Encoder writes objects to an output stream.

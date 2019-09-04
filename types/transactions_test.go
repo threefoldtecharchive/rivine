@@ -2004,14 +2004,18 @@ func (t Transaction) LegacyID() TransactionID {
 	if err != nil {
 		build.Critical(err)
 	}
-	return TransactionID(crypto.HashAll(
+	h, err := crypto.HashAll(
 		ltd.CoinInputs,
 		ltd.CoinOutputs,
 		ltd.BlockStakeInputs,
 		ltd.BlockStakeOutputs,
 		ltd.MinerFees,
 		ltd.ArbitraryData,
-	))
+	)
+	if err != nil {
+		build.Critical(err)
+	}
+	return TransactionID(h)
 }
 
 // CoinOutputID returns the ID of a coin output at the given index,
@@ -2023,7 +2027,7 @@ func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
 	if err != nil {
 		build.Critical(err)
 	}
-	return CoinOutputID(crypto.HashAll(
+	h, err := crypto.HashAll(
 		SpecifierCoinOutput,
 		ltd.CoinInputs,
 		ltd.CoinOutputs,
@@ -2032,7 +2036,11 @@ func (t Transaction) LegacyCoinOutputID(i uint64) CoinOutputID {
 		ltd.MinerFees,
 		ltd.ArbitraryData,
 		i,
-	))
+	)
+	if err != nil {
+		build.Severe(err)
+	}
+	return CoinOutputID(h)
 }
 
 // sanity checks for TestIDComputationCompatibleWithLegacyIDs_TFChain_Issue134
@@ -2044,7 +2052,11 @@ func (t Transaction) V106ID() (id TransactionID) {
 		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
-		return TransactionID(crypto.HashObject(ltd))
+		h, err := crypto.HashObject(ltd)
+		if err != nil {
+			build.Severe(err)
+		}
+		return TransactionID(h)
 	}
 	h := crypto.NewHash()
 	t.MarshalSia(h)
@@ -2059,17 +2071,25 @@ func (t Transaction) V106CoinOutputID(i uint64) CoinOutputID {
 		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
-		return CoinOutputID(crypto.HashAll(
+		h, err := crypto.HashAll(
 			SpecifierCoinOutput,
 			ltd,
 			i,
-		))
+		)
+		if err != nil {
+			build.Severe(err)
+		}
+		return CoinOutputID(h)
 	}
-	return CoinOutputID(crypto.HashAll(
+	h, err := crypto.HashAll(
 		SpecifierCoinOutput,
 		t,
 		i,
-	))
+	)
+	if err != nil {
+		build.Severe(err)
+	}
+	return CoinOutputID(h)
 }
 func (t Transaction) V106BlockstakeOutputID(i uint64) BlockStakeOutputID {
 	if t.Version == TransactionVersionZero {
@@ -2079,17 +2099,25 @@ func (t Transaction) V106BlockstakeOutputID(i uint64) BlockStakeOutputID {
 		}
 		// the legacy version does not include the transaction version
 		// as part of the crypto hash
-		return BlockStakeOutputID(crypto.HashAll(
+		h, err := crypto.HashAll(
 			SpecifierBlockStakeOutput,
 			ltd,
 			i,
-		))
+		)
+		if err != nil {
+			build.Severe(err)
+		}
+		return BlockStakeOutputID(h)
 	}
-	return BlockStakeOutputID(crypto.HashAll(
+	h, err := crypto.HashAll(
 		SpecifierBlockStakeOutput,
 		t,
 		i,
-	))
+	)
+	if err != nil {
+		build.Severe(err)
+	}
+	return BlockStakeOutputID(h)
 }
 
 // BlockStakeOutputID returns the ID of a BlockStakeOutput at the given index, which
@@ -2097,12 +2125,11 @@ func (t Transaction) V106BlockstakeOutputID(i uint64) BlockStakeOutputID {
 // all of the fields in the transaction (except the signatures), and output
 // index.
 func (t Transaction) LegacyBlockStakeOutputID(i uint64) BlockStakeOutputID {
-
 	ltd, err := newLegacyTransactionDataFromTransaction(t)
 	if err != nil {
 		build.Critical(err)
 	}
-	return BlockStakeOutputID(crypto.HashAll(
+	h, err := crypto.HashAll(
 		SpecifierBlockStakeOutput,
 		ltd.CoinInputs,
 		ltd.CoinOutputs,
@@ -2111,7 +2138,11 @@ func (t Transaction) LegacyBlockStakeOutputID(i uint64) BlockStakeOutputID {
 		ltd.MinerFees,
 		ltd.ArbitraryData,
 		i,
-	))
+	)
+	if err != nil {
+		build.Critical(err)
+	}
+	return BlockStakeOutputID(h)
 }
 
 func TestIsValidTransactionVersion(t *testing.T) {

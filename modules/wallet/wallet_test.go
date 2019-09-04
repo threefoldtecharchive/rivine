@@ -40,7 +40,7 @@ func createWalletTester(name string) (*walletTester, error) {
 	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func createWalletTesterWithStubCS(name string, cs *consensusSetStub) (*walletTes
 	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func createBlankWalletTester(name string) (*walletTester, error) {
 	chainCts := types.TestnetChainConstants()
 	// Create the modules
 	testdir := build.TempDir(modules.WalletDir, name)
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func TestNilInputs(t *testing.T) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.TestnetChainConstants()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,7 +306,7 @@ func TestCloseWallet(t *testing.T) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.TestnetChainConstants()
 	testdir := build.TempDir(modules.WalletDir, t.Name())
-	g, err := gateway.New("localhost:0", false, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
+	g, err := gateway.New("localhost:0", false, 1, filepath.Join(testdir, modules.GatewayDir), bcInfo, chainCts, nil, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,15 +386,23 @@ func (css *consensusSetStub) AcceptBlock(block types.Block) error {
 }
 
 func processAppliedBlock(block types.Block, subscriber modules.ConsensusSetSubscriber) {
+	bh, err := crypto.HashObject(block)
+	if err != nil {
+		panic(err)
+	}
 	cc := modules.ConsensusChange{
-		ID:            modules.ConsensusChangeID(crypto.HashObject(block)),
+		ID:            modules.ConsensusChangeID(bh),
 		AppliedBlocks: []types.Block{block},
 	}
 	for _, tx := range block.Transactions {
 		for _, co := range tx.CoinOutputs {
+			coh, err := crypto.HashObject(co)
+			if err != nil {
+				panic(err)
+			}
 			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, modules.CoinOutputDiff{
 				Direction:  modules.DiffApply,
-				ID:         types.CoinOutputID(crypto.HashObject(co)),
+				ID:         types.CoinOutputID(coh),
 				CoinOutput: co,
 			})
 		}
@@ -565,14 +573,22 @@ func (css *consensusSetStub) TryTransactionSet(txs []types.Transaction) (change 
 		Timestamp:    types.CurrentTimestamp(),
 		Transactions: txs,
 	}
+	bh, err := crypto.HashObject(block)
+	if err != nil {
+		return change, err
+	}
 	cc := modules.ConsensusChange{
-		ID: modules.ConsensusChangeID(crypto.HashObject(block)),
+		ID: modules.ConsensusChangeID(bh),
 	}
 	for _, tx := range block.Transactions {
 		for _, co := range tx.CoinOutputs {
+			coh, err := crypto.HashObject(co)
+			if err != nil {
+				return change, err
+			}
 			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, modules.CoinOutputDiff{
 				Direction:  modules.DiffApply,
-				ID:         types.CoinOutputID(crypto.HashObject(co)),
+				ID:         types.CoinOutputID(coh),
 				CoinOutput: co,
 			})
 		}
@@ -594,7 +610,11 @@ func (css *consensusSetStub) ConsensusSetSubscribe(subscriber modules.ConsensusS
 				return errors.New("abort (stub) ConsensusSetSubscribe")
 			default:
 			}
-			if modules.ConsensusChangeID(crypto.HashObject(css.blocks[i])) == changeID {
+			bh, err := crypto.HashObject(css.blocks[i])
+			if err != nil {
+				return err
+			}
+			if modules.ConsensusChangeID(bh) == changeID {
 				break
 			}
 		}

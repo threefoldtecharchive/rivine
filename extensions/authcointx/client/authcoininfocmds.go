@@ -120,9 +120,11 @@ func (ac *authCoinCmd) getAuthCondition(cmd *cobra.Command, args []string) {
 		encode = json.NewEncoder(os.Stdout).Encode
 	case cli.EncodingTypeHex:
 		encode = func(v interface{}) error {
-			b := rivbin.Marshal(v)
-			fmt.Println(hex.EncodeToString(b))
-			return nil
+			b, err := rivbin.Marshal(v)
+			if err == nil {
+				fmt.Println(hex.EncodeToString(b))
+			}
+			return err
 		}
 	}
 	err = encode(map[string]interface{}{
@@ -174,9 +176,11 @@ func (ac *authCoinCmd) getAddressAuthState(cmd *cobra.Command, address types.Unl
 		encode = json.NewEncoder(os.Stdout).Encode
 	case cli.EncodingTypeHex:
 		encode = func(v interface{}) error {
-			b := rivbin.Marshal(v)
-			fmt.Println(hex.EncodeToString(b))
-			return nil
+			b, err := rivbin.Marshal(v)
+			if err == nil {
+				fmt.Println(hex.EncodeToString(b))
+			}
+			return err
 		}
 	}
 	err = encode(map[string]interface{}{

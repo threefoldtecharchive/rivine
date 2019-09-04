@@ -163,12 +163,21 @@ func (ltd legacyTransactionData) TransactionData() (data TransactionData) {
 func (ilp legacyTransactionInputLockProxy) MarshalSia(w io.Writer) error {
 	switch tc := ilp.Fulfillment.(type) {
 	case *SingleSignatureFulfillment:
-		return siabin.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature,
-			siabin.Marshal(tc.PublicKey), tc.Signature)
+		pkBytes, err := siabin.Marshal(tc.PublicKey)
+		if err != nil {
+			return err
+		}
+		return siabin.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature, pkBytes, tc.Signature)
 	case *LegacyAtomicSwapFulfillment:
-		return siabin.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap,
-			siabin.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock),
-			siabin.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret))
+		conditionBytes, err := siabin.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock)
+		if err != nil {
+			return err
+		}
+		fulfillmentBytes, err := siabin.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret)
+		if err != nil {
+			return err
+		}
+		return siabin.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap, conditionBytes, fulfillmentBytes)
 	default:
 		return errors.New("unlock type is invalid in a v0 transaction")
 	}
@@ -232,12 +241,21 @@ func (ilp *legacyTransactionInputLockProxy) UnmarshalSia(r io.Reader) (err error
 func (ilp legacyTransactionInputLockProxy) MarshalRivine(w io.Writer) error {
 	switch tc := ilp.Fulfillment.(type) {
 	case *SingleSignatureFulfillment:
-		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature,
-			rivbin.Marshal(tc.PublicKey), tc.Signature)
+		pkBytes, err := rivbin.Marshal(tc.PublicKey)
+		if err != nil {
+			return err
+		}
+		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeSingleSignature, pkBytes, tc.Signature)
 	case *LegacyAtomicSwapFulfillment:
-		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap,
-			rivbin.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock),
-			rivbin.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret))
+		conditionBytes, err := rivbin.MarshalAll(tc.Sender, tc.Receiver, tc.HashedSecret, tc.TimeLock)
+		if err != nil {
+			return err
+		}
+		fulfillmentBytes, err := rivbin.MarshalAll(tc.PublicKey, tc.Signature, tc.Secret)
+		if err != nil {
+			return err
+		}
+		return rivbin.NewEncoder(w).EncodeAll(FulfillmentTypeAtomicSwap, conditionBytes, fulfillmentBytes)
 	default:
 		return errors.New("unlock type is invalid in a v0 transaction")
 	}

@@ -28,12 +28,13 @@ var (
 )
 
 type (
-	// ObjectIDs are the IDs of objects such as siacoin outputs and file
-	// contracts, and are used to see if there are conflicts or overlaps within
-	// the transaction pool. A TransactionSetID is the hash of a transaction
-	// set.
-	ObjectID         crypto.Hash
+	// TransactionSetID is the hash of a transaction set.
 	TransactionSetID crypto.Hash
+
+	poolTransactionSet struct {
+		ID           TransactionSetID
+		Transactions []types.Transaction
+	}
 
 	// The TransactionPool tracks incoming transactions, accepting them or
 	// rejecting them based on internal criteria such as fees and unconfirmed
@@ -43,21 +44,12 @@ type (
 		consensusSet modules.ConsensusSet
 		gateway      modules.Gateway
 
-		// To prevent double spends in the unconfirmed transaction set, the
-		// transaction pool keeps a list of all objects that have either been
-		// created or consumed by the current unconfirmed transaction pool. All
-		// transactions with overlaps are rejected. This model is
-		// over-aggressive - one transaction set may create an object that
-		// another transaction set spends. This is done to minimize the
-		// computation and memory load on the transaction pool. Dependent
-		// transactions should be lumped into a single transaction set.
-		//
 		// transactionSetDiffs map form a transaction set id to the set of
 		// diffs that resulted from the transaction set.
-		knownObjects        map[ObjectID]TransactionSetID
-		transactionSets     map[TransactionSetID][]types.Transaction
-		transactionSetDiffs map[TransactionSetID]modules.ConsensusChange
-		transactionListSize int
+		transactionSets       []poolTransactionSet
+		transactionSetMapping map[TransactionSetID]int
+		transactionSetDiffs   map[TransactionSetID]modules.ConsensusChange
+		transactionListSize   int
 		// TODO: Write a consistency check comparing transactionSets,
 		// transactionSetDiffs.
 		//
@@ -100,9 +92,9 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 		consensusSet: cs,
 		gateway:      g,
 
-		knownObjects:        make(map[ObjectID]TransactionSetID),
-		transactionSets:     make(map[TransactionSetID][]types.Transaction),
-		transactionSetDiffs: make(map[TransactionSetID]modules.ConsensusChange),
+		transactionSets:       make([]poolTransactionSet, 0),
+		transactionSetMapping: make(map[TransactionSetID]int),
+		transactionSetDiffs:   make(map[TransactionSetID]modules.ConsensusChange),
 
 		broadcastCache: newTransactionCache(),
 
@@ -139,25 +131,18 @@ func (tp *TransactionPool) Close() error {
 	return build.JoinErrors(errs, "; ")
 }
 
-// FeeEstimation returns an estimation for what fee should be applied to
-// transactions.
-func (tp *TransactionPool) FeeEstimation() (min, max types.Currency) {
-	// TODO: The fee estimation tool should look at the recent blocks and use
-	// them to gauge what sort of fee should be required, as opposed to just
-	// guessing blindly.
-	return tp.chainCts.MinimumTransactionFee, tp.chainCts.MinimumTransactionFee
-}
-
 // TransactionList returns a list of all transactions in the transaction pool.
 // The transactions are provided in an order that can acceptably be put into a
 // block.
 func (tp *TransactionPool) TransactionList() []types.Transaction {
 	tp.mu.RLock()
 	defer tp.mu.RUnlock()
-
+	return tp.transactionList()
+}
+func (tp *TransactionPool) transactionList() []types.Transaction {
 	var txns []types.Transaction
 	for _, tSet := range tp.transactionSets {
-		txns = append(txns, tSet...)
+		txns = append(txns, tSet.Transactions...)
 	}
 	return txns
 }
@@ -167,7 +152,7 @@ func (tp *TransactionPool) Transaction(id types.TransactionID) (types.Transactio
 	tp.mu.RLock()
 	defer tp.mu.RUnlock()
 	for _, tSet := range tp.transactionSets {
-		for _, txn := range tSet {
+		for _, txn := range tSet.Transactions {
 			if id == txn.ID() {
 				return txn, nil
 			}

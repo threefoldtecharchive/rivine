@@ -28,12 +28,12 @@ var (
 // marshaler marshals objects into byte slices and unmarshals byte
 // slices into objects.
 type marshaler interface {
-	Marshal(interface{}) []byte
+	Marshal(interface{}) ([]byte, error)
 	Unmarshal([]byte, interface{}) error
 }
 type stdMarshaler struct{}
 
-func (stdMarshaler) Marshal(v interface{}) []byte            { return siabin.Marshal(v) }
+func (stdMarshaler) Marshal(v interface{}) ([]byte, error)            { return siabin.Marshal(v) }
 func (stdMarshaler) Unmarshal(b []byte, v interface{}) error { return siabin.Unmarshal(b, v) }
 
 // The ConsensusSet is the object responsible for tracking the current status
@@ -57,6 +57,11 @@ type ConsensusSet struct {
 	// unlikely to grow beyond 1kb, and cannot by manipulated by an attacker as
 	// the function of adding a subscriber should not be exposed.
 	subscribers []modules.ConsensusSetSubscriber
+
+	// Stand-Alone transaction validators, linked to a version
+	txVersionMappedValidators map[types.TransactionVersion][]modules.TransactionValidationFunction
+	// Stand-Alone transaction validators, applied to any transaction
+	txValidators []modules.TransactionValidationFunction
 
 	// plugins to the consensus set will receive updates to the consensus set.
 	// At initialization, they receive all changes that they are missing.
@@ -131,6 +136,9 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 
 			DiffsGenerated: true,
 		},
+
+		txVersionMappedValidators: StandardTransactionVersionMappedValidators(),
+		txValidators:              StandardTransactionValidators(),
 
 		dosBlocks: make(map[types.BlockID]struct{}),
 

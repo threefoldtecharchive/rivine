@@ -274,12 +274,19 @@ func TestInputSigHash(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	mustSiabinMarshal := func(obj interface{}) []byte {
+		b, err := siabin.Marshal(obj)
+		if err != nil {
+			t.Error(err)
+		}
+		return b
+	}
 	signature = txn.CoinInputs[1].Fulfillment.Fulfillment.(*AtomicSwapFulfillment).Signature
 	// decode expected signature
 	expectedSignature = sig(
 		`01` + // transaction version
 			`0100000000000000` + // input index
-			sliceToHex(siabin.Marshal(pk)) + // AS: PublicKey
+			sliceToHex(mustSiabinMarshal(pk)) + // AS: PublicKey
 			sliceToHex(secret[:]) + // AS: Claim: secret
 			`0200000000000000` + // length(coinInputs), 2
 			`a3331dc5ad8fef504e148e1608db0f05156dc72283dc2b1b083afa8bfdcdb6d9` + // CI#1 - parentid only
@@ -402,6 +409,14 @@ func TestLegacyInputSigHash(t *testing.T) {
 		return crypto.SignHash(hash, sk)
 	}
 
+	mustPubKeyUH := func(publicKey PublicKey) UnlockHash {
+		uh, err := NewPubKeyUnlockHash(pk)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return uh
+	}
+
 	// transaction containing all possible fields,
 	// as well as all valid unlock hashes and input locks.
 	txn := Transaction{
@@ -418,7 +433,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 				Fulfillment: UnlockFulfillmentProxy{
 					Fulfillment: &LegacyAtomicSwapFulfillment{
 						Sender:       unlockHashFromHex("01fea3ae2854f6e497c92a1cdd603a0bc92ada717200e74f64731e86a923479883519804b18d9d"),
-						Receiver:     NewPubKeyUnlockHash(pk),
+						Receiver:     mustPubKeyUH(pk),
 						HashedSecret: hashedSecret,
 						TimeLock:     2524608000,
 						PublicKey:    pk,
@@ -477,15 +492,36 @@ func TestLegacyInputSigHash(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	mustSiabinMarshal := func(obj interface{}) []byte {
+		b, err := siabin.Marshal(obj)
+		if err != nil {
+			t.Error(err)
+		}
+		return b
+	}
+	mustSiabinMarshalAll := func(objs ...interface{}) []byte {
+		b, err := siabin.MarshalAll(objs...)
+		if err != nil {
+			t.Error(err)
+		}
+		return b
+	}
+	mustCryptoHashObject := func(obj interface{}) crypto.Hash {
+		h, err := crypto.HashObject(obj)
+		if err != nil {
+			t.Error(err)
+		}
+		return h
+	}
 	// decode expected signature
 	expectedSignature = sig(
 		`0000000000000000` + // input index
 			`a3331dc5ad8fef504e148e1608db0f05156dc72283dc2b1b083afa8bfdcdb6d9` + // CI#1
-			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
+			`01` + hashToHex(mustCryptoHashObject(mustSiabinMarshal(pk))) +
 			`fd166ead847ae80a5754700980130ee7bd23a94bd2a8fa14807955142719eb05` + // CI#2
-			`02` + hashToHex(crypto.HashObject(siabin.MarshalAll(
+			`02` + hashToHex(mustCryptoHashObject(mustSiabinMarshalAll(
 			unlockHashFromHex("01fea3ae2854f6e497c92a1cdd603a0bc92ada717200e74f64731e86a923479883519804b18d9d"),
-			NewPubKeyUnlockHash(pk),
+			mustPubKeyUH(pk),
 			hashedSecret,
 			Timestamp(2524608000),
 		))) +
@@ -495,7 +531,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 			`06000000000000002d79883d2000` + // CO#2
 			`0296551728f6e1a244184dcad09b4e76debf16bd4721acd87b073404eb74d151ae` +
 			`dca04a18b64ba012218d28d265a852625416567932f5eda3bcb0a0bc66da8b09` + // BSI#1
-			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
+			`01` + hashToHex(mustCryptoHashObject(mustSiabinMarshal(pk))) +
 			`0100000000000000` + // length(blockStakeOutputs), 1
 			`02000000000000000186` + // BSO#1
 			`01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a` +
@@ -542,14 +578,14 @@ func TestLegacyInputSigHash(t *testing.T) {
 	// decode expected signature
 	expectedSignature = sig(
 		`0100000000000000` + // input index
-			sliceToHex(siabin.Marshal(pk)) + // AS: PublicKey
+			sliceToHex(mustSiabinMarshal(pk)) + // AS: PublicKey
 			sliceToHex(secret[:]) + // AS: Claim: secret
 			`a3331dc5ad8fef504e148e1608db0f05156dc72283dc2b1b083afa8bfdcdb6d9` + // CI#1
-			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
+			`01` + hashToHex(mustCryptoHashObject(mustSiabinMarshal(pk))) +
 			`fd166ead847ae80a5754700980130ee7bd23a94bd2a8fa14807955142719eb05` + // CI#2
-			`02` + hashToHex(crypto.HashObject(siabin.MarshalAll(
+			`02` + hashToHex(mustCryptoHashObject(mustSiabinMarshalAll(
 			unlockHashFromHex("01fea3ae2854f6e497c92a1cdd603a0bc92ada717200e74f64731e86a923479883519804b18d9d"),
-			NewPubKeyUnlockHash(pk),
+			mustPubKeyUH(pk),
 			hashedSecret,
 			Timestamp(2524608000),
 		))) +
@@ -559,7 +595,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 			`06000000000000002d79883d2000` + // CO#2
 			`0296551728f6e1a244184dcad09b4e76debf16bd4721acd87b073404eb74d151ae` +
 			`dca04a18b64ba012218d28d265a852625416567932f5eda3bcb0a0bc66da8b09` + // BSI#1
-			`01` + hashToHex(crypto.HashObject(siabin.Marshal(pk))) +
+			`01` + hashToHex(mustCryptoHashObject(mustSiabinMarshal(pk))) +
 			`0100000000000000` + // length(blockStakeOutputs), 1
 			`02000000000000000186` + // BSO#1
 			`01746677df456546d93729066dd88514e2009930f3eebac3c93d43c88a108f8f9a` +

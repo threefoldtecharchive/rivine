@@ -20,8 +20,12 @@ var (
 
 // uidEncryptionKey creates an encryption key that is used to decrypt a
 // specific key file.
-func uidEncryptionKey(masterKey crypto.TwofishKey, uid UniqueID) crypto.TwofishKey {
-	return crypto.TwofishKey(crypto.HashAll(masterKey, uid))
+func uidEncryptionKey(masterKey crypto.TwofishKey, uid UniqueID) (crypto.TwofishKey, error) {
+	h, err := crypto.HashAll(masterKey, uid)
+	if err != nil {
+		return crypto.TwofishKey{}, err
+	}
+	return crypto.TwofishKey(h), nil
 }
 
 // checkMasterKey verifies that the master key is correct.
@@ -31,7 +35,10 @@ func (w *Wallet) checkMasterKey(masterKey crypto.TwofishKey) error {
 		return modules.ErrBadEncryptionKey
 	}
 
-	uk := uidEncryptionKey(masterKey, w.persist.UID)
+	uk, err := uidEncryptionKey(masterKey, w.persist.UID)
+	if err != nil {
+		return err
+	}
 	verification, err := uk.DecryptBytes(w.persist.EncryptionVerification)
 	if err != nil {
 		// Most of the time, the failure is an authentication failure.
@@ -87,7 +94,10 @@ func (w *Wallet) initEncryption(masterKey crypto.TwofishKey, seed modules.Seed) 
 
 	// Establish the encryption verification using the masterKey. After this
 	// point, the wallet is encrypted.
-	uk := uidEncryptionKey(masterKey, w.persist.UID)
+	uk, err := uidEncryptionKey(masterKey, w.persist.UID)
+	if err != nil {
+		return modules.Seed{}, err
+	}
 	encryptionBase := make([]byte, encryptionVerificationLen)
 	w.persist.EncryptionVerification = uk.EncryptBytes(encryptionBase)
 	err = w.saveSettings()

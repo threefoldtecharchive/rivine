@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
@@ -67,13 +68,6 @@ type (
 // optional interfaces which a TransactionController can implement as well,
 // in order to customize a version even more
 type (
-	// TransactionValidator defines the interface a transaction controller
-	// can optionally implement, in order to define custom validation logic
-	// for a transaction, overwriting the default validation logic.
-	TransactionValidator interface {
-		ValidateTransaction(t Transaction, ctx ValidationContext, constants TransactionValidationConstants) error
-	}
-
 	// TransactionSignatureHasher defines the interface a transaction controller
 	// can optionally implement, in order to define custom Tx signatures,
 	// overwriting the default Tx sig hash logic.
@@ -86,36 +80,6 @@ type (
 	// instead of using the default binary encoding logic for that transaction (version).
 	TransactionIDEncoder interface {
 		EncodeTransactionIDInput(io.Writer, TransactionData) error
-	}
-
-	// CoinOutputValidator defines the interface a transaction controller
-	// can optionally implement, in order to define custom validation logic
-	// for coin outputs, overwriting the default validation logic.
-	//
-	// The default validation logic ensures that the total amount of output coins (including fees),
-	// equals the total amount of input coins. It also ensures that all coin inputs refer with their given ParentID
-	// to an existing unspent coin output.
-	CoinOutputValidator interface {
-		// ValidateCoinOutputs validates if the coin outputs of a given transaction are valid.
-		// What the criteria for this validity are, is up to the CoinOutputValidator.
-		// All coin inputs of the transaction are already looked up.
-		// Should an input not be found, it will be ignored and not be part of the mapped coin inputs.
-		ValidateCoinOutputs(t Transaction, ctx FundValidationContext, coinInputs map[CoinOutputID]CoinOutput) error
-	}
-
-	// BlockStakeOutputValidator defines the interface a transaction controller
-	// can optionally implement, in order to define custom validation logic
-	// for block stake outputs, overwriting the default validation logic.
-	//
-	// The default validation logic ensures that the total amount of output block stakes,
-	// equals the total amount of input block stakes. It also ensures that all block stake inputs refer with their given ParentID
-	// to an existing unspent block stake output.
-	BlockStakeOutputValidator interface {
-		// ValidateBlockStakeOutputs validates if the block stake outputs of a given transaction are valid.
-		// What the criteria for this validity are, is up to the BlockStakeOutputValidator.
-		// All block stake inputs of the transaction are already looked up.
-		// Should an input not be found, it will be ignored and not be part of the mapped block stake inputs.
-		ValidateBlockStakeOutputs(t Transaction, ctx FundValidationContext, blockStakeInputs map[BlockStakeOutputID]BlockStakeOutput) error
 	}
 
 	// TransactionExtensionSigner defines an interface for transactions which have fulfillments in the
@@ -219,7 +183,10 @@ type (
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (dtc DefaultTransactionController) EncodeTransactionData(w io.Writer, td TransactionData) error {
 	// encode to a byte slice first
-	b := siabin.Marshal(td)
+	b, err := siabin.Marshal(td)
+	if err != nil {
+		return fmt.Errorf("failed to (siabin) marshal transaction data: %v", err)
+	}
 	// copy those bytes together with its prefixed length, as the final encoding
 	return siabin.NewEncoder(w).Encode(b)
 }
@@ -336,6 +303,95 @@ func (ltc LegacyTransactionController) SignatureHash(t Transaction, extraObjects
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (ltc LegacyTransactionController) EncodeTransactionIDInput(w io.Writer, td TransactionData) error {
 	return ltc.EncodeTransactionData(w, td)
+}
+
+// ensures at compile time that the Transaction Controller implement all desired interfaces
+var (
+	_ TransactionController = DisabledTransactionController{}
+)
+
+// DisabledTransactionController is used for transaction versions that are disabled but still need to be JSON decodable.
+type DisabledTransactionController struct {
+	DefaultTransactionController
+}
+
+// EncodeTransactionData implements TransactionController.EncodeTransactionData
+func (dtc DisabledTransactionController) EncodeTransactionData(w io.Writer, td TransactionData) error {
+	err := dtc.validateTransactionData(td) // ensure txdata is undefined
+	if err != nil {
+		return err
+	}
+	return dtc.DefaultTransactionController.EncodeTransactionData(w, td)
+}
+
+// DecodeTransactionData implements TransactionController.DecodeTransactionData
+func (dtc DisabledTransactionController) DecodeTransactionData(r io.Reader) (TransactionData, error) {
+	td, err := dtc.DefaultTransactionController.DecodeTransactionData(r)
+	if err != nil {
+		return td, err
+	}
+	return td, dtc.validateTransactionData(td) // ensure txdata is undefined
+}
+
+// JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
+func (dtc DisabledTransactionController) JSONEncodeTransactionData(td TransactionData) ([]byte, error) {
+	err := dtc.validateTransactionData(td) // ensure txdata is undefined
+	if err != nil {
+		return nil, err
+	}
+	return dtc.DefaultTransactionController.JSONEncodeTransactionData(td)
+}
+
+// JSONDecodeTransactionData implements TransactionController.JSONDecodeTransactionData
+func (dtc DisabledTransactionController) JSONDecodeTransactionData(b []byte) (TransactionData, error) {
+	var td TransactionData
+	err := json.Unmarshal(b, &td)
+	if err != nil {
+		return td, err
+	}
+	return td, dtc.validateTransactionData(td) // ensure txdata is undefined
+}
+
+// EncodeTransactionData imple
+
+func (dtc DisabledTransactionController) validateTransaction(t Transaction) error {
+	if t.Version != 0 {
+		return fmt.Errorf("DisabledTransactionController allows only empty (nil) transactions: invalid %d tx version", t.Version)
+	}
+	return dtc.validateTransactionData(TransactionData{
+		CoinInputs:        t.CoinInputs,
+		CoinOutputs:       t.CoinOutputs,
+		BlockStakeInputs:  t.BlockStakeInputs,
+		BlockStakeOutputs: t.BlockStakeOutputs,
+		MinerFees:         t.MinerFees,
+		ArbitraryData:     t.ArbitraryData,
+		Extension:         t.Extension,
+	})
+}
+
+func (dtc DisabledTransactionController) validateTransactionData(t TransactionData) error {
+	if len(t.CoinInputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: coin inputs not allowed")
+	}
+	if len(t.CoinOutputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: coin outputs not allowed")
+	}
+	if len(t.BlockStakeInputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: block stake inputs not allowed")
+	}
+	if len(t.BlockStakeOutputs) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: block stake outputs not allowed")
+	}
+	if len(t.MinerFees) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: miner fees not allowed")
+	}
+	if len(t.ArbitraryData) != 0 {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: arbitrary data not allowed")
+	}
+	if t.Extension != nil {
+		return errors.New("DisabledTransactionController allows only empty (nil) transactions: extension data not allowed")
+	}
+	return nil
 }
 
 func init() {

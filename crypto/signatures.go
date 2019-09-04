@@ -132,7 +132,10 @@ func VerifyHash(data Hash, pk PublicKey, sig Signature) error {
 
 // WriteSignedObject writes a length-prefixed object prefixed by its signature.
 func WriteSignedObject(w io.Writer, obj interface{}, sk SecretKey) error {
-	objBytes := siabin.Marshal(obj)
+	objBytes, err := siabin.Marshal(obj)
+	if err != nil {
+		return err
+	}
 	sig := SignHash(HashBytes(objBytes), sk)
 	return siabin.NewEncoder(w).EncodeAll(sig, objBytes)
 }

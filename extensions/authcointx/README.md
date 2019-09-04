@@ -6,7 +6,11 @@ The condition that defines who is authorized to do so can also only changed by t
 condition authorized to do this and the address authorization.
 
 > :warning: This extension also overwrites the standard Rivine `0x01` transaction controller,
-> and disabled `0x00` transactions by settings its transaction controller to `nil`.
+> and disabled `0x00` transactions by allowing it to be decoded but not validated.
+
+> :warning: This extensions adds a rule that is applied to all transaction versions.
+> Using this extensions means that coin inputs and coin outputs can only be sent if:
+> all parties are authorized, or if only one address is involved with just a single refund coin output.
 
 An initial condition is passed to the extensions which will be used as the authorized condition until it is changed.
 
