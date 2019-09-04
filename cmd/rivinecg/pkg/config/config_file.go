@@ -92,7 +92,7 @@ type (
 	}
 
 	Genesis struct {
-		CoinOutputs           []Output   `json:"coinOuput" yaml:"coinOutput" validate:"required"`
+		CoinOutputs           []Output   `json:"coinOuputs" yaml:"coinOutputs" validate:"required"`
 		BlockStakeOutputs     []Output   `json:"blockStakeOutputs" yaml:"blockStakeOutputs" validate:"required"`
 		Minting               *Condition `json:"minting,omitempty" yaml:"minting,omitempty"`
 		Authcoin              *Condition `json:"authcoin,omitempty" yaml:"authcoin,omitempty"`
@@ -144,7 +144,7 @@ type (
 	}
 
 	BootstrapPeer struct {
-		Address modules.NetAddress `json:"bootstrapPeer" yaml:"bootstrapPeer"`
+		modules.NetAddress
 	}
 
 	// Fraction represents ratio.
@@ -347,6 +347,17 @@ func (c *Condition) UnmarshalYAML(unmarshal func(v interface{}) error) error {
 	return err
 }
 
+// MarshalText will marshall JSON/YAML BootstrapPeer type
+func (bp BootstrapPeer) MarshalText() ([]byte, error) {
+	return []byte(string(bp.NetAddress)), nil
+}
+
+// UnmarshalText will unMarshall JSON/YAML BootstrapPeer type
+func (bp *BootstrapPeer) UnmarshalText(text []byte) error {
+	bp.NetAddress = modules.NetAddress(text)
+	return nil
+}
+
 // GenerateBlockchain imports a config file and uses it to generate a blockchain
 func GenerateBlockchain(configFilePath, outputDir string) error {
 	typ := path.Ext(configFilePath)
@@ -454,10 +465,10 @@ func validateConfig(conf *Config) error {
 	for _, network := range conf.Blockchain.Network {
 		for _, peer := range network.BootstrapPeers {
 			// allow loopback addresses in devnet network
-			if peer.Address.IsLoopback() && network.NetworkType == NetworkTypeDevnet {
-				return peer.Address.IsStdValid()
+			if peer.IsLoopback() && network.NetworkType == NetworkTypeDevnet {
+				return peer.IsStdValid()
 			}
-			err := peer.Address.IsValid()
+			err := peer.IsValid()
 			if err != nil {
 				return err
 			}
