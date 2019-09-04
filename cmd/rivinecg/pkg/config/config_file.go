@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -388,7 +389,7 @@ func GenerateBlockchain(configFilePath, outputDir string) error {
 		return err
 	}
 
-	printSteps(outputDir, config.Blockchain.Name)
+	printSteps(outputDir, config.Blockchain.Binaries.Daemon)
 	return nil
 }
 
@@ -550,19 +551,20 @@ func validateConfig(conf *Config) error {
 // GenerateConfigFile generates a blockchain config file
 func GenerateConfigFile(filepath string) error {
 	typ := path.Ext(filepath)
-	file, err := os.Create(path.Join(filepath))
+	filepath = path.Clean(filepath)
+	file, err := os.Create(filepath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	return encodeConfig(typ, file)
+	return encodeConfig(typ, file, filepath)
 }
 
 // encodeConfig generates a default config, encodes it according
 // to the given type, and writes it to the provided writer
-func encodeConfig(typ string, w io.Writer) error {
-	config := BuildConfigStruct()
+func encodeConfig(typ string, w io.Writer, filePath string) error {
+	config := BuildConfigStruct(filePath)
 	var enc interface {
 		Encode(interface{}) error
 	}
@@ -599,7 +601,7 @@ func decodeConfig(typ string, r io.Reader) (*Config, error) {
 }
 
 // BuildConfigStruct builds to default values in our config struct
-func BuildConfigStruct() *Config {
+func BuildConfigStruct(filePath string) *Config {
 	uhs := func(str string) (uh types.UnlockHash) {
 		err := uh.LoadString(str)
 		if err != nil {
@@ -706,6 +708,20 @@ func BuildConfigStruct() *Config {
 		assignDefaultNetworkProps(cfg)
 	}
 
+	// try to guess repository if the config is
+	// generated in a standard gopath repo location
+	gopath, ok := os.LookupEnv("GOPATH")
+	projectname := "bctempl"
+	repository := "github.com/somebody/bctempl"
+	if ok {
+		absGoPath := path.Join(os.ExpandEnv(gopath), "src")
+		absFilePath, err := filepath.Abs(filePath)
+		if err == nil && strings.HasPrefix(absFilePath, absGoPath) {
+			repository = filepath.Dir(strings.TrimLeft(strings.TrimPrefix(absFilePath, absGoPath), `\/`))
+			projectname = filepath.Base(repository)
+		}
+	}
+
 	return &Config{
 		Template{
 			Repository: &Repository{
@@ -715,8 +731,8 @@ func BuildConfigStruct() *Config {
 			Version: "master",
 		},
 		&Blockchain{
-			Name:       "bctempl",
-			Repository: "github.com/somebody/bctempl",
+			Name:       projectname,
+			Repository: repository,
 			Currency: &Currency{
 				Unit:      "ROC",
 				Precision: 9,
@@ -726,8 +742,8 @@ func BuildConfigStruct() *Config {
 				RPC: 23112,
 			},
 			Binaries: &Binaries{
-				Client: "bctemplc",
-				Daemon: "bctempld",
+				Client: fmt.Sprintf("%sc", projectname),
+				Daemon: fmt.Sprintf("%sd", projectname),
 			},
 			Transactions: &Transactions{
 				Default: &Version{
@@ -751,7 +767,7 @@ func BuildConfigStruct() *Config {
 	}
 }
 
-func printSteps(destinationDir, blockchainName string) {
+func printSteps(destinationDir, daemonName string) {
 	fmt.Printf("Your blockchain code is now available for usage. In order to publish it to GitHub follow these steps: \n\n")
 	fmt.Printf("1. Change directory into: %s \n", destinationDir)
 	fmt.Println("2. Create a repository on github.com")
@@ -760,5 +776,5 @@ func printSteps(destinationDir, blockchainName string) {
 	fmt.Println("5. Push your tags: git push --tags")
 	fmt.Println("6. Fetch dependencies for your repository: dep init (in root of project)")
 	fmt.Println("7. Create the binaries: make install-std")
-	fmt.Printf("8. Launch your blockchain localy: %s \n", blockchainName)
+	fmt.Printf("8. Launch your blockchain localy: %s \n", daemonName)
 }
