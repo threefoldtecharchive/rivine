@@ -110,8 +110,16 @@ func generateAddressesFromMnemonic(mnemonic string, n uint64) ([]types.UnlockHas
 		if err != nil {
 			return nil, err
 		}
-		_, pkey := crypto.GenerateKeyPairDeterministic(crypto.HashAll(seed, index))
-		unlockhashes = append(unlockhashes, types.NewPubKeyUnlockHash(types.Ed25519PublicKey(pkey)))
+		h, err := crypto.HashAll(seed, index)
+		if err != nil {
+			return nil, err
+		}
+		_, pkey := crypto.GenerateKeyPairDeterministic(h)
+		uh, err := types.NewPubKeyUnlockHash(types.Ed25519PublicKey(pkey))
+		if err != nil {
+			return nil, err
+		}
+		unlockhashes = append(unlockhashes, uh)
 	}
 	return unlockhashes, nil
 }
