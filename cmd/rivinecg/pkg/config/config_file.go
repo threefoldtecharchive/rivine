@@ -100,12 +100,8 @@ type (
 	}
 
 	Output struct {
-		Value     CurrencyValue `json:"value" yaml:"value" validate:"required"`
-		Condition Condition     `json:"condition" yaml:"condition" validate:"required"`
-	}
-
-	CurrencyValue struct {
-		types.Currency
+		Value     string    `json:"value" yaml:"value" validate:"required"`
+		Condition Condition `json:"condition" yaml:"condition" validate:"required"`
 	}
 
 	Condition struct {
@@ -194,17 +190,6 @@ func (f *Fraction) UnmarshalText(text []byte) error {
 	f.Numerator = numerator
 	f.Denominator = denominator
 	return nil
-}
-
-// MarshalText will marshall JSON/YAML CurrencyValue type
-func (c CurrencyValue) MarshalText() ([]byte, error) {
-	return []byte(c.String()), nil
-}
-
-// UnmarshalText will unMarshall JSON/YAML CurrencyValue type
-func (c *CurrencyValue) UnmarshalText(text []byte) error {
-	str := string(text)
-	return c.LoadString(str)
 }
 
 // MarshalText will marshall JSON/YAML UnlockHash type
@@ -557,15 +542,11 @@ func BuildConfigStruct() *Config {
 		Genesis: &Genesis{
 			CoinOutputs: []Output{
 				{
-					Value: CurrencyValue{
-						types.NewCurrency64(5e6 * 1e9),
-					},
+					Value:     "500000",
 					Condition: uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
 				},
 				{
-					Value: CurrencyValue{
-						types.NewCurrency64(5e6 * 1e9),
-					},
+					Value: "500000",
 					Condition: NewMultisigCondition(
 						2,
 						uhs("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
@@ -575,9 +556,7 @@ func BuildConfigStruct() *Config {
 			},
 			BlockStakeOutputs: []Output{
 				{
-					Value: CurrencyValue{
-						types.NewCurrency64(3000),
-					},
+					Value:     "3000",
 					Condition: uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
 				},
 			},
@@ -599,17 +578,13 @@ func BuildConfigStruct() *Config {
 		Genesis: &Genesis{
 			CoinOutputs: []Output{
 				{
-					Value: CurrencyValue{
-						types.NewCurrency64(5e6 * 1e9),
-					},
+					Value:     "500000",
 					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
 				},
 			},
 			BlockStakeOutputs: []Output{
 				{
-					Value: CurrencyValue{
-						types.NewCurrency64(3000),
-					},
+					Value:     "3000",
 					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
 				},
 			},
@@ -631,17 +606,13 @@ func BuildConfigStruct() *Config {
 		Genesis: &Genesis{
 			CoinOutputs: []Output{
 				{
-					Value: CurrencyValue{
-						types.NewCurrency64(5e6 * 1e9),
-					},
+					Value:     "500000",
 					Condition: uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"),
 				},
 			},
 			BlockStakeOutputs: []Output{
 				{
-					Value: CurrencyValue{
-						types.NewCurrency64(3000),
-					},
+					Value:     "3000",
 					Condition: uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"),
 				},
 			},

@@ -72,8 +72,9 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 
 func writeTemplateValues(destinationDirPath string, config *Config) error {
 	fmap := template.FuncMap{
-		"formatConditionAsUnlockhashString": formatConditionAsUnlockhashString,
-		"formatConditionAsGoString":         formatConditionAsGoString,
+		"formatConditionAsUnlockhashString":            formatConditionAsUnlockhashString,
+		"formatConditionAsGoString":                    formatConditionAsGoString,
+		"formatValueStringAsOneCoinCurrencyMultiplier": formatValueStringAsOneCoinCurrencyMultiplier,
 	}
 	for n, f := range sprig.FuncMap() {
 		fmap[n] = f
@@ -163,6 +164,34 @@ func formatConditionAsGoString(c Condition) (string, error) {
 			strings.Join(unlockhashes, ", "), msc.MinimumSignatureCount), nil
 	}
 	return "", fmt.Errorf("cannot marshal unsupported condition of type %d", ct)
+}
+
+func formatValueStringAsOneCoinCurrencyMultiplier(v string) (string, error) {
+	parts := strings.Split(v, ".")
+	if len(parts) == 1 {
+		// assume it is a natural number
+		return fmt.Sprintf(".Mul64(%s)", parts[0]), nil
+	}
+	if len(parts) != 2 {
+		return "", fmt.Errorf("invalid one coin currency value %s", v)
+	}
+	parts[1] = strings.TrimRight(parts[1], "0")
+	if parts[1] == "" {
+		// assume it is a natural number
+		return fmt.Sprintf(".Mul64(%s)", parts[0]), nil
+	}
+	// assume it is a real number
+	parts[0] = strings.TrimLeft(parts[0], "0")
+	if parts[0] == "" {
+		if parts[1] == "1" {
+			// real number that functions as a divisor only
+			return fmt.Sprintf(".Div64(1%s)", strings.Repeat("0", len(parts[1]))), nil
+		}
+		// real number with decimals only
+		return fmt.Sprintf(".Mul64(%s).Div64(1%s)", parts[1], strings.Repeat("0", len(parts[1]))), nil
+	}
+	// complete real number
+	return fmt.Sprintf(".Mul64(%s%s).Div64(1%s)", parts[0], parts[1], strings.Repeat("0", len(parts[1]))), nil
 }
 
 func readTemplateFileAsString(filepath string) (string, error) {
