@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/go-playground/validator.v9"
-	"gopkg.in/yaml.v2"
+	validator "gopkg.in/go-playground/validator.v9"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
@@ -390,7 +390,7 @@ func GenerateBlockchain(configFilePath, outputDir string) error {
 func assignDefaultValues(conf *Config) (*Config, error) {
 	// Fill in default values for provided network properties
 	for _, network := range conf.Blockchain.Network {
-		network = assignDefaultNetworkProps(network)
+		assignDefaultNetworkProps(network)
 	}
 
 	// Fill in default values for optional values in provided config
@@ -573,7 +573,7 @@ func BuildConfigStruct() *Config {
 			Minting:               &mintCondition,
 			GenesisBlockTimestamp: 1524168391,
 		},
-		TransactionFeePool:     "01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51",
+		TransactionFeePool: "01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51",
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"bootstrap1.testnet.example.com:23112"},
 			&BootstrapPeer{"bootstrap2.testnet.example.com:23112"},
@@ -605,7 +605,7 @@ func BuildConfigStruct() *Config {
 			Minting:               &mintCondition,
 			GenesisBlockTimestamp: 1524168391,
 		},
-		TransactionFeePool:     "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
+		TransactionFeePool: "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"bootstrap1.example.com:23112"},
 			&BootstrapPeer{"bootstrap2.example.com:23112"},
@@ -637,7 +637,7 @@ func BuildConfigStruct() *Config {
 			Minting:               &mintCondition,
 			GenesisBlockTimestamp: 1524168391,
 		},
-		TransactionFeePool:     "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f",
+		TransactionFeePool: "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f",
 		BootstrapPeers: []*BootstrapPeer{
 			&BootstrapPeer{"localhost:23112"},
 		},

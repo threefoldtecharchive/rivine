@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	MaxPoolSize             uint =  2e7
-	TransactionSetSizeLimit uint =  250e3
-	TransactionSizeLimit    uint =  16e3
-	ActualPoolSize          = uint64(MaxPoolSize - TransactionSetSizeLimit)
+	MaxPoolSize             uint = 2e7
+	TransactionSetSizeLimit uint = 250e3
+	TransactionSizeLimit    uint = 16e3
+	ActualPoolSize               = uint64(MaxPoolSize - TransactionSetSizeLimit)
 )
 
 var (
@@ -80,7 +80,7 @@ var (
 	}
 )
 
-func assignDefaultNetworkProps(networkConfig *Network) *Network {
+func assignDefaultNetworkProps(networkConfig *Network) {
 	networkCfgValue := reflect.ValueOf(&networkConfig).Elem()
 	var rootMap = map[string]interface{}{}
 	switch networkConfig.NetworkType {
@@ -105,7 +105,6 @@ func assignDefaultNetworkProps(networkConfig *Network) *Network {
 			pValue.Set(reflect.ValueOf(propValue))
 		}
 	}
-	return networkCfgValue.Interface().(*Network)
 }
 
 func isZero(v reflect.Value) bool {

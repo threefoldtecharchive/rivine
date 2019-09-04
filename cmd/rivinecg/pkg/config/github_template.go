@@ -3,6 +3,7 @@ package config
 import (
 	"archive/tar"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,8 +15,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/otiai10/copy"
 	"github.com/Masterminds/sprig"
+	"github.com/otiai10/copy"
+
+	"github.com/threefoldtech/rivine/types"
 )
 
 const rootGithubAPIurl = "https://api.github.com"
@@ -69,7 +72,8 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 
 func writeTemplateValues(destinationDirPath string, config *Config) error {
 	fmap := template.FuncMap{
-		"formatConditionAsString": formatConditionAsString,
+		"formatConditionAsUnlockhashString": formatConditionAsUnlockhashString,
+		"formatConditionAsGoString":         formatConditionAsGoString,
 	}
 	for n, f := range sprig.FuncMap() {
 		fmap[n] = f
@@ -121,8 +125,44 @@ func renameClientAndDaemonFolders(destinationDirPath string, config *Config) err
 	return nil
 }
 
-func formatConditionAsString(c Condition) (string, error) {
-	return fmt.Sprintf("%s", string(c.UnlockHash().String())), nil
+func formatConditionAsUnlockhashString(c Condition) (string, error) {
+	ct := c.ConditionType()
+	if ct == types.ConditionTypeTimeLock {
+		c = Condition{types.NewCondition(c.Condition.(*types.TimeLockCondition))}
+		ct = c.ConditionType()
+	}
+	if ct == types.ConditionTypeUnlockHash {
+		return fmt.Sprintf("%s", string(c.UnlockHash().String())), nil
+	}
+	return "", fmt.Errorf("cannot marshal unsupported condition of type %d", ct)
+}
+
+func formatConditionAsGoString(c Condition) (string, error) {
+	ct := c.ConditionType()
+	if ct == types.ConditionTypeUnlockHash {
+		return fmt.Sprintf(
+			`types.NewCondition(types.NewUnlockHashCondition(unlockHashFromHex("%s")))`,
+			c.UnlockHash().String()), nil
+	}
+	if ct == types.ConditionTypeMultiSignature {
+		msc := c.Condition.(*types.MultiSignatureCondition)
+		// validate
+		if len(msc.UnlockHashes) == 0 {
+			return "", errors.New("MultiSig outputs must specify at least a single address which can sign it as an input")
+		}
+		if msc.MinimumSignatureCount == 0 {
+			return "", errors.New("MultiSig outputs must specify amount of signatures required")
+		}
+		// return it as a golang string
+		unlockhashes := make([]string, 0, len(msc.UnlockHashes))
+		for _, uh := range msc.UnlockHashes {
+			unlockhashes = append(unlockhashes, fmt.Sprintf(`unlockHashFromHex("%s")`, uh.String()))
+		}
+		return fmt.Sprintf(
+			`types.NewCondition(types.NewMultiSignatureCondition(types.UnlockHashSlice{%s}, %d))`,
+			strings.Join(unlockhashes, ", "), msc.MinimumSignatureCount), nil
+	}
+	return "", fmt.Errorf("cannot marshal unsupported condition of type %d", ct)
 }
 
 func readTemplateFileAsString(filepath string) (string, error) {

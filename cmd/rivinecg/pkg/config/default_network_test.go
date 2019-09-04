@@ -13,7 +13,7 @@ func TestValidateConfigWithAssigningDefaultNetworkValues(t *testing.T) {
 	network.MaxAdjustmentDown = Fraction{Denominator: 0, Numerator: 0}
 	network.TransactionPool.PoolSizeLimit = 0
 
-	network = assignDefaultNetworkProps(network)
+	assignDefaultNetworkProps(network)
 	if network.ArbitraryDataSizeLimit != 83 {
 		t.Errorf("Something went wrong with setting default value for ArbitraryDataSizeLimit")
 	}
