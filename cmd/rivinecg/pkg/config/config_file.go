@@ -83,8 +83,8 @@ type (
 	}
 
 	Authcoin struct {
-		TransactionVersionAuthAddressUpdateTx   Version `json:"transactionVersionAuthAddressUpdateTx" yaml:"transactionVersionAuthAddressUpdateTx" validate:"required"`
-		TransactionVersionAuthConditionUpdateTx Version `json:"transactionVersionAuthConditionUpdateTx" yaml:"transactionVersionAuthConditionUpdateTx" validate:"required"`
+		TransactionVersionAuthAddressUpdate   Version `json:"transactionVersionAuthAddressUpdate" yaml:"transactionVersionAuthAddressUpdate" validate:"required"`
+		TransactionVersionAuthConditionUpdate Version `json:"transactionVersionAuthConditionUpdate" yaml:"transactionVersionAuthConditionUpdate" validate:"required"`
 	}
 
 	Version struct {

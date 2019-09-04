@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -105,7 +104,7 @@ func writeTemplateValues(destinationDirPath string, config *Config) error {
 			return nil
 		})
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 	return nil
 }
