@@ -114,9 +114,21 @@ func renameClientAndDaemonFolders(destinationDirPath string, config *Config) err
 	newClientFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Client)
 	daemonFolderPath := path.Join(destinationDirPath, "cmd", "UNDEFINED_DAEMON_NAME")
 	newDaemonFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Daemon)
+	if _, err := os.Stat(newClientFolderPath); !os.IsNotExist(err) {
+		err = os.RemoveAll(newClientFolderPath)
+		if err != nil {
+			return fmt.Errorf("failed to delete existing client dir: %v", err)
+		}
+	}
 	err := os.Rename(oldClientFolderPath, newClientFolderPath)
 	if err != nil {
 		return err
+	}
+	if _, err := os.Stat(newDaemonFolderPath); !os.IsNotExist(err) {
+		err = os.RemoveAll(newDaemonFolderPath)
+		if err != nil {
+			return fmt.Errorf("failed to delete existing daemon dir: %v", err)
+		}
 	}
 	err = os.Rename(daemonFolderPath, newDaemonFolderPath)
 	if err != nil {
