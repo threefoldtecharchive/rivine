@@ -51,8 +51,8 @@ type (
 	}
 
 	Caddy struct {
-		DNS string `json:"dns,omitempty" yaml:"dns,omitempty"`
-		TLS string `json:"tls,omitempty" yaml:"tls,omitempty"`
+		DNS string `json:"dns" yaml:"dns" validate:"required"`
+		TLS string `json:"tls" yaml:"tls" validate:"required"`
 	}
 
 	Blockchain struct {
