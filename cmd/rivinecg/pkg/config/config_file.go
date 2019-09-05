@@ -32,6 +32,7 @@ const (
 type (
 	Config struct {
 		Template   Template    `json:"template,omitempty" yaml:"template,omitempty"`
+		Frontend   *Frontend   `json:"frontend,omitempty" yaml:"frontend,omitempty"`
 		Blockchain *Blockchain `json:"blockchain" yaml:"blockchain" validate:"required"`
 	}
 
@@ -43,6 +44,15 @@ type (
 	Repository struct {
 		Owner string `json:"owner,omitempty" yaml:"owner,omitempty"`
 		Repo  string `json:"repo,omitempty" yaml:"repo,omitempty"`
+	}
+
+	Frontend struct {
+		Caddy *Caddy `json:"caddy,omitempty" yaml:"caddy,omitempty"`
+	}
+
+	Caddy struct {
+		DNS string `json:"dns,omitempty" yaml:"dns,omitempty"`
+		TLS string `json:"tls,omitempty" yaml:"tls,omitempty"`
 	}
 
 	Blockchain struct {
@@ -729,6 +739,12 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 				Repo:  "rivine-chain-template",
 			},
 			Version: "master",
+		},
+		&Frontend{
+			&Caddy{
+				DNS: "explorer.example.com",
+				TLS: "support@example.com",
+			},
 		},
 		&Blockchain{
 			Name:       projectname,
