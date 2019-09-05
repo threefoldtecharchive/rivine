@@ -27,17 +27,17 @@ var (
 		"TargetWindow":           uint64(1e3),
 		"MaxAdjustmentUp":        Fraction{Numerator: 25, Denominator: 10},
 		"MaxAdjustmentDown":      Fraction{Numerator: 10, Denominator: 25},
-		"FutureThreshold":        uint64(time.Hour),
-		"ExtremeFutureThreshold": uint64(time.Hour * 2),
-		"StakeModifierDelay":     uint64(time.Second * 2000),
-		"BlockStakeAging":        uint64(time.Hour * 24),
+		"FutureThreshold":        uint64(time.Hour.Seconds()),
+		"ExtremeFutureThreshold": uint64((time.Hour * 2).Seconds()),
+		"StakeModifierDelay":     uint64((time.Second * 2000).Seconds()),
+		"BlockStakeAging":        uint64((time.Hour * 24).Seconds()),
 	}
 
 	// networkRootPropsTestnet are sane defaults for testnet network configuration
 	networkRootPropsTestnet = map[string]interface{}{
 		"BlockSizeLimit":         uint64(2e6),
 		"ArbitraryDataSizeLimit": uint64(83),
-		"BlockCreatorFee":        "0.0",
+		"BlockCreatorFee":        "1.0",
 		"MinimumTransactionFee":  "0.1",
 		"BlockFrequency":         uint64(120),
 		"MaturityDelay":          uint64(720),
@@ -45,17 +45,17 @@ var (
 		"TargetWindow":           uint64(1e3),
 		"MaxAdjustmentUp":        Fraction{Numerator: 25, Denominator: 10},
 		"MaxAdjustmentDown":      Fraction{Numerator: 10, Denominator: 25},
-		"FutureThreshold":        uint64(time.Second * 3),
-		"ExtremeFutureThreshold": uint64(time.Second * 6),
-		"StakeModifierDelay":     uint64(time.Second * 20),
-		"BlockStakeAging":        uint64(time.Second * 1024),
+		"FutureThreshold":        uint64((time.Second * 3).Seconds()),
+		"ExtremeFutureThreshold": uint64((time.Second * 600).Seconds()),
+		"StakeModifierDelay":     uint64((time.Second * 2000).Seconds()),
+		"BlockStakeAging":        uint64((time.Second * 64).Seconds()),
 	}
 
 	// networkRootPropsDevnet are sane defaults for devnet network configuration
 	networkRootPropsDevnet = map[string]interface{}{
 		"BlockSizeLimit":         uint64(2e6),
 		"ArbitraryDataSizeLimit": uint64(83),
-		"BlockCreatorFee":        "0.0",
+		"BlockCreatorFee":        "1.0",
 		"MinimumTransactionFee":  "0.1",
 		"BlockFrequency":         uint64(12),
 		"MaturityDelay":          uint64(10),
@@ -63,10 +63,10 @@ var (
 		"TargetWindow":           uint64(20),
 		"MaxAdjustmentUp":        Fraction{Numerator: 120, Denominator: 100},
 		"MaxAdjustmentDown":      Fraction{Numerator: 100, Denominator: 120},
-		"FutureThreshold":        uint64(time.Minute * 2),
-		"ExtremeFutureThreshold": uint64(time.Minute * 3),
-		"StakeModifierDelay":     uint64(time.Second * 2000),
-		"BlockStakeAging":        uint64(time.Second * 1024),
+		"FutureThreshold":        uint64((time.Minute * 2).Seconds()),
+		"ExtremeFutureThreshold": uint64((time.Minute * 4).Seconds()),
+		"StakeModifierDelay":     uint64((time.Second * 2000).Seconds()),
+		"BlockStakeAging":        uint64((time.Second * 1024).Seconds()),
 		"BootstrapPeers": []modules.NetAddress{
 			"localhost:23112",
 		},
