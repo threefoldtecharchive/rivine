@@ -181,7 +181,7 @@ func init() {
 // MarshalText will marshall JSON/YAML fraction type
 func (f Fraction) MarshalText() ([]byte, error) {
 	buffer := bytes.NewBuffer(nil)
-	buffer.WriteString(fmt.Sprintf("%d/%d", f.Denominator, f.Numerator))
+	buffer.WriteString(fmt.Sprintf("%d/%d", f.Numerator, f.Denominator))
 	return buffer.Bytes(), nil
 }
 
@@ -190,11 +190,11 @@ func (f *Fraction) UnmarshalText(text []byte) error {
 	fractions := strings.Split(string(text), "/")
 	var err error
 	var denominator, numerator int64
-	denominator, err = strconv.ParseInt(strings.Trim(fractions[0], "\""), 10, 64)
+	numerator, err = strconv.ParseInt(strings.Trim(fractions[1], "\""), 10, 64)
 	if err != nil {
 		return err
 	}
-	numerator, err = strconv.ParseInt(strings.Trim(fractions[1], "\""), 10, 64)
+	denominator, err = strconv.ParseInt(strings.Trim(fractions[0], "\""), 10, 64)
 	if err != nil {
 		return err
 	}
