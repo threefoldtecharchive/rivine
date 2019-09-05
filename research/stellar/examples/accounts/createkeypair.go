@@ -36,7 +36,9 @@ func main() {
 func generateKeyPair(accountname string) (pair *keypair.Full, err error) {
 
 	pair, err = keypair.Random()
-	return
+	if err != nil {
+		return
+	}
 
 	log.Println("Seed:", pair.Seed())
 	log.Println("Address:", pair.Address())

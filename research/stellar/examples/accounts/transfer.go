@@ -4,64 +4,71 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strings"
 
-	"github.com/pelletier/go-toml"
-	"github.com/stellar/go/build"
+	"github.com/stellar/go/network"
+	"github.com/stellar/go/txnbuild"
+
 	"github.com/stellar/go/clients/horizon"
-	"github.com/stellar/go/keypair"
+	"github.com/stellar/go/clients/horizonclient"
+	"github.com/threefoldtech/rivine/research/stellar/examples/config"
 )
 
 func main() {
 	var accountname string
-	flag.StringVar(&accountname, "name", "default", "The name of the account to create")
+	flag.StringVar(&accountname, "from", "default", "The name of the account to make the payment from")
 	var destination string
+	var assetString string
 	flag.StringVar(&destination, "destination", "", "Destination address")
-
+	flag.StringVar(&assetString, "asset", "", "The asset to transfer in case of non native XLM, format: `code:issuer`")
+	var amount string
+	flag.StringVar(&amount, "amount", "10", "The amount of topkens to transfer")
 	flag.Parse()
-	config, err := toml.LoadFile("config.toml")
 
+	pair, err := config.GetKeyPairFromConfig(accountname)
 	if err != nil {
 		log.Fatal(err)
 	}
-	seed := config.Get(accountname + ".seed")
-	if seed == nil {
-		log.Fatal("No such account")
-	}
-	if seed == nil {
-		log.Fatal("No such account")
-	}
-	newPK, err := keypair.Parse(seed.(string))
-	pair, _ := newPK.(*keypair.Full)
-
 	log.Println("From Address", pair.Address())
-
-	tx, err := build.Transaction(
-		build.TestNetwork,
-		build.SourceAccount{pair.Seed()},
-		build.AutoSequence{horizon.DefaultTestNetClient},
-		build.Payment(
-			build.Destination{destination},
-			build.NativeAmount{"10"},
-		),
-	)
-
+	sourceAccount, err := getAccountDetails(pair.Address())
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	// Sign the transaction to prove you are actually the person sending it.
-	txe, err := tx.Sign(pair.Seed())
-	if err != nil {
-		panic(err)
+	var asset txnbuild.Asset
+	if assetString == "" {
+		asset = txnbuild.NativeAsset{}
+	} else {
+		assetparts := strings.SplitN(assetString, ":", 2)
+		if len(assetparts) != 2 {
+			log.Fatalln("Invalid asset format")
+		}
+		asset = txnbuild.CreditAsset{
+			Code:   assetparts[0],
+			Issuer: assetparts[1],
+		}
 	}
 
-	txeB64, err := txe.Base64()
+	payment := txnbuild.Payment{
+		Destination: destination,
+		Amount:      amount,
+		Asset:       asset,
+	}
+
+	tx := txnbuild.Transaction{
+		SourceAccount: &sourceAccount,
+		Operations:    []txnbuild.Operation{&payment},
+		Timebounds:    txnbuild.NewInfiniteTimeout(), // Use a real timeout in production!
+		Network:       network.TestNetworkPassphrase,
+	}
+
+	txe, err := tx.BuildSignEncode(pair)
 	if err != nil {
 		panic(err)
 	}
 
 	// And finally, send it off to Stellar!
-	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64)
+	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txe)
 	if err != nil {
 		he := err.(*horizon.Error)
 		log.Println(he.Problem.Detail)
@@ -77,4 +84,11 @@ func main() {
 	fmt.Println("Successful Transaction:")
 	fmt.Println("Ledger:", resp.Ledger)
 	fmt.Println("Hash:", resp.Hash)
+}
+
+func getAccountDetails(address string) (account horizon.Account, err error) {
+	client := horizonclient.DefaultTestNetClient
+	ar := horizonclient.AccountRequest{AccountID: address}
+	account, err = client.AccountDetail(ar)
+	return
 }

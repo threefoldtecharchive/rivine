@@ -13,7 +13,7 @@ import (
 
 func main() {
 	var accountname string
-	flag.StringVar(&accountname, "name", "", " The name of the account to create")
+	flag.StringVar(&accountname, "name", "", " The name of the account to check, if not given, checks the blances of all accounts")
 	flag.Parse()
 	config, err := toml.LoadFile("config.toml")
 

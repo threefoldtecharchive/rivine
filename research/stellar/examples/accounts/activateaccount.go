@@ -8,12 +8,11 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/pelletier/go-toml"
 	"github.com/stellar/go/clients/horizonclient"
-	"github.com/stellar/go/keypair"
 	"github.com/stellar/go/network"
 	"github.com/stellar/go/protocols/horizon"
 	"github.com/stellar/go/txnbuild"
+	"github.com/threefoldtech/rivine/research/stellar/examples/config"
 )
 
 func main() {
@@ -29,7 +28,7 @@ func main() {
 		log.Fatalln("Name is a required parameter")
 	}
 
-	pair, err := getKeyPairFromConfig(accountname)
+	pair, err := config.GetKeyPairFromConfig(accountname)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,7 +43,7 @@ func main() {
 		return
 	}
 	// Load the account to fund from
-	sourcePair, err := getKeyPairFromConfig(sourceAccountName)
+	sourcePair, err := config.GetKeyPairFromConfig(sourceAccountName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,7 +57,7 @@ func main() {
 	//Create the `createaccount` transaction
 	op := txnbuild.CreateAccount{
 		Destination: pair.Address(),
-		Amount:      "10",
+		Amount:      "100",
 	}
 
 	tx := txnbuild.Transaction{
@@ -84,22 +83,6 @@ func getAccountDetails(address string) (account horizon.Account, err error) {
 	client := horizonclient.DefaultTestNetClient
 	ar := horizonclient.AccountRequest{AccountID: address}
 	account, err = client.AccountDetail(ar)
-	return
-}
-
-func getKeyPairFromConfig(accountname string) (pair *keypair.Full, err error) {
-	config, err := toml.LoadFile("config.toml")
-
-	if err != nil {
-		return
-	}
-	seed := config.Get(accountname + ".seed")
-	if seed == nil {
-		err = fmt.Errorf("account %s not found", accountname)
-		return
-	}
-	newPK, err := keypair.Parse(seed.(string))
-	pair, _ = newPK.(*keypair.Full)
 	return
 }
 
