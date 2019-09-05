@@ -64,6 +64,9 @@ func init() {
 	// adds a address-amount flag to generate seed command
 	generateSeedCmd.Flags().Uint64VarP(&numberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
+	generateConfigCmd.Flags().BoolVar(&pluginMintingEnabled, "minting", true, "enable minting plugin")
+	generateConfigCmd.Flags().BoolVar(&pluginAuthcoinEnabled, "authcoin", true, "enable minting plugin")
+
 	for _, cmd := range []*cobra.Command{generateConfigCmd, generateBlockchainCmd} {
 		cmd.Flags().StringVarP(
 			&filePath, "config", "c", "blockchaincfg.yaml",
@@ -125,7 +128,10 @@ func generateAddressesFromMnemonic(mnemonic string, n uint64) ([]types.UnlockHas
 }
 
 func generateConfigFile(cmd *cobra.Command, args []string) error {
-	err := config.GenerateConfigFile(filePath)
+	err := config.GenerateConfigFile(filePath, &config.ConfigGenerationOpts{
+		PluginMintingEnabled:  pluginMintingEnabled,
+		PluginAuthcoinEnabled: pluginAuthcoinEnabled,
+	})
 	if err != nil {
 		return err
 	}

@@ -548,8 +548,13 @@ func validateConfig(conf *Config) error {
 	return err
 }
 
+type ConfigGenerationOpts struct {
+	PluginMintingEnabled  bool
+	PluginAuthcoinEnabled bool
+}
+
 // GenerateConfigFile generates a blockchain config file
-func GenerateConfigFile(filepath string) error {
+func GenerateConfigFile(filepath string, opts *ConfigGenerationOpts) error {
 	typ := path.Ext(filepath)
 	filepath = path.Clean(filepath)
 	file, err := os.Create(filepath)
@@ -558,13 +563,13 @@ func GenerateConfigFile(filepath string) error {
 	}
 	defer file.Close()
 
-	return encodeConfig(typ, file, filepath)
+	return encodeConfig(typ, file, filepath, opts)
 }
 
 // encodeConfig generates a default config, encodes it according
 // to the given type, and writes it to the provided writer
-func encodeConfig(typ string, w io.Writer, filePath string) error {
-	config := BuildConfigStruct(filePath)
+func encodeConfig(typ string, w io.Writer, filePath string, opts *ConfigGenerationOpts) error {
+	config := BuildConfigStruct(filePath, opts)
 	var enc interface {
 		Encode(interface{}) error
 	}
@@ -601,7 +606,7 @@ func decodeConfig(typ string, r io.Reader) (*Config, error) {
 }
 
 // BuildConfigStruct builds to default values in our config struct
-func BuildConfigStruct(filePath string) *Config {
+func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 	uhs := func(str string) (uh types.UnlockHash) {
 		err := uh.LoadString(str)
 		if err != nil {
@@ -612,8 +617,6 @@ func BuildConfigStruct(filePath string) *Config {
 	uhsc := func(str string) Condition {
 		return NewCondition(types.NewUnlockHashCondition(uhs(str)))
 	}
-
-	mintCondition := uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51")
 
 	networks := make(map[string]*Network)
 	networks["testnet"] = &Network{
@@ -639,7 +642,6 @@ func BuildConfigStruct(filePath string) *Config {
 					Condition: uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
 				},
 			},
-			Minting:               &mintCondition,
 			GenesisBlockTimestamp: 1524168391,
 		},
 		TransactionFeePool: "01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51",
@@ -667,7 +669,6 @@ func BuildConfigStruct(filePath string) *Config {
 					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
 				},
 			},
-			Minting:               &mintCondition,
 			GenesisBlockTimestamp: 1524168391,
 		},
 		TransactionFeePool: "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
@@ -695,7 +696,6 @@ func BuildConfigStruct(filePath string) *Config {
 					Condition: uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"),
 				},
 			},
-			Minting:               &mintCondition,
 			GenesisBlockTimestamp: 1524168391,
 		},
 		TransactionFeePool: "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f",
@@ -722,7 +722,7 @@ func BuildConfigStruct(filePath string) *Config {
 		}
 	}
 
-	return &Config{
+	cfg := &Config{
 		Template{
 			Repository: &Repository{
 				Owner: "threefoldtech",
@@ -749,22 +749,68 @@ func BuildConfigStruct(filePath string) *Config {
 				Default: &Version{
 					Version: 1,
 				},
-				Minting: &Minting{
-					ConditionUpdate: Version{
-						Version: 128,
-					},
-					CoinCreation: Version{
-						Version: 129,
-					},
-					CoinDestruction: &Version{
-						Version: 130,
-					},
-					RequireMinerFees: false,
-				},
 			},
 			Networks: networks,
 		},
 	}
+
+	if opts != nil {
+		// configure minting plugin if enabled
+		if opts.PluginMintingEnabled {
+			for _, network := range cfg.Blockchain.Networks {
+				switch network.NetworkType {
+				case NetworkTypeTestnet:
+					c := uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51")
+					network.Genesis.Minting = &c
+				case NetworkTypeDevnet:
+					c := uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f")
+					network.Genesis.Minting = &c
+				default: // standard
+					c := uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e")
+					network.Genesis.Minting = &c
+				}
+			}
+			cfg.Blockchain.Transactions.Minting = &Minting{
+				ConditionUpdate: Version{
+					Version: 128,
+				},
+				CoinCreation: Version{
+					Version: 129,
+				},
+				CoinDestruction: &Version{
+					Version: 130,
+				},
+				RequireMinerFees: false,
+			}
+		}
+
+		// configure authcoin plugin if enabled
+		if opts.PluginAuthcoinEnabled {
+			for _, network := range cfg.Blockchain.Networks {
+				switch network.NetworkType {
+				case NetworkTypeTestnet:
+					c := uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51")
+					network.Genesis.Authcoin = &c
+				case NetworkTypeDevnet:
+					c := uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f")
+					network.Genesis.Authcoin = &c
+				default: // standard
+					c := uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e")
+					network.Genesis.Authcoin = &c
+				}
+			}
+			cfg.Blockchain.Transactions.Authcoin = &Authcoin{
+				ConditionUpdate: Version{
+					Version: 176,
+				},
+				AddressUpdate: Version{
+					Version: 177,
+				},
+			}
+		}
+	}
+
+	return cfg
 }
 
 func printSteps(destinationDir, daemonName string) {

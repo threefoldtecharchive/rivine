@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidateValidConfigFile(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	err := validate.Struct(conf)
 	if err != nil {
 		t.Errorf("%s", err)
@@ -22,7 +22,7 @@ func TestValidateValidConfigFile(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithoutBlockchainProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain = nil
 	err := validate.Struct(conf)
 	// this check is only needed when your code could produce
@@ -39,7 +39,7 @@ func TestValidateInvalidConfigFileWithoutBlockchainProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithoutBlockchainNameProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Name = ""
 	err := validate.Struct(conf)
 	// this check is only needed when your code could produce
@@ -56,7 +56,7 @@ func TestValidateInvalidConfigFileWithoutBlockchainNameProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithoutBlockchainRepositoryProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Repository = ""
 	err := validate.Struct(conf)
 	// this check is only needed when your code could produce
@@ -73,7 +73,7 @@ func TestValidateInvalidConfigFileWithoutBlockchainRepositoryProperty(t *testing
 }
 
 func TestValidateInvalidConfigFileWithoutCurrencyProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Currency = nil
 	err := validate.Struct(conf)
 
@@ -91,7 +91,7 @@ func TestValidateInvalidConfigFileWithoutCurrencyProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithoutNetworkProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Networks = nil
 	err := validate.Struct(conf)
 
@@ -109,7 +109,7 @@ func TestValidateInvalidConfigFileWithoutNetworkProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithEmptyNetworkProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Networks = make(map[string]*Network)
 	err := validate.Struct(conf)
 
@@ -127,7 +127,7 @@ func TestValidateInvalidConfigFileWithEmptyNetworkProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithoutGenesisMintingProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Networks["testnet"].Genesis.Minting = nil
 	err := validate.Struct(conf)
 
@@ -145,7 +145,7 @@ func TestValidateInvalidConfigFileWithoutGenesisMintingProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithoutGenesisProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Networks["testnet"].Genesis = nil
 	err := validate.Struct(conf)
 
@@ -163,7 +163,7 @@ func TestValidateInvalidConfigFileWithoutGenesisProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithoutPortsProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Ports = nil
 	err := validate.Struct(conf)
 
@@ -181,7 +181,7 @@ func TestValidateInvalidConfigFileWithoutPortsProperty(t *testing.T) {
 }
 
 func TestValidateInvalidConfigFileWithSameAPIAndRPCProperty(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Ports.API = 1024
 	conf.Blockchain.Ports.RPC = 1024
 	err := validate.Struct(conf)
@@ -201,7 +201,7 @@ Key: 'Config.Blockchain.Ports.RPC' Error:Field validation for 'RPC' failed on th
 }
 
 func TestValidateValidConfigWithoutOptionalParameters(t *testing.T) {
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Binaries = nil
 	conf.Blockchain.Transactions.Default = nil
 	conf.Blockchain.Networks["testnet"].TransactionFeePool = ""
@@ -221,7 +221,7 @@ func TestValidateValidConfigWithoutOptionalParameters(t *testing.T) {
 
 func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsDefaults(t *testing.T) {
 	var err error
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Template.Version = ""
 	conf.Template.Repository = nil
 	conf.Blockchain.Binaries.Daemon = ""
@@ -252,7 +252,7 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 
 func TestValidateConfigWithLeavingOutTransactionsDefaultShouldFillItIn(t *testing.T) {
 	var err error
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Transactions.Default = nil
 
 	conf, err = assignDefaultValues(conf)
@@ -266,7 +266,7 @@ func TestValidateConfigWithLeavingOutTransactionsDefaultShouldFillItIn(t *testin
 
 func TestValidateConfigWithLeavingOutBinariesShouldFillItIn(t *testing.T) {
 	var err error
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Binaries = nil
 
 	conf, err = assignDefaultValues(conf)
@@ -283,7 +283,7 @@ func TestValidateConfigWithLeavingOutBinariesShouldFillItIn(t *testing.T) {
 
 func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *testing.T) {
 	var err error
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Networks["testnet"].BootstrapPeers = nil
 
 	err = validateConfig(conf)
@@ -295,7 +295,7 @@ func TestValidateConfigWithLeavingOutNetworkBootstrapPeersShouldThrowError(t *te
 
 func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testing.T) {
 	var err error
-	conf := BuildConfigStruct(".")
+	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Networks["testnet"].BootstrapPeers = []*BootstrapPeer{
 		&BootstrapPeer{"invalid"},
 	}

@@ -11,7 +11,7 @@ import (
 func TestGenerateConfigFileWithUnknownFileType(t *testing.T) {
 	typ := "test"
 	filepath := path.Join(os.TempDir(), "blockchaincfg."+typ)
-	err := GenerateConfigFile(filepath)
+	err := GenerateConfigFile(filepath, nil)
 	expectedError := "Filetype not supported"
 	if err != ErrUnsupportedFileType {
 		t.Errorf("Error actual: %s - and error expected: %s", err, expectedError)
@@ -24,7 +24,7 @@ func TestGenerateConfigFileWithUnknownFileType(t *testing.T) {
 func TestGenerateAndLoadConfigFile(t *testing.T) {
 	for _, typ := range []string{"yaml", "json"} {
 		filepath := path.Join(os.TempDir(), "blockchaincfg."+typ)
-		err := GenerateConfigFile(filepath)
+		err := GenerateConfigFile(filepath, nil)
 		if err != nil {
 			t.Errorf("Error occured: %s", err)
 		}
@@ -58,7 +58,7 @@ func TestGenerateAndLoadConfigFile(t *testing.T) {
 // func TestGenerateAndLoadConfigFileAndGetTemplateRepoAndGenerateBlockchainCode(t *testing.T) {
 // 	for _, typ := range []string{"yaml", "json"} {
 // 		filepath := path.Join(os.TempDir(), "blockchaincfg."+typ)
-// 		err := GenerateConfigFile(filepath)
+// 		err := GenerateConfigFile(filepath, nil)
 // 		if err != nil {
 // 			t.Errorf("Error occured: %s", err)
 // 		}
