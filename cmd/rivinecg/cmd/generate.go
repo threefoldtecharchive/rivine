@@ -65,7 +65,7 @@ func init() {
 	generateSeedCmd.Flags().Uint64VarP(&numberOfAddresses, "address-amount", "n", 1, "amount of generated addresses")
 
 	generateConfigCmd.Flags().BoolVar(&pluginMintingEnabled, "minting", true, "enable minting plugin")
-	generateConfigCmd.Flags().BoolVar(&pluginAuthcoinEnabled, "authcoin", true, "enable minting plugin")
+	generateConfigCmd.Flags().BoolVar(&pluginAuthcoinEnabled, "authcoin", false, "enable minting plugin")
 
 	for _, cmd := range []*cobra.Command{generateConfigCmd, generateBlockchainCmd} {
 		cmd.Flags().StringVarP(
