@@ -45,13 +45,41 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	// Directory where the contents of template repo is unpackged
 	dirPath := path.Join(destinationDirPath, config.Template.Repository.Owner) + "-" + config.Template.Repository.Repo + "-" + commitHash
 
-	err := copy.Copy(dirPath, destinationDirPath)
-	if err != nil {
-		return err
+	// if no files are ignored, copy all
+	if config.Generation == nil || len(config.Generation.Ignore) == 0 {
+		err := copy.Copy(dirPath, destinationDirPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		// walk over the files, and copy only those not ignored
+		err := filepath.Walk(dirPath, func(fPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err // return an error immediately
+			}
+
+			// ignore directories
+			if info.IsDir() {
+				return nil
+			}
+
+			// ignore files that are expected to be ignored
+			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
+			for _, p := range config.Generation.Ignore {
+				if p.Match(relFilePath) {
+					return nil
+				}
+			}
+			// copy the file if not to be ignored
+			return copy.Copy(fPath, path.Join(destinationDirPath, relFilePath))
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// Remove generated files in old path
-	err = os.RemoveAll(dirPath)
+	err := os.RemoveAll(dirPath)
 	if err != nil {
 		return err
 	}
@@ -84,24 +112,20 @@ func writeTemplateValues(destinationDirPath string, config *Config) error {
 			if err != nil {
 				return err
 			}
-			isTemplate := path.Ext(info.Name()) == ".template"
-			if isTemplate {
-				// First read the template file as string in order to write our generated code to a new file
-				templateText, err := readTemplateFileAsString(fPath)
-				if err != nil {
-					return err
-				}
-				err = writeTemplateToFile(templateText, fPath, info.Name(), config, fmap)
-				if err != nil {
-					return err
-				}
-				// Remove template file and keep generated one
-				err = os.Remove(fPath)
-				if err != nil {
-					return err
-				}
+			if path.Ext(info.Name()) != ".template" {
+				return nil
 			}
-			return nil
+			// First read the template file as string in order to write our generated code to a new file
+			templateText, err := readTemplateFileAsString(fPath)
+			if err != nil {
+				return err
+			}
+			err = writeTemplateToFile(templateText, fPath, info.Name(), config, fmap)
+			if err != nil {
+				return err
+			}
+			// Remove template file and keep generated one
+			return os.Remove(fPath)
 		})
 	if err != nil {
 		return err

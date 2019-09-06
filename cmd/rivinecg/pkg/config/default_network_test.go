@@ -17,7 +17,7 @@ func TestValidateConfigWithAssigningDefaultNetworkValues(t *testing.T) {
 	if network.ArbitraryDataSizeLimit != 83 {
 		t.Errorf("Something went wrong with setting default value for ArbitraryDataSizeLimit")
 	}
-	if network.BlockCreatorFee != "0.0" {
+	if network.BlockCreatorFee != "1.0" {
 		t.Errorf("Something went wrong with setting default value for BlockCreatorFee")
 	}
 	if network.BlockSizeLimit != 2e6 {

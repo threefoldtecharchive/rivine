@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gobwas/glob"
 	validator "gopkg.in/go-playground/validator.v9"
 	yaml "gopkg.in/yaml.v2"
 
@@ -34,6 +35,7 @@ type (
 	Config struct {
 		Template   Template    `json:"template,omitempty" yaml:"template,omitempty"`
 		Frontend   *Frontend   `json:"frontend,omitempty" yaml:"frontend,omitempty"`
+		Generation *Generation `json:"generation,omitempty" yaml:"generation,omitempty"`
 		Blockchain *Blockchain `json:"blockchain" yaml:"blockchain" validate:"required"`
 	}
 
@@ -56,8 +58,18 @@ type (
 		TLS string `json:"tls" yaml:"tls" validate:"required"`
 	}
 
+	Generation struct {
+		Ignore []GlobPattern `json:"ignore" yaml:"ignore" validate:"required"`
+	}
+
+	GlobPattern struct {
+		pattern glob.Glob
+		str     *string
+	}
+
 	Blockchain struct {
 		Name         string              `json:"name" yaml:"name" validate:"required"`
+		LongName     string              `json:"longName" yaml:"longName"`
 		Repository   string              `json:"repository" yaml:"repository" validate:"required"`
 		Currency     *Currency           `json:"currency" yaml:"currency" validate:"required"`
 		Ports        *Ports              `json:"ports" yaml:"ports" validate:"required"`
@@ -177,6 +189,28 @@ var (
 
 func init() {
 	validate = validator.New()
+}
+
+func (gp GlobPattern) MarshalText() ([]byte, error) {
+	if gp.str == nil {
+		return nil, nil
+	}
+	return []byte(*gp.str), nil
+}
+
+func (gp *GlobPattern) UnmarshalText(text []byte) error {
+	s := string(text)
+	gp.str = &s
+	var err error
+	gp.pattern, err = glob.Compile(s)
+	return err
+}
+
+func (gp GlobPattern) Match(str string) bool {
+	if gp.pattern == nil {
+		return false
+	}
+	return gp.pattern.Match(str)
 }
 
 // MarshalText will marshall JSON/YAML fraction type
@@ -736,20 +770,20 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 	}
 
 	cfg := &Config{
-		Template{
+		Template: Template{
 			Repository: &Repository{
 				Owner: "threefoldtech",
 				Repo:  "rivine-chain-template",
 			},
 			Version: "master",
 		},
-		&Frontend{
+		Frontend: &Frontend{
 			&Caddy{
 				DNS: "explorer.example.com",
 				TLS: "support@example.com",
 			},
 		},
-		&Blockchain{
+		Blockchain: &Blockchain{
 			Name:       projectname,
 			Repository: repository,
 			Currency: &Currency{
