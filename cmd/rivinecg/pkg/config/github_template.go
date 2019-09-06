@@ -65,8 +65,9 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 
 			// ignore files that are expected to be ignored
 			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
+			cleanRelFilePath := strings.TrimSuffix(relFilePath, ".template")
 			for _, p := range config.Generation.Ignore {
-				if p.Match(relFilePath) {
+				if p.Match(cleanRelFilePath) {
 					return nil
 				}
 			}
