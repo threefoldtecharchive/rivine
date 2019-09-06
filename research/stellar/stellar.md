@@ -49,9 +49,20 @@ compositions of transactions that are connected and executed using various const
 ## Custom assets
 It is easy to create custom assets on the Stellar network as the [issuetoken example](./issuetoken/readme.md) shows.
 
+### Token creation reasons
+Stellar transactions can contain a memotext up to 28 bytes of ASCII/UTF-8 which is not sufficient to hold a sha256 encoded hash.
+
+There is a Memohash field MemoHash which is a hash representing a reference to another transaction. 
+
+This can be used however to insert the hash of other documents, a concept known as [stellar attachments](https://www.stellar.org/developers/guides/attachment.html).
 ## Company accounts and multisig
 Stellar allows multiple signatures for custom asset issuer accounts or company accounts: https://www.stellar.org/developers/guides/concepts/multi-sig.html
 
+## Multiple addresses and anonimity
+Stellar is not meant for anonimity.
+You can have multiple registered accounts, each with their own balances, requiring XLM to perform transactions. 
+
+Payments from multiple addresses are not possible(as a workaround, one can merge the accounts first).
 
 ## Ico's, crowdfunding, ...
 As mentioned above, the stellar platform is suited for for crowdfunding or other basic financial operations or agreements
