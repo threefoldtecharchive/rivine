@@ -46,6 +46,9 @@ compositions of transactions that are connected and executed using various const
 
 **Atomic swaps** can be implemented since stellar supports multisig, [SHA256 hash](https://www.stellar.org/developers/guides/concepts/multi-sig.html#hashx) and timebounds.
 
+## Custom assets
+It is easy to create custom assets on the Stellar network as the [issuetoken example](./issuetoken/readme.md) shows
+
 ## Ico's, crowdfunding, ...
 As mentioned above, the stellar platform is suited for for crowdfunding or other basic financial operations or agreements
 
@@ -55,5 +58,7 @@ Possible options to issue credit:
 
 We would have to provide a small wallet if people do not already have one.
 
+## Signature schemes
+Stellar currently uses the ed25519 signature scheme which is the same as Rivine currently.
 
 
