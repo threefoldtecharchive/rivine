@@ -69,7 +69,7 @@ type (
 
 	Blockchain struct {
 		Name         string              `json:"name" yaml:"name" validate:"required"`
-		LongName     string              `json:"longName" yaml:"longName"`
+		LongName     string              `json:"longName,omitempty" yaml:"longName,omitempty"`
 		Repository   string              `json:"repository" yaml:"repository" validate:"required"`
 		Currency     *Currency           `json:"currency" yaml:"currency" validate:"required"`
 		Ports        *Ports              `json:"ports" yaml:"ports" validate:"required"`
