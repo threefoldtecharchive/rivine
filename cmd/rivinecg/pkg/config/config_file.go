@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	validator "gopkg.in/go-playground/validator.v9"
 	yaml "gopkg.in/yaml.v2"
@@ -628,6 +629,8 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 		return NewCondition(types.NewUnlockHashCondition(uhs(str)))
 	}
 
+	genesisBlockTimestamp := time.Now().Unix()
+
 	networks := make(map[string]*Network)
 	networks["testnet"] = &Network{
 		NetworkType: NetworkTypeTestnet,
@@ -652,7 +655,7 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 					Condition: uhsc("01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51"),
 				},
 			},
-			GenesisBlockTimestamp: 1524168391,
+			GenesisBlockTimestamp: genesisBlockTimestamp,
 		},
 		TransactionFeePool: "01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51",
 		BootstrapPeers: []*BootstrapPeer{
@@ -679,7 +682,7 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 					Condition: uhsc("01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e"),
 				},
 			},
-			GenesisBlockTimestamp: 1524168391,
+			GenesisBlockTimestamp: genesisBlockTimestamp,
 		},
 		TransactionFeePool: "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
 		BootstrapPeers: []*BootstrapPeer{
@@ -706,7 +709,7 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 					Condition: uhsc("015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f"),
 				},
 			},
-			GenesisBlockTimestamp: 1524168391,
+			GenesisBlockTimestamp: genesisBlockTimestamp,
 		},
 		TransactionFeePool: "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f",
 		BootstrapPeers: []*BootstrapPeer{
