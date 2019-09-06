@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -93,6 +94,24 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	err = renameClientAndDaemonFolders(destinationDirPath, config)
 	if err != nil {
 		return err
+	}
+
+	// optionally Go-Format the codebase (enabled by default)
+	if config.Generation == nil || !config.Generation.DisableGoFormatting {
+		goDirs := []string{
+			path.Join(destinationDirPath, "cmd"),
+			path.Join(destinationDirPath, "pkg"),
+		}
+		// default Go Imports
+		err = exec.Command("goimports", append([]string{"-w"}, goDirs...)...).Run()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to exec goimports: %v\n", err)
+		}
+		// default Go Formatting
+		err = exec.Command("gofmt", append([]string{"-s", "-w"}, goDirs...)...).Run()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to exec gofmt: %v\n", err)
+		}
 	}
 
 	return nil

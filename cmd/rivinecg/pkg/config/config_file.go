@@ -59,7 +59,8 @@ type (
 	}
 
 	Generation struct {
-		Ignore []GlobPattern `json:"ignore" yaml:"ignore" validate:"required"`
+		Ignore              []GlobPattern `json:"ignore" yaml:"ignore" validate:"required"`
+		DisableGoFormatting bool          `json:"disableGoFormatting,omitempty" yaml:"disableGoFormatting,omitempty"`
 	}
 
 	GlobPattern struct {
