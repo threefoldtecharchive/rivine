@@ -47,7 +47,11 @@ compositions of transactions that are connected and executed using various const
 **Atomic swaps** can be implemented since stellar supports multisig, [SHA256 hash](https://www.stellar.org/developers/guides/concepts/multi-sig.html#hashx) and timebounds.
 
 ## Custom assets
-It is easy to create custom assets on the Stellar network as the [issuetoken example](./issuetoken/readme.md) shows
+It is easy to create custom assets on the Stellar network as the [issuetoken example](./issuetoken/readme.md) shows.
+
+## Company accounts and multisig
+Stellar allows multiple signatures for custom asset issuer accounts or company accounts: https://www.stellar.org/developers/guides/concepts/multi-sig.html
+
 
 ## Ico's, crowdfunding, ...
 As mentioned above, the stellar platform is suited for for crowdfunding or other basic financial operations or agreements
