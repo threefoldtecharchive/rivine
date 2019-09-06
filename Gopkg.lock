@@ -118,6 +118,23 @@
   version = "v6.12.0"
 
 [[projects]]
+  digest = "1:9ae31ce33b4bab257668963e844d98765b44160be4ee98cafc44637a213e530d"
+  name = "github.com/gobwas/glob"
+  packages = [
+    ".",
+    "compiler",
+    "match",
+    "syntax",
+    "syntax/ast",
+    "syntax/lexer",
+    "util/runes",
+    "util/strings",
+  ]
+  pruneopts = "UT"
+  revision = "5ccd90ef52e1e632236f7326478d4faa74f99438"
+  version = "v0.2.3"
+
+[[projects]]
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -316,6 +333,7 @@
     "github.com/NebulousLabs/merkletree",
     "github.com/bgentry/speakeasy",
     "github.com/go-redis/redis",
+    "github.com/gobwas/glob",
     "github.com/julienschmidt/httprouter",
     "github.com/otiai10/copy",
     "github.com/rivine/bbolt",
