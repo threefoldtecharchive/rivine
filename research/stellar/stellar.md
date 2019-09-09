@@ -30,7 +30,7 @@ https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed
 However, the protocol includes who can hold assets: https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders
 
 ### Wallets
-A variety of wallets is available, each with their own features or focus, it makes it a bit hard though as a beginner.
+A variety of wallets is available, each with their own features or focus, it makes it a bit hard though as a beginner, especially since you need to know the concept of trustlines.
 
 
 ## Stellar Smart Contracts (SSC)
@@ -63,6 +63,8 @@ Stellar is not meant for anonimity.
 You can have multiple registered accounts, each with their own balances, requiring XLM to perform transactions. 
 
 Payments from multiple addresses are not possible(as a workaround, one can merge the accounts first).
+## Federation servers
+This allows eay addresses like  bob@yourdomain.com
 
 ## Ico's, crowdfunding, ...
 As mentioned above, the stellar platform is suited for for crowdfunding or other basic financial operations or agreements
