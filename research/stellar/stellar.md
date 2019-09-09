@@ -17,6 +17,10 @@ This works perfectly if your assets only exist on the stellar network as credit 
 _Question is how a credit issuer that acts as an exchange for it's users can control/recuperate free floating real world assets like BTCor TFT that stay in control of the user._
 
 Fees are in XLM.
+## Stellar accounts
+
+Just creating a kepair and an address like is common blockchains is not sufficient to receive funds, a transfer will fail. An account has to be explicitely created and funded with at least 1 XLM.
+
 ## random thoughts
 
 Not completely decentralized,for example sending with kyc, requires knowledge and trust of the counterparty, also 
@@ -26,7 +30,7 @@ https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed
 However, the protocol includes who can hold assets: https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders
 
 ### Wallets
-A variety of wallets is available, each with their own features or focus, it makes it a bit hard though as a beginner.
+A variety of wallets is available, each with their own features or focus, it makes it a bit hard though as a beginner, especially since you need to know the concept of trustlines.
 
 
 ## Stellar Smart Contracts (SSC)
@@ -42,6 +46,26 @@ compositions of transactions that are connected and executed using various const
 
 **Atomic swaps** can be implemented since stellar supports multisig, [SHA256 hash](https://www.stellar.org/developers/guides/concepts/multi-sig.html#hashx) and timebounds.
 
+## Custom assets
+It is easy to create custom assets on the Stellar network as the [issuetoken example](./issuetoken/readme.md) shows.
+
+### Token creation reasons
+Stellar transactions can contain a memotext up to 28 bytes of ASCII/UTF-8 which is not sufficient to hold a sha256 encoded hash.
+
+There is a Memohash field MemoHash which is a hash representing a reference to another transaction. 
+
+This can be used however to insert the hash of other documents, a concept known as [stellar attachments](https://www.stellar.org/developers/guides/attachment.html).
+## Company accounts and multisig
+Stellar allows multiple signatures for custom asset issuer accounts or company accounts: https://www.stellar.org/developers/guides/concepts/multi-sig.html
+
+## Multiple addresses and anonimity
+Stellar is not meant for anonimity.
+You can have multiple registered accounts, each with their own balances, requiring XLM to perform transactions. 
+
+Payments from multiple addresses are not possible(as a workaround, one can merge the accounts first).
+## Federation servers
+This allows eay addresses like  bob@yourdomain.com
+
 ## Ico's, crowdfunding, ...
 As mentioned above, the stellar platform is suited for for crowdfunding or other basic financial operations or agreements
 
@@ -51,5 +75,7 @@ Possible options to issue credit:
 
 We would have to provide a small wallet if people do not already have one.
 
+## Signature schemes
+Stellar currently uses the ed25519 signature scheme which is the same as Rivine currently.
 
 

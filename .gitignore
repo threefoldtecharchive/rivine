@@ -10,3 +10,4 @@ passwords testing
 /.project
 
 release/
+config.toml
