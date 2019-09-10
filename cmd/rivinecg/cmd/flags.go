@@ -6,4 +6,5 @@ var (
 	numberOfAddresses     uint64
 	pluginMintingEnabled  bool
 	pluginAuthcoinEnabled bool
+	frontendExplorerType  string
 )

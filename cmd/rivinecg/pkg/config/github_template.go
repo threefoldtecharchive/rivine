@@ -3,6 +3,7 @@ package config
 import (
 	"archive/tar"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -58,7 +59,41 @@ func getTemplateRepo(repository, version, destination string) (string, error) {
 	return commitHash, nil
 }
 
-func generateBlockchainTemplate(destinationDirPath, commitHash string, config *Config) error {
+type TemplateConfig struct {
+	Frontend TemplateFrontendConfig `json:"frontend" validate:"required"`
+}
+
+type TemplateFrontendConfig struct {
+	Explorer map[string]TemplateFrontendExplorerTypeConfig `json:"explorer" validate:"required"`
+}
+
+type TemplateFrontendExplorerTypeConfig struct {
+	Repository string `json:"repo" validate:"required"`
+	Branch     string `json:"branch" validate:"required"`
+}
+
+func generateBlockchainTemplate(destinationDirPath, commitHash string, config *Config, opts *BlockchainGenerationOpts) error {
+	var templateConfig *TemplateConfig
+
+	var fPathAction func(fPath, dirPath, destPath string) error
+	if config.Generation != nil && len(config.Generation.Ignore) > 0 {
+		fPathAction = func(fPath, dirPath, destPath string) error {
+			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
+			cleanRelFilePath := strings.TrimSuffix(relFilePath, ".template")
+			for _, p := range config.Generation.Ignore {
+				if p.Match(cleanRelFilePath) {
+					return nil
+				}
+			}
+			return copy.Copy(fPath, path.Join(destPath, relFilePath))
+		}
+	} else {
+		fPathAction = func(fPath, dirPath, destPath string) error {
+			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
+			return copy.Copy(fPath, path.Join(destPath, relFilePath))
+		}
+	}
+
 	templOwner, templRepo, err := githubOwnerAndRepoFromString(config.Template.Repository)
 	if err != nil {
 		return err
@@ -66,15 +101,87 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	// Directory where the contents of template repo is unpackged
 	dirPath := path.Join(destinationDirPath, templOwner+"-"+templRepo+"-"+commitHash)
 
-	// if no files are ignored, copy all
-	if config.Generation == nil || len(config.Generation.Ignore) == 0 {
-		err := copy.Copy(dirPath, destinationDirPath)
+	// walk over the files, and copy only those not ignored
+	err = filepath.Walk(dirPath, func(fPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return err // return an error immediately
 		}
-	} else {
+
+		// ignore directories
+		if info.IsDir() {
+			return nil
+		}
+
+		// consume template.json config file instead of copying it
+		if fPath == path.Join(dirPath, "template.json") {
+			templateJSONFile, err := os.Open(fPath)
+			if err != nil {
+				return fmt.Errorf("failed to open special template config file: %v", err)
+			}
+			templateConfig = new(TemplateConfig)
+			err = json.NewDecoder(templateJSONFile).Decode(templateConfig)
+			if err != nil {
+				return fmt.Errorf("failed to decode special template config file: %v", err)
+			}
+			return validate.Struct(templateConfig) // finished here, no need to copy it
+		}
+
+		return fPathAction(fPath, dirPath, destinationDirPath)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Remove generated files in old path
+	err = os.RemoveAll(dirPath)
+	if err != nil {
+		return err
+	}
+
+	// generate optionally also explorer frontend (opt-out)
+	if opts != nil && opts.FrontendExplorerType != FrontendExplorerTypeNone {
+		if templateConfig == nil {
+			return errors.New("an explorer frontend type is selected but usen template repo doesn't link to any explorer frontend template")
+		}
+		frontendExplorerTypeStr := opts.FrontendExplorerType.String()
+		explorerFrontendConfig, ok := templateConfig.Frontend.Explorer[frontendExplorerTypeStr]
+		if !ok {
+			return fmt.Errorf("usen template repo doesn't link to an explorer frontend template of type %s (%d)", frontendExplorerTypeStr, opts.FrontendExplorerType)
+		}
+
+		explorerTemplOwner, explorerTemplRepo, err := githubOwnerAndRepoFromString(explorerFrontendConfig.Repository)
+		if err != nil {
+			return fmt.Errorf("invalid frontend explorer (type: %s) template repo %s: %v", frontendExplorerTypeStr, explorerFrontendConfig.Repository, err)
+		}
+		commitHash, err := getTemplateRepo(explorerFrontendConfig.Repository, explorerFrontendConfig.Branch, destinationDirPath)
+		if err != nil {
+			return fmt.Errorf("failed to download frontend explorer (type: %s) template repo %s: %v", frontendExplorerTypeStr, explorerFrontendConfig.Repository, err)
+		}
+
+		// Directory where the contents of template repo is unpacked
+		frontendExplorerDirPath := path.Join(destinationDirPath, explorerTemplOwner+"-"+explorerTemplRepo+"-"+commitHash)
+
+		// Directory where the frontend explorer needs to be generated to
+		frontendExplorerDestinationPath := path.Join(destinationDirPath, "frontend", "explorer")
+
+		// modify fPathAction with ignore option here,
+		// as we need to ensure that the frontend/explorer path is prefixed
+		fPathAction := fPathAction
+		if config.Generation != nil && len(config.Generation.Ignore) > 0 {
+			fPathAction = func(fPath, dirPath, destPath string) error {
+				relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
+				cleanRelFilePath := path.Join("frontend", "explorer", strings.TrimSuffix(relFilePath, ".template"))
+				for _, p := range config.Generation.Ignore {
+					if p.Match(cleanRelFilePath) {
+						return nil
+					}
+				}
+				return copy.Copy(fPath, path.Join(destPath, relFilePath))
+			}
+		}
+
 		// walk over the files, and copy only those not ignored
-		err := filepath.Walk(dirPath, func(fPath string, info os.FileInfo, err error) error {
+		err = filepath.Walk(frontendExplorerDirPath, func(fPath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err // return an error immediately
 			}
@@ -84,26 +191,17 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 				return nil
 			}
 
-			// ignore files that are expected to be ignored
-			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
-			cleanRelFilePath := strings.TrimSuffix(relFilePath, ".template")
-			for _, p := range config.Generation.Ignore {
-				if p.Match(cleanRelFilePath) {
-					return nil
-				}
-			}
-			// copy the file if not to be ignored
-			return copy.Copy(fPath, path.Join(destinationDirPath, relFilePath))
+			return fPathAction(fPath, frontendExplorerDirPath, frontendExplorerDestinationPath)
 		})
 		if err != nil {
 			return err
 		}
-	}
 
-	// Remove generated files in old path
-	err = os.RemoveAll(dirPath)
-	if err != nil {
-		return err
+		// Remove generated files in old path
+		err = os.RemoveAll(frontendExplorerDirPath)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = writeTemplateValues(destinationDirPath, config)

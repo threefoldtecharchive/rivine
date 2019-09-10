@@ -409,8 +409,12 @@ func ImportAndValidateConfig(configFilePath string) (*Config, error) {
 	return config, nil
 }
 
+type BlockchainGenerationOpts struct {
+	FrontendExplorerType FrontendExplorerType
+}
+
 // GenerateBlockchain imports a config file and uses it to generate a blockchain
-func GenerateBlockchain(configFilePath, outputDir string) error {
+func GenerateBlockchain(configFilePath, outputDir string, opts *BlockchainGenerationOpts) error {
 	config, err := ImportAndValidateConfig(configFilePath)
 	if err != nil {
 		return err
@@ -426,7 +430,7 @@ func GenerateBlockchain(configFilePath, outputDir string) error {
 		return err
 	}
 
-	err = generateBlockchainTemplate(outputDir, commitHash, config)
+	err = generateBlockchainTemplate(outputDir, commitHash, config, opts)
 	if err != nil {
 		return err
 	}

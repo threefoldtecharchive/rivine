@@ -75,6 +75,9 @@ func init() {
 	generateBlockchainCmd.Flags().StringVarP(
 		&outputDir, "output", "o", "",
 		"file path where the blockchain will be generated to")
+	generateBlockchainCmd.Flags().StringVar(
+		&frontendExplorerType, "explorer", "vuets",
+		"frontend explorer to generate, options: vuets,plainjs,none")
 
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
@@ -144,7 +147,14 @@ func generateBlockchain(cmd *cobra.Command, args []string) error {
 	if dir == "" {
 		dir = filepath.Dir(filePath)
 	}
-	err := config.GenerateBlockchain(filePath, dir)
+	var fExplorerType config.FrontendExplorerType
+	err := fExplorerType.FromString(frontendExplorerType)
+	if err != nil {
+		return fmt.Errorf("invalid explorer flag: %v", err)
+	}
+	err = config.GenerateBlockchain(filePath, dir, &config.BlockchainGenerationOpts{
+		FrontendExplorerType: fExplorerType,
+	})
 	if err != nil {
 		return err
 	}
