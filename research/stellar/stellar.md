@@ -19,15 +19,8 @@ _Question is how a credit issuer that acts as an exchange for it's users can con
 Fees are in XLM.
 ## Stellar accounts
 
-Just creating a kepair and an address like is common blockchains is not sufficient to receive funds, a transfer will fail. An account has to be explicitely created and funded with at least 1 XLM.
+Just creating a keypair and an address like is common blockchains is not sufficient to receive funds, a transfer will fail. An account has to be explicitely created and funded with at least 1 XLM.
 
-## random thoughts
-
-Not completely decentralized,for example sending with kyc, requires knowledge and trust of the counterparty, also 
-Very good solution for traditional centralized banks that want to collaborate:
-https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed.jpg
-
-However, the protocol includes who can hold assets: https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders
 
 ### Wallets
 A variety of wallets is available, each with their own features or focus, it makes it a bit hard though as a beginner, especially since you need to know the concept of trustlines.
@@ -75,7 +68,25 @@ Possible options to issue credit:
 
 We would have to provide a small wallet if people do not already have one.
 
+
+## Market making
+A bifrost server exists that will automatically exchange the received BTC or ETH for your custom token. Usefull for market making and ICO's.
+
+There is also Kelp, a free, customizable, open-source trading bot for the Stellar universal marketplace.
 ## Signature schemes
 Stellar currently uses the ed25519 signature scheme which is the same as Rivine currently.
 
 
+## Storage for Core and Horizon
+PostgreSQL
+
+
+## random thoughts
+
+Not completely decentralized,for example sending with kyc, requires knowledge and trust of the counterparty, also 
+Very good solution for traditional centralized banks that want to collaborate:
+https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed.jpg
+
+However, the protocol includes who can hold assets: https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders
+
+A very extensive toolset for managing vustom tokens and ICO's.
