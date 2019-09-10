@@ -223,7 +223,7 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 	var err error
 	conf := BuildConfigStruct("", nil)
 	conf.Template.Version = ""
-	conf.Template.Repository = nil
+	conf.Template.Repository = ""
 	conf.Blockchain.Binaries.Daemon = ""
 	conf.Blockchain.Binaries.Client = ""
 
@@ -235,10 +235,14 @@ func TestValidateConfigWithLeavingOutAllOptionalParametersShouldFillInAllParamsD
 	if conf.Template.Version != "master" {
 		t.Errorf("Something went wrong with setting default value for template version")
 	}
-	if conf.Template.Repository.Owner != "threefoldtech" {
+	templOwner, templRepo, err := githubOwnerAndRepoFromString(conf.Template.Repository)
+	if err != nil {
+		t.Error(err)
+	}
+	if templOwner != "threefoldtech" {
 		t.Errorf("Something went wrong with setting default value for template repository owner")
 	}
-	if conf.Template.Repository.Repo != "rivine-chain-template" {
+	if templRepo != "rivine-chain-template" {
 		t.Errorf("Something went wrong with setting default value for template repository repo")
 	}
 	if conf.Blockchain.Binaries.Daemon != "pkgd" {

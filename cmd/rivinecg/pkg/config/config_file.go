@@ -40,13 +40,8 @@ type (
 	}
 
 	Template struct {
-		Repository *Repository `json:"repository,omitempty" yaml:"repository,omitempty"`
-		Version    string      `json:"version,omitempty" yaml:"version,omitempty"`
-	}
-
-	Repository struct {
-		Owner string `json:"owner,omitempty" yaml:"owner,omitempty"`
-		Repo  string `json:"repo,omitempty" yaml:"repo,omitempty"`
+		Repository string `json:"repository,omitempty" yaml:"repository,omitempty"`
+		Version    string `json:"version,omitempty" yaml:"version,omitempty"`
 	}
 
 	Frontend struct {
@@ -426,7 +421,7 @@ func GenerateBlockchain(configFilePath, outputDir string) error {
 		return err
 	}
 
-	commitHash, err := getTemplateRepo(config.Template.Repository.Owner, config.Template.Repository.Repo, config.Template.Version, outputDir)
+	commitHash, err := getTemplateRepo(config.Template.Repository, config.Template.Version, outputDir)
 	if err != nil {
 		return err
 	}
@@ -455,17 +450,8 @@ func assignDefaultValues(conf *Config) (*Config, error) {
 }
 
 func assignDefaultTemplateValues(templ Template) Template {
-	if templ.Repository == nil {
-		templ.Repository = &Repository{
-			Owner: "threefoldtech",
-			Repo:  "rivine-chain-template",
-		}
-	}
-	if templ.Repository.Owner == "" {
-		templ.Repository.Owner = "threefoldtech"
-	}
-	if templ.Repository.Repo == "" {
-		templ.Repository.Repo = "rivine-chain-template"
+	if templ.Repository == "" {
+		templ.Repository = "github.com/threefoldtech/rivine-chain-template"
 	}
 	if templ.Version == "" {
 		templ.Version = "master"
@@ -773,11 +759,8 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 
 	cfg := &Config{
 		Template: Template{
-			Repository: &Repository{
-				Owner: "threefoldtech",
-				Repo:  "rivine-chain-template",
-			},
-			Version: "master",
+			Repository: "github.com/threefoldtech/rivine-chain-template",
+			Version:    "master",
 		},
 		Frontend: &Frontend{
 			&Caddy{

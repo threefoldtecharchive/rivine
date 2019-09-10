@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -23,10 +24,25 @@ import (
 
 const rootGithubAPIurl = "https://api.github.com"
 
+var _githubRgxp = regexp.MustCompile(`github.com/([^/]+)/([^/]+)`)
+
+func githubOwnerAndRepoFromString(s string) (string, string, error) {
+	repoGithubMatches := _githubRgxp.FindStringSubmatch(s)
+	if len(repoGithubMatches) != 3 {
+		return "", "", fmt.Errorf("invalid repository (only Github is supported at the moment): %s", s)
+	}
+	return repoGithubMatches[1], repoGithubMatches[2], nil
+}
+
 // getTemplateRepo fetches the template repository from github and extracts this tar file.
 // At the end of this function we extract the commithash from the headers in order to rename this extracted directory later.
-func getTemplateRepo(owner, repo, version, destination string) (string, error) {
-	endPoint := rootGithubAPIurl + path.Join("/repos", owner, repo, "tarball", version)
+func getTemplateRepo(repository, version, destination string) (string, error) {
+	templOwner, templRepo, err := githubOwnerAndRepoFromString(repository)
+	if err != nil {
+		return "", err
+	}
+
+	endPoint := rootGithubAPIurl + path.Join("/repos", templOwner, templRepo, "tarball", version)
 	fmt.Printf("Fetching repository: %s ...\n", endPoint)
 	resp, err := http.Get(endPoint)
 	if err != nil {
@@ -43,8 +59,12 @@ func getTemplateRepo(owner, repo, version, destination string) (string, error) {
 }
 
 func generateBlockchainTemplate(destinationDirPath, commitHash string, config *Config) error {
+	templOwner, templRepo, err := githubOwnerAndRepoFromString(config.Template.Repository)
+	if err != nil {
+		return err
+	}
 	// Directory where the contents of template repo is unpackged
-	dirPath := path.Join(destinationDirPath, config.Template.Repository.Owner) + "-" + config.Template.Repository.Repo + "-" + commitHash
+	dirPath := path.Join(destinationDirPath, templOwner+"-"+templRepo+"-"+commitHash)
 
 	// if no files are ignored, copy all
 	if config.Generation == nil || len(config.Generation.Ignore) == 0 {
@@ -81,7 +101,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	}
 
 	// Remove generated files in old path
-	err := os.RemoveAll(dirPath)
+	err = os.RemoveAll(dirPath)
 	if err != nil {
 		return err
 	}
