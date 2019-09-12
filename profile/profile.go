@@ -82,9 +82,9 @@ func SaveMemProfile(profileDir, identifier string) error {
 	return nil
 }
 
-// StartContinuousProfiling will continuously print statistics about the cpu
+// StartContinuousProfile will continuously print statistics about the cpu
 // usage, memory usage, and runtime stats of the program.
-func StartContinuousProfile(profileDir string, bcInfo types.BlockchainInfo) {
+func StartContinuousProfile(profileDir string, bcInfo types.BlockchainInfo, verboseLogging bool) {
 	// Create the folder for all of the profiling results.
 	err := os.MkdirAll(profileDir, 0700)
 	if err != nil {
@@ -95,7 +95,7 @@ func StartContinuousProfile(profileDir string, bcInfo types.BlockchainInfo) {
 	// Continuously log statistics about the running Sia application.
 	go func() {
 		// Create the logger.
-		log, err := persist.NewFileLogger(bcInfo, filepath.Join(profileDir, "continuousProfiling.log"))
+		log, err := persist.NewFileLogger(bcInfo, filepath.Join(profileDir, "continuousProfiling.log"), verboseLogging)
 		if err != nil {
 			fmt.Println("Profile logging failed:", err)
 			return

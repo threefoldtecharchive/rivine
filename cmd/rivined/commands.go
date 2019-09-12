@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/pkg/daemon"
+	"github.com/threefoldtech/rivine/profile"
 )
 
 type commands struct {
@@ -53,6 +54,11 @@ func (cmds *commands) rootCommand(*cobra.Command, []string) {
 
 	// Process the config variables, cleaning up slightly invalid values
 	cmds.cfg = daemon.ProcessConfig(cmds.cfg)
+
+	// Create the profiling directory if profiling is enabled.
+	if cmds.cfg.Profile {
+		go profile.StartContinuousProfile(cmds.cfg.ProfileDir, cmds.cfg.BlockchainInfo, cmds.cfg.VerboseLogging)
+	}
 
 	// run daemon
 	err = runDaemon(cmds.cfg, networkCfg, cmds.moduleSetFlag.ModuleIdentifiers())
