@@ -7,3 +7,4 @@
 - Data added to a transaction is limited to 28 characters and a 32 byte hash.
 - Fork/fix in case of a programming/human error
 - Anonimity through free generation of new adresses.
+    - Funding through multiple addresses requires account merging

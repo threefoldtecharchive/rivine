@@ -8,6 +8,7 @@ To run:
 `go run createkeypair.go`
 
 - activateaccount.go
+
 Registers an address as an  account and funds it, either from an existing account or through friendbot.
 
 - checkaccount.go
