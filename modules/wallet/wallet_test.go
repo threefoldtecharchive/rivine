@@ -45,7 +45,7 @@ func createWalletTester(name string) (*walletTester, error) {
 		return nil, err
 	}
 
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false, "")
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func createBlankWalletTester(name string) (*walletTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false, "")
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +234,7 @@ func TestNilInputs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestCloseWallet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false)
+	cs, err := consensus.New(g, false, filepath.Join(testdir, modules.ConsensusDir), bcInfo, chainCts, false, "")
 	if err != nil {
 		t.Fatal(err)
 	}

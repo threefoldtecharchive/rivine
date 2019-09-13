@@ -87,7 +87,7 @@ func blankConsensusSetTester(name string) (*consensusSetTester, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs, err := New(g, false, filepath.Join(testdir, modules.ConsensusDir), types.DefaultBlockchainInfo(), types.TestnetChainConstants(), false)
+	cs, err := New(g, false, filepath.Join(testdir, modules.ConsensusDir), types.DefaultBlockchainInfo(), types.TestnetChainConstants(), false, "")
 	if err != nil {
 		return nil, err
 	}
