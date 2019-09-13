@@ -802,11 +802,11 @@ func TestPeerManagerOutboundSave(t *testing.T) {
 	// with every other gateway as an outbound peer.
 	var gs []*Gateway
 	for i := 0; i < wellConnectedThreshold+1; i++ {
-		gs = append(gs, newNamedTestingGateway(t, strconv.Itoa(i)))
-	}
-	for _, gw := range gs {
+		gw := newNamedTestingGateway(t, strconv.Itoa(i))
 		defer gw.Close()
+		gs = append(gs, gw)
 	}
+
 	// Connect g1 to each peer. This should be enough that every peer eventually
 	// has the full set of outbound peers.
 	for _, g := range gs[1:] {
@@ -875,8 +875,8 @@ func TestLegacyPeerConnects(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
-	g := newTestingGateway(t)
+	g := newNamedTestingGateway(t, "1")
+	defer g.Close()
 
 	// connect with 1.0.2 legacy peer
 	err := legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 2, 0))
@@ -884,23 +884,24 @@ func TestLegacyPeerConnects(t *testing.T) {
 		t.Error("expected errPeerRejectedConn, but received:", err)
 	}
 
-	g = newTestingGateway(t)
-
+	g = newNamedTestingGateway(t, "2")
+	defer g.Close()
 	// connect with 1.0.1 legacy peer
 	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 1, 0))
 	if err != nil {
 		t.Error(err)
 	}
 
-	g = newTestingGateway(t)
-
+	g = newNamedTestingGateway(t, "3")
+	defer g.Close()
 	// connect with 1.0.0 legacy peer
 	err = legacyConnect(string(g.myAddr), build.NewVersion(1, 0, 0, 0))
 	if err != nil {
 		t.Error(err)
 	}
 
-	g = newTestingGateway(t)
+	g = newNamedTestingGateway(t, "4")
+	defer g.Close()
 
 	// connect with 0.0.1 legacy peer
 	err = legacyConnect(string(g.myAddr), build.NewVersion(0, 0, 1, 0))
