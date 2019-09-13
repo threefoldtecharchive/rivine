@@ -274,7 +274,9 @@ func TestPruneNodeThreshold(t *testing.T) {
 	// Create and connect pruneNodeListLen gateways.
 	var gs []*Gateway
 	for i := 0; i < pruneNodeListLen; i++ {
-		gs = append(gs, newNamedTestingGateway(t, strconv.Itoa(i)))
+		gw := newNamedTestingGateway(t, strconv.Itoa(i))
+		defer gw.Close()
+		gs = append(gs, gw)
 
 		// Connect this gateway to the previous gateway.
 		if i != 0 {
@@ -356,12 +358,13 @@ func TestHealthyNodeListPruning(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	// Create and connect healthyNodeListLen*2 gateways.
 	var gs []*Gateway
 	for i := 0; i < healthyNodeListLen*2; i++ {
-		gs = append(gs, newNamedTestingGateway(t, strconv.Itoa(i)))
+		gw := newNamedTestingGateway(t, strconv.Itoa(i))
+		defer gw.Close()
+		gs = append(gs, gw)
 
 		// Connect this gateway to the previous gateway.
 		if i != 0 {

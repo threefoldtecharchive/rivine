@@ -16,6 +16,7 @@ import (
 )
 
 // newTestingGateway returns a gateway ready to use in a testing environment.
+// Do not call it more than once during the same test as the peristent files can interfere.
 func newTestingGateway(t *testing.T) *Gateway {
 	if testing.Short() {
 		build.Critical("newTestingGateway called during short test")
