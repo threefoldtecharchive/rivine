@@ -205,14 +205,14 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		}
 	}
 
-	// generate faucet by default (opt-in)
-	if opts.FrontendFaucet != true {
+	// generate optionally faucet by default (opt-out)
+	if opts != nil && opts.FrontendFaucet {
 		if templateConfig == nil {
 			return errors.New("an explorer frontend type is selected but usen template repo doesn't link to any explorer frontend template")
 		}
 		explorerFaucetConfig, ok := templateConfig.Frontend.Faucet["go"]
 		if !ok {
-			return fmt.Errorf("used template repo doesn't link to an faucet frontend template of type go")
+			return errors.New("used template repo doesn't link to an faucet frontend template of type go")
 		}
 
 		faucetTemplOwner, faucetTempRepo, err := githubOwnerAndRepoFromString(explorerFaucetConfig.Repository)
@@ -225,13 +225,13 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		}
 
 		// Directory where the contents of template repo is unpacked
-		frontendExplorerDirPath := path.Join(destinationDirPath, faucetTemplOwner+"-"+faucetTempRepo+"-"+commitHash)
+		frontendFaucetDirPath := path.Join(destinationDirPath, faucetTemplOwner+"-"+faucetTempRepo+"-"+commitHash)
 
-		// Directory where the frontend explorer needs to be generated to
-		frontendExplorerDestinationPath := path.Join(destinationDirPath, "frontend", "faucet")
+		// Directory where the frontend faucet needs to be generated to
+		frontendFaucetDestinationPath := path.Join(destinationDirPath, "frontend", "faucet")
 
 		// modify fPathAction with ignore option here,
-		// as we need to ensure that the frontend/explorer path is prefixed
+		// as we need to ensure that the frontend/faucet path is prefixed
 		fPathAction := fPathAction
 		if config.Generation != nil && len(config.Generation.Ignore) > 0 {
 			fPathAction = func(fPath, dirPath, destPath string) error {
@@ -247,7 +247,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		}
 
 		// walk over the files, and copy only those not ignored
-		err = filepath.Walk(frontendExplorerDirPath, func(fPath string, info os.FileInfo, err error) error {
+		err = filepath.Walk(frontendFaucetDirPath, func(fPath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err // return an error immediately
 			}
@@ -257,14 +257,14 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 				return nil
 			}
 
-			return fPathAction(fPath, frontendExplorerDirPath, frontendExplorerDestinationPath)
+			return fPathAction(fPath, frontendFaucetDirPath, frontendFaucetDestinationPath)
 		})
 		if err != nil {
 			return err
 		}
 
 		// Remove generated files in old path
-		err = os.RemoveAll(frontendExplorerDirPath)
+		err = os.RemoveAll(frontendFaucetDirPath)
 		if err != nil {
 			return err
 		}

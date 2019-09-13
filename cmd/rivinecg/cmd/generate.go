@@ -78,9 +78,9 @@ func init() {
 	generateBlockchainCmd.Flags().StringVar(
 		&frontendExplorerType, "explorer", "vuets",
 		"frontend explorer to generate, options: vuets,plainjs,none")
-	generateBlockchainCmd.Flags().BoolVarP(
-		&frontendFaucet, "no-faucet", "f", false,
-		"don't generate faucet, options: true or false. Default false")
+	generateBlockchainCmd.Flags().BoolVar(
+		&frontendFaucet, "faucet", true,
+		"Generate the frontend faucet, opt-out.")
 
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
