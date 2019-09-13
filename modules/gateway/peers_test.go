@@ -577,15 +577,17 @@ func TestOverloadedBootstrap(t *testing.T) {
 	// first node.
 	var gs []*Gateway
 	for i := 0; i < fullyConnectedThreshold*2; i++ {
-		gs = append(gs, newNamedTestingGateway(t, strconv.Itoa(i)))
+		gw := newNamedTestingGateway(t, strconv.Itoa(i))
+		defer gw.Close()
+		gs = append(gs, gw)
 		// Connect this gateway to the first gateway.
 		if i == 0 {
 			continue
 		}
-		err := gs[i].Connect(gs[0].myAddr)
+		err := gw.Connect(gs[0].myAddr)
 		for j := 0; j < 100 && err != nil; j++ {
 			time.Sleep(time.Millisecond * 250)
-			err = gs[i].Connect(gs[0].myAddr)
+			err = gw.Connect(gs[0].myAddr)
 		}
 		if err != nil {
 			build.Critical(err)
@@ -801,6 +803,9 @@ func TestPeerManagerOutboundSave(t *testing.T) {
 	var gs []*Gateway
 	for i := 0; i < wellConnectedThreshold+1; i++ {
 		gs = append(gs, newNamedTestingGateway(t, strconv.Itoa(i)))
+	}
+	for _, gw := range gs {
+		defer gw.Close()
 	}
 	// Connect g1 to each peer. This should be enough that every peer eventually
 	// has the full set of outbound peers.
