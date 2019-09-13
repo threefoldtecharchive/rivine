@@ -64,10 +64,11 @@ type TemplateConfig struct {
 }
 
 type TemplateFrontendConfig struct {
-	Explorer map[string]TemplateFrontendExplorerTypeConfig `json:"explorer" validate:"required"`
+	Explorer map[string]TemplateFrontendTypeConfig `json:"explorer" validate:"required"`
+	Faucet   map[string]TemplateFrontendTypeConfig `json:"Faucet" validate:"required"`
 }
 
-type TemplateFrontendExplorerTypeConfig struct {
+type TemplateFrontendTypeConfig struct {
 	Repository string `json:"repo" validate:"required"`
 	Branch     string `json:"branch" validate:"required"`
 }
@@ -146,7 +147,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		frontendExplorerTypeStr := opts.FrontendExplorerType.String()
 		explorerFrontendConfig, ok := templateConfig.Frontend.Explorer[frontendExplorerTypeStr]
 		if !ok {
-			return fmt.Errorf("usen template repo doesn't link to an explorer frontend template of type %s (%d)", frontendExplorerTypeStr, opts.FrontendExplorerType)
+			return fmt.Errorf("used template repo doesn't link to an explorer frontend template of type %s (%d)", frontendExplorerTypeStr, opts.FrontendExplorerType)
 		}
 
 		explorerTemplOwner, explorerTemplRepo, err := githubOwnerAndRepoFromString(explorerFrontendConfig.Repository)
@@ -199,6 +200,71 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 
 		// Remove generated files in old path
 		err = os.RemoveAll(frontendExplorerDirPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	// generate optionally faucet by default (opt-out)
+	if opts != nil && opts.FrontendFaucet {
+		if templateConfig == nil {
+			return errors.New("an explorer frontend type is selected but usen template repo doesn't link to any explorer frontend template")
+		}
+		explorerFaucetConfig, ok := templateConfig.Frontend.Faucet["go"]
+		if !ok {
+			return errors.New("used template repo doesn't link to an faucet frontend template of type go")
+		}
+
+		faucetTemplOwner, faucetTempRepo, err := githubOwnerAndRepoFromString(explorerFaucetConfig.Repository)
+		if err != nil {
+			return fmt.Errorf("invalid faucet explorer (type: go) template repo %s: %v", explorerFaucetConfig.Repository, err)
+		}
+		commitHash, err := getTemplateRepo(explorerFaucetConfig.Repository, explorerFaucetConfig.Branch, destinationDirPath)
+		if err != nil {
+			return fmt.Errorf("failed to download faucet explorer (type: go) template repo %s: %v", explorerFaucetConfig.Repository, err)
+		}
+
+		// Directory where the contents of template repo is unpacked
+		frontendFaucetDirPath := path.Join(destinationDirPath, faucetTemplOwner+"-"+faucetTempRepo+"-"+commitHash)
+
+		// Directory where the frontend faucet needs to be generated to
+		frontendFaucetDestinationPath := path.Join(destinationDirPath, "frontend", "faucet")
+
+		// modify fPathAction with ignore option here,
+		// as we need to ensure that the frontend/faucet path is prefixed
+		fPathAction := fPathAction
+		if config.Generation != nil && len(config.Generation.Ignore) > 0 {
+			fPathAction = func(fPath, dirPath, destPath string) error {
+				relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
+				cleanRelFilePath := path.Join("frontend", "faucet", strings.TrimSuffix(relFilePath, ".template"))
+				for _, p := range config.Generation.Ignore {
+					if p.Match(cleanRelFilePath) {
+						return nil
+					}
+				}
+				return copy.Copy(fPath, path.Join(destPath, relFilePath))
+			}
+		}
+
+		// walk over the files, and copy only those not ignored
+		err = filepath.Walk(frontendFaucetDirPath, func(fPath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err // return an error immediately
+			}
+
+			// ignore directories
+			if info.IsDir() {
+				return nil
+			}
+
+			return fPathAction(fPath, frontendFaucetDirPath, frontendFaucetDestinationPath)
+		})
+		if err != nil {
+			return err
+		}
+
+		// Remove generated files in old path
+		err = os.RemoveAll(frontendFaucetDirPath)
 		if err != nil {
 			return err
 		}

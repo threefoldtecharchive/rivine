@@ -411,6 +411,7 @@ func ImportAndValidateConfig(configFilePath string) (*Config, error) {
 
 type BlockchainGenerationOpts struct {
 	FrontendExplorerType FrontendExplorerType
+	FrontendFaucet       bool
 }
 
 // GenerateBlockchain imports a config file and uses it to generate a blockchain

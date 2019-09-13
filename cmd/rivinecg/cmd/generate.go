@@ -78,6 +78,9 @@ func init() {
 	generateBlockchainCmd.Flags().StringVar(
 		&frontendExplorerType, "explorer", "vuets",
 		"frontend explorer to generate, options: vuets,plainjs,none")
+	generateBlockchainCmd.Flags().BoolVar(
+		&frontendFaucet, "faucet", true,
+		"Generate the frontend faucet, opt-out.")
 
 	// adds generateSeedCmd to rootCmd
 	generateCmd.AddCommand(
@@ -154,6 +157,7 @@ func generateBlockchain(cmd *cobra.Command, args []string) error {
 	}
 	err = config.GenerateBlockchain(filePath, dir, &config.BlockchainGenerationOpts{
 		FrontendExplorerType: fExplorerType,
+		FrontendFaucet:       frontendFaucet,
 	})
 	if err != nil {
 		return err

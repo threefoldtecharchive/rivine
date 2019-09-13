@@ -7,4 +7,5 @@ var (
 	pluginMintingEnabled  bool
 	pluginAuthcoinEnabled bool
 	frontendExplorerType  string
+	frontendFaucet        bool
 )
