@@ -685,11 +685,11 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 		},
 		TransactionFeePool: "01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51",
 		BootstrapPeers: []*BootstrapPeer{
-			&BootstrapPeer{"bootstrap1.testnet.example.com:23112"},
-			&BootstrapPeer{"bootstrap2.testnet.example.com:23112"},
-			&BootstrapPeer{"bootstrap3.testnet.example.com:23112"},
-			&BootstrapPeer{"bootstrap4.testnet.example.com:23112"},
-			&BootstrapPeer{"bootstrap5.testnet.example.com:23112"},
+			{"bootstrap1.testnet.example.com:23112"},
+			{"bootstrap2.testnet.example.com:23112"},
+			{"bootstrap3.testnet.example.com:23112"},
+			{"bootstrap4.testnet.example.com:23112"},
+			{"bootstrap5.testnet.example.com:23112"},
 		},
 	}
 
@@ -712,11 +712,11 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 		},
 		TransactionFeePool: "017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34",
 		BootstrapPeers: []*BootstrapPeer{
-			&BootstrapPeer{"bootstrap1.example.com:23112"},
-			&BootstrapPeer{"bootstrap2.example.com:23112"},
-			&BootstrapPeer{"bootstrap3.example.com:23112"},
-			&BootstrapPeer{"bootstrap4.example.com:23112"},
-			&BootstrapPeer{"bootstrap5.example.com:23112"},
+			{"bootstrap1.example.com:23112"},
+			{"bootstrap2.example.com:23112"},
+			{"bootstrap3.example.com:23112"},
+			{"bootstrap4.example.com:23112"},
+			{"bootstrap5.example.com:23112"},
 		},
 	}
 
@@ -739,7 +739,7 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 		},
 		TransactionFeePool: "015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f",
 		BootstrapPeers: []*BootstrapPeer{
-			&BootstrapPeer{"localhost:23112"},
+			{"localhost:23112"},
 		},
 	}
 

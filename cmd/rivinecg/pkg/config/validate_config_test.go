@@ -301,7 +301,7 @@ func TestValidateConfigWithFaultyNetworkBootstrapPeersShouldThrowError(t *testin
 	var err error
 	conf := BuildConfigStruct("", nil)
 	conf.Blockchain.Networks["testnet"].BootstrapPeers = []*BootstrapPeer{
-		&BootstrapPeer{"invalid"},
+		{"invalid"},
 	}
 
 	delete(conf.Blockchain.Networks, "devnet")
