@@ -286,6 +286,9 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 			path.Join(destinationDirPath, "cmd"),
 			path.Join(destinationDirPath, "pkg"),
 		}
+		if opts != nil && opts.FrontendFaucet {
+			goDirs = append(goDirs, path.Join(destinationDirPath, "frontend", "faucet"))
+		}
 		// default Go Imports
 		err = exec.Command("goimports", append([]string{"-w"}, goDirs...)...).Run()
 		if err != nil {
