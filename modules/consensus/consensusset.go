@@ -7,9 +7,12 @@ package consensus
 // commitDiff functions will be sufficient.
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	gosync "sync"
+	"time"
 
 	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
@@ -33,7 +36,7 @@ type marshaler interface {
 }
 type stdMarshaler struct{}
 
-func (stdMarshaler) Marshal(v interface{}) ([]byte, error)            { return siabin.Marshal(v) }
+func (stdMarshaler) Marshal(v interface{}) ([]byte, error)   { return siabin.Marshal(v) }
 func (stdMarshaler) Unmarshal(b []byte, v interface{}) error { return siabin.Unmarshal(b, v) }
 
 // The ConsensusSet is the object responsible for tracking the current status
@@ -113,12 +116,14 @@ type ConsensusSet struct {
 	bcInfo                 types.BlockchainInfo
 	chainCts               types.ChainConstants
 	genesisBlockStakeCount types.Currency
+
+	dbDebugFile *os.File
 }
 
 // New returns a new ConsensusSet, containing at least the genesis block. If
 // there is an existing block database present in the persist directory, it
 // will be loaded.
-func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verboseLogging bool) (*ConsensusSet, error) {
+func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verboseLogging bool, dbDebugFile string) (*ConsensusSet, error) {
 	// Check for nil dependencies.
 	if gateway == nil {
 		return nil, errNilGateway
@@ -181,6 +186,38 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 	err := cs.initPersist(verboseLogging)
 	if err != nil {
 		return nil, err
+	}
+
+	// Db is initialized at this point, start collecting stats if requested
+	if dbDebugFile != "" {
+		file, err := os.OpenFile(dbDebugFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+		if err != nil {
+			return nil, err
+		}
+		cs.dbDebugFile = file
+		// encode data as json
+		enc := json.NewEncoder(file)
+
+		go func() {
+			var previousStats, currentStats bolt.Stats
+			cs.tg.Add()
+			defer cs.tg.Done()
+
+			for {
+				select {
+				case <-cs.tg.StopChan():
+					if err := file.Close(); err != nil {
+						cs.log.Println("[ERROR] Failed to close consensus db debug file: ", err)
+					}
+					return
+				case <-time.Tick(time.Second):
+					currentStats = cs.db.Stats()
+					if err := enc.Encode(currentStats.Sub(&previousStats)); err != nil {
+						cs.log.Println("[WARN] Failed to collect database stats: ", err)
+					}
+				}
+			}
+		}()
 	}
 
 	return cs, nil
