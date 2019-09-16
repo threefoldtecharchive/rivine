@@ -89,4 +89,4 @@ https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed
 
 However, the protocol includes who can hold assets: https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders
 
-A very extensive toolset for managing vustom tokens and ICO's.
+A very extensive toolset for managing custom tokens and ICO's.
