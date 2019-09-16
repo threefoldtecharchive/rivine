@@ -119,6 +119,7 @@ func (cs *ConsensusSet) rewindBlock(tx *bolt.Tx, pb *processedBlock) error {
 func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
 	cBlock := modules.ConsensusBlock{
 		Block:                  pb.Block,
+		Height:                 pb.Height,
 		SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 		SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 	}
@@ -134,7 +135,7 @@ func (cs *ConsensusSet) rewindBlockForPlugins(tx *bolt.Tx, pb *processedBlock) e
 
 	for name, plugin := range cs.plugins {
 		bucket := cs.bucketForPlugin(tx, name)
-		err := plugin.RevertBlock(cBlock, pb.Height, bucket)
+		err := plugin.RevertBlock(cBlock, bucket)
 		if err != nil {
 			return err
 		}
@@ -154,6 +155,7 @@ func (cs *ConsensusSet) forwardBlock(tx *bolt.Tx, pb *processedBlock) error {
 func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) error {
 	cBlock := modules.ConsensusBlock{
 		Block:                  pb.Block,
+		Height:                 pb.Height,
 		SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 		SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 	}
@@ -169,7 +171,7 @@ func (cs *ConsensusSet) forwardBlockForPlugins(tx *bolt.Tx, pb *processedBlock) 
 
 	for name, plugin := range cs.plugins {
 		bucket := cs.bucketForPlugin(tx, name)
-		err := plugin.ApplyBlock(cBlock, pb.Height, bucket)
+		err := plugin.ApplyBlock(cBlock, bucket)
 		if err != nil {
 			return err
 		}

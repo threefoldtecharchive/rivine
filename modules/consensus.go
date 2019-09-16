@@ -88,17 +88,17 @@ type (
 
 		// Apply the block to the plugin.
 		// An error should be returned in case something went wrong.
-		ApplyBlock(block ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		ApplyBlock(block ConsensusBlock, bucket *persist.LazyBoltBucket) error
 		// Revert the block from the plugin.
 		// An error should be returned in case something went wrong.
-		RevertBlock(block ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		RevertBlock(block ConsensusBlock, bucket *persist.LazyBoltBucket) error
 
 		// Apply the transaction to the plugin.
 		// An error should be returned in case something went wrong.
-		ApplyTransaction(txn ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		ApplyTransaction(txn ConsensusTransaction, bucket *persist.LazyBoltBucket) error
 		// Revert the transaction from the plugin.
 		// An error should be returned in case something went wrong.
-		RevertTransaction(txn ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		RevertTransaction(txn ConsensusTransaction, bucket *persist.LazyBoltBucket) error
 
 		// TransactionValidatorFunctions allows the plugin to provide validation rules for all transaction versions it mapped to
 		TransactionValidatorVersionFunctionMapping() map[types.TransactionVersion][]PluginTransactionValidationFunction
@@ -133,6 +133,8 @@ type (
 	ConsensusBlock struct {
 		types.Block
 
+		Height types.BlockHeight
+
 		SpentCoinOutputs       map[types.CoinOutputID]types.CoinOutput
 		SpentBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
 	}
@@ -142,6 +144,9 @@ type (
 	// for any of the by-the-transaction defined inputs
 	ConsensusTransaction struct {
 		types.Transaction
+
+		BlockHeight types.BlockHeight
+		BlockTime   types.Timestamp
 
 		SpentCoinOutputs       map[types.CoinOutputID]types.CoinOutput
 		SpentBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput

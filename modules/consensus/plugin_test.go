@@ -29,22 +29,22 @@ func (plugin *testPlugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bu
 	}
 	return *metadata, nil
 }
-func (plugin *testPlugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) ApplyBlock(block modules.ConsensusBlock, bucket *persist.LazyBoltBucket) error {
 	return nil
 }
-func (plugin *testPlugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) RevertBlock(block modules.ConsensusBlock, bucket *persist.LazyBoltBucket) error {
 	return nil
 }
 
 // Apply the transaction to the plugin.
 // An error should be returned in case something went wrong.
-func (plugin *testPlugin) ApplyTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) ApplyTransaction(txn modules.ConsensusTransaction, bucket *persist.LazyBoltBucket) error {
 	return nil
 }
 
 // Revert the transaction from the plugin.
 // An error should be returned in case something went wrong.
-func (plugin *testPlugin) RevertTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (plugin *testPlugin) RevertTransaction(txn modules.ConsensusTransaction, bucket *persist.LazyBoltBucket) error {
 	return nil
 }
 

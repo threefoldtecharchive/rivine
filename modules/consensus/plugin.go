@@ -216,6 +216,7 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 					if exists {
 						cBlock := modules.ConsensusBlock{
 							Block:                  block,
+							Height:                 blockHeight,
 							SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 							SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 						}
@@ -234,7 +235,7 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 							}
 						}
 
-						err = plugin.RevertBlock(cBlock, blockHeight, bucket)
+						err = plugin.RevertBlock(cBlock, bucket)
 						if err != nil {
 							return err
 						}
@@ -245,6 +246,7 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 					if exists {
 						cBlock := modules.ConsensusBlock{
 							Block:                  block,
+							Height:                 blockHeight,
 							SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 							SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 						}
@@ -263,7 +265,7 @@ func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin 
 							}
 						}
 
-						err = plugin.ApplyBlock(cBlock, blockHeight, bucket)
+						err = plugin.ApplyBlock(cBlock, bucket)
 						if err != nil {
 							return err
 						}

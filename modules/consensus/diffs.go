@@ -159,6 +159,8 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 	for idx, txn := range pb.Block.Transactions {
 		cTxn := modules.ConsensusTransaction{
 			Transaction:            txn,
+			BlockHeight:            pb.Height,
+			BlockTime:              pb.Block.Timestamp,
 			SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 			SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 		}
@@ -191,7 +193,7 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 		// apply the transaction for each of the plugins
 		for name, plugin := range cs.plugins {
 			bucket := cs.bucketForPlugin(tx, name)
-			err := plugin.ApplyTransaction(cTxn, pb.Height, bucket)
+			err := plugin.ApplyTransaction(cTxn, bucket)
 			if err != nil {
 				return err
 			}

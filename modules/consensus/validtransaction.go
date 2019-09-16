@@ -85,6 +85,8 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 		for _, txn := range txns {
 			cTxn := modules.ConsensusTransaction{
 				Transaction:            txn,
+				BlockHeight:            diffHolder.Height,
+				BlockTime:              blockTime,
 				SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 				SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 			}
@@ -119,7 +121,7 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 			// apply transaction for all plugins
 			for name, plugin := range cs.plugins {
 				bucket := cs.bucketForPlugin(tx, name)
-				err := plugin.ApplyTransaction(cTxn, diffHolder.Height, bucket)
+				err := plugin.ApplyTransaction(cTxn, bucket)
 				if err != nil {
 					return err
 				}

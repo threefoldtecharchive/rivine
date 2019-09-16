@@ -45,10 +45,10 @@ A plugin **has to** implement following interface:
 
 		// Apply the transaction to the plugin.
 		// An error should be returned in case something went wrong.
-		ApplyBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		ApplyBlock(block types.Block, bucket *persist.LazyBoltBucket) error
 		// Revert the block from the plugin.
 		// An error should be returned in case something went wrong.
-		RevertBlock(block types.Block, height types.BlockHeight, bucket *persist.LazyBoltBucket) error
+		RevertBlock(block types.Block, bucket *persist.LazyBoltBucket) error
 
 		// Close releases any resources helt by the plugin like the PluginViewStorage
 		Close() error

@@ -119,7 +119,7 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 }
 
 // ApplyBlock applies a block's minting transactions to the minting bucket.
-func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("minting bucket does not exist")
 	}
@@ -127,10 +127,12 @@ func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeig
 	for _, txn := range block.Transactions {
 		cTxn := modules.ConsensusTransaction{
 			Transaction:            txn,
+			BlockHeight:            block.Height,
+			BlockTime:              block.Timestamp,
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}
-		err = p.ApplyTransaction(cTxn, height, bucket)
+		err = p.ApplyTransaction(cTxn, bucket)
 		if err != nil {
 			return err
 		}
@@ -139,7 +141,7 @@ func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeig
 }
 
 // ApplyTransaction applies a minting transactions to the minting bucket.
-func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("minting bucket does not exist")
 	}
@@ -163,18 +165,18 @@ func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types
 		if err != nil {
 			return fmt.Errorf("failed to marshal mint condition: %v", err)
 		}
-		err = mintingBucket.Put(encodeBlockheight(height), mintcond)
+		err = mintingBucket.Put(encodeBlockheight(txn.BlockHeight), mintcond)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to put mint condition for block height %d: %v",
-				height, err)
+				txn.BlockHeight, err)
 		}
 	}
 	return nil
 }
 
 // RevertBlock reverts a block's minting transaction from the minting bucket
-func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertBlock(block modules.ConsensusBlock, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("mint conditions bucket does not exist")
 	}
@@ -183,10 +185,12 @@ func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHei
 	for _, txn := range block.Transactions {
 		cTxn := modules.ConsensusTransaction{
 			Transaction:            txn,
+			BlockHeight:            block.Height,
+			BlockTime:              block.Timestamp,
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}
-		err = p.RevertTransaction(cTxn, height, bucket)
+		err = p.RevertTransaction(cTxn, bucket)
 		if err != nil {
 			return err
 		}
@@ -195,7 +199,7 @@ func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHei
 }
 
 // RevertTransaction reverts a minting transactions to the minting bucket.
-func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("minting bucket does not exist")
 	}
@@ -212,11 +216,11 @@ func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height type
 				return errors.New("mintcondition bucket does not exist")
 			}
 		}
-		err := mintingBucket.Delete(encodeBlockheight(height))
+		err := mintingBucket.Delete(encodeBlockheight(txn.BlockHeight))
 		if err != nil {
 			return fmt.Errorf(
 				"failed to delete mint condition for block height %d: %v",
-				height, err)
+				txn.BlockHeight, err)
 		}
 	}
 	return nil

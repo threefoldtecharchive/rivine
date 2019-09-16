@@ -126,7 +126,7 @@ func (p *Plugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, sto
 }
 
 // ApplyBlock applies a block's minting transactions to the minting bucket.
-func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
@@ -134,10 +134,12 @@ func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeig
 	for _, txn := range block.Transactions {
 		cTxn := modules.ConsensusTransaction{
 			Transaction:            txn,
+			BlockHeight:            block.Height,
+			BlockTime:              block.Timestamp,
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}
-		err = p.ApplyTransaction(cTxn, height, bucket)
+		err = p.ApplyTransaction(cTxn, bucket)
 		if err != nil {
 			return err
 		}
@@ -146,7 +148,7 @@ func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, height types.BlockHeig
 }
 
 // ApplyTransaction applies a minting transactions to the minting bucket.
-func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
@@ -165,13 +167,13 @@ func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types
 		if err != nil {
 			return fmt.Errorf(
 				"failed to (rivbin) marshal auth condition for block height %d: %v",
-				height, err)
+				txn.BlockHeight, err)
 		}
-		err = authBucket.Put(encodeBlockheight(height), authConditionBytes)
+		err = authBucket.Put(encodeBlockheight(txn.BlockHeight), authConditionBytes)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to put auth condition for block height %d: %v",
-				height, err)
+				txn.BlockHeight, err)
 		}
 
 	case p.authAddressUpdateTransactionVersion:
@@ -198,11 +200,11 @@ func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types
 			if err != nil {
 				return fmt.Errorf("failed to (rivbin) marshal auth address state (true): %v", err)
 			}
-			err = addressAuthBucket.Put(encodeBlockheight(height), stateBytes)
+			err = addressAuthBucket.Put(encodeBlockheight(txn.BlockHeight), stateBytes)
 			if err != nil {
 				return fmt.Errorf(
 					"failed to put auth condition for address %s block height %d: %v",
-					address.String(), height, err)
+					address.String(), txn.BlockHeight, err)
 			}
 		}
 		for _, address := range aautx.DeauthAddresses {
@@ -218,11 +220,11 @@ func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types
 			if err != nil {
 				return fmt.Errorf("failed to (rivbin) marshal auth address state (false): %v", err)
 			}
-			err = addressAuthBucket.Put(encodeBlockheight(height), stateBytes)
+			err = addressAuthBucket.Put(encodeBlockheight(txn.BlockHeight), stateBytes)
 			if err != nil {
 				return fmt.Errorf(
 					"failed to put deauth condition for address %s block height %d: %v",
-					address.String(), height, err)
+					address.String(), txn.BlockHeight, err)
 			}
 		}
 	}
@@ -230,7 +232,7 @@ func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, height types
 }
 
 // RevertBlock reverts a block's minting transaction from the minting bucket
-func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertBlock(block modules.ConsensusBlock, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
@@ -238,10 +240,12 @@ func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHei
 	for _, txn := range block.Transactions {
 		cTxn := modules.ConsensusTransaction{
 			Transaction:            txn,
+			BlockHeight:            block.Height,
+			BlockTime:              block.Timestamp,
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}
-		err = p.RevertTransaction(cTxn, height, bucket)
+		err = p.RevertTransaction(cTxn, bucket)
 		if err != nil {
 			return err
 		}
@@ -250,7 +254,7 @@ func (p *Plugin) RevertBlock(block modules.ConsensusBlock, height types.BlockHei
 }
 
 // RevertTransaction reverts a  minting transaction from the minting bucket
-func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height types.BlockHeight, bucket *persist.LazyBoltBucket) error {
+func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, bucket *persist.LazyBoltBucket) error {
 	if bucket == nil {
 		return errors.New("plugin bucket does not exist")
 	}
@@ -261,11 +265,11 @@ func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height type
 		if err != nil {
 			return errors.New("auth conditions bucket does not exist")
 		}
-		err = authBucket.Delete(encodeBlockheight(height))
+		err = authBucket.Delete(encodeBlockheight(txn.BlockHeight))
 		if err != nil {
 			return fmt.Errorf(
 				"failed to delete auth condition for block height %d: %v",
-				height, err)
+				txn.BlockHeight, err)
 		}
 
 	case p.authAddressUpdateTransactionVersion:
@@ -288,11 +292,11 @@ func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height type
 			if addressAuthBucket == nil {
 				return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
 			}
-			err = addressAuthBucket.Delete(encodeBlockheight(height))
+			err = addressAuthBucket.Delete(encodeBlockheight(txn.BlockHeight))
 			if err != nil {
 				return fmt.Errorf(
 					"failed to delete auth condition for address %s block height %d: %v",
-					address.String(), height, err)
+					address.String(), txn.BlockHeight, err)
 			}
 		}
 		for _, address := range aautx.DeauthAddresses {
@@ -304,11 +308,11 @@ func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, height type
 			if addressAuthBucket == nil {
 				return fmt.Errorf("auth address (%s) condition bucket does not exist", address.String())
 			}
-			err = addressAuthBucket.Delete(encodeBlockheight(height))
+			err = addressAuthBucket.Delete(encodeBlockheight(txn.BlockHeight))
 			if err != nil {
 				return fmt.Errorf(
 					"failed to delete deauth condition for address %s block height %d: %v",
-					address.String(), height, err)
+					address.String(), txn.BlockHeight, err)
 			}
 		}
 	}
