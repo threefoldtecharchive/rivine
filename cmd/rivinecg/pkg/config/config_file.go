@@ -45,7 +45,16 @@ type (
 	}
 
 	Frontend struct {
-		Caddy *Caddy `json:"caddy,omitempty" yaml:"caddy,omitempty"`
+		Explorer *Explorer `json:"explorer,omitempty" yaml:"explorer,omitempty"`
+		Faucet   *Faucet   `json:"faucet,omitempty" yaml:"faucet,omitempty"`
+	}
+
+	Explorer struct {
+		Caddy `json:"caddy,omitempty" yaml:"caddy,omitempty"`
+	}
+
+	Faucet struct {
+		Caddy `json:"caddy,omitempty" yaml:"caddy,omitempty"`
 	}
 
 	Caddy struct {
@@ -768,9 +777,17 @@ func BuildConfigStruct(filePath string, opts *ConfigGenerationOpts) *Config {
 			Version:    "master",
 		},
 		Frontend: &Frontend{
-			&Caddy{
-				DNS: "explorer.example.com",
-				TLS: "support@example.com",
+			Explorer: &Explorer{
+				Caddy: Caddy{
+					DNS: "explorer.example.com",
+					TLS: "support@example.com",
+				},
+			},
+			Faucet: &Faucet{
+				Caddy: Caddy{
+					DNS: "faucet.example.com",
+					TLS: "support@example.com",
+				},
 			},
 		},
 		Blockchain: &Blockchain{
