@@ -161,6 +161,7 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 			Transaction:            txn,
 			BlockHeight:            pb.Height,
 			BlockTime:              pb.Block.Timestamp,
+			SequenceID:             uint64(idx),
 			SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 			SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 		}

@@ -147,6 +147,7 @@ type (
 
 		BlockHeight types.BlockHeight
 		BlockTime   types.Timestamp
+		SequenceID  uint64
 
 		SpentCoinOutputs       map[types.CoinOutputID]types.CoinOutput
 		SpentBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput

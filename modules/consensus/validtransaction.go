@@ -82,11 +82,12 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 			return err
 		}
 
-		for _, txn := range txns {
+		for idx, txn := range txns {
 			cTxn := modules.ConsensusTransaction{
 				Transaction:            txn,
 				BlockHeight:            diffHolder.Height,
 				BlockTime:              blockTime,
+				SequenceID:             uint64(idx),
 				SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 				SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 			}

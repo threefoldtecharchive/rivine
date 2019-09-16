@@ -124,11 +124,12 @@ func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, bucket *persist.LazyBo
 		return errors.New("minting bucket does not exist")
 	}
 	var err error
-	for _, txn := range block.Transactions {
+	for idx, txn := range block.Transactions {
 		cTxn := modules.ConsensusTransaction{
 			Transaction:            txn,
 			BlockHeight:            block.Height,
 			BlockTime:              block.Timestamp,
+			SequenceID:             uint64(idx),
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}
@@ -182,11 +183,12 @@ func (p *Plugin) RevertBlock(block modules.ConsensusBlock, bucket *persist.LazyB
 	}
 	// collect all one-per-block mint conditions
 	var err error
-	for _, txn := range block.Transactions {
+	for idx, txn := range block.Transactions {
 		cTxn := modules.ConsensusTransaction{
 			Transaction:            txn,
 			BlockHeight:            block.Height,
 			BlockTime:              block.Timestamp,
+			SequenceID:             uint64(idx),
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}
