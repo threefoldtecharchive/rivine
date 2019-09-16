@@ -136,7 +136,7 @@ func (p *Plugin) ApplyBlock(block modules.ConsensusBlock, bucket *persist.LazyBo
 			Transaction:            txn,
 			BlockHeight:            block.Height,
 			BlockTime:              block.Timestamp,
-			SequenceID:             uint64(idx),
+			SequenceID:             uint16(idx),
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}
@@ -243,7 +243,7 @@ func (p *Plugin) RevertBlock(block modules.ConsensusBlock, bucket *persist.LazyB
 			Transaction:            txn,
 			BlockHeight:            block.Height,
 			BlockTime:              block.Timestamp,
-			SequenceID:             uint64(idx),
+			SequenceID:             uint16(idx),
 			SpentCoinOutputs:       block.SpentCoinOutputs,
 			SpentBlockStakeOutputs: block.SpentBlockStakeOutputs,
 		}

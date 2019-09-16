@@ -87,7 +87,7 @@ func (cs *ConsensusSet) TryTransactionSet(txns []types.Transaction) (modules.Con
 				Transaction:            txn,
 				BlockHeight:            diffHolder.Height,
 				BlockTime:              blockTime,
-				SequenceID:             uint64(idx),
+				SequenceID:             uint16(idx),
 				SpentCoinOutputs:       make(map[types.CoinOutputID]types.CoinOutput),
 				SpentBlockStakeOutputs: make(map[types.BlockStakeOutputID]types.BlockStakeOutput),
 			}
