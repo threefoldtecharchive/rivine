@@ -200,7 +200,12 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 
 		go func() {
 			var previousStats, currentStats bolt.Stats
-			cs.tg.Add()
+
+			if err := cs.tg.Add(); err != nil {
+				// tg already closed
+				return
+			}
+
 			defer cs.tg.Done()
 
 			for {
