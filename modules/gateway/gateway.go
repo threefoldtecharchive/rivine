@@ -278,9 +278,10 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 		g.threads.OnStop(func() {
 			<-boostrapPeersClosedChan
 		})
-		// Initially try connecting to bootstrap peers without timeout (when daemon has internet access)
-		g.startConnectingToBootstrapPeers(bootstrapPeers)
+
 		go func() {
+			// Initially try connecting to bootstrap peers without timeout (when daemon has internet access)
+			g.startConnectingToBootstrapPeers(boostrapPeersClosedChan, bootstrapPeers)
 			// Try reconnecting to bootstrap peers with timeout in case daemon has no internet access
 			g.connectToBootstapPeers(boostrapPeersClosedChan, bootstrapPeers)
 		}()
@@ -348,7 +349,7 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 }
 
 func (g *Gateway) connectToBootstapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
-	defer close(closeChan)
+	defer closeGatewayChan(closeChan)
 	for {
 		select {
 		// If gateway stop, close the closeChannel
@@ -356,25 +357,51 @@ func (g *Gateway) connectToBootstapPeers(closeChan chan struct{}, bootstrapPeers
 			return
 		// Start connection to bootstrapPeers after 1 minute
 		case <-time.After(1 * time.Minute):
-			g.startConnectingToBootstrapPeers(bootstrapPeers)
+			g.startConnectingToBootstrapPeers(closeChan, bootstrapPeers)
 		}
 	}
 }
 
-func (g *Gateway) startConnectingToBootstrapPeers(bootstrapPeers []modules.NetAddress) {
+func (g *Gateway) startConnectingToBootstrapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
+	defer closeGatewayChan(closeChan)
 	for _, addr := range bootstrapPeers {
-		g.log.Debugf("Trying to connect to bootstrap peer: %v", addr)
-		if err := addr.TryNameResolution(); err != nil {
-			// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
-			g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", addr, err)
-			continue
-		}
-		err := g.managedConnect(addr)
-		if err != nil && err != errNodeExists {
-			g.log.Printf("WARN: failed to add the bootstrap node '%v': %v", addr, err)
-			continue
+		select {
+		// If gateway stop, close the closeChannel
+		case <-g.threads.StopChan():
+			return
+		default:
+			g.log.Debugf("Trying to connect to bootstrap peer: %v", addr)
+			if err := addr.TryNameResolution(); err != nil {
+				// Bootstrap nodes can still be in IP:PORT notation so we might still be able to continue
+				g.log.Debugf("Bootstrap node [%v] address resolution failed: %v", addr, err)
+				continue
+			}
+			err := g.managedConnect(addr)
+			if err != nil && err != errNodeExists {
+				g.log.Printf("WARN: failed to add the bootstrap node '%v': %v", addr, err)
+				continue
+			}
 		}
 	}
+}
+
+// first check if the channel is not closed, then close it.
+func closeGatewayChan(closeChan chan struct{}) {
+	if !isClosed(closeChan) {
+		close(closeChan)
+	}
+	return
+}
+
+// help method to check if a channel is closed.
+func isClosed(ch <-chan struct{}) bool {
+	select {
+	case <-ch:
+		return true
+	default:
+	}
+
+	return false
 }
 
 // enforce that Gateway satisfies the modules.Gateway interface
