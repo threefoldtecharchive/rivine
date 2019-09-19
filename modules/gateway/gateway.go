@@ -281,9 +281,9 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 
 		go func() {
 			// Initially try connecting to bootstrap peers without timeout (when daemon has internet access)
-			g.initialBootstrapPeersConnect(bootstrapPeers)
+			g.connectToBootstrapPeers(bootstrapPeers)
 			// Try reconnecting to bootstrap peers with timeout in case daemon has no internet access
-			g.connectToBootstrapPeers(bootstrapPeersClosedChan, bootstrapPeers)
+			g.ensureBootstrapPeerConnection(bootstrapPeersClosedChan, bootstrapPeers)
 		}()
 	}
 
@@ -348,7 +348,7 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	return g, nil
 }
 
-func (g *Gateway) connectToBootstrapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
+func (g *Gateway) ensureBootstrapPeerConnection(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
 	defer close(closeChan)
 	for {
 		select {
@@ -357,15 +357,14 @@ func (g *Gateway) connectToBootstrapPeers(closeChan chan struct{}, bootstrapPeer
 			return
 		// Start connection to bootstrapPeers after 1 minute
 		case <-time.After(1 * time.Minute):
-			g.initialBootstrapPeersConnect(bootstrapPeers)
+			g.connectToBootstrapPeers(bootstrapPeers)
 		}
 	}
 }
 
-func (g *Gateway) initialBootstrapPeersConnect(bootstrapPeers []modules.NetAddress) {
+func (g *Gateway) connectToBootstrapPeers(bootstrapPeers []modules.NetAddress) {
 	for _, addr := range bootstrapPeers {
 		select {
-		// If gateway stop, close the closeChannel
 		case <-g.threads.StopChan():
 			return
 		default:
