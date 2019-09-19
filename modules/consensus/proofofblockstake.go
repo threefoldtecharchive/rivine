@@ -20,7 +20,7 @@ import (
 func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight, block types.Block, delay types.BlockHeight) *big.Int {
 	//TODO: check if a new Stakemodifier needs to be calculated. The stakemodifier
 	// only change when a new block is created, and this calculation is also needed
-	// to validate an incomming new block
+	// to validate an incoming new block
 
 	// make a signed version of the current height because sub genesis block is
 	// possible here.
@@ -34,10 +34,11 @@ func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight, block t
 
 	// Rollback the required amount of blocks, minus 1. This way we end up at the direct child of the
 	// block we use to calculate the stakemodifer, rather than the actual first block. Simplifies
-	// the main loop a bit
-	// block is not present in the DB yet so use the parent ID to count back from
-	// subtrackt an aditional block from the delay since we start at the parent ID,
-	// not the current block ID (so we already went back a block)
+	// the main loop a bit.
+	// If we are validating a new block, `block` is not present in the database yet.
+	// To work around this problem, start traversing back from the parent ID of the
+	// given block. Since this means we already traversed one block manually, we
+	// need to subtract 1 from the amount of blocks we need to roll back as well.
 	// Giving both of the above, roll back delay - 2
 	hash, _ := cs.FindParentHash(block.Header().ParentID, (delay-1)-1)
 

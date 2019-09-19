@@ -347,8 +347,8 @@ func (cs *ConsensusSet) FindParentBlock(b types.Block, depth types.BlockHeight) 
 	return
 }
 
-// FindParentHash starts at a given hash h, and traversers the chain for the given
-// depth to aquire the hash (block ID) of a block. The caller must ensure that
+// FindParentHash starts at a given hash h, and traverse the chain for the given
+// depth to acquire the hash (block ID) of a block. The caller must ensure that
 // the block with ID `h` is already present in the consensus DB, else this function
 // will fail. Specifically, when this function is used for validation, the parent ID
 // of the block being validated should be used, and depth adjusted accordingly
@@ -376,16 +376,17 @@ func (cs *ConsensusSet) FindParentHash(h types.BlockID, depth types.BlockHeight)
 			pID, exists = cs.knownParentIDs[pID]
 			if !exists {
 				// Not found in cache, load from disk
-				// we previously updted cbID to point to the parent, so we can use it
+				// we previously updated cbID to point to the parent, so we can use it
 				// here instead of the now invalid pID
 				parent, err = getBlockMap(tx, cbID)
 				if err != nil {
 					return err
 				}
-				// save parentID for later use
-				cs.knownParentIDs[cbID] = parent.Block.Header().ParentID
 
+				// save parentID for later use
 				pID = parent.Block.Header().ParentID
+				cs.knownParentIDs[cbID] = pID
+
 			}
 
 			// If we get here pID is once again valid
