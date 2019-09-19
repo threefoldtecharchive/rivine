@@ -86,6 +86,12 @@ type ConsensusSet struct {
 	// the genesis block, meaning the PoW is not very expensive.
 	dosBlocks map[types.BlockID]struct{}
 
+	// knownParentIDs keeps track of block ID's and their associated parent ID's.
+	// This allows us to find a parent block of any block, regardless whether or
+	// not it is in the active fork, without having to load all these blocks from
+	// disk and decode them.
+	knownParentIDs map[types.BlockID]types.BlockID
+
 	// checkingConsistency is a bool indicating whether or not a consistency
 	// check is in progress. The consistency check logic call itself, resulting
 	// in infinite loops. This bool prevents that while still allowing for full
@@ -146,6 +152,8 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		txValidators:              StandardTransactionValidators(),
 
 		dosBlocks: make(map[types.BlockID]struct{}),
+
+		knownParentIDs: make(map[types.BlockID]types.BlockID),
 
 		bootstrap: bootstrap,
 
@@ -313,22 +321,87 @@ func (cs *ConsensusSet) BlockHeightOfBlock(block types.Block) (height types.Bloc
 func (cs *ConsensusSet) FindParentBlock(b types.Block, depth types.BlockHeight) (block types.Block, exists bool) {
 	var parent *processedBlock
 	var err error
+	var ph types.BlockID
+
+	// subtract one from depth as we start at the parent ID already, not the
+	// current block ID
+	ph, exists = cs.FindParentHash(b.Header().ParentID, depth-1)
+	if !exists {
+		return
+	}
+
 	_ = cs.db.View(func(tx *bolt.Tx) error {
-		pID := b.Header().ParentID
-		// count back to the right block
-		for i := depth; i > 0; i-- {
-			parent, err = getBlockMap(tx, pID)
-			if err != nil {
-				return err
-			}
-			pID = parent.Block.Header().ParentID
+		parent, err = getBlockMap(tx, ph)
+		if err != nil {
+			return err
 		}
+
 		return nil
 	})
+
 	if parent != nil {
 		exists = true
 		block = parent.Block
 	}
+
+	return
+}
+
+// FindParentHash starts at a given hash h, and traverse the chain for the given
+// depth to acquire the hash (block ID) of a block. The caller must ensure that
+// the block with ID `h` is already present in the consensus DB, else this function
+// will fail. Specifically, when this function is used for validation, the parent ID
+// of the block being validated should be used, and depth adjusted accordingly
+func (cs *ConsensusSet) FindParentHash(h types.BlockID, depth types.BlockHeight) (id types.BlockID, exists bool) {
+	var parent *processedBlock
+	var err error
+
+	// Keep track of the current block ID
+	cbID := h
+	// Keep track of the parent ID of the current block
+	// This variable will fix itself in the first loop iteration
+	pID := h
+
+	err = cs.db.View(func(tx *bolt.Tx) error {
+
+		// Count back to the right block, add 1 loop iteration to fix the parent
+		// ID not being present yet.
+		// After the first iteration, current block ID will still be the same,
+		// but parentID will be set to the correctly
+		for i := depth + 1; i > 0; i-- {
+			// We load a new block, therefore the parent ID is now the current ID
+			cbID = pID
+
+			// Update the parent ID, first fetch from the cache
+			pID, exists = cs.knownParentIDs[pID]
+			if !exists {
+				// Not found in cache, load from disk
+				// we previously updated cbID to point to the parent, so we can use it
+				// here instead of the now invalid pID
+				parent, err = getBlockMap(tx, cbID)
+				if err != nil {
+					return err
+				}
+
+				// save parentID for later use
+				pID = parent.Block.Header().ParentID
+				cs.knownParentIDs[cbID] = pID
+
+			}
+
+			// If we get here pID is once again valid
+		}
+
+		return nil
+	})
+
+	if err == nil {
+		exists = true
+		// pID keeps track of the next block ID we need for the loop, so the one
+		// we are interested in is actually in cbID
+		id = cbID
+	}
+
 	return
 }
 

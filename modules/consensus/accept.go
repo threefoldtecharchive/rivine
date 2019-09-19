@@ -147,6 +147,8 @@ func (cs *ConsensusSet) addBlockToTree(b types.Block) (ce changeEntry, err error
 		// set to indicate that modules.ErrNonExtending should be returned.
 		nonExtending = !newNode.heavierThan(
 			currentNode, cs.chainCts.RootDepth)
+		// At this point the block is added in the cs, so update the header cache
+		cs.knownParentIDs[b.ID()] = b.ParentID
 		if nonExtending {
 			return nil
 		}

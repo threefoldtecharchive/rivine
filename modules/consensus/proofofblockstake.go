@@ -20,7 +20,7 @@ import (
 func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight, block types.Block, delay types.BlockHeight) *big.Int {
 	//TODO: check if a new Stakemodifier needs to be calculated. The stakemodifier
 	// only change when a new block is created, and this calculation is also needed
-	// to validate an incomming new block
+	// to validate an incoming new block
 
 	// make a signed version of the current height because sub genesis block is
 	// possible here.
@@ -34,8 +34,13 @@ func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight, block t
 
 	// Rollback the required amount of blocks, minus 1. This way we end up at the direct child of the
 	// block we use to calculate the stakemodifer, rather than the actual first block. Simplifies
-	// the main loop a bit
-	block, _ = cs.FindParentBlock(block, delay-1)
+	// the main loop a bit.
+	// If we are validating a new block, `block` is not present in the database yet.
+	// To work around this problem, start traversing back from the parent ID of the
+	// given block. Since this means we already traversed one block manually, we
+	// need to subtract 1 from the amount of blocks we need to roll back as well.
+	// Giving both of the above, roll back delay - 2
+	hash, _ := cs.FindParentHash(block.Header().ParentID, (delay-1)-1)
 
 	// We have the direct child of the first block used in the stake modifier calculation. As such
 	// we can follow the parentID in the block to retrieve all the blocks required, using 1 bit
@@ -43,12 +48,11 @@ func (cs *ConsensusSet) CalculateStakeModifier(height types.BlockHeight, block t
 	for i := 0; i < 256; i++ {
 		if signedHeight >= 0 {
 			var exist bool
-			block, exist = cs.FindParentBlock(block, 1)
+			hash, exist = cs.FindParentHash(hash, 1)
 			if !exist {
 				build.Severe("block to be used for stakemodifier does not yet exist")
 			}
-			hashof := block.ID()
-			BlockIDHash = big.NewInt(0).SetBytes(hashof[:])
+			BlockIDHash = big.NewInt(0).SetBytes(hash[:])
 		} else {
 			// if the counter goes sub genesis block , calculate a predefined hash
 			// from the sub genesis distance.
