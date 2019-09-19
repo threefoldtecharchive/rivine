@@ -274,16 +274,16 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	// if no-bootstrap flag is not provided.
 	if bootstrap {
 		// Spawn the boostrap peer manager and provide tools for ensuring clean shudown.
-		boostrapPeersClosedChan := make(chan struct{})
+		bootstrapPeersClosedChan := make(chan struct{})
 		g.threads.OnStop(func() {
-			<-boostrapPeersClosedChan
+			<-bootstrapPeersClosedChan
 		})
 
 		go func() {
 			// Initially try connecting to bootstrap peers without timeout (when daemon has internet access)
-			g.startConnectingToBootstrapPeers(boostrapPeersClosedChan, bootstrapPeers)
+			g.initialBootstrapPeersConnect(bootstrapPeers)
 			// Try reconnecting to bootstrap peers with timeout in case daemon has no internet access
-			g.connectToBootstapPeers(boostrapPeersClosedChan, bootstrapPeers)
+			g.connectToBootstrapPeers(bootstrapPeersClosedChan, bootstrapPeers)
 		}()
 	}
 
@@ -348,8 +348,8 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	return g, nil
 }
 
-func (g *Gateway) connectToBootstapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
-	defer closeGatewayChan(closeChan)
+func (g *Gateway) connectToBootstrapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
+	defer close(closeChan)
 	for {
 		select {
 		// If gateway stop, close the closeChannel
@@ -357,13 +357,12 @@ func (g *Gateway) connectToBootstapPeers(closeChan chan struct{}, bootstrapPeers
 			return
 		// Start connection to bootstrapPeers after 1 minute
 		case <-time.After(1 * time.Minute):
-			g.startConnectingToBootstrapPeers(closeChan, bootstrapPeers)
+			g.initialBootstrapPeersConnect(bootstrapPeers)
 		}
 	}
 }
 
-func (g *Gateway) startConnectingToBootstrapPeers(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {
-	defer closeGatewayChan(closeChan)
+func (g *Gateway) initialBootstrapPeersConnect(bootstrapPeers []modules.NetAddress) {
 	for _, addr := range bootstrapPeers {
 		select {
 		// If gateway stop, close the closeChannel
@@ -383,25 +382,6 @@ func (g *Gateway) startConnectingToBootstrapPeers(closeChan chan struct{}, boots
 			}
 		}
 	}
-}
-
-// first check if the channel is not closed, then close it.
-func closeGatewayChan(closeChan chan struct{}) {
-	if !isClosed(closeChan) {
-		close(closeChan)
-	}
-	return
-}
-
-// help method to check if a channel is closed.
-func isClosed(ch <-chan struct{}) bool {
-	select {
-	case <-ch:
-		return true
-	default:
-	}
-
-	return false
 }
 
 // enforce that Gateway satisfies the modules.Gateway interface
