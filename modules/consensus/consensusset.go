@@ -158,7 +158,7 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 		bootstrap: bootstrap,
 
 		marshaler:       stdMarshaler{},
-		blockRuleHelper: stdBlockRuleHelper{chainCts: chainCts},
+		blockRuleHelper: newStdBlockRuleHelper(chainCts),
 
 		persistDir: persistDir,
 
