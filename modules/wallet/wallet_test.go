@@ -667,3 +667,11 @@ func (css *consensusSetStub) RegisterPlugin(ctx context.Context, name string, pl
 func (css *consensusSetStub) UnregisterPlugin(name string, plugin modules.ConsensusSetPlugin) {
 	// Do nothing
 }
+
+func (css *consensusSetStub) SetTransactionValidators(validators ...modules.TransactionValidationFunction) {
+	// Do nothing
+}
+
+func (css *consensusSetStub) SetTransactionVersionMappedValidators(version types.TransactionVersion, validators ...modules.TransactionValidationFunction) {
+	// Do nothing
+}
