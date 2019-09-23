@@ -59,6 +59,7 @@ func StandardTransactionValidators() []modules.TransactionValidationFunction {
 		ValidateCoinOutputsAreValid,
 		ValidateBlockStakeInputsAreValid,
 		ValidateBlockStakeOutputsAreValid,
+		ValidateMinerFeeIsPresent,
 		ValidateMinerFeesAreValid,
 		ValidateDoubleCoinSpends,
 		ValidateDoubleBlockStakeSpends,
