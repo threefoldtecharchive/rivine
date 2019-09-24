@@ -62,7 +62,9 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 
 				for _, sci := range txn.CoinInputs {
 					dbRemoveCoinOutputID(tx, sci.ParentID, txid)
-					unmapParentUnlockConditionHash(tx, sci.ParentID, txid)
+					if err = unmapParentUnlockConditionHash(tx, sci.ParentID, txid); err != nil {
+						build.Severe(err)
+					}
 				}
 				for k, sco := range txn.CoinOutputs {
 					scoid := txn.CoinOutputID(uint64(k))
@@ -72,7 +74,9 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 				}
 				for _, sfi := range txn.BlockStakeInputs {
 					dbRemoveBlockStakeOutputID(tx, sfi.ParentID, txid)
-					unmapParentUnlockConditionHash(tx, sfi.ParentID, txid)
+					if err = unmapParentUnlockConditionHash(tx, sfi.ParentID, txid); err != nil {
+						build.Severe(err)
+					}
 				}
 				for k, sfo := range txn.BlockStakeOutputs {
 					sfoid := txn.BlockStakeOutputID(uint64(k))
@@ -404,7 +408,9 @@ func dbRemoveCoinOutputID(tx *bolt.Tx, id types.CoinOutputID, txid types.Transac
 	bucket := tx.Bucket(bucketCoinOutputIDs).Bucket(assertSiaMarshal(id))
 	mustDelete(bucket, txid)
 	if bucketIsEmpty(bucket) {
-		tx.Bucket(bucketCoinOutputIDs).DeleteBucket(assertSiaMarshal(id))
+		if err := tx.Bucket(bucketCoinOutputIDs).DeleteBucket(assertSiaMarshal(id)); err != nil {
+			build.Severe(err)
+		}
 	}
 }
 
@@ -427,7 +433,9 @@ func dbRemoveBlockStakeOutputID(tx *bolt.Tx, id types.BlockStakeOutputID, txid t
 	bucket := tx.Bucket(bucketBlockStakeOutputIDs).Bucket(assertSiaMarshal(id))
 	mustDelete(bucket, txid)
 	if bucketIsEmpty(bucket) {
-		tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(assertSiaMarshal(id))
+		if err := tx.Bucket(bucketBlockStakeOutputIDs).DeleteBucket(assertSiaMarshal(id)); err != nil {
+			build.Severe(err)
+		}
 	}
 }
 
@@ -569,7 +577,9 @@ func dbRemoveUnlockHash(tx *bolt.Tx, uh types.UnlockHash, txid types.Transaction
 	b := uhb.Bucket(muh)
 	mustDelete(b, txid)
 	if bucketIsEmpty(b) {
-		uhb.DeleteBucket(muh)
+		if err := uhb.DeleteBucket(muh); err != nil {
+			build.Severe(err)
+		}
 	}
 }
 
@@ -605,9 +615,13 @@ func dbRemoveWalletAddressToMultiSigAddressMapping(tx *bolt.Tx, walletAddress, m
 	msb := wb.Bucket(msa)
 	mustDelete(msb, txid)
 	if bucketIsEmpty(msb) {
-		wb.DeleteBucket(msa)
+		if err := wb.DeleteBucket(msa); err != nil {
+			build.Severe(err)
+		}
 		if bucketIsEmpty(wb) {
-			mb.DeleteBucket(wa)
+			if err := mb.DeleteBucket(wa); err != nil {
+				build.Severe(err)
+			}
 		}
 	}
 }
