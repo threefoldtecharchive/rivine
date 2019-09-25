@@ -10,24 +10,24 @@ import (
 
 // WalletClient is used to easily interact with the wallet through the HTTP REST API.
 type WalletClient struct {
-	client *CommandLineClient
+	bc *BaseClient
 }
 
 // NewWalletClient creates a new WalletClient,
 // that can be used for easy interaction with the Wallet API exposed via the HTTP REST API.
-func NewWalletClient(cli *CommandLineClient) *WalletClient {
-	if cli == nil {
-		panic("no CommandLineClient given")
+func NewWalletClient(bc *BaseClient) *WalletClient {
+	if bc == nil {
+		panic("no BaseClient given")
 	}
 	return &WalletClient{
-		client: cli,
+		bc: bc,
 	}
 }
 
 // NewPublicKey creates a new public key (from an index and the wallet's primary seed), and returns it.
 func (wallet *WalletClient) NewPublicKey() (types.PublicKey, error) {
 	var result api.WalletPublicKeyGET
-	err := wallet.client.GetWithResponse("/wallet/publickey", &result)
+	err := wallet.bc.HTTP().GetWithResponse("/wallet/publickey", &result)
 	if err != nil {
 		return types.PublicKey{}, fmt.Errorf("failed to get (new) public key: %v", err)
 	}
@@ -44,7 +44,7 @@ func (wallet *WalletClient) FundCoins(amount types.Currency, refundAddress *type
 	} else {
 		r += fmt.Sprintf("&refund=%t", newRefundAddress)
 	}
-	err := wallet.client.GetWithResponse(r, &result)
+	err := wallet.bc.HTTP().GetWithResponse(r, &result)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get fund coins: %v", err)
 	}
@@ -58,7 +58,7 @@ func (wallet *WalletClient) GreedySignTx(t *types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	err = wallet.client.PostWithResponse("/wallet/sign", string(b), t)
+	err = wallet.bc.HTTP().PostWithResponse("/wallet/sign", string(b), t)
 	if err != nil {
 		return fmt.Errorf("Failed to sign transaction: %v", err)
 	}

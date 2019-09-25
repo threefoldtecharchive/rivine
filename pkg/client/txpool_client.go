@@ -10,17 +10,17 @@ import (
 // TransactionPoolClient is used to easily interact
 // with the transaction pool through the HTTP REST API.
 type TransactionPoolClient struct {
-	client *CommandLineClient
+	bc *BaseClient
 }
 
 // NewTransactionPoolClient creates a new TransactionPoolClient,
 // that can be used for easy interaction with the TransactionPool API exposed via the HTTP REST API.
-func NewTransactionPoolClient(cli *CommandLineClient) *TransactionPoolClient {
-	if cli == nil {
-		panic("no CommandLineClient given")
+func NewTransactionPoolClient(bc *BaseClient) *TransactionPoolClient {
+	if bc == nil {
+		panic("no BaseClient given")
 	}
 	return &TransactionPoolClient{
-		client: cli,
+		bc: bc,
 	}
 }
 
@@ -31,7 +31,7 @@ func (tpool *TransactionPoolClient) AddTransactiom(t types.Transaction) (types.T
 		return types.TransactionID{}, err
 	}
 	var resp rivineapi.TransactionPoolPOST
-	err = tpool.client.PostWithResponse("/transactionpool/transactions", string(b), &resp)
+	err = tpool.bc.HTTP().PostWithResponse("/transactionpool/transactions", string(b), &resp)
 	if err != nil {
 		return types.TransactionID{}, err
 	}

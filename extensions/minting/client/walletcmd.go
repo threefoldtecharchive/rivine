@@ -21,9 +21,15 @@ type WalletCmdsOpts struct {
 }
 
 //CreateWalletCmds adds the wallet cli subcommands for the minting plugin
-func CreateWalletCmds(client *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion, opts *WalletCmdsOpts) {
+func CreateWalletCmds(ccli *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion, opts *WalletCmdsOpts) {
+	bc, err := client.NewBaseClientFromCommandLineClient(ccli)
+	if err != nil {
+		panic(err)
+	}
 	walletCmd := &walletCmd{
-		cli:                        client,
+		cli:                        ccli,
+		walletClient:               client.NewWalletClient(bc),
+		txPoolClient:               client.NewTransactionPoolClient(bc),
 		mintingDefinitionTxVersion: mintingDefinitionTxVersion,
 		coinCreationTxVersion:      coinCreationTxVersion,
 	}
@@ -64,7 +70,7 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 	)
 
 	// add commands as wallet sub commands
-	client.WalletCmd.RootCmdCreate.AddCommand(
+	ccli.WalletCmd.RootCmdCreate.AddCommand(
 		createMinterDefinitionTxCmd,
 		createCoinCreationTxCmd,
 	)
@@ -97,7 +103,7 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 
 		// get the root command or create it
 		var burnRootCmd *cobra.Command
-		for _, cmd := range client.WalletCmd.Commands() {
+		for _, cmd := range ccli.WalletCmd.Commands() {
 			if cmd.Name() == "burn" {
 				burnRootCmd = cmd
 				break
@@ -108,7 +114,7 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 				Use:   "burn",
 				Short: "burn resources, using an available command",
 			}
-			client.WalletCmd.AddCommand(burnRootCmd)
+			ccli.WalletCmd.AddCommand(burnRootCmd)
 		}
 
 		// attach our burn command to the burn root cmd
@@ -117,7 +123,9 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 }
 
 type walletCmd struct {
-	cli *client.CommandLineClient
+	cli          *client.CommandLineClient
+	walletClient *client.WalletClient
+	txPoolClient *client.TransactionPoolClient
 
 	mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion
 	minterDefinitionTxCfg                             struct {
@@ -218,9 +226,6 @@ func (walletCmd *walletCmd) burnCoinsCmd(cmd *cobra.Command, args []string) {
 	// add the minimum miner fee
 	amount = amount.Add(walletCmd.cli.Config.MinimumTransactionFee)
 
-	// create wallet client to be able to fund and sign
-	walletClient := client.NewWalletClient(walletCmd.cli)
-
 	// define the optional user-defined refund address
 	var refundAddress *types.UnlockHash
 	if walletCmd.coinDestructionTxCfg.RefundAddress != "" {
@@ -232,7 +237,7 @@ func (walletCmd *walletCmd) burnCoinsCmd(cmd *cobra.Command, args []string) {
 		}
 	}
 	// fund the burn Tx
-	coinInputs, refundCoinOutput, err := walletClient.FundCoins(amount, refundAddress, walletCmd.coinDestructionTxCfg.RefundAddressNew)
+	coinInputs, refundCoinOutput, err := walletCmd.walletClient.FundCoins(amount, refundAddress, walletCmd.coinDestructionTxCfg.RefundAddressNew)
 	if err != nil {
 		cli.DieWithError("failed to fund burn transaction", err)
 	}
@@ -250,14 +255,13 @@ func (walletCmd *walletCmd) burnCoinsCmd(cmd *cobra.Command, args []string) {
 
 	// sign the transaction
 	tx := cdTx.Transaction(walletCmd.coinDestructionTxVersion)
-	err = walletClient.GreedySignTx(&tx)
+	err = walletCmd.walletClient.GreedySignTx(&tx)
 	if err != nil {
 		cli.DieWithError("failed to sign burn transaction", err)
 	}
 
 	// send the transaction
-	txPoolClient := client.NewTransactionPoolClient(walletCmd.cli)
-	txID, err := txPoolClient.AddTransactiom(tx)
+	txID, err := walletCmd.txPoolClient.AddTransactiom(tx)
 	if err != nil {
 		cli.DieWithError("failed to send burn transaction", err)
 	}
