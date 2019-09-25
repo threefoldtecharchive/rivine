@@ -12,13 +12,8 @@ import (
 
 // HTTPGet is a utility function for making http get requests to sia with a
 // whitelisted user-agent. A non-2xx response does not return an error.
-func HTTPGet(url, data, userAgent string) (resp *http.Response, err error) {
-	var req *http.Request
-	if data != "" {
-		req, err = http.NewRequest("GET", url, strings.NewReader(data))
-	} else {
-		req, err = http.NewRequest("GET", url, nil)
-	}
+func HTTPGet(url, userAgent string) (resp *http.Response, err error) {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -29,13 +24,8 @@ func HTTPGet(url, data, userAgent string) (resp *http.Response, err error) {
 // HTTPGETAuthenticated is a utility function for making authenticated http get
 // requests to sia with a whitelisted user-agent and the supplied password. A
 // non-2xx response does not return an error.
-func HTTPGETAuthenticated(url, data, userAgent, password string) (resp *http.Response, err error) {
-	var req *http.Request
-	if data != "" {
-		req, err = http.NewRequest("GET", url, strings.NewReader(data))
-	} else {
-		req, err = http.NewRequest("GET", url, nil)
-	}
+func HTTPGETAuthenticated(url, userAgent, password string) (resp *http.Response, err error) {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}

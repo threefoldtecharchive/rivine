@@ -363,7 +363,7 @@ type walletCmd struct {
 // receive coins.
 func (walletCmd *walletCmd) addressCmd() {
 	addr := new(api.WalletAddressGET)
-	err := walletCmd.cli.GetAPI("/wallet/address", addr)
+	err := walletCmd.cli.GetWithResponse("/wallet/address", addr)
 	if err != nil {
 		cli.DieWithError("Could not generate new address:", err)
 	}
@@ -373,7 +373,7 @@ func (walletCmd *walletCmd) addressCmd() {
 // addressesCmd fetches the list of addresses that the wallet knows.
 func (walletCmd *walletCmd) addressesCmd() {
 	addrs := new(api.WalletAddressesGET)
-	err := walletCmd.cli.GetAPI("/wallet/addresses", addrs)
+	err := walletCmd.cli.GetWithResponse("/wallet/addresses", addrs)
 	if err != nil {
 		cli.DieWithError("Failed to fetch addresses:", err)
 	}
@@ -411,7 +411,7 @@ func (walletCmd *walletCmd) initCmd() {
 		data = fmt.Sprintf("passphrase=%s", passphrase)
 	}
 
-	err := walletCmd.cli.PostResp("/wallet/init", data, &er)
+	err := walletCmd.cli.PostWithResponse("/wallet/init", data, &er)
 	if err != nil {
 		if walletCmd.walletInitCfg.Plain {
 			cli.DieWithError("Error when creating plain wallet:", err)
@@ -470,7 +470,7 @@ func (walletCmd *walletCmd) recoverCmd() {
 	}
 	data += fmt.Sprintf("seed=%s", seed.String())
 
-	err = walletCmd.cli.PostResp("/wallet/init", data, &er)
+	err = walletCmd.cli.PostWithResponse("/wallet/init", data, &er)
 	if err != nil {
 		if walletCmd.walletRecoverCfg.Plain {
 			cli.DieWithError("Error when creating plain wallet:", err)
@@ -526,7 +526,7 @@ func (walletCmd *walletCmd) lockCmd() {
 // seedsCmd returns the current seed {
 func (walletCmd *walletCmd) seedsCmd() {
 	var seedInfo api.WalletSeedsGET
-	err := walletCmd.cli.GetAPI("/wallet/seeds", &seedInfo)
+	err := walletCmd.cli.GetWithResponse("/wallet/seeds", &seedInfo)
 	if err != nil {
 		cli.DieWithError("Error retrieving the current seed:", err)
 	}
@@ -575,7 +575,7 @@ func (walletCmd *walletCmd) sendCoinsCmd(cmd *cobra.Command, args []string) {
 		cli.Die("Failed to JSON Marshal the input body:", err)
 	}
 	var resp api.WalletCoinsPOSTResp
-	err = walletCmd.cli.PostResp("/wallet/coins", string(bytes), &resp)
+	err = walletCmd.cli.PostWithResponse("/wallet/coins", string(bytes), &resp)
 	if err != nil {
 		cli.DieWithError("Could not send coins:", err)
 	}
@@ -623,7 +623,7 @@ func (walletCmd *walletCmd) sendBlockStakesCmd(cmd *cobra.Command, args []string
 		cli.Die("Failed to JSON Marshal the input body:", err)
 	}
 	var resp api.WalletBlockStakesPOSTResp
-	err = walletCmd.cli.PostResp("/wallet/blockstakes", string(bytes), &resp)
+	err = walletCmd.cli.PostWithResponse("/wallet/blockstakes", string(bytes), &resp)
 	if err != nil {
 		cli.DieWithError("Could not send block stakes:", err)
 	}
@@ -705,7 +705,7 @@ func (walletCmd *walletCmd) blockStakesStatsCmd() {
 	currencyConvertor := walletCmd.cli.CreateCurrencyConvertor()
 
 	bsstat := new(api.WalletBlockStakeStatsGET)
-	err := walletCmd.cli.GetAPI("/wallet/blockstakestats", bsstat)
+	err := walletCmd.cli.GetWithResponse("/wallet/blockstakestats", bsstat)
 	if err != nil {
 		cli.DieWithError("Could not gen blockstake info:", err)
 	}
@@ -735,7 +735,7 @@ func (walletCmd *walletCmd) balanceCmd() {
 	currencyConvertor := walletCmd.cli.CreateCurrencyConvertor()
 
 	status := new(api.WalletGET)
-	err := walletCmd.cli.GetAPI("/wallet", status)
+	err := walletCmd.cli.GetWithResponse("/wallet", status)
 	if err != nil {
 		cli.DieWithError("Could not get wallet status:", err)
 	}
@@ -830,7 +830,7 @@ BlockStakes:         %v BS
 // providing a net flow of siacoins and siafunds for each.
 func (walletCmd *walletCmd) listTransactionsCmd() {
 	wtg := new(api.WalletTransactionsGET)
-	err := walletCmd.cli.GetAPI("/wallet/transactions?startheight=0&endheight=10000000", wtg)
+	err := walletCmd.cli.GetWithResponse("/wallet/transactions?startheight=0&endheight=10000000", wtg)
 	if err != nil {
 		cli.DieWithError("Could not fetch transaction history:", err)
 	}
@@ -989,7 +989,7 @@ func (walletCmd *walletCmd) unlockCmd() {
 // to the transaction pool
 func (walletCmd *walletCmd) sendTxCmd(txnjson string) {
 	var resp api.TransactionPoolPOST
-	err := walletCmd.cli.PostResp("/transactionpool/transactions", txnjson, &resp)
+	err := walletCmd.cli.PostWithResponse("/transactionpool/transactions", txnjson, &resp)
 	if err != nil {
 		cli.DieWithError("Could not publish transaction:", err)
 	}
@@ -1012,7 +1012,7 @@ func (walletCmd *walletCmd) listUnlockedCmd(_ *cobra.Command, args []string) {
 	}
 
 	var resp api.WalletListUnlockedGET
-	err = walletCmd.cli.GetAPI("/wallet/unlocked", &resp)
+	err = walletCmd.cli.GetWithResponse("/wallet/unlocked", &resp)
 	if err != nil {
 		cli.DieWithError("failed to get unlocked outputs: ", err)
 	}
@@ -1089,7 +1089,7 @@ func (walletCmd *walletCmd) listLockedCmd(_ *cobra.Command, args []string) {
 	}
 
 	var resp api.WalletListLockedGET
-	err = walletCmd.cli.GetAPI("/wallet/locked", &resp)
+	err = walletCmd.cli.GetWithResponse("/wallet/locked", &resp)
 	if err != nil {
 		cli.DieWithError("Could not get locked outputs: ", err)
 	}
@@ -1212,7 +1212,7 @@ func (walletCmd *walletCmd) createCoinTxCmd(cmd *cobra.Command, args []string) {
 		cli.Die("Could not create raw transaction from inputs and outputs: ", err)
 	}
 	var resp api.WalletCreateTransactionRESP
-	err = walletCmd.cli.PostResp("/wallet/create/transaction", buffer.String(), &resp)
+	err = walletCmd.cli.PostWithResponse("/wallet/create/transaction", buffer.String(), &resp)
 	if err != nil {
 		cli.DieWithError("Failed to create transaction:", err)
 	}
@@ -1256,7 +1256,7 @@ func (walletCmd *walletCmd) createBlockStakeTxCmd(cmd *cobra.Command, args []str
 		cli.Die("Could not create raw transaction from inputs and outputs: ", err)
 	}
 	var resp api.WalletCreateTransactionRESP
-	err = walletCmd.cli.PostResp("/wallet/create/transaction", buffer.String(), &resp)
+	err = walletCmd.cli.PostWithResponse("/wallet/create/transaction", buffer.String(), &resp)
 	if err != nil {
 		cli.DieWithError("Failed to create transaction:", err)
 	}
@@ -1266,7 +1266,7 @@ func (walletCmd *walletCmd) createBlockStakeTxCmd(cmd *cobra.Command, args []str
 
 func (walletCmd *walletCmd) signTxCmd(txnjson string) {
 	var txn types.Transaction
-	err := walletCmd.cli.PostResp("/wallet/sign", txnjson, &txn)
+	err := walletCmd.cli.PostWithResponse("/wallet/sign", txnjson, &txn)
 	if err != nil {
 		cli.DieWithError("Failed to sign transaction:", err)
 	}

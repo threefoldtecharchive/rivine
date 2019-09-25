@@ -255,29 +255,3 @@ func (cli *CommandLineClient) CreateCurrencyConvertor() CurrencyConvertor {
 		cli.Config.CurrencyCoinUnit,
 	)
 }
-
-// FetchConfigFromDaemon fetches constants and creates a config, by fetching the constants from the daemon.
-// Returns an error in case the fetching wasn't possible.
-func FetchConfigFromDaemon(httpClient *api.HTTPClient) (*Config, error) {
-	var constants modules.DaemonConstants
-	err := httpClient.GetAPI("/daemon/constants", &constants)
-	if err == nil {
-		// returned config from received constants from the daemon's server module
-		cfg := ConfigFromDaemonConstants(constants)
-		return &cfg, nil
-	}
-	err = httpClient.GetAPI("/explorer/constants", &constants)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load constants from daemon's server and explorer modules: %v", err)
-	}
-	if constants.ChainInfo == (types.BlockchainInfo{}) {
-		// only since 1.0.7 do we support the full set of public daemon constants for both
-		// the explorer endpoint as well as the daemon endpoint,
-		// so we need to validate this
-		return nil, errors.New("failed to load constants from daemon's server and explorer modules: " +
-			"explorer modules does not support the full exposure of public daemon constants")
-	}
-	// returned config from received constants from the daemon's explorer module
-	cfg := ConfigFromDaemonConstants(constants)
-	return &cfg, nil
-}

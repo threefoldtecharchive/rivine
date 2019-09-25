@@ -13,18 +13,25 @@ import (
 )
 
 //CreateExploreCmd adds the explorer clisubcommands for the minting plugin
-func CreateExploreCmd(client *client.CommandLineClient) {
-	createCmd(client, client.ExploreCmd, NewPluginExplorerClient(client))
+func CreateExploreCmd(cli *client.CommandLineClient) {
+	bc, err := client.NewBaseClientFromCommandLineClient(cli)
+	if err != nil {
+		panic(err)
+	}
+	createCmd(cli.ExploreCmd, NewPluginExplorerClient(bc))
 }
 
 //CreateConsensusCmd adds the consensus cli subcommands for the minting plugin
-func CreateConsensusCmd(client *client.CommandLineClient) {
-	createCmd(client, client.ConsensusCmd, NewPluginConsensusClient(client))
+func CreateConsensusCmd(cli *client.CommandLineClient) {
+	bc, err := client.NewBaseClientFromCommandLineClient(cli)
+	if err != nil {
+		panic(err)
+	}
+	createCmd(cli.ConsensusCmd, NewPluginConsensusClient(bc))
 }
 
-func createCmd(client *client.CommandLineClient, rootCmd *cobra.Command, pluginClient *PluginClient) {
+func createCmd(rootCmd *cobra.Command, pluginClient *PluginClient) {
 	subCmds := &subCmd{
-		cli:          client,
 		pluginClient: pluginClient,
 	}
 
@@ -50,7 +57,6 @@ or the one for the given block height.
 }
 
 type subCmd struct {
-	cli                 *client.CommandLineClient
 	pluginClient        *PluginClient
 	getMintConditionCfg struct {
 		EncodingType cli.EncodingType

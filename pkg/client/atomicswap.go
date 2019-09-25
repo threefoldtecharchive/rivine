@@ -381,7 +381,7 @@ func (atomicSwapCmd *atomicSwapCmd) participateCmd(participantAddress, amount, h
 	} else {
 		// get new one from the wallet
 		resp := new(api.WalletAddressGET)
-		err := atomicSwapCmd.cli.GetAPI("/wallet/address", resp)
+		err := atomicSwapCmd.cli.GetWithResponse("/wallet/address", resp)
 		if err != nil {
 			cli.DieWithError("failed to generate new address:", err)
 		}
@@ -420,7 +420,7 @@ func (atomicSwapCmd *atomicSwapCmd) initiateCmd(participantAddress, amount strin
 	} else {
 		// get new one from the wallet
 		resp := new(api.WalletAddressGET)
-		err := atomicSwapCmd.cli.GetAPI("/wallet/address", resp)
+		err := atomicSwapCmd.cli.GetWithResponse("/wallet/address", resp)
 		if err != nil {
 			cli.DieWithError("failed to generate new address:", err)
 		}
@@ -477,7 +477,7 @@ func (atomicSwapCmd *atomicSwapCmd) createAtomicSwapContract(hastings types.Curr
 		cli.Die("failed to create/marshal JSON body:", err)
 	}
 	var response api.WalletTransactionPOSTResponse
-	err = atomicSwapCmd.cli.PostResp("/wallet/transaction", string(body), &response)
+	err = atomicSwapCmd.cli.PostWithResponse("/wallet/transaction", string(body), &response)
 	if err != nil {
 		cli.DieWithError("failed to create transaction:", err)
 	}
@@ -565,7 +565,7 @@ func (atomicSwapCmd *atomicSwapCmd) auditCmd(cmd *cobra.Command, args []string) 
 	}
 
 	// get unspent output from consensus
-	err = atomicSwapCmd.cli.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
+	err = atomicSwapCmd.cli.GetWithResponse("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err == nil {
 		atomicSwapCmd.auditAtomicSwapContract(unspentCoinOutputResp.Output, auditSourceConsensus)
 		return
@@ -575,7 +575,7 @@ func (atomicSwapCmd *atomicSwapCmd) auditCmd(cmd *cobra.Command, args []string) 
 	}
 	// output couldn't be found as an unspent coin output
 	// therefore the last positive hope is if it wasn't yet part of the transaction pool
-	err = atomicSwapCmd.cli.GetAPI("/transactionpool/transactions", &txnPoolGetResp)
+	err = atomicSwapCmd.cli.GetWithResponse("/transactionpool/transactions", &txnPoolGetResp)
 	if err != nil {
 		cli.DieWithExitCode(cli.ExitCodeNotFound,
 			"contract no found as part of an unspent coin output, and getting unconfirmed transactions from the transactionpool failed:", err)
@@ -605,7 +605,7 @@ func (atomicSwapCmd *atomicSwapCmd) auditCmd(cmd *cobra.Command, args []string) 
 	// where the block might have been just created in between our 2 calls,
 	// let's try to get the coin output one last time from the consensus
 	// contract couldn't be found as either
-	err = atomicSwapCmd.cli.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
+	err = atomicSwapCmd.cli.GetWithResponse("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err == nil {
 		atomicSwapCmd.auditAtomicSwapContract(unspentCoinOutputResp.Output, auditSourceConsensus)
 		return
@@ -768,7 +768,7 @@ func (atomicSwapCmd *atomicSwapCmd) extractSecretCmd(cmd *cobra.Command, args []
 	// this is OK for extracting the secret, as the secret will already be validated
 	// against the condition's secret hash, prior to being able to add it to the transaction pool.
 	// ALl we care here is extracting the secret, as soon as possible.
-	err = atomicSwapCmd.cli.GetAPI("/transactionpool/transactions", &txnPoolGetResp)
+	err = atomicSwapCmd.cli.GetWithResponse("/transactionpool/transactions", &txnPoolGetResp)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "getting unconfirmed transactions from the transactionpool failed: "+err.Error())
 	}
@@ -796,7 +796,7 @@ func (atomicSwapCmd *atomicSwapCmd) extractSecretCmd(cmd *cobra.Command, args []
 
 	// get transaction from consensus, assuming that the transactionID is valid,
 	// it should mean that the transaction is already part of a created block
-	err = atomicSwapCmd.cli.GetAPI("/consensus/transactions/"+txnID.String(), &txnResp)
+	err = atomicSwapCmd.cli.GetWithResponse("/consensus/transactions/"+txnID.String(), &txnResp)
 	if err != nil {
 		if err == api.ErrStatusNotFound {
 			cli.DieWithExitCode(cli.ExitCodeUsage,
@@ -912,7 +912,7 @@ func (atomicSwapCmd *atomicSwapCmd) spendAtomicSwapContract(outputID types.CoinO
 
 	// get unspent output from consensus
 	var unspentCoinOutputResp api.ConsensusGetUnspentCoinOutput
-	err := atomicSwapCmd.cli.GetAPI("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
+	err := atomicSwapCmd.cli.GetWithResponse("/consensus/unspent/coinoutputs/"+outputID.String(), &unspentCoinOutputResp)
 	if err != nil {
 		if err == api.ErrStatusNotFound {
 			cli.DieWithExitCode(cli.ExitCodeNotFound,
@@ -1020,7 +1020,7 @@ func (atomicSwapCmd *atomicSwapCmd) spendAtomicSwapContract(outputID types.CoinO
 // get public- and private key from wallet module
 func (atomicSwapCmd *atomicSwapCmd) getSpendableKey(unlockHash types.UnlockHash) (types.PublicKey, types.ByteSlice) {
 	resp := new(api.WalletKeyGet)
-	err := atomicSwapCmd.cli.GetAPI("/wallet/key/"+unlockHash.String(), resp)
+	err := atomicSwapCmd.cli.GetWithResponse("/wallet/key/"+unlockHash.String(), resp)
 	if err != nil {
 		cli.DieWithError("failed to get a matching wallet public/secret key pair for the given unlock hash:", err)
 	}
@@ -1058,7 +1058,7 @@ func (atomicSwapCmd *atomicSwapCmd) commitTxn(txn types.Transaction) (types.Tran
 	}
 
 	resp := new(api.TransactionPoolPOST)
-	err = atomicSwapCmd.cli.PostResp("/transactionpool/transactions", bodyBuff.String(), resp)
+	err = atomicSwapCmd.cli.PostWithResponse("/transactionpool/transactions", bodyBuff.String(), resp)
 	return resp.TransactionID, err
 }
 

@@ -74,7 +74,7 @@ type exploreCmd struct {
 func (cmd *exploreCmd) blockCmd(blockHeightStr string) {
 	// get the block on the given height, using the daemon's explorer module
 	var resp api.ExplorerBlockGET
-	err := cmd.cli.GetAPI("/explorer/blocks/"+blockHeightStr, &resp)
+	err := cmd.cli.GetWithResponse("/explorer/blocks/"+blockHeightStr, &resp)
 	if err != nil {
 		cli.Die(fmt.Sprintf("Could not get a block on height %q: %v", blockHeightStr, err))
 	}
@@ -110,7 +110,7 @@ func (cmd *exploreCmd) hashCmd(hash string) {
 	if cmd.hashCfg.MinHeight > 0 {
 		url += fmt.Sprintf("?minheight=%d", cmd.hashCfg.MinHeight)
 	}
-	err := cmd.cli.GetAPI(url, &resp)
+	err := cmd.cli.GetWithResponse(url, &resp)
 	if err != nil {
 		cli.Die(fmt.Sprintf("Could not get an item using the hash %q: %v", hash, err))
 	}

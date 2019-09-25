@@ -27,7 +27,7 @@ func NewWalletClient(cli *CommandLineClient) *WalletClient {
 // NewPublicKey creates a new public key (from an index and the wallet's primary seed), and returns it.
 func (wallet *WalletClient) NewPublicKey() (types.PublicKey, error) {
 	var result api.WalletPublicKeyGET
-	err := wallet.client.GetAPI("/wallet/publickey", &result)
+	err := wallet.client.GetWithResponse("/wallet/publickey", &result)
 	if err != nil {
 		return types.PublicKey{}, fmt.Errorf("failed to get (new) public key: %v", err)
 	}
@@ -44,7 +44,7 @@ func (wallet *WalletClient) FundCoins(amount types.Currency, refundAddress *type
 	} else {
 		r += fmt.Sprintf("&refund=%t", newRefundAddress)
 	}
-	err := wallet.client.GetAPI(r, &result)
+	err := wallet.client.GetWithResponse(r, &result)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get fund coins: %v", err)
 	}
@@ -58,7 +58,7 @@ func (wallet *WalletClient) GreedySignTx(t *types.Transaction) error {
 	if err != nil {
 		return err
 	}
-	err = wallet.client.PostResp("/wallet/sign", string(b), t)
+	err = wallet.client.PostWithResponse("/wallet/sign", string(b), t)
 	if err != nil {
 		return fmt.Errorf("Failed to sign transaction: %v", err)
 	}

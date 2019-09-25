@@ -58,9 +58,9 @@ type HTTPClient struct {
 	UserAgent string
 }
 
-// PostResp makes a POST API call and decodes the response. An error is
+// PostWithResponse makes a POST API call and decodes the response. An error is
 // returned if the response status is not 2xx.
-func (c *HTTPClient) PostResp(call, data string, reply interface{}) error {
+func (c *HTTPClient) PostWithResponse(call, data string, reply interface{}) error {
 	resp, err := c.apiPost(call, data)
 	if err != nil {
 		return err
@@ -91,39 +91,8 @@ func (c *HTTPClient) Post(call, data string) error {
 
 // GetAPI makes a GET API call and decodes the response. An error is returned
 // if the response status is not 2xx.
-func (c *HTTPClient) GetAPI(call string, obj interface{}) error {
-	resp, err := c.apiGet(call, "")
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNoContent {
-		return ErrStatusNotFound
-	}
-
-	err = json.NewDecoder(resp.Body).Decode(obj)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// GetWithData makes an API call and discards the response. An error is returned if the
-// response status is not 2xx.
-func (c *HTTPClient) GetWithData(call, data string) error {
-	resp, err := c.apiGet(call, data)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
-}
-
-// GetAPIWithData makes a GET API call and decodes the response. An error is returned
-// if the response status is not 2xx.
-func (c *HTTPClient) GetAPIWithData(call, data string, obj interface{}) error {
-	resp, err := c.apiGet(call, data)
+func (c *HTTPClient) GetWithResponse(call string, obj interface{}) error {
+	resp, err := c.apiGet(call)
 	if err != nil {
 		return err
 	}
@@ -143,7 +112,7 @@ func (c *HTTPClient) GetAPIWithData(call, data string, obj interface{}) error {
 // Get makes an API call and discards the response. An error is returned if the
 // response status is not 2xx.
 func (c *HTTPClient) Get(call string) error {
-	resp, err := c.apiGet(call, "")
+	resp, err := c.apiGet(call)
 	if err != nil {
 		return err
 	}
@@ -154,8 +123,8 @@ func (c *HTTPClient) Get(call string) error {
 // ApiGet wraps a GET request with a status code check, such that if the GET does
 // not return 2xx, the error will be read and returned. When no error is returned,
 // the response's body isn't closed, otherwise it is.
-func (c *HTTPClient) apiGet(call, data string) (*http.Response, error) {
-	resp, err := HTTPGet(c.RootURL+call, data, c.UserAgent)
+func (c *HTTPClient) apiGet(call string) (*http.Response, error) {
+	resp, err := HTTPGet(c.RootURL+call, c.UserAgent)
 	if err != nil {
 		return nil, errors.New("no response from daemon")
 	}
@@ -167,7 +136,7 @@ func (c *HTTPClient) apiGet(call, data string) (*http.Response, error) {
 		if err != nil {
 			return nil, err
 		}
-		resp, err = HTTPGETAuthenticated(c.RootURL+call, data, c.UserAgent, password)
+		resp, err = HTTPGETAuthenticated(c.RootURL+call, c.UserAgent, password)
 		if err != nil {
 			return nil, errors.New("no response from daemon - authentication failed")
 		}

@@ -55,7 +55,7 @@ type consensusCmd struct {
 // Prints the current state of consensus.
 func (consensusCmd *consensusCmd) rootCmd() {
 	var cg api.ConsensusGET
-	err := consensusCmd.cli.GetAPI("/consensus", &cg)
+	err := consensusCmd.cli.GetWithResponse("/consensus", &cg)
 	if err != nil {
 		cli.Die("Could not get current consensus state:", err)
 	}
@@ -107,7 +107,7 @@ func estimatedHeightBetween(from, to, blockFrequency int64) types.BlockHeight {
 func (consensusCmd *consensusCmd) transactionCmd(id string) {
 	var txn api.ConsensusGetTransaction
 
-	err := consensusCmd.cli.GetAPI("/consensus/transactions/"+id, &txn)
+	err := consensusCmd.cli.GetWithResponse("/consensus/transactions/"+id, &txn)
 	if err != nil {
 		cli.Die("failed to get transaction:", err, "; ID:", id)
 	}

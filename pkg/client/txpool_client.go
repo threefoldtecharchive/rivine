@@ -31,7 +31,7 @@ func (tpool *TransactionPoolClient) AddTransactiom(t types.Transaction) (types.T
 		return types.TransactionID{}, err
 	}
 	var resp rivineapi.TransactionPoolPOST
-	err = tpool.client.PostResp("/transactionpool/transactions", string(b), &resp)
+	err = tpool.client.PostWithResponse("/transactionpool/transactions", string(b), &resp)
 	if err != nil {
 		return types.TransactionID{}, err
 	}

@@ -13,30 +13,30 @@ import (
 // PluginClient is used to be able to get auth information from
 // a daemon that has the authcointx extension enabled and running.
 type PluginClient struct {
-	client       *client.CommandLineClient
+	bc           *client.BaseClient
 	rootEndpoint string
 }
 
 // NewPluginConsensusClient creates a new PluginClient,
 // that can be used for easy interaction with the API exposed via the Consensus endpoints
-func NewPluginConsensusClient(cli *client.CommandLineClient) *PluginClient {
-	if cli == nil {
-		panic("no CommandLineClient given")
+func NewPluginConsensusClient(bc *client.BaseClient) *PluginClient {
+	if bc == nil {
+		panic("no BaseClient given")
 	}
 	return &PluginClient{
-		client:       cli,
+		bc:           bc,
 		rootEndpoint: "/consensus",
 	}
 }
 
 // NewPluginExplorerClient creates a new PluginClient,
 // that can be used for easy interaction with the API exposed via the Explorer endpoints
-func NewPluginExplorerClient(cli *client.CommandLineClient) *PluginClient {
-	if cli == nil {
-		panic("no CommandLineClient given")
+func NewPluginExplorerClient(bc *client.BaseClient) *PluginClient {
+	if bc == nil {
+		panic("no BaseClient given")
 	}
 	return &PluginClient{
-		client:       cli,
+		bc:           bc,
 		rootEndpoint: "/explorer",
 	}
 }
@@ -49,7 +49,7 @@ var (
 // GetActiveAuthCondition implements authcointx.AuthInfoGetter.GetActiveAuthCondition
 func (cli *PluginClient) GetActiveAuthCondition() (types.UnlockConditionProxy, error) {
 	var result api.GetAuthConditionResponse
-	err := cli.client.GetAPI(cli.rootEndpoint+"/authcoin/condition", &result)
+	err := cli.bc.HTTP().GetWithResponse(cli.rootEndpoint+"/authcoin/condition", &result)
 	if err != nil {
 		return types.UnlockConditionProxy{}, fmt.Errorf(
 			"failed to get active auth condition from daemon: %v", err)
@@ -60,7 +60,7 @@ func (cli *PluginClient) GetActiveAuthCondition() (types.UnlockConditionProxy, e
 // GetAuthConditionAt implements authcointx.AuthInfoGetter.GetAuthConditionAt
 func (cli *PluginClient) GetAuthConditionAt(height types.BlockHeight) (types.UnlockConditionProxy, error) {
 	var result api.GetAuthConditionResponse
-	err := cli.client.GetAPI(fmt.Sprintf("%s/authcoin/condition/%d", cli.rootEndpoint, height), &result)
+	err := cli.bc.HTTP().GetWithResponse(fmt.Sprintf("%s/authcoin/condition/%d", cli.rootEndpoint, height), &result)
 	if err != nil {
 		return types.UnlockConditionProxy{}, fmt.Errorf(
 			"failed to get auth condition at height %d from daemon: %v", height, err)
@@ -101,7 +101,7 @@ func (cli *PluginClient) GetAddressesAuthStateNow(addresses []types.UnlockHash, 
 	resource = resource[:len(resource)-1] // remove trailing '&'
 
 	var result api.GetAddressesAuthStateResponse
-	err := cli.client.GetAPI(resource, &result)
+	err := cli.bc.HTTP().GetWithResponse(resource, &result)
 	return result.AuthStates, err
 }
 
@@ -118,6 +118,6 @@ func (cli *PluginClient) GetAddressesAuthStateAt(height types.BlockHeight, addre
 	resource = resource[:len(resource)-1] // remove trailing '&'
 
 	var result api.GetAddressesAuthStateResponse
-	err := cli.client.GetAPI(resource, &result)
+	err := cli.bc.HTTP().GetWithResponse(resource, &result)
 	return result.AuthStates, err
 }

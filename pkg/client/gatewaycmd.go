@@ -5,9 +5,9 @@ import (
 	"os"
 	"text/tabwriter"
 
+	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/cli"
-	"github.com/spf13/cobra"
 )
 
 func createGatewayCmd(cli *CommandLineClient) *cobra.Command {
@@ -85,7 +85,7 @@ func (gatewayCmd *gatewayCmd) disconnectCmd(addr string) {
 // Prints the gateway's network address.
 func (gatewayCmd *gatewayCmd) addressCmd() {
 	var info api.GatewayGET
-	err := gatewayCmd.cli.GetAPI("/gateway", &info)
+	err := gatewayCmd.cli.GetWithResponse("/gateway", &info)
 	if err != nil {
 		cli.Die("Could not get gateway address:", err)
 	}
@@ -96,7 +96,7 @@ func (gatewayCmd *gatewayCmd) addressCmd() {
 // Prints the gateway's network address and number of peers.
 func (gatewayCmd *gatewayCmd) rootCmd() {
 	var info api.GatewayGET
-	err := gatewayCmd.cli.GetAPI("/gateway", &info)
+	err := gatewayCmd.cli.GetWithResponse("/gateway", &info)
 	if err != nil {
 		cli.Die("Could not get gateway address:", err)
 	}
@@ -108,7 +108,7 @@ func (gatewayCmd *gatewayCmd) rootCmd() {
 // Prints a list of all peers.
 func (gatewayCmd *gatewayCmd) listPeersCmd() {
 	var info api.GatewayGET
-	err := gatewayCmd.cli.GetAPI("/gateway", &info)
+	err := gatewayCmd.cli.GetWithResponse("/gateway", &info)
 	if err != nil {
 		cli.Die("Could not get peer list:", err)
 	}

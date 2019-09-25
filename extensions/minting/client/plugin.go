@@ -15,15 +15,15 @@ import (
 // without requiring access to the consensus-extended transactiondb,
 // normally the validation isn't required on the client side, but it is possible none the less.
 type PluginClient struct {
-	client       *client.CommandLineClient
+	client       *client.BaseClient
 	rootEndpoint string
 }
 
 // NewPluginConsensusClient creates a new PluginClient,
 // that can be used for easy interaction with the TransactionDB API exposed via the Consensus endpoints
-func NewPluginConsensusClient(cli *client.CommandLineClient) *PluginClient {
+func NewPluginConsensusClient(cli *client.BaseClient) *PluginClient {
 	if cli == nil {
-		panic("no CommandLineClient given")
+		panic("no BaseClient given")
 	}
 	return &PluginClient{
 		client:       cli,
@@ -33,9 +33,9 @@ func NewPluginConsensusClient(cli *client.CommandLineClient) *PluginClient {
 
 // NewPluginExplorerClient creates a new PluginClient,
 // that can be used for easy interaction with the TransactionDB API exposed via the Explorer endpoints
-func NewPluginExplorerClient(cli *client.CommandLineClient) *PluginClient {
+func NewPluginExplorerClient(cli *client.BaseClient) *PluginClient {
 	if cli == nil {
-		panic("no CommandLineClient given")
+		panic("no BaseClient given")
 	}
 	return &PluginClient{
 		client:       cli,
@@ -51,7 +51,7 @@ var (
 // GetActiveMintCondition implements minting.MintConditionGetter.GetActiveMintCondition
 func (cli *PluginClient) GetActiveMintCondition() (types.UnlockConditionProxy, error) {
 	var result api.TransactionDBGetMintCondition
-	err := cli.client.GetAPI(cli.rootEndpoint+"/mintcondition", &result)
+	err := cli.client.HTTP().GetWithResponse(cli.rootEndpoint+"/mintcondition", &result)
 	if err != nil {
 		return types.UnlockConditionProxy{}, fmt.Errorf(
 			"failed to get active mint condition from daemon: %v", err)
@@ -62,7 +62,7 @@ func (cli *PluginClient) GetActiveMintCondition() (types.UnlockConditionProxy, e
 // GetMintConditionAt implements minting.MintConditionGetter.GetMintConditionAt
 func (cli *PluginClient) GetMintConditionAt(height types.BlockHeight) (types.UnlockConditionProxy, error) {
 	var result api.TransactionDBGetMintCondition
-	err := cli.client.GetAPI(fmt.Sprintf("%s/mintcondition/%d", cli.rootEndpoint, height), &result)
+	err := cli.client.HTTP().GetWithResponse(fmt.Sprintf("%s/mintcondition/%d", cli.rootEndpoint, height), &result)
 	if err != nil {
 		return types.UnlockConditionProxy{}, fmt.Errorf(
 			"failed to get mint condition at height %d from daemon: %v", height, err)
