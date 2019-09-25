@@ -8,6 +8,7 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
+	rivinesync "github.com/threefoldtech/rivine/sync"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -363,6 +364,9 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 	if err := w.tg.Add(); err != nil {
 		// Gracefully reject transactions if the wallet's Close method has
 		// closed the wallet's ThreadGroup already.
+		if err == rivinesync.ErrStopped {
+			return nil
+		}
 		return err
 	}
 	defer w.tg.Done()
