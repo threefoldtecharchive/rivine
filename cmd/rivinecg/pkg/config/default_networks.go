@@ -27,8 +27,8 @@ var (
 		"TargetWindow":           uint64(1e3),
 		"MaxAdjustmentUp":        Fraction{Numerator: 25, Denominator: 10},
 		"MaxAdjustmentDown":      Fraction{Numerator: 10, Denominator: 25},
-		"FutureThreshold":        uint64(time.Hour.Seconds()),
-		"ExtremeFutureThreshold": uint64((time.Hour * 2).Seconds()),
+		"FutureThreshold":        uint64((time.Minute * 2).Seconds()),
+		"ExtremeFutureThreshold": uint64((time.Minute * 10).Seconds()),
 		"StakeModifierDelay":     uint64((time.Second * 2000).Seconds()),
 		"BlockStakeAging":        uint64((time.Hour * 24).Seconds()),
 	}
@@ -45,8 +45,8 @@ var (
 		"TargetWindow":           uint64(1e3),
 		"MaxAdjustmentUp":        Fraction{Numerator: 25, Denominator: 10},
 		"MaxAdjustmentDown":      Fraction{Numerator: 10, Denominator: 25},
-		"FutureThreshold":        uint64((time.Second * 3).Seconds()),
-		"ExtremeFutureThreshold": uint64((time.Second * 600).Seconds()),
+		"FutureThreshold":        uint64((time.Minute * 2).Seconds()),
+		"ExtremeFutureThreshold": uint64((time.Minute * 10).Seconds()),
 		"StakeModifierDelay":     uint64((time.Second * 2000).Seconds()),
 		"BlockStakeAging":        uint64((time.Second * 64).Seconds()),
 	}
@@ -63,8 +63,8 @@ var (
 		"TargetWindow":           uint64(20),
 		"MaxAdjustmentUp":        Fraction{Numerator: 120, Denominator: 100},
 		"MaxAdjustmentDown":      Fraction{Numerator: 100, Denominator: 120},
-		"FutureThreshold":        uint64((time.Minute * 2).Seconds()),
-		"ExtremeFutureThreshold": uint64((time.Minute * 4).Seconds()),
+		"FutureThreshold":        uint64((time.Second * 12).Seconds()),
+		"ExtremeFutureThreshold": uint64((time.Second * 60).Seconds()),
 		"StakeModifierDelay":     uint64((time.Second * 2000).Seconds()),
 		"BlockStakeAging":        uint64((time.Second * 1024).Seconds()),
 		"BootstrapPeers": []modules.NetAddress{
