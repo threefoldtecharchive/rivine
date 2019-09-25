@@ -154,8 +154,6 @@ func (b *BlockCreator) Close() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	b.cs.Unsubscribe(b)
-
 	var errs []error
 	if err := b.saveSync(); err != nil {
 		errs = append(errs, fmt.Errorf("save failed: %v", err))
