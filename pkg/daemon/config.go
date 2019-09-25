@@ -117,7 +117,7 @@ func (cfg *Config) RegisterAsFlags(flagSet *pflag.FlagSet) {
 	flagSet.BoolVarP(&cfg.AuthenticateAPI, "authenticate-api", "", cfg.AuthenticateAPI, "enable API password protection")
 	flagSet.BoolVarP(&cfg.AllowAPIBind, "disable-api-security", "", cfg.AllowAPIBind, fmt.Sprintf("allow the daemon of %s to listen on a non-localhost address (DANGEROUS)", cfg.BlockchainInfo.Name))
 	flagSet.StringVarP(&cfg.BlockchainInfo.NetworkName, "network", "n", cfg.BlockchainInfo.NetworkName, "the name of the network to which the daemon connects")
-	flagSet.StringVarP(&cfg.DebugConsensusDB, "consensus-db-stats", "", cfg.DebugConsensusDB, "file path in which json encoded database stats will be saved")
+	flagSet.StringVar(&cfg.DebugConsensusDB, "consensus-db-stats", cfg.DebugConsensusDB, "file path in which json encoded database stats will be saved")
 
 	cli.NetAddressArrayFlagVar(flagSet, &cfg.BootstrapPeers, "bootstrap-peers",
 		"overwrite the bootstrap peers to use, instead of using the default bootstrap peers")
