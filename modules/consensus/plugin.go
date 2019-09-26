@@ -140,7 +140,7 @@ func (cs *ConsensusSet) RegisterPlugin(ctx context.Context, name string, plugin 
 // This initial sync is  be cancelled if the passes context is closed.
 func (cs *ConsensusSet) initPluginSync(ctx context.Context, name string, plugin modules.ConsensusSetPlugin, start modules.ConsensusChangeID) (modules.ConsensusChangeID, error) {
 	newChangeID := start
-	err := cs.db.View(func(tx *bolt.Tx) error {
+	err := cs.db.Update(func(tx *bolt.Tx) error {
 		// 'exists' and 'entry' are going to be pointed to the first entry that
 		// has not yet been seen by subscriber.
 		var exists bool
