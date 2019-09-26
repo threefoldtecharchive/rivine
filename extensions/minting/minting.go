@@ -58,24 +58,39 @@ func NewMintingPlugin(genesisMintCondition types.UnlockConditionProxy, minterDef
 		coinCreationTransactionVersion:     coinCreationTransactionVersion,
 		requireMinerFees:                   opts != nil && opts.RequireMinerFees,
 	}
+	var legacyEncoding bool
+	if opts != nil {
+		legacyEncoding = opts.UseLegacySiaEncoding
+		if opts.CoinDestructionTransactionVersion > 0 {
+			types.RegisterTransactionVersion(opts.CoinDestructionTransactionVersion, CoinDestructionTransactionController{
+				MintingBaseTransactionController: MintingBaseTransactionController{
+					UseLegacySiaEncoding: legacyEncoding,
+				},
+				TransactionVersion: opts.CoinDestructionTransactionVersion,
+			})
+			p.coinDestructionTransactionVersion = &opts.CoinDestructionTransactionVersion
+		}
+	}
 	types.RegisterTransactionVersion(minterDefinitionTransactionVersion, MinterDefinitionTransactionController{
+		MintingMinerFeeBaseTransactionController: MintingMinerFeeBaseTransactionController{
+			MintingBaseTransactionController: MintingBaseTransactionController{
+				UseLegacySiaEncoding: legacyEncoding,
+			},
+			RequireMinerFees: p.requireMinerFees,
+		},
 		MintConditionGetter: p,
 		TransactionVersion:  minterDefinitionTransactionVersion,
 	})
 	types.RegisterTransactionVersion(coinCreationTransactionVersion, CoinCreationTransactionController{
+		MintingMinerFeeBaseTransactionController: MintingMinerFeeBaseTransactionController{
+			MintingBaseTransactionController: MintingBaseTransactionController{
+				UseLegacySiaEncoding: legacyEncoding,
+			},
+			RequireMinerFees: p.requireMinerFees,
+		},
 		MintConditionGetter: p,
 		TransactionVersion:  coinCreationTransactionVersion,
 	})
-	var legacyEncoding bool
-	if opts != nil {
-		if opts.CoinDestructionTransactionVersion > 0 {
-			types.RegisterTransactionVersion(opts.CoinDestructionTransactionVersion, CoinDestructionTransactionController{
-				TransactionVersion: opts.CoinDestructionTransactionVersion,
-			})
-		}
-		p.coinDestructionTransactionVersion = &opts.CoinDestructionTransactionVersion
-		legacyEncoding = opts.UseLegacySiaEncoding
-	}
 	if legacyEncoding {
 		p.binMarshal = siabin.Marshal
 		p.binUnmarshal = siabin.Unmarshal
