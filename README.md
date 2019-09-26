@@ -41,7 +41,6 @@ Releases
 - 1.1.4
     - Freeflow token
     - better container support:
-        - unencrypted wallets
         - delegated staking
 
 - 1.1.3
@@ -52,6 +51,11 @@ Releases
 - 1.1.2 (<https://github.com/orgs/threefoldtech/projects/1>):
     - digitalme (3Bot) support (<https://github.com/threefoldtech/home/issues/42>);
     - testnet faucet (<https://github.com/threefoldtech/home/issues/36>);
+    - Extensions: minting and authorized addresses
+    - better container support:
+        - unencrypted wallets
+    - tool for easier custom chain creation
+
   
 Usage
 -----
