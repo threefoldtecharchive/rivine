@@ -328,13 +328,13 @@ func (p *Plugin) getMintConditionFromBucketWithContextInfo(mintConditionBucket *
 	if confirmed || blockHeight > 0 {
 		mintCondition, err := p.getMintConditionFromBucketAt(mintConditionBucket, blockHeight)
 		if err != nil {
-			return types.UnlockConditionProxy{}, fmt.Errorf("failed to get mint condition at block height %d", blockHeight)
+			return types.UnlockConditionProxy{}, fmt.Errorf("failed to get mint condition at block height %d: %v", blockHeight, err)
 		}
 		return mintCondition, nil
 	}
 	mintCondition, err := p.getMintConditionFromBucket(mintConditionBucket)
 	if err != nil {
-		return types.UnlockConditionProxy{}, errors.New("failed to get the latest mint condition")
+		return types.UnlockConditionProxy{}, fmt.Errorf("failed to get the latest mint condition: %v", err)
 	}
 	return mintCondition, nil
 }
