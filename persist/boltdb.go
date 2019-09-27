@@ -120,6 +120,10 @@ func NewLazyBoltBucket(getter func() (*bolt.Bucket, error)) *LazyBoltBucket {
 	}
 }
 
+func (lb *LazyBoltBucket) AsBoltBucket() (*bolt.Bucket, error) {
+	return lb.bucket()
+}
+
 func (lb *LazyBoltBucket) Bucket(name []byte) (*bolt.Bucket, error) {
 	bucket, err := lb.bucket()
 	if err != nil {
