@@ -44,6 +44,7 @@ func StandardTransactionVersionMappedValidators() map[types.TransactionVersion][
 		types.TransactionVersionOne: []modules.TransactionValidationFunction{
 			ValidateCoinOutputsAreBalanced,
 			ValidateBlockStakeOutputsAreBalanced,
+			ValidateMinerFeeIsPresent,
 		},
 	}
 }
@@ -59,7 +60,6 @@ func StandardTransactionValidators() []modules.TransactionValidationFunction {
 		ValidateCoinOutputsAreValid,
 		ValidateBlockStakeInputsAreValid,
 		ValidateBlockStakeOutputsAreValid,
-		ValidateMinerFeeIsPresent,
 		ValidateMinerFeesAreValid,
 		ValidateDoubleCoinSpends,
 		ValidateDoubleBlockStakeSpends,
