@@ -80,7 +80,10 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	if config.Generation != nil && len(config.Generation.Ignore) > 0 {
 		fPathAction = func(fPath, dirPath, destPath string) error {
 			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
-			cleanRelFilePath := strings.TrimSuffix(relFilePath, ".template")
+			cleanRelFilePath := strings.Replace(strings.Replace(
+				strings.TrimSuffix(relFilePath, ".template"),
+				"UNDEFINED_CLIENT_NAME", config.Blockchain.Binaries.Client, 1),
+				"UNDEFINED_DAEMON_NAME", config.Blockchain.Binaries.Daemon, 1)
 			for _, p := range config.Generation.Ignore {
 				if p.Match(cleanRelFilePath) {
 					return nil
@@ -343,29 +346,45 @@ func writeTemplateValues(destinationDirPath string, config *Config) error {
 func renameClientAndDaemonFolders(destinationDirPath string, config *Config) error {
 	oldClientFolderPath := path.Join(destinationDirPath, "cmd", "UNDEFINED_CLIENT_NAME")
 	newClientFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Client)
-	daemonFolderPath := path.Join(destinationDirPath, "cmd", "UNDEFINED_DAEMON_NAME")
+	err := filepath.Walk(oldClientFolderPath, func(fPath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err // return an error immediately
+		}
+
+		// ignore directories
+		if info.IsDir() {
+			return nil
+		}
+
+		relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, oldClientFolderPath), `\/`)
+		return copy.Copy(fPath, path.Join(newClientFolderPath, relFilePath))
+	})
+	if err != nil {
+		return err
+	}
+	err = os.RemoveAll(oldClientFolderPath)
+	if err != nil {
+		return err
+	}
+	oldDaemonFolderPath := path.Join(destinationDirPath, "cmd", "UNDEFINED_DAEMON_NAME")
 	newDaemonFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Daemon)
-	if _, err := os.Stat(newClientFolderPath); !os.IsNotExist(err) {
-		err = os.RemoveAll(newClientFolderPath)
+	err = filepath.Walk(oldDaemonFolderPath, func(fPath string, info os.FileInfo, err error) error {
 		if err != nil {
-			return fmt.Errorf("failed to delete existing client dir: %v", err)
+			return err // return an error immediately
 		}
-	}
-	err := os.Rename(oldClientFolderPath, newClientFolderPath)
+
+		// ignore directories
+		if info.IsDir() {
+			return nil
+		}
+
+		relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, oldDaemonFolderPath), `\/`)
+		return copy.Copy(fPath, path.Join(newDaemonFolderPath, relFilePath))
+	})
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(newDaemonFolderPath); !os.IsNotExist(err) {
-		err = os.RemoveAll(newDaemonFolderPath)
-		if err != nil {
-			return fmt.Errorf("failed to delete existing daemon dir: %v", err)
-		}
-	}
-	err = os.Rename(daemonFolderPath, newDaemonFolderPath)
-	if err != nil {
-		return err
-	}
-	return nil
+	return os.RemoveAll(oldDaemonFolderPath)
 }
 
 func formatConditionAsUnlockhashString(c Condition) (string, error) {
