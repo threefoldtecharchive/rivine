@@ -270,12 +270,19 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 
 	tpoolFee := w.chainCts.MinimumTransactionFee.Mul64(1) // TODO better fee algo
 	totalAmount := types.NewCurrency64(0).Add(tpoolFee)
+	var err error
 	txnBuilder := w.StartTransaction()
+	// Make sure to release inputs in case of an error
+	defer func() {
+		if err != nil {
+			txnBuilder.Drop()
+		}
+	}()
 	for _, co := range coinOutputs {
 		txnBuilder.AddCoinOutput(co)
 		totalAmount = totalAmount.Add(co.Value)
 	}
-	err := txnBuilder.FundCoins(totalAmount, refundAddress, reuseRefundAddress)
+	err = txnBuilder.FundCoins(totalAmount, refundAddress, reuseRefundAddress)
 	if err != nil {
 		return types.Transaction{}, err
 	}
@@ -294,7 +301,8 @@ func (w *Wallet) SendOutputs(coinOutputs []types.CoinOutput, blockstakeOutputs [
 	if len(data) != 0 {
 		txnBuilder.SetArbitraryData(data)
 	}
-	txnSet, err := txnBuilder.Sign()
+	var txnSet []types.Transaction
+	txnSet, err = txnBuilder.Sign()
 	if err != nil {
 		return types.Transaction{}, err
 	}

@@ -417,6 +417,9 @@ func (tb *transactionBuilder) Drop() {
 		for _, sci := range txn.CoinInputs {
 			delete(tb.wallet.spentOutputs, types.OutputID(sci.ParentID))
 		}
+		for _, bsi := range txn.BlockStakeInputs {
+			delete(tb.wallet.spentOutputs, types.OutputID(bsi.ParentID))
+		}
 	}
 
 	tb.parents = nil
