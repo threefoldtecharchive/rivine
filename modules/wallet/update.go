@@ -339,6 +339,8 @@ func (w *Wallet) applyHistory(cc modules.ConsensusChange) {
 			}
 		}
 	}
+	// Reset spent outputs map
+	w.spentOutputs = make(map[types.OutputID]types.BlockHeight)
 }
 
 // ProcessConsensusChange parses a consensus change to update the set of
@@ -389,6 +391,8 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			_, exists := w.keys[output.UnlockHash]
 			if exists {
 				relevant = true
+				// Add the outputid and height to spentoutputs map in wallet
+				w.spentOutputs[types.OutputID(sci.ParentID)] = pt.ConfirmationHeight
 			} else if _, exists = w.multiSigCoinOutputs[sci.ParentID]; exists {
 				// Since we know about every multisig output that is still open and releated,
 				// any relevant multisig input must have a parent ID present in the multisig
@@ -426,6 +430,15 @@ func (w *Wallet) ReceiveUpdatedUnconfirmedTransactions(txns []types.Transaction,
 			w.historicOutputs[types.OutputID(txn.CoinOutputID(uint64(i)))] = historicOutput{
 				UnlockHash: uh,
 				Value:      sco.Value,
+			}
+		}
+		for _, bsi := range txn.BlockStakeInputs {
+			output := w.historicOutputs[types.OutputID(bsi.ParentID)]
+			_, exists := w.keys[output.UnlockHash]
+			if exists {
+				relevant = true
+				// Add the outputid and height to spentoutputs map in wallet
+				w.spentOutputs[types.OutputID(bsi.ParentID)] = pt.ConfirmationHeight
 			}
 		}
 		if relevant {
