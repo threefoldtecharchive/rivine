@@ -36,6 +36,13 @@ func (plugin *testPlugin) RevertBlock(block modules.ConsensusBlock, bucket *pers
 	return nil
 }
 
+func (plugin *testPlugin) ApplyBlockHeader(block modules.ConsensusBlockHeader, bucket *persist.LazyBoltBucket) error {
+	return nil
+}
+func (plugin *testPlugin) RevertBlockHeader(block modules.ConsensusBlockHeader, bucket *persist.LazyBoltBucket) error {
+	return nil
+}
+
 // Apply the transaction to the plugin.
 // An error should be returned in case something went wrong.
 func (plugin *testPlugin) ApplyTransaction(txn modules.ConsensusTransaction, bucket *persist.LazyBoltBucket) error {

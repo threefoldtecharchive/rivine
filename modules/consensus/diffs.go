@@ -201,6 +201,29 @@ func (cs *ConsensusSet) generateAndApplyDiff(tx *bolt.Tx, pb *processedBlock) er
 		}
 	}
 
+	// Apply Block Header as well for each of the plguins
+	if len(cs.plugins) > 0 {
+		header := modules.ConsensusBlockHeader{
+			ID:           pb.Block.ID(),
+			ParentID:     pb.Block.ParentID,
+			POBSOutput:   pb.Block.POBSOutput,
+			MinerPayouts: pb.Block.MinerPayouts,
+			Timestamp:    pb.Block.Timestamp,
+			Height:       pb.Height,
+		}
+		header.MinerPayoutIDs = make([]types.CoinOutputID, 0, len(header.MinerPayouts))
+		for idx := range header.MinerPayouts {
+			header.MinerPayoutIDs = append(header.MinerPayoutIDs, pb.Block.MinerPayoutID(uint64(idx)))
+		}
+		for name, plugin := range cs.plugins {
+			bucket := cs.bucketForPlugin(tx, name)
+			err := plugin.ApplyBlockHeader(header, bucket)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	// After all of the transactions have been applied, 'maintenance' is
 	// applied on the block. This includes adding any outputs that have reached
 	// maturity, applying any contracts with missed storage proofs, and adding

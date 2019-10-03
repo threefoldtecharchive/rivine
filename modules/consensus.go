@@ -93,6 +93,13 @@ type (
 		// An error should be returned in case something went wrong.
 		RevertBlock(block ConsensusBlock, bucket *persist.LazyBoltBucket) error
 
+		// Apply the block header to the plugin.
+		// An error should be returned in case something went wrong.
+		ApplyBlockHeader(block ConsensusBlockHeader, bucket *persist.LazyBoltBucket) error
+		// Revert the block header from the plugin.
+		// An error should be returned in case something went wrong.
+		RevertBlockHeader(block ConsensusBlockHeader, bucket *persist.LazyBoltBucket) error
+
 		// Apply the transaction to the plugin.
 		// An error should be returned in case something went wrong.
 		ApplyTransaction(txn ConsensusTransaction, bucket *persist.LazyBoltBucket) error
@@ -137,6 +144,18 @@ type (
 
 		SpentCoinOutputs       map[types.CoinOutputID]types.CoinOutput
 		SpentBlockStakeOutputs map[types.BlockStakeOutputID]types.BlockStakeOutput
+	}
+
+	// ConsensusBlockHeader is the block header type as exposed by the consensus module.
+	ConsensusBlockHeader struct {
+		ID             types.BlockID
+		ParentID       types.BlockID
+		POBSOutput     types.BlockStakeOutputIndexes
+		MinerPayouts   []types.MinerPayout
+		MinerPayoutIDs []types.CoinOutputID
+
+		Timestamp types.Timestamp
+		Height    types.BlockHeight
 	}
 
 	// ConsensusTransaction is the transaction type as exposed by the consensus module
