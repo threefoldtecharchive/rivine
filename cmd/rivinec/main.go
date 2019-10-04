@@ -15,7 +15,7 @@ import (
 func main() {
 	// create command line client
 	bchainInfo := types.DefaultBlockchainInfo()
-	cliClient, err := client.NewCommandLineClient("", bchainInfo.Name, daemon.RivineUserAgent)
+	cliClient, err := client.NewCommandLineClient("", bchainInfo.Name, daemon.RivineUserAgent, nil)
 	if err != nil {
 		build.Critical(err)
 	}
