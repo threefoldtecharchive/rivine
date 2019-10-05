@@ -43,7 +43,8 @@ type (
 		UnauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
 
 		// UnlockHashFilter can be used to filter what unlock hashes require authorization and which not.
-		// It is optional, and if none given, all unlockhashes except the NilUnlockHash require authorization.
+		// It is optional, and if none given, all unlockhashes except
+		// the NilUnlockHash and AtomicSwap contract addresses require authorization.
 		// Returns true in case authorization cheque is required, False otherwise.
 		UnlockHashFilter func(types.UnlockHash) bool
 	}
@@ -80,7 +81,9 @@ func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdat
 	if opts != nil && opts.UnlockHashFilter != nil {
 		p.unlockHashFilter = opts.UnlockHashFilter
 	} else {
-		p.unlockHashFilter = func(uh types.UnlockHash) bool { return uh.Type != types.UnlockTypeNil }
+		p.unlockHashFilter = func(uh types.UnlockHash) bool {
+			return uh.Type != types.UnlockTypeNil && uh.Type != types.UnlockTypeAtomicSwap
+		}
 	}
 	types.RegisterTransactionVersion(authAddressUpdateTransactionVersion, AuthAddressUpdateTransactionController{
 		AuthInfoGetter:     p,
