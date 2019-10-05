@@ -32,6 +32,7 @@ type (
 		storage                                      modules.PluginViewStorage
 		unregisterCallback                           modules.PluginUnregisterCallback
 		unauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
+		unlockHashFilter                             func(types.UnlockHash) bool
 	}
 
 	// PluginOpts are extra optional configurations one can make to the AuthCoin Plugin
@@ -40,6 +41,11 @@ type (
 		// in case your chain requires custom logic to define what transaction can be considered valid for
 		// coin transfers with unauthorized addresses due to whatever rules (e.g. version, pure refund coin flow, ...)
 		UnauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
+
+		// UnlockHashFilter can be used to filter what unlock hashes require authorization and which not.
+		// It is optional, and if none given, all unlockhashes except the NilUnlockHash require authorization.
+		// Returns true in case authorization cheque is required, False otherwise.
+		UnlockHashFilter func(types.UnlockHash) bool
 	}
 
 	// UnauthorizedCoinTransactionExceptionCallback is the function signature for the callback that can be used
@@ -70,6 +76,11 @@ func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdat
 		p.unauthorizedCoinTransactionExceptionCallback = opts.UnauthorizedCoinTransactionExceptionCallback
 	} else {
 		p.unauthorizedCoinTransactionExceptionCallback = DefaultUnauthorizedCoinTransactionExceptionCallback
+	}
+	if opts != nil && opts.UnlockHashFilter != nil {
+		p.unlockHashFilter = opts.UnlockHashFilter
+	} else {
+		p.unlockHashFilter = func(uh types.UnlockHash) bool { return uh.Type != types.UnlockTypeNil }
 	}
 	types.RegisterTransactionVersion(authAddressUpdateTransactionVersion, AuthAddressUpdateTransactionController{
 		AuthInfoGetter:     p,
@@ -378,9 +389,13 @@ func (p *Plugin) GetAddressesAuthStateNow(addresses []types.UnlockHash, exitEarl
 		authBucket := bucket.Bucket([]byte(bucketAuthAddresses))
 		var err error
 		for index, address := range addresses {
-			stateSlice[index], err = p.getAuthAddressStateFromBucket(authBucket, address)
-			if err != nil {
-				return err
+			if !p.unlockHashFilter(address) {
+				stateSlice[index] = true
+			} else {
+				stateSlice[index], err = p.getAuthAddressStateFromBucket(authBucket, address)
+				if err != nil {
+					return err
+				}
 			}
 			if exitEarlyFn != nil && exitEarlyFn(index, stateSlice[index]) {
 				return nil
@@ -404,9 +419,13 @@ func (p *Plugin) GetAddressesAuthStateAt(height types.BlockHeight, addresses []t
 		authBucket := bucket.Bucket([]byte(bucketAuthAddresses))
 		var err error
 		for index, address := range addresses {
-			stateSlice[index], err = p.getAuthAddressStateFromBucket(authBucket, address)
-			if err != nil {
-				return err
+			if !p.unlockHashFilter(address) {
+				stateSlice[index] = true
+			} else {
+				stateSlice[index], err = p.getAuthAddressStateFromBucket(authBucket, address)
+				if err != nil {
+					return err
+				}
 			}
 			if exitEarlyFn != nil && exitEarlyFn(index, stateSlice[index]) {
 				return nil
@@ -634,6 +653,9 @@ func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx modules.ConsensusTransac
 	}
 	// validate that all used addresses are authorized
 	for addr := range dedupAddresses {
+		if !p.unlockHashFilter(addr) {
+			continue
+		}
 		state, err := p.getAuthAddressStateFromBucketWithContextInfo(authAddressBucket, addr, ctx.Confirmed, ctx.BlockHeight)
 		if err != nil {
 			return fmt.Errorf("failed to check if address %s is authorized at the moment: %v", addr.String(), err)
