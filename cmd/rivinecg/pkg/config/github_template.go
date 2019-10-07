@@ -348,6 +348,9 @@ func renameClientAndDaemonFolders(destinationDirPath string, config *Config) err
 	newClientFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Client)
 	err := filepath.Walk(oldClientFolderPath, func(fPath string, info os.FileInfo, err error) error {
 		if err != nil {
+			if os.IsNotExist(err) {
+				return nil // not counted as an error, simply nothing to copy
+			}
 			return err // return an error immediately
 		}
 
@@ -370,6 +373,9 @@ func renameClientAndDaemonFolders(destinationDirPath string, config *Config) err
 	newDaemonFolderPath := path.Join(destinationDirPath, "cmd", config.Blockchain.Binaries.Daemon)
 	err = filepath.Walk(oldDaemonFolderPath, func(fPath string, info os.FileInfo, err error) error {
 		if err != nil {
+			if os.IsNotExist(err) {
+				return nil // not counted as an error, simply nothing to copy
+			}
 			return err // return an error immediately
 		}
 
