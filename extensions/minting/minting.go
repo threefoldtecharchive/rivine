@@ -524,6 +524,9 @@ func (p *Plugin) validateCoinDestructionTxCreation(tx modules.ConsensusTransacti
 
 // Close unregisters the plugin from the consensus
 func (p *Plugin) Close() error {
+	if p.storage == nil {
+		return nil
+	}
 	return p.storage.Close()
 }
 
