@@ -1,5 +1,8 @@
 # Wallet
 
+
+A common misconception in cryptocurrency regarding wallets is that they store tokens. A wallet **does not** store tokens. What a wallet does is store private keys in an encrypted file and sign transactions.
+
 ## Key Pairs
 
 A wallet is identified by one or multiple private keys. Each private key is linked to a public key.
