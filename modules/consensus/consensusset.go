@@ -248,6 +248,7 @@ func (cs *ConsensusSet) Start() {
 			// function without a goroutine is okay.
 			err := cs.threadedInitialBlockchainDownload()
 			if err != nil {
+				cs.log.Printf("[WARN] IBD interrupted with an error: %v", err)
 				return
 			}
 			cs.log.Println("IBD finished")

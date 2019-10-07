@@ -557,6 +557,8 @@ func (cs *ConsensusSet) threadedInitialBlockchainDownload() error {
 						cs.log.Printf("WARN: disconnecting from peer %v failed: %v", p.NetAddress, err)
 					}
 				}
+
+				cs.log.Printf("WARN: managedReceiveBlocks (via SendBlocks RPC) has failed with an error: %v", err)
 				return nil
 			}()
 			if err != nil {
