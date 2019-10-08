@@ -37,8 +37,16 @@ func main() {
 			CoinDestructionTxVersion: rivtypes.TransactionVersionCoinDestruction,
 			RequireMinerFees:         false,
 		})
-
 	mintingcli.CreateExploreCmd(cliClient)
+
+	// register authcoin extension commands
+	authcoincli.CreateExploreAuthCoinInfoCmd(cliClient)
+	authcoincli.CreateWalletCmds(
+		cliClient,
+		rivtypes.TransactionVersionAuthConditionUpdate,
+		rivtypes.TransactionVersionAuthAddressUpdate,
+	)
+
 	// define preRunE, as to ensure we go to a default config should it be required
 	cliClient.PreRunE = func(cfg *client.Config) (*client.Config, error) {
 		if cfg == nil {
