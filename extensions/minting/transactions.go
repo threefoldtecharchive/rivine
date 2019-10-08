@@ -319,7 +319,7 @@ func (cdtc CoinDestructionTransactionController) SignatureHash(t types.Transacti
 
 	enc.EncodeAll(
 		parentIDSlice,
-		cdtx.RefundCoinOutput,
+		cdtx.CoinOutputs,
 		cdtx.MinerFees,
 		cdtx.ArbitraryData,
 	)
@@ -573,14 +573,12 @@ type (
 	// CoinDestructionTransaction is to to be used by anyone
 	// as a medium in order to destroy coins (coin outputs), partially or complete.
 	CoinDestructionTransaction struct {
+		// CoinInputs defines the coin outputs that are being spent.
+		CoinInputs []types.CoinInput `json:"coininputs"`
 		// CoinOutputs defines the coin outputs,
 		// which contain the freshly created coins, adding to the total pool of coins
 		// available in the rivine network.
-		CoinInputs []types.CoinInput `json:"coininputs"`
-		// RefundCoinOutput defines an optional coin output,
-		// that can be used to refund in case it is needed.
-		// NOTE the following condition must be true: sum(CoinInputs) > sum(RefundCoinOutput, sum(MinerFees))
-		RefundCoinOutput *types.CoinOutput `json:"refundcoinoutput"`
+		CoinOutputs []types.CoinOutput `json:"coinoutputs"`
 		// Minerfees, a fee paid for this coin destruction transaction.
 		MinerFees []types.Currency `json:"minerfees,omitempty"`
 		// ArbitraryData can be used for any purpose,
@@ -615,10 +613,7 @@ func CoinDestructionTransactionFromTransaction(tx types.Transaction, expectedVer
 // CoinDestructionTransactionFromTransactionData creates a CoinDestructionTransaction,
 // using the TransactionData from a regular in-memory rivine transaction.
 func CoinDestructionTransactionFromTransactionData(txData types.TransactionData) (CoinDestructionTransaction, error) {
-	// at least one coin output as well as one miner fee is required
-	if len(txData.CoinOutputs) > 1 {
-		return CoinDestructionTransaction{}, errors.New("maximum one coin output is allowed for a CoinDestructionTransaction")
-	}
+	// no restrictions are there for coin outputs, but at least one miner fee is required
 	if len(txData.MinerFees) == 0 {
 		return CoinDestructionTransaction{}, errors.New("at least one miner fee is required for a CoinDestructionTransaction")
 	}
@@ -631,44 +626,35 @@ func CoinDestructionTransactionFromTransactionData(txData types.TransactionData)
 		return CoinDestructionTransaction{}, errors.New("no block stake inputs/outputs are allowed in a CoinDestructionTransaction")
 	}
 	// return the CoinDestructionTransaction, with the data extracted from the TransactionData
-	tx := CoinDestructionTransaction{
+	return CoinDestructionTransaction{
 		CoinInputs:    txData.CoinInputs,
+		CoinOutputs:   txData.CoinOutputs,
 		MinerFees:     txData.MinerFees,
 		ArbitraryData: txData.ArbitraryData,
-	}
-	if len(txData.CoinOutputs) > 0 {
-		tx.RefundCoinOutput = &txData.CoinOutputs[0]
-	}
-	return tx, nil
+	}, nil
 }
 
 // TransactionData returns this CoinDestructionTransaction
 // as regular rivine transaction data.
 func (cdtx *CoinDestructionTransaction) TransactionData() types.TransactionData {
-	txData := types.TransactionData{
+	return types.TransactionData{
 		CoinInputs:    cdtx.CoinInputs,
+		CoinOutputs:   cdtx.CoinOutputs,
 		MinerFees:     cdtx.MinerFees,
 		ArbitraryData: cdtx.ArbitraryData,
 	}
-	if cdtx.RefundCoinOutput != nil {
-		txData.CoinOutputs = []types.CoinOutput{*cdtx.RefundCoinOutput}
-	}
-	return txData
 }
 
 // Transaction returns this CoinDestructionTransaction
 // as regular rivine transaction, using TransactionVersionCoinCreation as the type.
 func (cdtx *CoinDestructionTransaction) Transaction(version types.TransactionVersion) types.Transaction {
-	tx := types.Transaction{
+	return types.Transaction{
 		Version:       version,
 		CoinInputs:    cdtx.CoinInputs,
+		CoinOutputs:   cdtx.CoinOutputs,
 		MinerFees:     cdtx.MinerFees,
 		ArbitraryData: cdtx.ArbitraryData,
 	}
-	if cdtx.RefundCoinOutput != nil {
-		tx.CoinOutputs = []types.CoinOutput{*cdtx.RefundCoinOutput}
-	}
-	return tx
 }
 
 type (
