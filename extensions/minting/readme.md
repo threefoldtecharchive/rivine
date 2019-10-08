@@ -333,8 +333,8 @@ The Coin Destruction transactions defines 4 fields:
 				}
 			}
 		],
-		// defines the optonal refund coin output
-		"refundcoinoutput": {
+		// defines the optonal coin outputs
+		"coinoutputs": [{
 			"value": "500000000000000",
 			"condition": {
 				"type": 1,
@@ -342,7 +342,7 @@ The Coin Destruction transactions defines 4 fields:
 					"unlockhash": "01e3cbc41bd3cdfec9e01a6be46a35099ba0e1e1b793904fce6aa5a444496c6d815f5e3e981ccf"
 				}
 			}
-		},
+		}],
 		// the transaction fees to be paid, small partion of coins that are not burned
 		"minerfees": ["1000000000"],
 		// arbitrary data, can contain anything as long as it
@@ -361,7 +361,7 @@ The binary encoding of a Coin Destruction Transaction uses the Rivine encoding p
 The same transaction that was shown as an example of a JSON-encoded Coin Destruction Transaction, can be represented in a hexadecimal string —when binary encoded— as:
 
 ```raw
-8133a6432220334946018000000000000000656432353531390000000000000000002000000000000000d285f92d6d449d9abb27f4c6cf82713cec0696d62b8c123f1627e054dc6d77804000000000000000a074b976556d6ea2e4ae8d51fbbb5ec99099f11918201abfa31cf80d415c8d5bdfda5a32d9cc167067b6b798e80c6c1a45f6fd9e0f01ac09053e767b15d310050100000000000000070000000000000001c6bf5263400001210000000000000001e78fd5af261e49643dba489b29566db53fa6e195fa0e6aad4430d4f06ce88b73010000000000000004000000000000003b9aca0012000000000000006d6f6e65792066726f6d2074686520736b79
+8202110000000000000000000000000000000000000000000000000000000000001101c401def123def123def123def123def123def123def123def123def123def123def180ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef12345ef020e01c6bf52634000014201e3cbc41bd3cdfec9e01a6be46a35099ba0e1e1b793904fce6aa5a444496c6d8102083b9aca0022746573742e2e2e20312c20322e2e2e2033
 ```
 
 #### Signing a Coin Destruction Transaction
@@ -380,10 +380,7 @@ blake2b_256_hash(RivineBinaryEncoding(
   - specifier: 16 bytes, hardcoded to "coin destruct tx\0"
   - nonce: 8 bytes
   - all coin inputs
-  - refund pointer defined or not: 1 byte
-    if refund output defined:
-	- value: Currency (8 bytes length + n bytes, little endian encoded)
-	- binaryEncoding(condition)
+  - all coin outputs
   - length(minerFees): int64 (8 bytes, little endian)
   for each minerFee:
     - fee: Currency (8 bytes length + n bytes, little endian encoded)
