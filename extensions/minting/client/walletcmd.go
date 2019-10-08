@@ -244,9 +244,11 @@ func (walletCmd *walletCmd) burnCoinsCmd(cmd *cobra.Command, args []string) {
 
 	// assemble the transaction
 	cdTx := minting.CoinDestructionTransaction{
-		CoinInputs:       coinInputs,
-		RefundCoinOutput: refundCoinOutput,
-		MinerFees:        []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
+		CoinInputs: coinInputs,
+		MinerFees:  []types.Currency{walletCmd.cli.Config.MinimumTransactionFee},
+	}
+	if refundCoinOutput != nil {
+		cdTx.CoinOutputs = append(cdTx.CoinOutputs, *refundCoinOutput)
 	}
 	if n := len(walletCmd.coinCreationTxCfg.Description); n > 0 {
 		cdTx.ArbitraryData = make([]byte, n)
