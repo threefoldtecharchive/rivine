@@ -59,6 +59,40 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	// router to register all endpoints to
 	router := httprouter.New()
 
+	fmt.Println("Setting up root HTTP API handler...")
+
+	// handle all our endpoints over a router,
+	// which requires a user agent should one be configured
+	srv.Handle("/", api.RequireUserAgentHandler(router, cfg.RequiredUserAgent))
+
+	// register our special daemon HTTP handlers
+	router.GET("/daemon/constants", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+		constants := modules.NewDaemonConstants(cfg.BlockchainInfo, networkCfg.Constants)
+		api.WriteJSON(w, constants)
+	})
+	router.GET("/daemon/version", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+		api.WriteJSON(w, daemon.Version{
+			ChainVersion:    cfg.BlockchainInfo.ChainVersion,
+			ProtocolVersion: cfg.BlockchainInfo.ProtocolVersion,
+		})
+	})
+	router.POST("/daemon/stop", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
+		// can't write after we stop the server, so lie a bit.
+		api.WriteSuccess(w)
+
+		// need to flush the response before shutting down the server
+		f, ok := w.(http.Flusher)
+		if !ok {
+			err := errors.New("Server does not support flushing")
+			build.Severe(err)
+		}
+		f.Flush()
+
+		if err := srv.Close(); err != nil {
+			servErrs <- err
+		}
+	})
+
 	// Initialize the Rivine modules
 	var g modules.Gateway
 	if moduleIdentifiers.Contains(daemon.GatewayModule.Identifier()) {
@@ -171,40 +205,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 			}
 		}()
 	}
-
-	fmt.Println("Setting up root HTTP API handler...")
-
-	// register our special daemon HTTP handlers
-	router.GET("/daemon/constants", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-		constants := modules.NewDaemonConstants(cfg.BlockchainInfo, networkCfg.Constants)
-		api.WriteJSON(w, constants)
-	})
-	router.GET("/daemon/version", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-		api.WriteJSON(w, daemon.Version{
-			ChainVersion:    cfg.BlockchainInfo.ChainVersion,
-			ProtocolVersion: cfg.BlockchainInfo.ProtocolVersion,
-		})
-	})
-	router.POST("/daemon/stop", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-		// can't write after we stop the server, so lie a bit.
-		api.WriteSuccess(w)
-
-		// need to flush the response before shutting down the server
-		f, ok := w.(http.Flusher)
-		if !ok {
-			err := errors.New("Server does not support flushing")
-			build.Severe(err)
-		}
-		f.Flush()
-
-		if err := srv.Close(); err != nil {
-			servErrs <- err
-		}
-	})
-
-	// handle all our endpoints over a router,
-	// which requires a user agent should one be configured
-	srv.Handle("/", api.RequireUserAgentHandler(router, cfg.RequiredUserAgent))
 
 	// If there are any long running operations that need to happen first (e.g. for some extension code)
 	// You can do that first before starting the cs syncing
