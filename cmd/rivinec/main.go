@@ -10,6 +10,14 @@ import (
 	"github.com/threefoldtech/rivine/pkg/client"
 	"github.com/threefoldtech/rivine/pkg/daemon"
 	"github.com/threefoldtech/rivine/types"
+
+	rivtypes "github.com/threefoldtech/rivine/cmd/rivinec/types"
+
+	"github.com/threefoldtech/rivine/extensions/minting"
+	mintingcli "github.com/threefoldtech/rivine/extensions/minting/client"
+
+	"github.com/threefoldtech/rivine/extensions/authcointx"
+	authcoincli "github.com/threefoldtech/rivine/extensions/authcointx/client"
 )
 
 func main() {
@@ -19,6 +27,18 @@ func main() {
 	if err != nil {
 		build.Critical(err)
 	}
+
+	// register minting extension commands
+	mintingcli.CreateConsensusCmd(cliClient)
+	mintingcli.CreateWalletCmds(cliClient,
+		rivtypes.TransactionVersionMinterDefinition,
+		rivtypes.TransactionVersionCoinCreation,
+		&mintingcli.WalletCmdsOpts{
+			CoinDestructionTxVersion: rivtypes.TransactionVersionCoinDestruction,
+			RequireMinerFees:         false,
+		})
+
+	mintingcli.CreateExploreCmd(cliClient)
 	// define preRunE, as to ensure we go to a default config should it be required
 	cliClient.PreRunE = func(cfg *client.Config) (*client.Config, error) {
 		if cfg == nil {
@@ -31,6 +51,54 @@ func main() {
 		if !(cfg.NetworkName == "standard" || cfg.NetworkName == "devnet" || cfg.NetworkName == "testnet") {
 			return nil, fmt.Errorf("Netork name %q not recognized", cfg.NetworkName)
 		}
+
+		// creating minting plugin client
+		baseClient, err := client.NewBaseClientFromCommandLineClient(cliClient)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create minting plugin client: %v", err)
+		}
+		mintingPluginClient := mintingcli.NewPluginConsensusClient(baseClient)
+
+		// register minting transaction versions
+		types.RegisterTransactionVersion(rivtypes.TransactionVersionMinterDefinition, &minting.MinterDefinitionTransactionController{
+			MintingMinerFeeBaseTransactionController: minting.MintingMinerFeeBaseTransactionController{
+				MintingBaseTransactionController: minting.MintingBaseTransactionController{
+					UseLegacySiaEncoding: false,
+				},
+				RequireMinerFees: false,
+			},
+			MintConditionGetter: mintingPluginClient,
+			TransactionVersion:  rivtypes.TransactionVersionMinterDefinition,
+		})
+		types.RegisterTransactionVersion(rivtypes.TransactionVersionCoinCreation, &minting.CoinCreationTransactionController{
+			MintingMinerFeeBaseTransactionController: minting.MintingMinerFeeBaseTransactionController{
+				MintingBaseTransactionController: minting.MintingBaseTransactionController{
+					UseLegacySiaEncoding: false,
+				},
+				RequireMinerFees: false,
+			},
+			MintConditionGetter: mintingPluginClient,
+			TransactionVersion:  rivtypes.TransactionVersionCoinCreation,
+		})
+		types.RegisterTransactionVersion(rivtypes.TransactionVersionCoinDestruction, &minting.CoinDestructionTransactionController{
+			MintingBaseTransactionController: minting.MintingBaseTransactionController{
+				UseLegacySiaEncoding: false,
+			},
+			TransactionVersion: rivtypes.TransactionVersionCoinDestruction,
+		})
+
+		// create authcoin plugin client
+		authCoinPluginClient := authcoincli.NewPluginConsensusClient(baseClient)
+
+		// register auth coin transaction versions
+		types.RegisterTransactionVersion(rivtypes.TransactionVersionAuthAddressUpdate, &authcointx.AuthAddressUpdateTransactionController{
+			AuthInfoGetter:     authCoinPluginClient,
+			TransactionVersion: rivtypes.TransactionVersionAuthAddressUpdate,
+		})
+		types.RegisterTransactionVersion(rivtypes.TransactionVersionAuthConditionUpdate, &authcointx.AuthConditionUpdateTransactionController{
+			AuthInfoGetter:     authCoinPluginClient,
+			TransactionVersion: rivtypes.TransactionVersionAuthConditionUpdate,
+		})
 
 		return cfg, nil
 	}
