@@ -39,7 +39,6 @@ Index
 | [/wallet/seeds](#walletseeds-get)                               | GET       |
 | [/wallet/coins](#walletcoins-post)                              | POST      |
 | [/wallet/blockstakes](#walletblockstakes-post)                  | POST      |
-| [/wallet/data](#walletdata-post)                                | POST      |
 | [/wallet/transaction/___:id___](#wallettransactionid-get)       | GET       |
 | [/wallet/transactions](#wallettransactions-get)                 | GET       |
 | [/wallet/transactions/___:addr___](#wallettransactionsaddr-get) | GET       |
@@ -257,35 +256,6 @@ amount      // blockstakes
 
 // Address that is receiving the funds.
 destination // address
-```
-
-###### JSON Response
-```javascript
-{
-  // Array of IDs of the transactions that were created when sending the coins.
-  // The last transaction contains the output headed to the 'destination'.
-  // Transaction IDs are 64 character long hex strings.
-  "transactionids": [
-    "1234567890abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-  ]
-}
-```
-
-#### /wallet/data [POST]
-
-Registers data on the blockchain. A transaction is created which sends the
-minimal required amount of coin outputs to the provided address. The data provided is added
-as arbitrary data in the transaction
-
-###### Query String Parameters
-```
-// Address that is receiving the minimal required coin outputs sent in the transaction
-destination     // address
-
-// The base64 encoded representation of the data
-data            // base64 string
 ```
 
 ###### JSON Response

@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -81,12 +80,6 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 			Short: "Retrieve information about your seeds",
 			Long:  "Retrieves the current seed, how many addresses are remaining, and the rest of your seeds from the wallet",
 			Run:   Wrap(walletCmd.seedsCmd),
-		}
-		registerDataCmd = &cobra.Command{
-			Use:   "registerdata <namespace> <data> <dest>",
-			Short: "Register data on the blockchain",
-			Long:  "Register data on the blockchain by sending a minimal transaction to the destination address, and including the data in the transaction",
-			Run:   Wrap(walletCmd.registerDataCmd),
 		}
 		balanceCmd = &cobra.Command{
 			Use:   "balance",
@@ -253,7 +246,6 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 		balanceCmd,
 		listTransactionsCmd,
 		blockStakeStatCmd,
-		registerDataCmd,
 		listCmd,
 		createCmd,
 		signTxCmd)
@@ -686,18 +678,6 @@ func parsePairedOutputs(args []string, parseCurrency parseCurrencyString) (pairs
 		pairs = append(pairs, pair)
 	}
 	return
-}
-
-// registerDataCmd registers data on the blockchain by making a minimal transaction to the designated address
-// and includes the data in the transaction
-func (walletCmd *walletCmd) registerDataCmd(namespace, dest, data string) {
-	encodedData := base64.StdEncoding.EncodeToString([]byte(namespace + data))
-	err := walletCmd.cli.Post("/wallet/data",
-		fmt.Sprintf("destination=%s&data=%s", dest, encodedData))
-	if err != nil {
-		cli.DieWithError("Could not register data:", err)
-	}
-	fmt.Printf("Registered data to %s\n", dest)
 }
 
 // blockStakesStatsCmd gives all statistical info of blockstake

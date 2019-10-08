@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -223,7 +222,6 @@ func RegisterWalletHTTPHandlers(router Router, wallet modules.Wallet, requiredPa
 	router.POST("/wallet/transaction", RequirePasswordHandler(NewWalletTransactionCreateHandler(wallet), requiredPassword))
 	router.POST("/wallet/coins", RequirePasswordHandler(NewWalletCoinsHandler(wallet), requiredPassword))
 	router.POST("/wallet/blockstakes", RequirePasswordHandler(NewWalletBlockStakesHandler(wallet), requiredPassword))
-	router.POST("/wallet/data", RequirePasswordHandler(NewWalletDataHandler(wallet), requiredPassword))
 	router.GET("/wallet/transaction/:id", NewWalletTransactionHandler(wallet))
 	router.GET("/wallet/transactions", NewWalletTransactionsHandler(wallet))
 	router.GET("/wallet/transactions/:addr", NewWalletTransactionsAddrHandler(wallet))
@@ -590,34 +588,6 @@ func NewWalletBlockStakesHandler(wallet modules.Wallet) httprouter.Handle {
 			return
 		}
 		WriteJSON(w, WalletBlockStakesPOSTResp{
-			TransactionID: tx.ID(),
-		})
-	}
-}
-
-// NewWalletDataHandler creates a handler to handle the API calls to /wallet/data
-func NewWalletDataHandler(wallet modules.Wallet) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		dest, err := ScanAddress(req.FormValue("destination"))
-		if err != nil {
-			WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, http.StatusBadRequest)
-			return
-		}
-		dataString := req.FormValue("data")
-		data, err := base64.StdEncoding.DecodeString(dataString)
-		if err != nil {
-			WriteError(w, Error{"error after call to /wallet/coins: Failed to decode arbitrary data"}, http.StatusBadRequest)
-			return
-		}
-		// Since zero outputs are not allowed, just send one of the smallest unit, the minimal amount.
-		// The transaction fee should be much higher anyway
-		tx, err := wallet.SendCoins(types.NewCurrency64(1),
-			types.NewCondition(types.NewUnlockHashCondition(dest)), data)
-		if err != nil {
-			WriteError(w, Error{"error after call to /wallet/coins: " + err.Error()}, walletErrorToHTTPStatus(err))
-			return
-		}
-		WriteJSON(w, WalletCoinsPOSTResp{
 			TransactionID: tx.ID(),
 		})
 	}
