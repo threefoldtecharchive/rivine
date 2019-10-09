@@ -45,6 +45,7 @@ type (
 		RawTransaction types.Transaction   `json:"rawtransaction"`
 		Timestamp      types.Timestamp     `json:"timestamp"`
 		Order          int                 `json:"order"`
+		MinerPayouts   []types.MinerPayout `json:"minerpayouts"`
 
 		CoinInputOutputs             []ExplorerCoinOutput       `json:"coininputoutputs"` // the outputs being spent
 		CoinOutputIDs                []types.CoinOutputID       `json:"coinoutputids"`
@@ -88,6 +89,7 @@ func buildExplorerTransactionWithMappedCoinOutputs(explorer modules.Explorer, he
 	et.ID = txn.ID()
 	et.Height = height
 	et.Parent = block.ParentID
+	et.MinerPayouts = block.MinerPayouts
 	et.RawTransaction = txn
 	et.Timestamp = block.Timestamp
 
