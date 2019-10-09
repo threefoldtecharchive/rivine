@@ -66,7 +66,7 @@ type (
 		ChainInfo types.BlockchainInfo `json:"chaininfo"`
 
 		// ConsensusPlugins are the plugins loaded in the consensus set module of this daemon
-		ConsensusPlugins []string `json:"consensusplugins`
+		ConsensusPlugins []string `json:"consensusplugins"`
 
 		GenesisTimestamp       types.Timestamp   `json:"genesistimestamp"`
 		BlockSizeLimit         uint64            `json:"blocksizelimit"`
