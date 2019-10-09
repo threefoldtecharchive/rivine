@@ -63,6 +63,13 @@ func NewCurrencyConvertor(units types.CurrencyUnits, coinUnit string) CurrencyCo
 // It will fail if the given string is invalid or too precise.
 func (cc CurrencyConvertor) ParseCoinString(str string) (types.Currency, error) {
 	initialParts := strings.SplitN(str, ".", 2)
+	// remove formatting for whole number part
+	var err error
+	initialParts[0], err = stripColonFromCoinString(initialParts[0])
+	if err != nil {
+		return types.Currency{}, err
+	}
+
 	if len(initialParts) == 1 {
 		// a round number, simply multiply and go
 		i, ok := big.NewInt(0).SetString(initialParts[0], 10)
@@ -104,6 +111,31 @@ func (cc CurrencyConvertor) ParseCoinString(str string) (types.Currency, error) 
 	return c, nil
 }
 
+// stripColonFromCoinString removes comma formatting from a coin string representing a
+// currency. The formatting is expected to be groups of thousands (i.e. 3 digits).
+// Invalid formatting returns an error.
+func stripColonFromCoinString(str string) (string, error) {
+	groups := strings.Split(str, ",")
+	if len(groups) == 1 {
+		// no formatting
+		return str, nil
+	}
+
+	// all groups must have a lenght of 3, except for the first one which can
+	// have a length of 1-3
+	if len(groups[0]) < 1 || len(groups[0]) > 3 {
+		return "", errors.New("Inconsistent use of , formatting")
+	}
+
+	for i := 1; i < len(groups); i++ {
+		if len(groups[i]) != 3 {
+			return "", errors.New("Inconsistent use of , formatting")
+		}
+	}
+
+	return strings.Join(groups, ""), nil
+}
+
 // ToCoinString turns the in-memory currency unit,
 // into a string version of the default currency unit.
 // This can never fail, as the only thing it can do is make a number smaller.
@@ -123,6 +155,10 @@ func (cc CurrencyConvertor) ToCoinString(c types.Currency) string {
 		str = strings.TrimRight(str, ".")
 		if len(str) == 0 {
 			return "0"
+		}
+		// make more readable
+		for i := uint(3); idx > i; i += 3 {
+			str = str[:idx-i] + "," + str[idx-i:]
 		}
 		return str
 	}

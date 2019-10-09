@@ -1,6 +1,7 @@
 package client
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -36,9 +37,16 @@ func TestParseCoinStringValidStrings(t *testing.T) {
 		"1.123",
 		"1.123456",
 		"1.123456789",
-		"123456789.987654321",
+		"123,456,789.987654321",
 		"1.1234567890",
 		"1.123456789000",
+		"12.345678900000",
+		"123.4567",
+		"1,234.8945",
+		"12,345.4944100",
+		"166,198,297,161.1100",
+		"1,234,567,890.00000",
+		"12,987,654,321.002650",
 	}
 	for idx, testCase := range testCases {
 		x, err := cc.ParseCoinString(testCase)
@@ -48,7 +56,7 @@ func TestParseCoinStringValidStrings(t *testing.T) {
 		}
 
 		str := cc.ToCoinString(x)
-		strippedTestCase := strings.TrimRight(testCase, "0")
+		strippedTestCase := strings.TrimRight(strings.TrimRight(testCase, "0"), ".")
 		if str != strippedTestCase {
 			t.Error(idx, str, "!=", strippedTestCase)
 		}
@@ -141,7 +149,15 @@ func TestParseCoinStringToCoinBigValueString_E24(t *testing.T) {
 func testParseCoinStringToCoinBigValueString(t *testing.T, cc CurrencyConvertor) {
 	for i := uint(0); i < cc.precision; i++ {
 		str := "1"
-		str += strings.Repeat("0", int(i))
+		// make sure to insert proper formatting
+		formatterStartingOffset := int((i + 1) % 3)
+		for j := 1; j < int(i)+1; j++ {
+			if (j-formatterStartingOffset)%3 == 0 {
+				fmt.Println(j, formatterStartingOffset, j-formatterStartingOffset)
+				str += ","
+			}
+			str += "0"
+		}
 
 		c, err := cc.ParseCoinString(str)
 		if err != nil {
