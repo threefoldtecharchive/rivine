@@ -30,11 +30,12 @@ import (
 	"errors"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 
-	"github.com/NebulousLabs/fastrand"
-	"github.com/NebulousLabs/go-upnp/goupnp"
-	"github.com/NebulousLabs/go-upnp/goupnp/dcps/internetgateway1"
+	"gitlab.com/NebulousLabs/fastrand"
+	"gitlab.com/NebulousLabs/go-upnp/goupnp"
+	"gitlab.com/NebulousLabs/go-upnp/goupnp/dcps/internetgateway1"
 )
 
 // An IGD provides an interface to the most commonly used functions of an
@@ -45,6 +46,7 @@ type IGD struct {
 	client interface {
 		GetExternalIPAddress() (string, error)
 		AddPortMapping(string, uint16, string, uint16, string, bool, string, uint32) error
+		GetSpecificPortMappingEntry(string, uint16, string) (uint16, string, bool, string, uint32, error)
 		DeletePortMapping(string, uint16, string) error
 		GetServiceClient() *goupnp.ServiceClient
 	}
@@ -53,6 +55,32 @@ type IGD struct {
 // ExternalIP returns the router's external IP.
 func (d *IGD) ExternalIP() (string, error) {
 	return d.client.GetExternalIPAddress()
+}
+
+// IsForwardedTCP checks whether a specific TCP port is forwarded to this host
+func (d *IGD) IsForwardedTCP(port uint16) (bool, error) {
+	return d.checkForward(port, "TCP")
+}
+
+// IsForwardedUDP checks whether a specific UDP port is forwarded to this host
+func (d *IGD) IsForwardedUDP(port uint16) (bool, error) {
+	return d.checkForward(port, "UDP")
+}
+
+// checkForward checks whether a specific TCP or UDP port is forwarded to this host
+func (d *IGD) checkForward(port uint16, proto string) (bool, error) {
+	time.Sleep(time.Millisecond)
+	_, _, enabled, _, _, err := d.client.GetSpecificPortMappingEntry("", port, proto)
+
+	if err != nil {
+		// 714 "NoSuchEntryInArray" means that there is no such forwarding
+		if strings.Contains(err.Error(), "<errorCode>714</errorCode>") {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return enabled, nil
 }
 
 // Forward forwards the specified port, and adds its description to the
