@@ -276,5 +276,6 @@ func (e *Explorer) getStats(start types.BlockHeight, end types.BlockHeight) (*mo
 
 // Constants returns all of the constants in use by the chain
 func (e *Explorer) Constants() modules.DaemonConstants {
-	return modules.NewDaemonConstants(e.bcInfo, e.chainCts)
+	pluginNames := e.cs.LoadedPlugins()
+	return modules.NewDaemonConstants(e.bcInfo, e.chainCts, pluginNames)
 }

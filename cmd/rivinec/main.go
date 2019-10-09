@@ -51,7 +51,7 @@ func main() {
 	cliClient.PreRunE = func(cfg *client.Config) (*client.Config, error) {
 		if cfg == nil {
 			chainConstants := types.StandardnetChainConstants()
-			daemonConstants := modules.NewDaemonConstants(bchainInfo, chainConstants)
+			daemonConstants := modules.NewDaemonConstants(bchainInfo, chainConstants, nil)
 			newCfg := client.ConfigFromDaemonConstants(daemonConstants)
 			cfg = &newCfg
 		}

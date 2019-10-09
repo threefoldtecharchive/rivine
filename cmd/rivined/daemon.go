@@ -12,6 +12,7 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/threefoldtech/rivine/build"
+	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/modules/blockcreator"
 	"github.com/threefoldtech/rivine/modules/consensus"
@@ -21,7 +22,6 @@ import (
 	"github.com/threefoldtech/rivine/modules/wallet"
 	"github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/pkg/daemon"
-	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/types"
 
 	rivtypes "github.com/threefoldtech/rivine/cmd/rivinec/types"
@@ -76,9 +76,16 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 	// which requires a user agent should one be configured
 	srv.Handle("/", api.RequireUserAgentHandler(router, cfg.RequiredUserAgent))
 
+	// consensus set
+	var cs modules.ConsensusSet
+
 	// register our special daemon HTTP handlers
 	router.GET("/daemon/constants", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
-		constants := modules.NewDaemonConstants(cfg.BlockchainInfo, networkCfg.Constants)
+		var pluginNames []string
+		if cs != nil {
+			pluginNames = cs.LoadedPlugins()
+		}
+		constants := modules.NewDaemonConstants(cfg.BlockchainInfo, networkCfg.Constants, pluginNames)
 		api.WriteJSON(w, constants)
 	})
 	router.GET("/daemon/version", func(w http.ResponseWriter, _ *http.Request, _ httprouter.Params) {
@@ -129,7 +136,6 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 
 	}
 	var (
-		cs               modules.ConsensusSet
 		mintingPlugin    *minting.Plugin
 		authCoinTxPlugin *authcointx.Plugin
 	)

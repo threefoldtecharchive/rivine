@@ -352,6 +352,9 @@ type (
 		// UnregisterPlugin takes in a name and plugin and unregisters this plugin off the consensus
 		UnregisterPlugin(name string, plugin ConsensusSetPlugin)
 
+		// LoadedPlugins returns a list of all loaded plugins, by nane.
+		LoadedPlugins() []string
+
 		// SetTransactionValidators sets the transaction validators used by the ConsensusSet as rules for all transactions,
 		// regardless of the version. Use SetTransactionVersionMappedValidators in case you want rules that only apply to a specific tx version.
 		// If no validators are passed, the validators returned by the `consensus.StandardTransactionValidators` function are used.

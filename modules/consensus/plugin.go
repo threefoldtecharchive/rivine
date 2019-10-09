@@ -441,3 +441,19 @@ func (cs *ConsensusSet) UnregisterPlugin(name string, plugin modules.ConsensusSe
 		fmt.Printf("try to delete plugin %s, plugin does not exist", name)
 	}
 }
+
+// LoadedPlugins returns a list of all loaded plugins, by nane.
+func (cs *ConsensusSet) LoadedPlugins() []string {
+	if cs.tg.Add() != nil {
+		return nil
+	}
+	defer cs.tg.Done()
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	names := make([]string, 0, len(cs.plugins))
+	for name := range cs.plugins {
+		names = append(names, name)
+	}
+	return names
+}

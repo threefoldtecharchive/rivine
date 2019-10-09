@@ -65,6 +65,9 @@ type (
 	DaemonConstants struct {
 		ChainInfo types.BlockchainInfo `json:"chaininfo"`
 
+		// ConsensusPlugins are the plugins loaded in the consensus set module of this daemon
+		ConsensusPlugins []string `json:"consensusplugins`
+
 		GenesisTimestamp       types.Timestamp   `json:"genesistimestamp"`
 		BlockSizeLimit         uint64            `json:"blocksizelimit"`
 		BlockFrequency         types.BlockHeight `json:"blockfrequency"`
@@ -176,9 +179,11 @@ func NewChainStats(size int) *ChainStats {
 
 // NewDaemonConstants returns the Deamon's public constants,
 // using the blockchain (network) info and constants used internally as input.
-func NewDaemonConstants(info types.BlockchainInfo, constants types.ChainConstants) DaemonConstants {
+func NewDaemonConstants(info types.BlockchainInfo, constants types.ChainConstants, consensusPlugins []string) DaemonConstants {
 	return DaemonConstants{
 		ChainInfo: info,
+
+		ConsensusPlugins: consensusPlugins,
 
 		GenesisTimestamp:       constants.GenesisTimestamp,
 		BlockSizeLimit:         constants.BlockSizeLimit,
