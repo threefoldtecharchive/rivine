@@ -39,13 +39,13 @@ type (
 	// the parent block. This information is provided for programs that may not
 	// be complex enough to compute the extra information on their own.
 	ExplorerTransaction struct {
-		ID             types.TransactionID `json:"id"`
-		Height         types.BlockHeight   `json:"height"`
-		Parent         types.BlockID       `json:"parent"`
-		RawTransaction types.Transaction   `json:"rawtransaction"`
-		Timestamp      types.Timestamp     `json:"timestamp"`
-		Order          int                 `json:"order"`
-		MinerPayouts   []types.MinerPayout `json:"minerpayouts"`
+		ID             types.TransactionID   `json:"id"`
+		Height         types.BlockHeight     `json:"height"`
+		Parent         types.BlockID         `json:"parent"`
+		RawTransaction types.Transaction     `json:"rawtransaction"`
+		Timestamp      types.Timestamp       `json:"timestamp"`
+		Order          int                   `json:"order"`
+		MinerPayouts   []ExplorerMinerPayout `json:"minerpayouts"`
 
 		CoinInputOutputs             []ExplorerCoinOutput       `json:"coininputoutputs"` // the outputs being spent
 		CoinOutputIDs                []types.CoinOutputID       `json:"coinoutputids"`
@@ -55,6 +55,12 @@ type (
 		BlockStakeOutputUnlockHashes []types.UnlockHash         `json:"blockstakeunlockhashes"`
 
 		Unconfirmed bool `json:"unconfirmed"`
+	}
+
+	// ExplorerMinerPayout adds extra information about the MinerPayout
+	ExplorerMinerPayout struct {
+		RawMinerPayout types.MinerPayout  `json:"rawminerpayout"`
+		MinerPayoutID  types.CoinOutputID `json:"minerpayoutid"`
 	}
 
 	explorerTransactionsByHeight []ExplorerTransaction
@@ -89,9 +95,16 @@ func buildExplorerTransactionWithMappedCoinOutputs(explorer modules.Explorer, he
 	et.ID = txn.ID()
 	et.Height = height
 	et.Parent = block.ParentID
-	et.MinerPayouts = block.MinerPayouts
 	et.RawTransaction = txn
 	et.Timestamp = block.Timestamp
+
+	et.MinerPayouts = make([]ExplorerMinerPayout, 0, len(block.MinerPayouts))
+	for idx, mp := range block.MinerPayouts {
+		et.MinerPayouts = append(et.MinerPayouts, ExplorerMinerPayout{
+			RawMinerPayout: mp,
+			MinerPayoutID:  block.MinerPayoutID(uint64(idx)),
+		})
+	}
 
 	for k, tx := range block.Transactions {
 		if et.ID == tx.ID() {
