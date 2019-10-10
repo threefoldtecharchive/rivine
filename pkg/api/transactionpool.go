@@ -106,6 +106,16 @@ func NewTransactionPoolGetTransactionsHandler(cs modules.ConsensusSet, tpool mod
 					continue txnLoop
 				}
 			}
+			// support extension data
+			data, err := txn.CommonExtensionData()
+			if err == nil {
+				for _, co := range data.UnlockConditions {
+					if isUnlockHashInCondition(uh, co) {
+						i++
+						continue txnLoop
+					}
+				}
+			}
 			// txn doesn't reference unlock hash
 			txns = append(txns[:i], txns[i+1:]...)
 		}
