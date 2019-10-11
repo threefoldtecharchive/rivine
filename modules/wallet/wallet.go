@@ -39,6 +39,7 @@ var (
 type spendableKey struct {
 	PublicKey crypto.PublicKey
 	SecretKey crypto.SecretKey
+	Index     uint64
 }
 
 func (sk spendableKey) WipeSecret() spendableKey {
@@ -213,12 +214,45 @@ func (w *Wallet) AllAddresses() ([]types.UnlockHash, error) {
 		return nil, modules.ErrLockedWallet
 	}
 
-	addrs := make(types.UnlockHashSlice, 0, len(w.keys))
-	for addr := range w.keys {
-		addrs = append(addrs, addr)
+	// sort by address
+	uips := unlockHashesWithIndicesFromKeyMap(w.keys)
+	sort.Sort(uips)
+	return uips.Addresses, nil
+}
+
+type unlockHashesWithIndices struct {
+	Addresses []types.UnlockHash
+	Indices   []uint64
+}
+
+func unlockHashesWithIndicesFromKeyMap(skeys map[types.UnlockHash]spendableKey) *unlockHashesWithIndices {
+	lskeys := len(skeys)
+	uips := &unlockHashesWithIndices{
+		Addresses: make([]types.UnlockHash, 0, lskeys),
+		Indices:   make([]uint64, 0, lskeys),
 	}
-	sort.Sort(addrs)
-	return addrs, nil
+	for addr, sk := range skeys {
+		uips.Addresses = append(uips.Addresses, addr)
+		uips.Indices = append(uips.Indices, sk.Index)
+	}
+	return uips
+}
+
+// Len is the number of elements in the collection.
+func (uips *unlockHashesWithIndices) Len() int {
+	return len(uips.Indices)
+}
+
+// Less reports whether the element with
+// index i should sort before the element with index j.
+func (uips *unlockHashesWithIndices) Less(i, j int) bool {
+	return uips.Indices[i] < uips.Indices[j]
+}
+
+// Swap swaps the elements with indexes i and j.
+func (uips *unlockHashesWithIndices) Swap(i, j int) {
+	uips.Addresses[i], uips.Addresses[j] = uips.Addresses[j], uips.Addresses[i]
+	uips.Indices[i], uips.Indices[j] = uips.Indices[j], uips.Indices[i]
 }
 
 // GetKey gets the pub/priv key pair,

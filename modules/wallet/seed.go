@@ -48,6 +48,7 @@ func generateSpendableKey(seed modules.Seed, index uint64) (spendableKey, error)
 	return spendableKey{
 		PublicKey: pk,
 		SecretKey: sk,
+		Index:     index,
 	}, nil
 }
 

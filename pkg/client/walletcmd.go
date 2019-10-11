@@ -305,6 +305,11 @@ func createWalletCmd(cli *CommandLineClient) *WalletCommand {
 		&walletCmd.sendBlockStakesCfg.RefundAddressNew,
 		"refund-address-new", false, "generate a new refund address if a refund needs to happen")
 
+	// all addresses cmd flags
+	addressesCmd.Flags().BoolVarP(
+		&walletCmd.walletAddressesCfg.ShowIndices, "index", "i", false,
+		"prefix each address with its index")
+
 	// return root command
 	return &WalletCommand{
 		Command:       rootCmd,
@@ -349,6 +354,9 @@ type walletCmd struct {
 		Plain bool
 		Seed  string
 	}
+	walletAddressesCfg struct {
+		ShowIndices bool
+	}
 }
 
 // addressCmd fetches a new address from the wallet that will be able to
@@ -369,8 +377,18 @@ func (walletCmd *walletCmd) addressesCmd() {
 	if err != nil {
 		cli.DieWithError("Failed to fetch addresses:", err)
 	}
-	for _, addr := range addrs.Addresses {
-		fmt.Println(addr)
+	if !walletCmd.walletAddressesCfg.ShowIndices {
+		for _, addr := range addrs.Addresses {
+			fmt.Println(addr)
+		}
+		return
+	}
+	fmtStr := "%04d\t%s\r\n"
+	if len(addrs.Addresses) >= 10000 {
+		fmtStr = "%05d\t%s\r\n"
+	}
+	for idx, addr := range addrs.Addresses {
+		fmt.Printf(fmtStr, idx, addr.String())
 	}
 }
 
