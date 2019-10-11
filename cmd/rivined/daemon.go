@@ -156,7 +156,28 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 				fmt.Println("Error during consensus set shutdown:", err)
 			}
 		}()
+	}
+	var tpool modules.TransactionPool
+	if moduleIdentifiers.Contains(daemon.TransactionPoolModule.Identifier()) {
+		printModuleIsLoading("transaction pool")
+		tpool, err = transactionpool.New(cs, g,
+			filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir),
+			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
+		if err != nil {
+			cancel()
+			return err
+		}
+		api.RegisterTransactionPoolHTTPHandlers(router, cs, tpool, cfg.APIPassword)
+		defer func() {
+			fmt.Println("Closing transaction pool...")
+			err := tpool.Close()
+			if err != nil {
+				fmt.Println("Error during transaction pool shutdown:", err)
+			}
+		}()
+	}
 
+	if cs != nil {
 		rivCfg, err := newRivineNetworkConfig(cfg)
 		if err != nil {
 			cancel()
@@ -188,7 +209,17 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 			},
 		)
 		// add the HTTP handlers for the auth coin tx extension as well
-		authcointxapi.RegisterConsensusAuthCoinHTTPHandlers(router, authCoinTxPlugin)
+		if tpool != nil {
+			authcointxapi.RegisterConsensusAuthCoinHTTPHandlers(
+				router, authCoinTxPlugin,
+				tpool, rivtypes.TransactionVersionAuthConditionUpdate,
+				rivtypes.TransactionVersionAuthAddressUpdate)
+		} else {
+			authcointxapi.RegisterConsensusAuthCoinHTTPHandlers(
+				router, authCoinTxPlugin,
+				nil, rivtypes.TransactionVersionAuthConditionUpdate,
+				rivtypes.TransactionVersionAuthAddressUpdate)
+		}
 
 		// register the minting extension plugin
 		err = cs.RegisterPlugin(ctx, "minting", mintingPlugin)
@@ -214,25 +245,7 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 			return err
 		}
 	}
-	var tpool modules.TransactionPool
-	if moduleIdentifiers.Contains(daemon.TransactionPoolModule.Identifier()) {
-		printModuleIsLoading("transaction pool")
-		tpool, err = transactionpool.New(cs, g,
-			filepath.Join(cfg.RootPersistentDir, modules.TransactionPoolDir),
-			cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
-		if err != nil {
-			cancel()
-			return err
-		}
-		api.RegisterTransactionPoolHTTPHandlers(router, cs, tpool, cfg.APIPassword)
-		defer func() {
-			fmt.Println("Closing transaction pool...")
-			err := tpool.Close()
-			if err != nil {
-				fmt.Println("Error during transaction pool shutdown:", err)
-			}
-		}()
-	}
+
 	var w modules.Wallet
 	if moduleIdentifiers.Contains(daemon.WalletModule.Identifier()) {
 		printModuleIsLoading("wallet")
@@ -290,6 +303,19 @@ func runDaemon(cfg daemon.Config, networkCfg daemon.NetworkConfig, moduleIdentif
 				fmt.Println("Error during explorer shutdown:", err)
 			}
 		}()
+
+		mintingapi.RegisterExplorerMintingHTTPHandlers(router, mintingPlugin)
+		if tpool != nil {
+			authcointxapi.RegisterExplorerAuthCoinHTTPHandlers(
+				router, authCoinTxPlugin,
+				tpool, rivtypes.TransactionVersionAuthConditionUpdate,
+				rivtypes.TransactionVersionAuthAddressUpdate)
+		} else {
+			authcointxapi.RegisterExplorerAuthCoinHTTPHandlers(
+				router, authCoinTxPlugin,
+				nil, rivtypes.TransactionVersionAuthConditionUpdate,
+				rivtypes.TransactionVersionAuthAddressUpdate)
+		}
 	}
 
 	// If there are any long running operations that need to happen first (e.g. for some extension code)
