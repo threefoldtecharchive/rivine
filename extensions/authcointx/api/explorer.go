@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/threefoldtech/rivine/extensions/authcointx"
+	"github.com/threefoldtech/rivine/modules"
 	rapi "github.com/threefoldtech/rivine/pkg/api"
 	"github.com/threefoldtech/rivine/types"
 )
@@ -24,24 +26,53 @@ type GetAddressesAuthStateResponse struct {
 }
 
 // RegisterConsensusAuthCoinHTTPHandlers registers the default Rivine handlers for all default Rivine Consensus HTTP endpoints.
-func RegisterConsensusAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin) {
-	registerAuthCoinHTTPHandlers(router, "/consensus", plugin)
+func RegisterConsensusAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin, txpool modules.TransactionPool, authConditionTxVersion, authAddressTxVersion types.TransactionVersion) {
+	registerAuthCoinHTTPHandlers(router, "/consensus", plugin, txpool, authConditionTxVersion, authAddressTxVersion)
 }
 
 // RegisterExplorerAuthCoinHTTPHandlers registers the default Rivine handlers for all default Rivine Explorer HTTP endpoints.
-func RegisterExplorerAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin) {
-	registerAuthCoinHTTPHandlers(router, "/explorer", plugin)
+func RegisterExplorerAuthCoinHTTPHandlers(router rapi.Router, plugin *authcointx.Plugin, txpool modules.TransactionPool, authConditionTxVersion, authAddressTxVersion types.TransactionVersion) {
+	registerAuthCoinHTTPHandlers(router, "/explorer", plugin, txpool, authConditionTxVersion, authAddressTxVersion)
 }
 
-func registerAuthCoinHTTPHandlers(router rapi.Router, root string, plugin *authcointx.Plugin) {
-	router.GET(root+"/authcoin/condition", NewGetActiveAuthConditionHandler(plugin))
+func registerAuthCoinHTTPHandlers(router rapi.Router, root string, plugin *authcointx.Plugin, txpool modules.TransactionPool, authConditionTxVersion, authAddressTxVersion types.TransactionVersion) {
+	router.GET(root+"/authcoin/condition", NewGetActiveAuthConditionHandler(plugin, txpool, authConditionTxVersion))
 	router.GET(root+"/authcoin/condition/:height", NewGetAuthConditionAtHandler(plugin))
-	router.GET(root+"/authcoin/status", NewGetAddressesAuthStateHandler(plugin))
+	router.GET(root+"/authcoin/status", NewGetAddressesAuthStateHandler(plugin, txpool, authAddressTxVersion))
 }
 
 // NewGetActiveAuthConditionHandler creates a handler to handle the API calls to /explorer/authcoin/condition.
-func NewGetActiveAuthConditionHandler(plugin *authcointx.Plugin) httprouter.Handle {
+func NewGetActiveAuthConditionHandler(plugin *authcointx.Plugin, txpool modules.TransactionPool, authConditionTxVersion types.TransactionVersion) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+		// do we accept txpool
+		q := req.URL.Query()
+		txPoolAllowed := true
+		txPoolAllowedStr := q.Get("tzxpool")
+		if txpool == nil || (txPoolAllowedStr != "" && (txPoolAllowedStr == "0" || strings.ToLower(txPoolAllowedStr) == "false")) {
+			txPoolAllowed = false
+		}
+		if txPoolAllowed {
+			// look through txpool first
+			txns := txpool.TransactionList()
+			txnsOffset := len(txns) - 1
+			var txn *types.Transaction
+			for i := range txns {
+				txn = &txns[txnsOffset-i]
+				if txn.Version != authConditionTxVersion {
+					continue
+				}
+				atxn, err := authcointx.AuthConditionUpdateTransactionFromTransaction(*txn, authConditionTxVersion)
+				if err != nil {
+					rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
+					return
+				}
+				rapi.WriteJSON(w, GetAuthConditionResponse{
+					AuthCondition: atxn.AuthCondition,
+				})
+				return
+			}
+		}
+		// use confirmed later
 		authCondition, err := plugin.GetActiveAuthCondition()
 		if err != nil {
 			rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
@@ -74,7 +105,7 @@ func NewGetAuthConditionAtHandler(plugin *authcointx.Plugin) httprouter.Handle {
 }
 
 // NewGetAddressesAuthStateHandler creates a handler to handle the API calls to /<root>/authcoin/status.
-func NewGetAddressesAuthStateHandler(plugin *authcointx.Plugin) httprouter.Handle {
+func NewGetAddressesAuthStateHandler(plugin *authcointx.Plugin, txpool modules.TransactionPool, authAddressTxVersion types.TransactionVersion) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
 		q := req.URL.Query()
 
@@ -113,7 +144,18 @@ func NewGetAddressesAuthStateHandler(plugin *authcointx.Plugin) httprouter.Handl
 				return
 			}
 		} else {
-			resp.AuthStates, err = plugin.GetAddressesAuthStateNow(addresses, nil)
+			// do we accept txpool
+			q := req.URL.Query()
+			txPoolAllowed := true
+			txPoolAllowedStr := q.Get("txpool")
+			if txpool == nil || (txPoolAllowedStr != "" && (txPoolAllowedStr == "0" || strings.ToLower(txPoolAllowedStr) == "false")) {
+				txPoolAllowed = false
+			}
+			if txPoolAllowed {
+				resp.AuthStates, err = getAddressesAuthStateNowAcceptingTxPool(addresses, plugin, txpool, authAddressTxVersion)
+			} else {
+				resp.AuthStates, err = plugin.GetAddressesAuthStateNow(addresses, nil)
+			}
 			if err != nil {
 				rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
 				return
@@ -123,4 +165,37 @@ func NewGetAddressesAuthStateHandler(plugin *authcointx.Plugin) httprouter.Handl
 		// return successfull response
 		rapi.WriteJSON(w, resp)
 	}
+}
+
+func getAddressesAuthStateNowAcceptingTxPool(addresses []types.UnlockHash, plugin *authcointx.Plugin, txpool modules.TransactionPool, authAddressTxVersion types.TransactionVersion) ([]bool, error) {
+	states, err := plugin.GetAddressesAuthStateNow(addresses, nil)
+	if err != nil {
+		return nil, err
+	}
+	// look through txpool first
+	txns := txpool.TransactionList()
+	addressMapping := map[types.UnlockHash]int{}
+	for idx, address := range addresses {
+		addressMapping[address] = idx
+	}
+	for _, txn := range txns {
+		if txn.Version != authAddressTxVersion {
+			continue
+		}
+		atxn, err := authcointx.AuthAddressUpdateTransactionFromTransaction(txn, authAddressTxVersion)
+		if err != nil {
+			return nil, err
+		}
+		for _, uh := range atxn.AuthAddresses {
+			if idx, ok := addressMapping[uh]; ok {
+				states[idx] = true
+			}
+		}
+		for _, uh := range atxn.DeauthAddresses {
+			if idx, ok := addressMapping[uh]; ok {
+				states[idx] = false
+			}
+		}
+	}
+	return states, nil
 }
