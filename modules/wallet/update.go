@@ -30,10 +30,16 @@ func (w *Wallet) subscribeWallet() error {
 			}
 		}()
 	}
-	err := w.cs.ConsensusSetSubscribe(w, modules.ConsensusChangeBeginning, w.tg.StopChan())
+	var err error
+	w.csUpdateChan, err = w.cs.ConsensusSetSubscribe(w, modules.ConsensusChangeBeginning, w.tg.StopChan())
 	if err != nil {
 		return errors.New("wallet subscription failed: " + err.Error())
 	}
+	go func() {
+		for cc := range w.csUpdateChan {
+			w.ProcessConsensusChange(cc)
+		}
+	}()
 	w.tpool.TransactionPoolSubscribe(w)
 	return nil
 }

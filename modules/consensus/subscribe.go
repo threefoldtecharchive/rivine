@@ -3,9 +3,8 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
-
-	"github.com/rivine/bbolt"
 )
 
 // computeConsensusChange computes the consensus change from the change entry
@@ -84,7 +83,7 @@ func (cs *ConsensusSet) readlockUpdateSubscribers(ce changeEntry) {
 		return
 	}
 	for _, subscriber := range cs.subscribers {
-		subscriber.ProcessConsensusChange(cc)
+		subscriber <- cc
 	}
 }
 
@@ -93,7 +92,7 @@ func (cs *ConsensusSet) readlockUpdateSubscribers(ce changeEntry) {
 //
 // As a special case, using an empty id as the start will have all the changes
 // sent to the modules starting with the genesis block.
-func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID, cancel <-chan struct{}) error {
+func (cs *ConsensusSet) initializeSubscribe(subscriber chan<- modules.ConsensusChange, start modules.ConsensusChangeID, cancel <-chan struct{}) error {
 	return cs.db.View(func(tx *bolt.Tx) error {
 		// 'exists' and 'entry' are going to be pointed to the first entry that
 		// has not yet been seen by subscriber.
@@ -140,7 +139,7 @@ func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubsc
 				if err != nil {
 					return err
 				}
-				subscriber.ProcessConsensusChange(cc)
+				subscriber <- cc
 				entry, exists = entry.NextEntry(tx)
 			}
 		}
@@ -154,25 +153,26 @@ func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubsc
 //
 // As a special case, using an empty id as the start will have all the changes
 // sent to the modules starting with the genesis block.
-func (cs *ConsensusSet) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID, cancel <-chan struct{}) error {
+func (cs *ConsensusSet) ConsensusSetSubscribe(subscriber modules.ConsensusSetSubscriber, start modules.ConsensusChangeID, cancel <-chan struct{}) (<-chan modules.ConsensusChange, error) {
 	err := cs.tg.Add()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer cs.tg.Done()
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
 	// Get the input module caught up to the currenct consnesus set.
-	cs.subscribers = append(cs.subscribers, subscriber)
-	err = cs.initializeSubscribe(subscriber, start, cancel)
+	updateChan := make(chan modules.ConsensusChange, modules.ConsensusChangeBufferSize)
+	cs.subscribers[subscriber] = updateChan
+	err = cs.initializeSubscribe(updateChan, start, cancel)
 	if err != nil {
 		// Remove the subscriber from the set of subscribers.
-		cs.subscribers = cs.subscribers[:len(cs.subscribers)-1]
-		return err
+		delete(cs.subscribers, subscriber)
+		return nil, err
 	}
 	// Only add the module as a subscriber if there was no error.
-	return nil
+	return updateChan, nil
 }
 
 // Unsubscribe removes a subscriber from the list of subscribers, allowing for
@@ -188,10 +188,5 @@ func (cs *ConsensusSet) Unsubscribe(subscriber modules.ConsensusSetSubscriber) {
 
 	// Search for the subscriber in the list of subscribers and remove it if
 	// found.
-	for i := range cs.subscribers {
-		if cs.subscribers[i] == subscriber {
-			cs.subscribers = append(cs.subscribers[0:i], cs.subscribers[i+1:]...)
-			break
-		}
-	}
+	delete(cs.subscribers, subscriber)
 }

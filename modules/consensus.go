@@ -23,6 +23,10 @@ const (
 	// DiffRevert indicates that a diff is being reverted from the consensus
 	// set.
 	DiffRevert DiffDirection = false
+
+	// ConsensusChangeBufferSize is the buffer for Consensus change updates to
+	// Consensus set subscribers
+	ConsensusChangeBufferSize = 1024
 )
 
 var (
@@ -67,13 +71,14 @@ type (
 
 	// A ConsensusSetSubscriber is an object that receives updates to the consensus
 	// set every time there is a change in consensus.
-	ConsensusSetSubscriber interface {
-		// ProcessConsensusChange sends a consensus update to a module through
-		// a function call. Updates will always be sent in the correct order.
-		// There may not be any reverted blocks, but there will always be
-		// applied blocks.
-		ProcessConsensusChange(ConsensusChange)
-	}
+	ConsensusSetSubscriber interface{}
+	//ConsensusSetSubscriber interface {
+	//	// ProcessConsensusChange sends a consensus update to a module through
+	//	// a function call. Updates will always be sent in the correct order.
+	//	// There may not be any reverted blocks, but there will always be
+	//	// applied blocks.
+	//	ProcessConsensusChange(ConsensusChange)
+	//}
 
 	// A ConsensusSetPlugin is an object that receives updates to the consensus set
 	// every time there is a change in consensus. The difference with a ConsensusSetSubscriber
@@ -298,7 +303,7 @@ type (
 		// and gives them every consensus change that has occurred since the
 		// change with the provided id. There are a few special cases,
 		// described by the ConsensusChangeX variables in this package.
-		ConsensusSetSubscribe(ConsensusSetSubscriber, ConsensusChangeID, <-chan struct{}) error
+		ConsensusSetSubscribe(ConsensusSetSubscriber, ConsensusChangeID, <-chan struct{}) (<-chan ConsensusChange, error)
 
 		// CurrentBlock returns the latest block in the heaviest known
 		// blockchain.

@@ -121,6 +121,8 @@ type Wallet struct {
 
 	bcInfo   types.BlockchainInfo
 	chainCts types.ChainConstants
+
+	csUpdateChan <-chan modules.ConsensusChange
 }
 
 type historicOutput struct {

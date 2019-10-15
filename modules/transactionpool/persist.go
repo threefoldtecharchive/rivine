@@ -5,11 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
-
-	"github.com/rivine/bbolt"
 )
 
 const (
@@ -96,7 +95,7 @@ func (tp *TransactionPool) initPersist(verbose bool) error {
 	}
 
 	// Subscribe to the consensus set using the most recent consensus change.
-	err = tp.consensusSet.ConsensusSetSubscribe(tp, cc, nil)
+	tp.csUpdateChan, err = tp.consensusSet.ConsensusSetSubscribe(tp, cc, nil)
 	if err == modules.ErrInvalidConsensusChangeID {
 		// Reset and rescan because the consensus set does not recognize the
 		// provided consensus change id.
@@ -106,7 +105,7 @@ func (tp *TransactionPool) initPersist(verbose bool) error {
 		if resetErr != nil {
 			return resetErr
 		}
-		return tp.consensusSet.ConsensusSetSubscribe(tp, modules.ConsensusChangeBeginning, nil)
+		tp.csUpdateChan, err = tp.consensusSet.ConsensusSetSubscribe(tp, modules.ConsensusChangeBeginning, nil)
 	}
 	return err
 }

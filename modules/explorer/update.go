@@ -13,6 +13,7 @@ import (
 // ProcessConsensusChange follows the most recent changes to the consensus set,
 // including parsing new blocks and updating the utxo sets.
 func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
+	e.log.Debugln("[DEBUG] Processing consensus change", cc.ID)
 	if len(cc.AppliedBlocks) == 0 {
 		build.Critical("Explorer.ProcessConsensusChange called with a ConsensusChange that has no AppliedBlocks")
 	}

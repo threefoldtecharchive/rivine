@@ -74,6 +74,8 @@ type (
 
 		bcInfo   types.BlockchainInfo
 		chainCts types.ChainConstants
+
+		csUpdateChan <-chan modules.ConsensusChange
 	}
 )
 
@@ -109,6 +111,11 @@ func New(cs modules.ConsensusSet, g modules.Gateway, persistDir string, bcInfo t
 	if err != nil {
 		return nil, err
 	}
+	go func() {
+		for cc := range tp.csUpdateChan {
+			tp.ProcessConsensusChange(cc)
+		}
+	}()
 
 	// Register RPCs
 	g.RegisterRPC("RelayTransactionSet", tp.relayTransactionSet)

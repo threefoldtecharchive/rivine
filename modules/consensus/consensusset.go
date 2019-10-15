@@ -59,7 +59,7 @@ type ConsensusSet struct {
 	// subscription typically happens entirely at startup. This slice is
 	// unlikely to grow beyond 1kb, and cannot by manipulated by an attacker as
 	// the function of adding a subscriber should not be exposed.
-	subscribers []modules.ConsensusSetSubscriber
+	subscribers map[modules.ConsensusSetSubscriber]chan<- modules.ConsensusChange
 
 	// Stand-Alone transaction validators, linked to a version
 	txVersionMappedValidators map[types.TransactionVersion][]modules.TransactionValidationFunction
@@ -148,6 +148,7 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 			DiffsGenerated: true,
 		},
 
+		subscribers:               make(map[modules.ConsensusSetSubscriber]chan<- modules.ConsensusChange),
 		txVersionMappedValidators: StandardTransactionVersionMappedValidators(),
 		txValidators:              StandardTransactionValidators(),
 

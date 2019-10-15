@@ -45,6 +45,7 @@ type (
 		rootTarget     types.Target
 		genesisBlock   types.Block
 		genesisBlockID types.BlockID
+		csUpdateChan   <-chan modules.ConsensusChange
 	}
 )
 
@@ -81,11 +82,16 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		return nil, err
 	}
 
-	err = cs.ConsensusSetSubscribe(e, recentChange, nil)
+	e.csUpdateChan, err = cs.ConsensusSetSubscribe(e, recentChange, nil)
 	if err != nil {
 		// TODO: restart from 0
 		return nil, errors.New("explorer subscription failed: " + err.Error())
 	}
+	go func() {
+		for cc := range e.csUpdateChan {
+			e.ProcessConsensusChange(cc)
+		}
+	}()
 
 	return e, nil
 }
