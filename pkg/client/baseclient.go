@@ -3,13 +3,27 @@ package client
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/types"
 )
 
 type (
-	BaseClient struct {
+	BaseClient interface {
+		Config() (*Config, error)
+		HTTP() HTTPClient
+		NewCurrencyConvertor() (CurrencyConvertor, error)
+	}
+
+	LazyBaseClient struct {
+		once func() (BaseClient, error)
+		so   sync.Once
+		bc   BaseClient
+		err  error
+	}
+
+	StdBaseClient struct {
 		config     *Config
 		httpClient HTTPClient
 	}
@@ -21,13 +35,59 @@ type (
 		Post(call, data string) error
 		PostWithResponse(call, data string, obj interface{}) error
 	}
+
+	errHTTPClient struct {
+		err error
+	}
 )
 
-func NewBaseClientFromCommandLineClient(cli *CommandLineClient) (*BaseClient, error) {
+func NewLazyBaseClientFromCommandLineClient(cli *CommandLineClient) (*LazyBaseClient, error) {
+	return &LazyBaseClient{
+		once: func() (BaseClient, error) {
+			return NewBaseClientFromCommandLineClient(cli)
+		},
+	}, nil
+}
+
+func NewLazyBaseClient(once func() (BaseClient, error)) (*LazyBaseClient, error) {
+	return &LazyBaseClient{
+		once: once,
+	}, nil
+}
+
+func (lbc *LazyBaseClient) Config() (*Config, error) {
+	lbc.so.Do(lbc.doOnceFn)
+	if lbc.err != nil {
+		return nil, lbc.err
+	}
+	return lbc.bc.Config()
+}
+
+func (lbc *LazyBaseClient) HTTP() HTTPClient {
+	lbc.so.Do(lbc.doOnceFn)
+	if lbc.err != nil {
+		return newErrHTTPClient(lbc.err)
+	}
+	return lbc.bc.HTTP()
+}
+
+func (lbc *LazyBaseClient) NewCurrencyConvertor() (CurrencyConvertor, error) {
+	lbc.so.Do(lbc.doOnceFn)
+	if lbc.err != nil {
+		return CurrencyConvertor{}, lbc.err
+	}
+	return lbc.bc.NewCurrencyConvertor()
+}
+
+func (lbc *LazyBaseClient) doOnceFn() {
+	lbc.bc, lbc.err = lbc.once()
+}
+
+func NewBaseClientFromCommandLineClient(cli *CommandLineClient) (BaseClient, error) {
 	return NewBaseClient(cli.HTTPClient, cli.Config)
 }
 
-func NewBaseClient(httpClient HTTPClient, config *Config) (*BaseClient, error) {
+func NewBaseClient(httpClient HTTPClient, config *Config) (BaseClient, error) {
 	if httpClient == nil {
 		return nil, errors.New("no HTTPClient given while one is required for a base client")
 	}
@@ -38,26 +98,26 @@ func NewBaseClient(httpClient HTTPClient, config *Config) (*BaseClient, error) {
 			return nil, err
 		}
 	}
-	return &BaseClient{
+	return &StdBaseClient{
 		config:     config,
 		httpClient: httpClient,
 	}, nil
 }
 
-func (bc *BaseClient) Config() *Config {
-	return bc.config
+func (bc *StdBaseClient) Config() (*Config, error) {
+	return bc.config, nil
 }
 
-func (bc *BaseClient) HTTP() HTTPClient {
+func (bc *StdBaseClient) HTTP() HTTPClient {
 	return bc.httpClient
 }
 
-// CreateCurrencyConvertor creates a currency convertor using the internally stored Config.
-func (bc *BaseClient) CreateCurrencyConvertor() CurrencyConvertor {
+// NewCurrencyConvertor creates a currency convertor using the internally stored Config.
+func (bc *StdBaseClient) NewCurrencyConvertor() (CurrencyConvertor, error) {
 	return NewCurrencyConvertor(
 		bc.config.CurrencyUnits,
 		bc.config.CurrencyCoinUnit,
-	)
+	), nil
 }
 
 // FetchConfigFromDaemon fetches constants and creates a config, by fetching the constants from the daemon.
@@ -88,4 +148,26 @@ func FetchConfigFromDaemon(httpClient HTTPClient) (*Config, error) {
 	// returned config from received constants from the daemon's explorer module
 	cfg := ConfigFromDaemonConstants(constants)
 	return &cfg, nil
+}
+
+func newErrHTTPClient(err error) *errHTTPClient {
+	return &errHTTPClient{
+		err: fmt.Errorf("failed to create HTTP Client: %v", err),
+	}
+}
+
+func (ec *errHTTPClient) Get(call string) error {
+	return fmt.Errorf("GET %s failed: %v", call, ec.err)
+}
+
+func (ec *errHTTPClient) GetWithResponse(call string, obj interface{}) error {
+	return fmt.Errorf("GET (/wr) %s failed: %v", call, ec.err)
+}
+
+func (ec *errHTTPClient) Post(call, data string) error {
+	return fmt.Errorf("POST %s failed: %v", call, ec.err)
+}
+
+func (ec *errHTTPClient) PostWithResponse(call, data string, obj interface{}) error {
+	return fmt.Errorf("POST (/wr) %s failed: %v", call, ec.err)
 }

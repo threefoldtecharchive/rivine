@@ -15,13 +15,13 @@ import (
 // without requiring access to the consensus-extended transactiondb,
 // normally the validation isn't required on the client side, but it is possible none the less.
 type PluginClient struct {
-	client       *client.BaseClient
+	client       client.BaseClient
 	rootEndpoint string
 }
 
 // NewPluginConsensusClient creates a new PluginClient,
 // that can be used for easy interaction with the TransactionDB API exposed via the Consensus endpoints
-func NewPluginConsensusClient(cli *client.BaseClient) *PluginClient {
+func NewPluginConsensusClient(cli client.BaseClient) *PluginClient {
 	if cli == nil {
 		panic("no BaseClient given")
 	}
@@ -33,7 +33,7 @@ func NewPluginConsensusClient(cli *client.BaseClient) *PluginClient {
 
 // NewPluginExplorerClient creates a new PluginClient,
 // that can be used for easy interaction with the TransactionDB API exposed via the Explorer endpoints
-func NewPluginExplorerClient(cli *client.BaseClient) *PluginClient {
+func NewPluginExplorerClient(cli client.BaseClient) *PluginClient {
 	if cli == nil {
 		panic("no BaseClient given")
 	}

@@ -10,12 +10,12 @@ import (
 // TransactionPoolClient is used to easily interact
 // with the transaction pool through the HTTP REST API.
 type TransactionPoolClient struct {
-	bc *BaseClient
+	bc BaseClient
 }
 
 // NewTransactionPoolClient creates a new TransactionPoolClient,
 // that can be used for easy interaction with the TransactionPool API exposed via the HTTP REST API.
-func NewTransactionPoolClient(bc *BaseClient) *TransactionPoolClient {
+func NewTransactionPoolClient(bc BaseClient) *TransactionPoolClient {
 	if bc == nil {
 		panic("no BaseClient given")
 	}

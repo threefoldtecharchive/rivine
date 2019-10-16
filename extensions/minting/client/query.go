@@ -13,21 +13,23 @@ import (
 )
 
 //CreateExploreCmd adds the explorer clisubcommands for the minting plugin
-func CreateExploreCmd(cli *client.CommandLineClient) {
-	bc, err := client.NewBaseClientFromCommandLineClient(cli)
+func CreateExploreCmd(cli *client.CommandLineClient) error {
+	bc, err := client.NewLazyBaseClientFromCommandLineClient(cli)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	createCmd(cli.ExploreCmd, NewPluginExplorerClient(bc))
+	return nil
 }
 
 //CreateConsensusCmd adds the consensus cli subcommands for the minting plugin
-func CreateConsensusCmd(cli *client.CommandLineClient) {
-	bc, err := client.NewBaseClientFromCommandLineClient(cli)
+func CreateConsensusCmd(cli *client.CommandLineClient) error {
+	bc, err := client.NewLazyBaseClientFromCommandLineClient(cli)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	createCmd(cli.ConsensusCmd, NewPluginConsensusClient(bc))
+	return nil
 }
 
 func createCmd(rootCmd *cobra.Command, pluginClient *PluginClient) {

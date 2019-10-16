@@ -21,16 +21,16 @@ func main() {
 	// create cli
 	bchainInfo := config.GetBlockchainInfo()
 	cliClient, err := NewCommandLineClient("http://localhost:23110", bchainInfo.Name, daemon.RivineUserAgent)
-	if err != nil {
-		panic(err)
-	}
+	exitIfError(err)
 
-	// register goldchain-specific explorer commands
-	mintingcli.CreateExploreCmd(cliClient.CommandLineClient)
-	mintingcli.CreateConsensusCmd(cliClient.CommandLineClient)
+	// register minting specific commands
+	err = mintingcli.CreateConsensusCmd(cliClient.CommandLineClient)
+	exitIfError(err)
+	err = mintingcli.CreateExploreCmd(cliClient.CommandLineClient)
+	exitIfError(err)
 
 	// add cli wallet extension commands
-	mintingcli.CreateWalletCmds(
+	err = mintingcli.CreateWalletCmds(
 		cliClient.CommandLineClient,
 		types.TransactionVersionMinterDefinition,
 		types.TransactionVersionCoinCreation,
@@ -38,8 +38,13 @@ func main() {
 			CoinDestructionTxVersion: types.TransactionVersionCoinDestruction,
 		},
 	)
+	exitIfError(err)
 
-	authcointxcli.CreateExploreAuthCoinInfoCmd(cliClient.CommandLineClient)
+	// register authcoin specific commands
+	err = authcointxcli.CreateConsensusAuthCoinInfoCmd(cliClient.CommandLineClient)
+	exitIfError(err)
+	err = authcointxcli.CreateExploreAuthCoinInfoCmd(cliClient.CommandLineClient)
+	exitIfError(err)
 	authcointxcli.CreateWalletCmds(
 		cliClient.CommandLineClient,
 		types.TransactionVersionAuthConditionUpdate,
@@ -56,7 +61,7 @@ func main() {
 			cfg = &newCfg
 		}
 
-		bc, err := client.NewBaseClientFromCommandLineClient(cliClient.CommandLineClient)
+		bc, err := client.NewLazyBaseClientFromCommandLineClient(cliClient.CommandLineClient)
 		if err != nil {
 			return nil, err
 		}
@@ -91,4 +96,15 @@ func main() {
 		// Command.SilenceUsage is false) and we should exit with exitCodeUsage.
 		os.Exit(cli.ExitCodeUsage)
 	}
+}
+
+func exitIfError(err error) {
+	if err != nil {
+		exitWithError(err)
+	}
+}
+
+func exitWithError(err error) {
+	fmt.Fprintln(os.Stderr, "client exited during setup with an error:", err)
+	os.Exit(cli.ExitCodeGeneral)
 }

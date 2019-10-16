@@ -17,22 +17,24 @@ import (
 
 // CreateExploreAuthCoinInfoCmd creates and attached the multi-use
 // auth-coin-info fetch command to the root explore cmd.
-func CreateExploreAuthCoinInfoCmd(cli *client.CommandLineClient) {
-	bc, err := client.NewBaseClientFromCommandLineClient(cli)
+func CreateExploreAuthCoinInfoCmd(cli *client.CommandLineClient) error {
+	bc, err := client.NewLazyBaseClientFromCommandLineClient(cli)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	createAuthCoinCmd(cli, NewPluginExplorerClient(bc), cli.ExploreCmd)
+	return nil
 }
 
 // CreateConsensusAuthCoinInfoCmd creates and attached the multi-use
 // auth-coin-info fetch command to the root consensus cmd.
-func CreateConsensusAuthCoinInfoCmd(cli *client.CommandLineClient) {
-	bc, err := client.NewBaseClientFromCommandLineClient(cli)
+func CreateConsensusAuthCoinInfoCmd(cli *client.CommandLineClient) error {
+	bc, err := client.NewLazyBaseClientFromCommandLineClient(cli)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	createAuthCoinCmd(cli, NewPluginConsensusClient(bc), cli.ConsensusCmd)
+	return nil
 }
 
 func createAuthCoinCmd(client *client.CommandLineClient, pluginClient *PluginClient, rootCmd *cobra.Command) {

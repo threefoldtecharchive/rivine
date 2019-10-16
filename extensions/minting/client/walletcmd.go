@@ -21,10 +21,10 @@ type WalletCmdsOpts struct {
 }
 
 //CreateWalletCmds adds the wallet cli subcommands for the minting plugin
-func CreateWalletCmds(ccli *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion, opts *WalletCmdsOpts) {
-	bc, err := client.NewBaseClientFromCommandLineClient(ccli)
+func CreateWalletCmds(ccli *client.CommandLineClient, mintingDefinitionTxVersion, coinCreationTxVersion types.TransactionVersion, opts *WalletCmdsOpts) error {
+	bc, err := client.NewLazyBaseClientFromCommandLineClient(ccli)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	walletCmd := &walletCmd{
 		cli:                        ccli,
@@ -120,6 +120,7 @@ The returned (raw) CoinCreationTransaction still has to be signed, prior to send
 		// attach our burn command to the burn root cmd
 		burnRootCmd.AddCommand(burnCoinsCmd)
 	}
+	return nil
 }
 
 type walletCmd struct {

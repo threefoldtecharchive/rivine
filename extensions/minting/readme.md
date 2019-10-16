@@ -64,7 +64,10 @@ import (
 
 // Will create the explore mintcondition command
 // * rivinec explore mintcondition [height] [flags]
-mintingcli.CreateExploreCmd(cliClient)
+err := mintingcli.CreateExploreCmd(cliClient)
+if err != nil {
+	panic(err)
+}
 
 // define the transaction versions for the 2 extra transactions possible
 const (
