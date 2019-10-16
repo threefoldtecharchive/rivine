@@ -23,8 +23,6 @@ Main Repositories
 
 - [rivine](https://github.com/threefoldtech/rivine)
     Core rivine software
-- [rivine-explorer](https://github.com/threefoldtech/rivine-explorer)
-    Rivine block explorer
 - [atomicswap](https://github.com/threefoldtech/atomicswap)
     Ethereum and bitcoin light client atomic swap support
 - [rivine-UI](https://github.com/threefoldtech/rivine-UI)
