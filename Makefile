@@ -37,7 +37,7 @@ vet: release-std
 
 # installs developer binaries.
 install:
-	go build race -tags='dev debug profile' -ldflags '$(ldflagsversion)' -o $(rivinecgbin) $(rivinecgpkgs)
+	go build -race -tags='dev debug profile' -ldflags '$(ldflagsversion)' -o $(rivinecgbin) $(rivinecgpkgs)
 	cd examples/rivchain && make install
 
 # installs std (release) binaries
