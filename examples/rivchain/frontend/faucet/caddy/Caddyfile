@@ -1,0 +1,8 @@
+faucet.rivine.io {
+    proxy / localhost:2020 {
+        transparent
+    }
+
+    log stdout
+    tls support@threefold.tech
+}

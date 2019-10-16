@@ -35,6 +35,10 @@ jobs:
         - go build -o /dev/null ./doc/examples/offline_transaction
     - stage: test
       language: go
-      go: 1.12.x
+      go: 1.13.x
       script:
-        - go build -o /dev/null ./doc/examples/offline_transaction
+        - make install-std
+        - cd examples/rivchain
+        - bash generate.sh
+        - bash modcheck.sh
+        - make install-std

@@ -1,0 +1,149 @@
+template:
+  repository: github.com/threefoldtech/rivine-chain-template
+  version: master
+frontend:
+  explorer:
+    caddy:
+      dns: explorer.rivine.io
+      tls: support@threefold.tech
+  faucet:
+    caddy:
+      dns: faucet.rivine.io
+      tls: support@threefold.tech
+blockchain:
+  name: rivchain
+  repository: github.com/threefoldtech/rivine/examples/rivchain
+  currency:
+    unit: ROC
+    precision: 9
+  ports:
+    api: 23110
+    rpc: 23112
+  binaries:
+    client: rivinec
+    daemon: rivined
+  transactions:
+    default:
+      version: 1
+    minting:
+      conditionUpdate:
+        version: 128
+      coinCreation:
+        version: 129
+      coinDestruction:
+        version: 130
+    authcoin:
+      addressUpdate:
+        version: 177
+      conditionUpdate:
+        version: 176
+  networks:
+    devnet:
+      networkType: 3
+      genesis:
+        coinOutputs:
+        - value: "500000"
+          condition: 015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f
+        blockStakeOutputs:
+        - value: "3000"
+          condition: 015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f
+        minting: 015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f
+        authcoin: 015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f
+        genesisBlockTimestamp: 1571229355
+      transactionFeePool: 015a080a9259b9d4aaa550e2156f49b1a79a64c7ea463d810d4493e8242e6791584fbdac553e6f
+      blockSizeLimit: 2000000
+      arbitraryDataSizeLimit: 83
+      blockCreatorFee: "1.0"
+      minimumTransactionFee: "0.1"
+      blockFrequency: 12
+      maturityDelay: 10
+      medianTimestampWindow: 11
+      targetWindow: 20
+      maxAdjustmentUp: 120/100
+      maxAdjustmentDown: 100/120
+      futureTreshold: 12
+      extremeFutureTreshold: 60
+      stakeModifierDelay: 2000
+      blockStakeAging: 1024
+      transactionPool:
+        transactionSizeLimit: 16000
+        transactionSetSizeLimit: 250000
+        poolSizeLimit: 19750000
+      bootstrapPeers:
+      - localhost:23112
+    standard:
+      networkType: 1
+      genesis:
+        coinOutputs:
+        - value: "500000"
+          condition: 01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e
+        blockStakeOutputs:
+        - value: "3000"
+          condition: 01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e
+        minting: 01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e
+        authcoin: 01b5e42056ef394f2ad9b511a61cec874d25bebe2095682dd37455cbafed4bec154e382a23f90e
+        genesisBlockTimestamp: 1571229355
+      transactionFeePool: 017267221ef1947bb18506e390f1f9446b995acfb6d08d8e39508bb974d9830b8cb8fdca788e34
+      blockSizeLimit: 2000000
+      arbitraryDataSizeLimit: 83
+      blockCreatorFee: "1.0"
+      minimumTransactionFee: "0.1"
+      blockFrequency: 120
+      maturityDelay: 144
+      medianTimestampWindow: 11
+      targetWindow: 1000
+      maxAdjustmentUp: 25/10
+      maxAdjustmentDown: 10/25
+      futureTreshold: 120
+      extremeFutureTreshold: 600
+      stakeModifierDelay: 2000
+      blockStakeAging: 86400
+      transactionPool:
+        transactionSizeLimit: 16000
+        transactionSetSizeLimit: 250000
+        poolSizeLimit: 19750000
+      bootstrapPeers:
+      - bootstrap1.rivine.io:23112
+      - bootstrap2.rivine.io:23112
+      - bootstrap3.rivine.io:23112
+    testnet:
+      networkType: 2
+      genesis:
+        coinOutputs:
+        - value: "500000"
+          condition: 01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51
+        - value: "500000"
+          condition:
+            addresses:
+            - 01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51
+            - 01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51
+            signaturesRequired: 2
+        blockStakeOutputs:
+        - value: "3000"
+          condition: 01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51
+        minting: 01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51
+        authcoin: 01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51
+        genesisBlockTimestamp: 1571229355
+      transactionFeePool: 01434535fd01243c02c277cd58d71423163767a575a8ae44e15807bf545e4a8456a5c4afabad51
+      blockSizeLimit: 2000000
+      arbitraryDataSizeLimit: 83
+      blockCreatorFee: "1.0"
+      minimumTransactionFee: "0.1"
+      blockFrequency: 120
+      maturityDelay: 720
+      medianTimestampWindow: 11
+      targetWindow: 1000
+      maxAdjustmentUp: 25/10
+      maxAdjustmentDown: 10/25
+      futureTreshold: 120
+      extremeFutureTreshold: 600
+      stakeModifierDelay: 2000
+      blockStakeAging: 64
+      transactionPool:
+        transactionSizeLimit: 16000
+        transactionSetSizeLimit: 250000
+        poolSizeLimit: 19750000
+      bootstrapPeers:
+      - bootstrap1.testnet.rivine.io:23112
+      - bootstrap2.testnet.rivine.io:23112
+      - bootstrap3.testnet.rivine.io:23112

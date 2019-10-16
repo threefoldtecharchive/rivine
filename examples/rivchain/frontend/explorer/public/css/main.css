@@ -1,0 +1,274 @@
+/* Set the page width to 1000px */
+div.content {
+	margin: 0 auto;
+	width:  1000px;
+}
+
+/* CSS for constructing banners */
+.banner {
+	text-align:    center;
+	margin-bottom: 40px;
+}
+.sub-banner {
+	text-align:    center;
+	margin-bottom: 10px;
+	font-weight:   400;
+}
+
+
+/* CSS for constructing stat tables */
+.stats {
+	margin-bottom: 15px;
+	width:         100%;
+}
+.stats-head {
+	font-size:  200%;
+	text-align: center;
+}
+.stats-title {
+	text-align: left;
+	width:      250px;
+}
+.stats-info {
+	text-align: left;
+}
+.stats-unlabeled-info {
+	text-align: center;
+}
+
+/* CSS to ensure the unlocker does not break the tables */
+#dynamic-elements {
+	white-space: -moz-pre-wrap; /* Mozilla */
+	white-space: -hp-pre-wrap; /* HP printers */
+	white-space: -o-pre-wrap; /* Opera 7 */
+	white-space: -pre-wrap; /* Opera 4-6 */
+	white-space: pre-wrap; /* CSS 2.1 */
+	white-space: pre-line; /* CSS 3 (and 2.1 as well, actually) */
+	word-wrap: break-word; /* IE */
+	word-break: break-all;
+}
+
+#error-not-found {
+	white-space: normal;
+	word-wrap: normal;
+	word-break: normal;
+}
+
+/* CSS for managing the search bars at the bottom */
+div.search-form {
+	display: table;
+}
+form.search-form-tr, div.search-form-tr {
+	display: table-row;
+}
+span.search-form-td {
+	display:       table-cell;
+	padding-left:  10px;
+	padding-right: 10px;
+	padding-bottom: 10px;
+}
+.search {
+	text-align:      left;
+	margin:     0px auto;
+	margin-top: 40px;
+}
+
+.input-field {
+	width: 475px;
+}
+
+.header {
+	display: flex;
+	justify-content: space-between;
+	text-align: center;
+	vertical-align: middle;
+}
+
+.stats-tiles-container {
+	text-align: center;
+	display: 	flex;
+}
+
+.stats-tile {
+	text-align: 		center;
+	width: 				300px;
+	height: 			200px;
+	margin: 			50px;
+	display: 			-webkit-flex;
+	display: 			flex;
+	justify-content: 	space-between;
+	flex-direction: 	column;
+}
+
+.tile-stat{
+	font-weight: 	bold;
+	font-size: 		30px;
+}
+
+.graph-link {
+	text-align: center;
+	font-size: 	25px;
+	margin: auto 0;
+}
+
+.graph {
+	height: 400px;
+	width: 	1000px;
+}
+
+.raw {
+	width: 100%;
+	max-height: 300px;
+	overflow-y: scroll;
+	background-color: #f0f0f0;
+	word-wrap: break-word; /* IE */
+	word-break: break-all;
+	margin: 50px 0;
+}
+
+.toggle-button {
+	text-align: center;
+	margin: 25px 0;
+}
+
+.hidden {
+	display: none;
+}
+
+.red-text {
+	color: red;
+}
+
+.grey-text {
+	color: grey;
+}
+
+#page-navigation {
+	margin-top: 1rem;
+	margin-bottom: 1rem;
+}
+
+#nav-links {
+	font-size: 0.8rem;
+}
+
+#nav-links-home {
+	float: left;
+}
+
+#nav-container {
+	float: left;
+	margin-left: 0.5rem;
+}
+
+#nav-container span {
+	display: block;
+}
+
+#nav-container span::before {
+	color: black;
+	content: ' > ';
+}
+
+#nav-container > span:first-child::after {
+	content : '';
+}
+
+#navigation-buttons-container {
+	width: 100%;
+	text-align: center;
+	margin-bottom: 1rem;
+}
+
+#button-previous {
+	float: left;
+	width: 180px;
+}
+
+#button-next {
+	float: right;
+	width: 180px;
+}
+
+#search-button-form {
+	margin: 0 auto;
+	width: 300px;
+}
+
+#search-field-input {
+	width: 150px;
+}
+
+.button-disabled {
+	opacity: 0.3;
+}
+
+.clearfix::after {
+    content: "";
+    clear: both;
+    display: table;
+}
+
+#footer-content {
+	background-color: #e0e0e0;
+	text-align: center;
+	margin: 0 auto;
+	margin-top: 0.5rem;
+	width: 1000px;
+	border: 1px solid #cbcbcb;
+}
+
+#version {
+	font-size: 0.8rem;
+}
+
+#version p {
+	margin: 0.5rem;
+}
+
+#error-message p{
+	margin-top: 2.5rem;
+	color: red;
+	font-weight: 900;
+}
+
+.bold-text {
+	font-weight: 900;
+}
+
+#dynamic-elements div {
+	margin-top: 2rem;
+}
+
+#dynamic-elements div p {
+	font-weight: 900;
+	color: red;
+	font-size: 1rem;
+	text-align: left;
+}
+
+#dynamic-elements p {
+	text-align: center;	
+}
+
+#dynamic-elements form p {
+	text-align: left;
+	font-size: 0.9rem;
+}
+
+form#search-hash-container {
+	margin-top: 3rem;
+}
+
+input#search-hash-field {
+	width: 830px;
+}
+
+button#search-hash-button {
+	width: 15%;
+}
+
+p#ffa-wallet-link {
+	text-align: left;
+}
+

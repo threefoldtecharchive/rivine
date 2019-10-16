@@ -1,0 +1,13 @@
+:2016
+
+header / {
+	    Access-Control-Allow-Origin  *
+        Access-Control-Allow-Methods  *
+        Access-Control-Allow-Headers  *
+}
+
+proxy / localhost:2020 {
+    transparent
+}
+
+log stdout

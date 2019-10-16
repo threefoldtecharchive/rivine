@@ -8,34 +8,28 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/bgentry/speakeasy"
-	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/pkg/daemon"
 	"github.com/threefoldtech/rivine/profile"
+
+	"github.com/bgentry/speakeasy"
+	"github.com/spf13/cobra"
 )
 
 type commands struct {
-	cfg           daemon.Config
+	cfg           ExtendedDaemonConfig
 	moduleSetFlag daemon.ModuleSetFlag
 }
 
 func (cmds *commands) rootCommand(*cobra.Command, []string) {
-	// create and validate network config
-	networkCfg, err := daemon.DefaultNetworkConfig(cmds.cfg.BlockchainInfo.NetworkName)
-	if err != nil {
-		cli.DieWithError("failed to create network config", err)
-	}
-	err = networkCfg.Constants.Validate()
-	if err != nil {
-		cli.DieWithError("failed to validate network config", err)
-	}
+	var err error
 
 	// Silently append a subdirectory for storage with the name of the network so we don't create conflicts
 	cmds.cfg.RootPersistentDir = filepath.Join(cmds.cfg.RootPersistentDir, cmds.cfg.BlockchainInfo.NetworkName)
+
 	// Check if we require an api password
 	if cmds.cfg.AuthenticateAPI {
-		// if its not set, ask one now
+		// if not set, ask one now
 		if cmds.cfg.APIPassword == "" {
 			// Prompt user for API password.
 			cmds.cfg.APIPassword, err = speakeasy.Ask("Enter API password: ")
@@ -53,7 +47,7 @@ func (cmds *commands) rootCommand(*cobra.Command, []string) {
 	}
 
 	// Process the config variables, cleaning up slightly invalid values
-	cmds.cfg = daemon.ProcessConfig(cmds.cfg)
+	cmds.cfg.Config = daemon.ProcessConfig(cmds.cfg.Config)
 
 	// Create the profiling directory if profiling is enabled.
 	if cmds.cfg.Profile {
@@ -61,7 +55,7 @@ func (cmds *commands) rootCommand(*cobra.Command, []string) {
 	}
 
 	// run daemon
-	err = runDaemon(cmds.cfg, networkCfg, cmds.moduleSetFlag.ModuleIdentifiers())
+	err = runDaemon(cmds.cfg, cmds.moduleSetFlag.ModuleIdentifiers())
 	if err != nil {
 		cli.DieWithError("daemon failed", err)
 	}
@@ -70,17 +64,26 @@ func (cmds *commands) rootCommand(*cobra.Command, []string) {
 func (cmds *commands) versionCommand(*cobra.Command, []string) {
 	var postfix string
 	switch cmds.cfg.BlockchainInfo.NetworkName {
+
 	case "devnet":
-		postfix = "-dev"
+
+		postfix = "-devnet"
+
+	case "standard":
+
+		// no special prefix needed for standard-type networks
+
 	case "testnet":
-		postfix = "-testing"
-	case "standard": // ""
+
+		postfix = "-testnet"
+
 	default:
 		postfix = "-???"
 	}
-	fmt.Printf("%s Daemon v%s%s\r\n",
+	fmt.Printf("%s Daemon v%s%s\n",
 		strings.Title(cmds.cfg.BlockchainInfo.Name),
 		cmds.cfg.BlockchainInfo.ChainVersion.String(), postfix)
+	fmt.Println("Rivine Protocol v" + cmds.cfg.BlockchainInfo.ProtocolVersion.String())
 
 	fmt.Println()
 	fmt.Printf("Go Version   v%s\r\n", runtime.Version()[2:])
