@@ -2,6 +2,19 @@
 
 
 [[projects]]
+  digest = "1:ecb63d398130fee54aec9b9aa80df16b72c9d785255735bd5a30aa8889758a37"
+  name = "github.com/99designs/gqlgen"
+  packages = [
+    "complexity",
+    "graphql",
+    "graphql/introspection",
+    "handler",
+  ]
+  pruneopts = "UT"
+  revision = "efb6efe06c6e4fc706440acebf6f81fff85f295c"
+  version = "v0.10.1"
+
+[[projects]]
   digest = "1:3b10c6fd33854dc41de2cf78b7bae105da94c2789b6fa5b9ac9e593ea43484ac"
   name = "github.com/Masterminds/goutils"
   packages = ["."]
@@ -64,6 +77,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "08d5d54b07f5e86a27f2d7431d0bc0300f5a9328"
+
+[[projects]]
+  digest = "1:786e862ec180708b60ee670723e3edd969fd4309e7b1c315cd7de058ac62a011"
+  name = "github.com/agnivade/levenshtein"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "51b298ff305e72cfd29166dccc3f9878e82f9fdc"
+  version = "v1.0.2"
 
 [[projects]]
   branch = "master"
@@ -132,6 +153,25 @@
   pruneopts = "UT"
   revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
   version = "v1.1.1"
+
+[[projects]]
+  digest = "1:e62657cca9badaa308d86e7716083e4c5933bb78e30a17743fc67f50be26f6f4"
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b"
+  version = "v1.4.1"
+
+[[projects]]
+  digest = "1:c77361e611524ec8f2ad37c408c3c916111a70b6acf806a1200855696bf8fa4d"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "UT"
+  revision = "7f827b33c0f158ec5dfbba01bb0b14a4541fd81d"
+  version = "v0.5.3"
 
 [[projects]]
   digest = "1:f9a5e090336881be43cfc1cf468330c1bdd60abdc9dd194e0b1ab69f4b94dd7c"
@@ -371,6 +411,22 @@
   revision = "c55f737395bc849274c1d1a35ca6f29a4e568092"
 
 [[projects]]
+  digest = "1:b4e8aaca88f799355f4ac560bce4293fb85ff21003dd0d5741ca503f7a788e91"
+  name = "github.com/vektah/gqlparser"
+  packages = [
+    ".",
+    "ast",
+    "gqlerror",
+    "lexer",
+    "parser",
+    "validator",
+    "validator/rules",
+  ]
+  pruneopts = "UT"
+  revision = "05741cdb0871330d8bc980d4afd21ab34eceee83"
+  version = "v1.1.2"
+
+[[projects]]
   branch = "master"
   digest = "1:e7b091967bad5c6d958dae84215f073654e66c742fb8473c0c97ed9b18b9af09"
   name = "gitlab.com/NebulousLabs/fastrand"
@@ -479,6 +535,9 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/99designs/gqlgen/graphql",
+    "github.com/99designs/gqlgen/graphql/introspection",
+    "github.com/99designs/gqlgen/handler",
     "github.com/Masterminds/sprig",
     "github.com/NebulousLabs/demotemutex",
     "github.com/NebulousLabs/errors",
@@ -501,6 +560,8 @@
     "github.com/stellar/go/protocols/horizon",
     "github.com/stellar/go/txnbuild",
     "github.com/tyler-smith/go-bip39",
+    "github.com/vektah/gqlparser",
+    "github.com/vektah/gqlparser/ast",
     "golang.org/x/crypto/blake2b",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/twofish",

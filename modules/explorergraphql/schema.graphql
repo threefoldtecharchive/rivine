@@ -3,7 +3,7 @@ schema {
 }
 
 type QueryRoot {
-  object(id: ObjectID): Object
+  object(id: BinaryData): Object
 
   transaction(id: ID): Transaction
   transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
@@ -17,6 +17,7 @@ type QueryRoot {
 
 scalar BlockHeight
 scalar Timestamp
+scalar ReferencePoint # BlockHeight or TimeStamp
 scalar Hash
 scalar UnlockHash
 scalar LockTime
@@ -26,19 +27,17 @@ scalar Signature
 scalar BigInt
 scalar ByteVersion
 
-union ObjectID = Hash | UnlockHash
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinCreationTransaction | Input | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
-union Object = Block | Transaction | Input | Output | Wallet | Contract
-union ReferencePoint = BlockHeight | Timestamp
 
-type Block implements Object {
+type Block {
     Header: BlockHeader!
     Transactions: [Transaction!]!
 }
 
 type BlockHeader {
     ID: Hash!
-    BlockTime: BlockTime
+    BlockTime: Timestamp
     BlockHeight: BlockHeight
     Payouts: [BlockPayout!]
 }
@@ -88,7 +87,7 @@ type MintConditionDefinitionTransaction implements Transaction {
 
     Nonce: BinaryData!
     MintCondition: UnlockCondition
-    MintFulfillment: MintFulfillment!
+    MintFulfillment: UnlockFulfillment!
     NewMintCondition: UnlockCondition!
 
     CoinInputs: [Input!]
@@ -109,7 +108,7 @@ type MintCoinCreationTransaction implements Transaction {
 
     Nonce: BinaryData!
     MintCondition: UnlockCondition
-    MintFulfillment: MintFulfillment!
+    MintFulfillment: UnlockFulfillment!
 
     CoinInputs: [Input!]
     CoinOutputs: [Output!]!
@@ -250,7 +249,7 @@ interface Wallet {
     UnlockHash: UnlockHash!
 
     BlockHeight: BlockHeight!
-    BlockTime: BlockTime!
+    BlockTime: Timestamp!
 
     Transactions: [Transaction!]
 
@@ -269,10 +268,10 @@ type SingleSignatureWallet implements Wallet {
 
     PublicKey: PublicKey
 
-    MultiSignatureWallets: [MultiSigWallet]
+    MultiSignatureWallets: [MultiSignatureWallet]
 
     BlockHeight: BlockHeight!
-    BlockTime: BlockTime!
+    BlockTime: Timestamp!
 
     Transactions: [Transaction!]
 
@@ -298,7 +297,7 @@ type MultiSignatureWallet implements Wallet {
     RequiredSignatureCount: Int
 
     BlockHeight: BlockHeight!
-    BlockTime: BlockTime!
+    BlockTime: Timestamp!
 
     Transactions: [Transaction!]
 
@@ -320,7 +319,7 @@ type AtomicSwapContract {
     ContractValue: BigInt!
 
     BlockHeight: BlockHeight!
-    BlockTime: BlockTime!
+    BlockTime: Timestamp!
 
     Transactions: [Transaction!]
 
