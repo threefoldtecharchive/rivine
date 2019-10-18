@@ -1,0 +1,329 @@
+schema {
+    query: QueryRoot
+}
+
+type QueryRoot {
+  object(id: ObjectID): Object
+
+  transaction(id: ID): Transaction
+  transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
+
+  block(id: ID): Block
+  blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
+
+  wallet(unlockhash: UnlockHash): Wallet
+  contract(unlockhash: UnlockHash): Contract
+}
+
+scalar BlockHeight
+scalar Timestamp
+scalar Hash
+scalar UnlockHash
+scalar LockTime
+scalar BinaryData
+scalar PublicKey
+scalar Signature
+scalar BigInt
+scalar ByteVersion
+
+union ObjectID = Hash | UnlockHash
+union Contract = AtomicSwapContract
+union Object = Block | Transaction | Input | Output | Wallet | Contract
+union ReferencePoint = BlockHeight | Timestamp
+
+type Block implements Object {
+    Header: BlockHeader!
+    Transactions: [Transaction!]!
+}
+
+type BlockHeader {
+    ID: Hash!
+    BlockTime: BlockTime
+    BlockHeight: BlockHeight
+    Payouts: [BlockPayout!]
+}
+
+interface Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    BlockID: Hash!
+    BlockHeight: BlockHeight
+    BlockTimestamp: Timestamp
+    TransactionOrder: Int
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+    FeePayouts: [FeePayout!]
+    ArbitraryData: BinaryData
+}
+
+type StandardTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    BlockID: Hash!
+    BlockHeight: BlockHeight
+    BlockTimestamp: Timestamp
+    TransactionOrder: Int
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    BlockStakeInputs: [Input!]
+    BlockStakeOutputs: [Output!]
+
+    FeePayouts: [FeePayout!]
+    ArbitraryData: BinaryData
+}
+
+type MintConditionDefinitionTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    BlockID: Hash!
+    BlockHeight: BlockHeight
+    BlockTimestamp: Timestamp
+    TransactionOrder: Int
+
+    Nonce: BinaryData!
+    MintCondition: UnlockCondition
+    MintFulfillment: MintFulfillment!
+    NewMintCondition: UnlockCondition!
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    FeePayouts: [FeePayout!]
+    ArbitraryData: BinaryData
+}
+
+type MintCoinCreationTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    BlockID: Hash!
+    BlockHeight: BlockHeight
+    BlockTimestamp: Timestamp
+    TransactionOrder: Int
+
+    Nonce: BinaryData!
+    MintCondition: UnlockCondition
+    MintFulfillment: MintFulfillment!
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]!
+
+    FeePayouts: [FeePayout!]
+    ArbitraryData: BinaryData
+}
+
+type MintCoinDestructionTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    BlockID: Hash!
+    BlockHeight: BlockHeight
+    BlockTimestamp: Timestamp
+    TransactionOrder: Int
+
+    CoinInputs: [Input!]!
+    CoinOutputs: [Output!]
+
+    FeePayouts: [FeePayout!]
+    ArbitraryData: BinaryData
+}
+
+type Input {
+    ID: Hash!
+    Value: BigInt!
+    Fulfillment: UnlockFulfillment!
+
+    Parent: Output
+}
+
+type Output {
+    ID: Hash!
+    Value: BigInt!
+    Condition: UnlockCondition!
+
+    Sibling: Input
+}
+
+enum BlockPayoutType {
+    BLOCK_REWARD
+    TRANSACTION_FEE
+}
+
+type BlockPayout {
+    Output: Output!
+    Type: BlockPayoutType
+}
+
+type FeePayout {
+    Output: Output!
+    Value: BigInt!
+}
+
+interface UnlockCondition {
+    Version: ByteVersion!
+    UnlockHash: UnlockHash
+}
+
+type NilCondition implements UnlockCondition {
+    Version: ByteVersion!
+    UnlockHash: UnlockHash!
+}
+
+type UnlockHashCondition implements UnlockCondition {
+    Version: ByteVersion!
+    UnlockHash: UnlockHash!
+}
+
+type AtomicSwapParticipant {
+    UnlockHash: UnlockHash!
+    PublicKey: PublicKey
+}
+
+type AtomicSwapCondition implements UnlockCondition {
+    Version: ByteVersion!
+    UnlockHash: UnlockHash!
+    Sender: AtomicSwapParticipant!
+    Receiver: AtomicSwapParticipant!
+    HashedSecret: BinaryData!
+    TimeLock: LockTime!
+}
+
+enum LockType {
+    BLOCK_HEIGHT
+    TIMESTAMP
+}
+
+type LockTimeCondition implements UnlockCondition {
+    Version: ByteVersion!
+    UnlockHash: UnlockHash
+    LockValue: LockTime!
+    LockType: LockType!
+    Condition: UnlockCondition!
+}
+
+type MultiSignatureCondition implements UnlockCondition {
+    Version: ByteVersion!
+    UnlockHash: UnlockHash!
+    UnlockHashes: [UnlockHash]!
+    RequiredSignatureCount: Int!
+}
+
+interface UnlockFulfillment {
+    Version: ByteVersion!
+    ParentCondition: UnlockCondition
+}
+
+type SingleSignatureFulfillment implements UnlockFulfillment {
+    Version: ByteVersion!
+    ParentCondition: UnlockCondition
+    PublicKey: PublicKey!
+    Signature: Signature!
+}
+
+type AtomicSwapFulfillment implements UnlockFulfillment {
+    Version: ByteVersion!
+    ParentCondition: UnlockCondition
+    PublicKey: PublicKey!
+    Signature: Signature!
+    Secret: BinaryData
+}
+
+type MultiSignatureFulfillment implements UnlockFulfillment {
+    Version: ByteVersion!
+    ParentCondition: UnlockCondition
+    PublicKeys: [PublicKey!]!
+    Signatures: [Signature!]!
+}
+
+type Balance {
+    Unlocked: BigInt!
+    Locked: BigInt!
+}
+
+interface Wallet {
+    UnlockHash: UnlockHash!
+
+    BlockHeight: BlockHeight!
+    BlockTime: BlockTime!
+
+    Transactions: [Transaction!]
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    BlockStakeInputs: [Input!]
+    BlockStakeOutputs: [Output!]
+
+    CoinBalance: Balance
+    BlockStakeBalance: Balance
+}
+
+type SingleSignatureWallet implements Wallet {
+    UnlockHash: UnlockHash!
+
+    PublicKey: PublicKey
+
+    MultiSignatureWallets: [MultiSigWallet]
+
+    BlockHeight: BlockHeight!
+    BlockTime: BlockTime!
+
+    Transactions: [Transaction!]
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    BlockStakeInputs: [Input!]
+    BlockStakeOutputs: [Output!]
+
+    CoinBalance: Balance
+    BlockStakeBalance: Balance
+}
+
+type MultiSignatureWalletOwner {
+    UnlockHash: UnlockHash!
+    PublicKey: PublicKey
+}
+
+type MultiSignatureWallet implements Wallet {
+    UnlockHash: UnlockHash!
+
+    Owners: [MultiSignatureWalletOwner]
+    RequiredSignatureCount: Int
+
+    BlockHeight: BlockHeight!
+    BlockTime: BlockTime!
+
+    Transactions: [Transaction!]
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    BlockStakeInputs: [Input!]
+    BlockStakeOutputs: [Output!]
+
+    CoinBalance: Balance
+    BlockStakeBalance: Balance
+}
+
+type AtomicSwapContract {
+    UnlockHash: UnlockHash!
+
+    ContractCondition: AtomicSwapCondition!
+    ContractFulfillment: AtomicSwapFulfillment
+    ContractValue: BigInt!
+
+    BlockHeight: BlockHeight!
+    BlockTime: BlockTime!
+
+    Transactions: [Transaction!]
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+}
