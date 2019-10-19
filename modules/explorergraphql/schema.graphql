@@ -5,10 +5,10 @@ schema {
 type QueryRoot {
   object(id: BinaryData): Object
 
-  transaction(id: ID): Transaction
+  transaction(id: Hash): Transaction
   transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
-  block(id: ID): Block
+  block(id: Hash): Block
   blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
   wallet(unlockhash: UnlockHash): Wallet
@@ -27,7 +27,7 @@ scalar Signature
 scalar BigInt
 scalar ByteVersion
 
-union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinCreationTransaction | Input | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Input | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
 type Block {

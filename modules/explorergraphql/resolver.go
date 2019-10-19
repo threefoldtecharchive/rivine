@@ -2,7 +2,12 @@ package explorergraphql
 
 import (
 	"context"
-) // THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
+
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/types"
+)
+
+// THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
 
 type Resolver struct{}
 
@@ -12,24 +17,24 @@ func (r *Resolver) QueryRoot() QueryRootResolver {
 
 type queryRootResolver struct{ *Resolver }
 
-func (r *queryRootResolver) Object(ctx context.Context, id *string) (Object, error) {
+func (r *queryRootResolver) Object(ctx context.Context, id *BinaryData) (Object, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Transaction(ctx context.Context, id *string) (Transaction, error) {
+func (r *queryRootResolver) Transaction(ctx context.Context, id *crypto.Hash) (Transaction, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Transactions(ctx context.Context, after *string, first *int, before *string, last *int) (Transaction, error) {
+func (r *queryRootResolver) Transactions(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Block(ctx context.Context, id *string) (*Block, error) {
+func (r *queryRootResolver) Block(ctx context.Context, id *crypto.Hash) (*Block, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Blocks(ctx context.Context, after *string, first *int, before *string, last *int) (Transaction, error) {
+func (r *queryRootResolver) Blocks(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Wallet(ctx context.Context, unlockhash *string) (Wallet, error) {
+func (r *queryRootResolver) Wallet(ctx context.Context, unlockhash *types.UnlockHash) (Wallet, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Contract(ctx context.Context, unlockhash *string) (Contract, error) {
+func (r *queryRootResolver) Contract(ctx context.Context, unlockhash *types.UnlockHash) (Contract, error) {
 	panic("not implemented")
 }

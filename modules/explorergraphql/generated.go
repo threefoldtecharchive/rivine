@@ -12,6 +12,8 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/types"
 	"github.com/vektah/gqlparser"
 	"github.com/vektah/gqlparser/ast"
 )
@@ -210,13 +212,13 @@ type ComplexityRoot struct {
 	}
 
 	QueryRoot struct {
-		Block        func(childComplexity int, id *string) int
-		Blocks       func(childComplexity int, after *string, first *int, before *string, last *int) int
-		Contract     func(childComplexity int, unlockhash *string) int
-		Object       func(childComplexity int, id *string) int
-		Transaction  func(childComplexity int, id *string) int
-		Transactions func(childComplexity int, after *string, first *int, before *string, last *int) int
-		Wallet       func(childComplexity int, unlockhash *string) int
+		Block        func(childComplexity int, id *crypto.Hash) int
+		Blocks       func(childComplexity int, after *ReferencePoint, first *int, before *ReferencePoint, last *int) int
+		Contract     func(childComplexity int, unlockhash *types.UnlockHash) int
+		Object       func(childComplexity int, id *BinaryData) int
+		Transaction  func(childComplexity int, id *crypto.Hash) int
+		Transactions func(childComplexity int, after *ReferencePoint, first *int, before *ReferencePoint, last *int) int
+		Wallet       func(childComplexity int, unlockhash *types.UnlockHash) int
 	}
 
 	SingleSignatureFulfillment struct {
@@ -263,13 +265,13 @@ type ComplexityRoot struct {
 }
 
 type QueryRootResolver interface {
-	Object(ctx context.Context, id *string) (Object, error)
-	Transaction(ctx context.Context, id *string) (Transaction, error)
-	Transactions(ctx context.Context, after *string, first *int, before *string, last *int) (Transaction, error)
-	Block(ctx context.Context, id *string) (*Block, error)
-	Blocks(ctx context.Context, after *string, first *int, before *string, last *int) (Transaction, error)
-	Wallet(ctx context.Context, unlockhash *string) (Wallet, error)
-	Contract(ctx context.Context, unlockhash *string) (Contract, error)
+	Object(ctx context.Context, id *BinaryData) (Object, error)
+	Transaction(ctx context.Context, id *crypto.Hash) (Transaction, error)
+	Transactions(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error)
+	Block(ctx context.Context, id *crypto.Hash) (*Block, error)
+	Blocks(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error)
+	Wallet(ctx context.Context, unlockhash *types.UnlockHash) (Wallet, error)
+	Contract(ctx context.Context, unlockhash *types.UnlockHash) (Contract, error)
 }
 
 type executableSchema struct {
@@ -1053,7 +1055,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Block(childComplexity, args["id"].(*string)), true
+		return e.complexity.QueryRoot.Block(childComplexity, args["id"].(*crypto.Hash)), true
 
 	case "QueryRoot.blocks":
 		if e.complexity.QueryRoot.Blocks == nil {
@@ -1065,7 +1067,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Blocks(childComplexity, args["after"].(*string), args["first"].(*int), args["before"].(*string), args["last"].(*int)), true
+		return e.complexity.QueryRoot.Blocks(childComplexity, args["after"].(*ReferencePoint), args["first"].(*int), args["before"].(*ReferencePoint), args["last"].(*int)), true
 
 	case "QueryRoot.contract":
 		if e.complexity.QueryRoot.Contract == nil {
@@ -1077,7 +1079,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Contract(childComplexity, args["unlockhash"].(*string)), true
+		return e.complexity.QueryRoot.Contract(childComplexity, args["unlockhash"].(*types.UnlockHash)), true
 
 	case "QueryRoot.object":
 		if e.complexity.QueryRoot.Object == nil {
@@ -1089,7 +1091,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Object(childComplexity, args["id"].(*string)), true
+		return e.complexity.QueryRoot.Object(childComplexity, args["id"].(*BinaryData)), true
 
 	case "QueryRoot.transaction":
 		if e.complexity.QueryRoot.Transaction == nil {
@@ -1101,7 +1103,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Transaction(childComplexity, args["id"].(*string)), true
+		return e.complexity.QueryRoot.Transaction(childComplexity, args["id"].(*crypto.Hash)), true
 
 	case "QueryRoot.transactions":
 		if e.complexity.QueryRoot.Transactions == nil {
@@ -1113,7 +1115,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Transactions(childComplexity, args["after"].(*string), args["first"].(*int), args["before"].(*string), args["last"].(*int)), true
+		return e.complexity.QueryRoot.Transactions(childComplexity, args["after"].(*ReferencePoint), args["first"].(*int), args["before"].(*ReferencePoint), args["last"].(*int)), true
 
 	case "QueryRoot.wallet":
 		if e.complexity.QueryRoot.Wallet == nil {
@@ -1125,7 +1127,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Wallet(childComplexity, args["unlockhash"].(*string)), true
+		return e.complexity.QueryRoot.Wallet(childComplexity, args["unlockhash"].(*types.UnlockHash)), true
 
 	case "SingleSignatureFulfillment.ParentCondition":
 		if e.complexity.SingleSignatureFulfillment.ParentCondition == nil {
@@ -1393,10 +1395,10 @@ var parsedSchema = gqlparser.MustLoadSchema(
 type QueryRoot {
   object(id: BinaryData): Object
 
-  transaction(id: ID): Transaction
+  transaction(id: Hash): Transaction
   transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
-  block(id: ID): Block
+  block(id: Hash): Block
   blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
   wallet(unlockhash: UnlockHash): Wallet
@@ -1415,7 +1417,7 @@ scalar Signature
 scalar BigInt
 scalar ByteVersion
 
-union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinCreationTransaction | Input | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Input | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
 type Block {
@@ -1738,9 +1740,9 @@ func (ec *executionContext) field_QueryRoot___type_args(ctx context.Context, raw
 func (ec *executionContext) field_QueryRoot_block_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *crypto.Hash
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1752,9 +1754,9 @@ func (ec *executionContext) field_QueryRoot_block_args(ctx context.Context, rawA
 func (ec *executionContext) field_QueryRoot_blocks_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *ReferencePoint
 	if tmp, ok := rawArgs["after"]; ok {
-		arg0, err = ec.unmarshalOReferencePoint2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1768,9 +1770,9 @@ func (ec *executionContext) field_QueryRoot_blocks_args(ctx context.Context, raw
 		}
 	}
 	args["first"] = arg1
-	var arg2 *string
+	var arg2 *ReferencePoint
 	if tmp, ok := rawArgs["before"]; ok {
-		arg2, err = ec.unmarshalOReferencePoint2ᚖstring(ctx, tmp)
+		arg2, err = ec.unmarshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1790,9 +1792,9 @@ func (ec *executionContext) field_QueryRoot_blocks_args(ctx context.Context, raw
 func (ec *executionContext) field_QueryRoot_contract_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *types.UnlockHash
 	if tmp, ok := rawArgs["unlockhash"]; ok {
-		arg0, err = ec.unmarshalOUnlockHash2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1804,9 +1806,9 @@ func (ec *executionContext) field_QueryRoot_contract_args(ctx context.Context, r
 func (ec *executionContext) field_QueryRoot_object_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *BinaryData
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalOBinaryData2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1818,9 +1820,9 @@ func (ec *executionContext) field_QueryRoot_object_args(ctx context.Context, raw
 func (ec *executionContext) field_QueryRoot_transaction_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *crypto.Hash
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1832,9 +1834,9 @@ func (ec *executionContext) field_QueryRoot_transaction_args(ctx context.Context
 func (ec *executionContext) field_QueryRoot_transactions_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *ReferencePoint
 	if tmp, ok := rawArgs["after"]; ok {
-		arg0, err = ec.unmarshalOReferencePoint2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1848,9 +1850,9 @@ func (ec *executionContext) field_QueryRoot_transactions_args(ctx context.Contex
 		}
 	}
 	args["first"] = arg1
-	var arg2 *string
+	var arg2 *ReferencePoint
 	if tmp, ok := rawArgs["before"]; ok {
-		arg2, err = ec.unmarshalOReferencePoint2ᚖstring(ctx, tmp)
+		arg2, err = ec.unmarshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1870,9 +1872,9 @@ func (ec *executionContext) field_QueryRoot_transactions_args(ctx context.Contex
 func (ec *executionContext) field_QueryRoot_wallet_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *types.UnlockHash
 	if tmp, ok := rawArgs["unlockhash"]; ok {
-		arg0, err = ec.unmarshalOUnlockHash2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1948,10 +1950,10 @@ func (ec *executionContext) _AtomicSwapCondition_Version(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapCondition_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapCondition) (ret graphql.Marshaler) {
@@ -1985,10 +1987,10 @@ func (ec *executionContext) _AtomicSwapCondition_UnlockHash(ctx context.Context,
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapCondition_Sender(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapCondition) (ret graphql.Marshaler) {
@@ -2096,10 +2098,10 @@ func (ec *executionContext) _AtomicSwapCondition_HashedSecret(ctx context.Contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBinaryData2string(ctx, field.Selections, res)
+	return ec.marshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapCondition_TimeLock(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapCondition) (ret graphql.Marshaler) {
@@ -2133,10 +2135,10 @@ func (ec *executionContext) _AtomicSwapCondition_TimeLock(ctx context.Context, f
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(LockTime)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNLockTime2string(ctx, field.Selections, res)
+	return ec.marshalNLockTime2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapContract_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
@@ -2170,10 +2172,10 @@ func (ec *executionContext) _AtomicSwapContract_UnlockHash(ctx context.Context, 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapContract_ContractCondition(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
@@ -2278,10 +2280,10 @@ func (ec *executionContext) _AtomicSwapContract_ContractValue(ctx context.Contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BigInt)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapContract_BlockHeight(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
@@ -2315,10 +2317,10 @@ func (ec *executionContext) _AtomicSwapContract_BlockHeight(ctx context.Context,
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBlockHeight2string(ctx, field.Selections, res)
+	return ec.marshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapContract_BlockTime(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
@@ -2352,10 +2354,10 @@ func (ec *executionContext) _AtomicSwapContract_BlockTime(ctx context.Context, f
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNTimestamp2string(ctx, field.Selections, res)
+	return ec.marshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapContract_Transactions(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
@@ -2491,10 +2493,10 @@ func (ec *executionContext) _AtomicSwapFulfillment_Version(ctx context.Context, 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapFulfillment_ParentCondition(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapFulfillment) (ret graphql.Marshaler) {
@@ -2562,10 +2564,10 @@ func (ec *executionContext) _AtomicSwapFulfillment_PublicKey(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNPublicKey2string(ctx, field.Selections, res)
+	return ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapFulfillment_Signature(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapFulfillment) (ret graphql.Marshaler) {
@@ -2599,10 +2601,10 @@ func (ec *executionContext) _AtomicSwapFulfillment_Signature(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Signature)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNSignature2string(ctx, field.Selections, res)
+	return ec.marshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapFulfillment_Secret(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapFulfillment) (ret graphql.Marshaler) {
@@ -2633,10 +2635,10 @@ func (ec *executionContext) _AtomicSwapFulfillment_Secret(ctx context.Context, f
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBinaryData2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapParticipant_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapParticipant) (ret graphql.Marshaler) {
@@ -2670,10 +2672,10 @@ func (ec *executionContext) _AtomicSwapParticipant_UnlockHash(ctx context.Contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapParticipant_PublicKey(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapParticipant) (ret graphql.Marshaler) {
@@ -2704,10 +2706,10 @@ func (ec *executionContext) _AtomicSwapParticipant_PublicKey(ctx context.Context
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*crypto.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOPublicKey2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Balance_Unlocked(ctx context.Context, field graphql.CollectedField, obj *Balance) (ret graphql.Marshaler) {
@@ -2741,10 +2743,10 @@ func (ec *executionContext) _Balance_Unlocked(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BigInt)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Balance_Locked(ctx context.Context, field graphql.CollectedField, obj *Balance) (ret graphql.Marshaler) {
@@ -2778,10 +2780,10 @@ func (ec *executionContext) _Balance_Locked(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BigInt)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Block_Header(ctx context.Context, field graphql.CollectedField, obj *Block) (ret graphql.Marshaler) {
@@ -2889,10 +2891,10 @@ func (ec *executionContext) _BlockHeader_ID(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockHeader_BlockTime(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
@@ -2923,10 +2925,10 @@ func (ec *executionContext) _BlockHeader_BlockTime(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOTimestamp2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockHeader_BlockHeight(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
@@ -2957,10 +2959,10 @@ func (ec *executionContext) _BlockHeader_BlockHeight(ctx context.Context, field 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBlockHeight2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockHeader_Payouts(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
@@ -3136,10 +3138,10 @@ func (ec *executionContext) _FeePayout_Value(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BigInt)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Input_ID(ctx context.Context, field graphql.CollectedField, obj *Input) (ret graphql.Marshaler) {
@@ -3173,10 +3175,10 @@ func (ec *executionContext) _Input_ID(ctx context.Context, field graphql.Collect
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Input_Value(ctx context.Context, field graphql.CollectedField, obj *Input) (ret graphql.Marshaler) {
@@ -3210,10 +3212,10 @@ func (ec *executionContext) _Input_Value(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BigInt)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Input_Fulfillment(ctx context.Context, field graphql.CollectedField, obj *Input) (ret graphql.Marshaler) {
@@ -3318,10 +3320,10 @@ func (ec *executionContext) _LockTimeCondition_Version(ctx context.Context, fiel
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _LockTimeCondition_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *LockTimeCondition) (ret graphql.Marshaler) {
@@ -3352,10 +3354,10 @@ func (ec *executionContext) _LockTimeCondition_UnlockHash(ctx context.Context, f
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOUnlockHash2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _LockTimeCondition_LockValue(ctx context.Context, field graphql.CollectedField, obj *LockTimeCondition) (ret graphql.Marshaler) {
@@ -3389,10 +3391,10 @@ func (ec *executionContext) _LockTimeCondition_LockValue(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(LockTime)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNLockTime2string(ctx, field.Selections, res)
+	return ec.marshalNLockTime2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockTime(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _LockTimeCondition_LockType(ctx context.Context, field graphql.CollectedField, obj *LockTimeCondition) (ret graphql.Marshaler) {
@@ -3500,10 +3502,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_ID(ctx context.Context,
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinCreationTransaction_Version(ctx context.Context, field graphql.CollectedField, obj *MintCoinCreationTransaction) (ret graphql.Marshaler) {
@@ -3537,10 +3539,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_Version(ctx context.Con
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinCreationTransaction_BlockID(ctx context.Context, field graphql.CollectedField, obj *MintCoinCreationTransaction) (ret graphql.Marshaler) {
@@ -3574,10 +3576,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_BlockID(ctx context.Con
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinCreationTransaction_BlockHeight(ctx context.Context, field graphql.CollectedField, obj *MintCoinCreationTransaction) (ret graphql.Marshaler) {
@@ -3608,10 +3610,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_BlockHeight(ctx context
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBlockHeight2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinCreationTransaction_BlockTimestamp(ctx context.Context, field graphql.CollectedField, obj *MintCoinCreationTransaction) (ret graphql.Marshaler) {
@@ -3642,10 +3644,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_BlockTimestamp(ctx cont
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOTimestamp2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinCreationTransaction_TransactionOrder(ctx context.Context, field graphql.CollectedField, obj *MintCoinCreationTransaction) (ret graphql.Marshaler) {
@@ -3713,10 +3715,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_Nonce(ctx context.Conte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBinaryData2string(ctx, field.Selections, res)
+	return ec.marshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinCreationTransaction_MintCondition(ctx context.Context, field graphql.CollectedField, obj *MintCoinCreationTransaction) (ret graphql.Marshaler) {
@@ -3923,10 +3925,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_ArbitraryData(ctx conte
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBinaryData2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinDestructionTransaction_ID(ctx context.Context, field graphql.CollectedField, obj *MintCoinDestructionTransaction) (ret graphql.Marshaler) {
@@ -3960,10 +3962,10 @@ func (ec *executionContext) _MintCoinDestructionTransaction_ID(ctx context.Conte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinDestructionTransaction_Version(ctx context.Context, field graphql.CollectedField, obj *MintCoinDestructionTransaction) (ret graphql.Marshaler) {
@@ -3997,10 +3999,10 @@ func (ec *executionContext) _MintCoinDestructionTransaction_Version(ctx context.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinDestructionTransaction_BlockID(ctx context.Context, field graphql.CollectedField, obj *MintCoinDestructionTransaction) (ret graphql.Marshaler) {
@@ -4034,10 +4036,10 @@ func (ec *executionContext) _MintCoinDestructionTransaction_BlockID(ctx context.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinDestructionTransaction_BlockHeight(ctx context.Context, field graphql.CollectedField, obj *MintCoinDestructionTransaction) (ret graphql.Marshaler) {
@@ -4068,10 +4070,10 @@ func (ec *executionContext) _MintCoinDestructionTransaction_BlockHeight(ctx cont
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBlockHeight2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinDestructionTransaction_BlockTimestamp(ctx context.Context, field graphql.CollectedField, obj *MintCoinDestructionTransaction) (ret graphql.Marshaler) {
@@ -4102,10 +4104,10 @@ func (ec *executionContext) _MintCoinDestructionTransaction_BlockTimestamp(ctx c
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOTimestamp2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinDestructionTransaction_TransactionOrder(ctx context.Context, field graphql.CollectedField, obj *MintCoinDestructionTransaction) (ret graphql.Marshaler) {
@@ -4275,10 +4277,10 @@ func (ec *executionContext) _MintCoinDestructionTransaction_ArbitraryData(ctx co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBinaryData2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_ID(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -4312,10 +4314,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_ID(ctx context.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_Version(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -4349,10 +4351,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_Version(ctx cont
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_BlockID(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -4386,10 +4388,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_BlockID(ctx cont
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_BlockHeight(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -4420,10 +4422,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_BlockHeight(ctx 
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBlockHeight2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_BlockTimestamp(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -4454,10 +4456,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_BlockTimestamp(c
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOTimestamp2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_TransactionOrder(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -4525,10 +4527,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_Nonce(ctx contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBinaryData2string(ctx, field.Selections, res)
+	return ec.marshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_MintCondition(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -4769,10 +4771,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_ArbitraryData(ct
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBinaryData2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureCondition_Version(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureCondition) (ret graphql.Marshaler) {
@@ -4806,10 +4808,10 @@ func (ec *executionContext) _MultiSignatureCondition_Version(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureCondition_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureCondition) (ret graphql.Marshaler) {
@@ -4843,10 +4845,10 @@ func (ec *executionContext) _MultiSignatureCondition_UnlockHash(ctx context.Cont
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureCondition_UnlockHashes(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureCondition) (ret graphql.Marshaler) {
@@ -4880,10 +4882,10 @@ func (ec *executionContext) _MultiSignatureCondition_UnlockHashes(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*string)
+	res := resTmp.([]*types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2ᚕᚖstring(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureCondition_RequiredSignatureCount(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureCondition) (ret graphql.Marshaler) {
@@ -4954,10 +4956,10 @@ func (ec *executionContext) _MultiSignatureFulfillment_Version(ctx context.Conte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureFulfillment_ParentCondition(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureFulfillment) (ret graphql.Marshaler) {
@@ -5025,10 +5027,10 @@ func (ec *executionContext) _MultiSignatureFulfillment_PublicKeys(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]string)
+	res := resTmp.([]crypto.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNPublicKey2ᚕstring(ctx, field.Selections, res)
+	return ec.marshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureFulfillment_Signatures(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureFulfillment) (ret graphql.Marshaler) {
@@ -5062,10 +5064,10 @@ func (ec *executionContext) _MultiSignatureFulfillment_Signatures(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]string)
+	res := resTmp.([]crypto.Signature)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNSignature2ᚕstring(ctx, field.Selections, res)
+	return ec.marshalNSignature2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureWallet_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWallet) (ret graphql.Marshaler) {
@@ -5099,10 +5101,10 @@ func (ec *executionContext) _MultiSignatureWallet_UnlockHash(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureWallet_Owners(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWallet) (ret graphql.Marshaler) {
@@ -5204,10 +5206,10 @@ func (ec *executionContext) _MultiSignatureWallet_BlockHeight(ctx context.Contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBlockHeight2string(ctx, field.Selections, res)
+	return ec.marshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureWallet_BlockTime(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWallet) (ret graphql.Marshaler) {
@@ -5241,10 +5243,10 @@ func (ec *executionContext) _MultiSignatureWallet_BlockTime(ctx context.Context,
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNTimestamp2string(ctx, field.Selections, res)
+	return ec.marshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureWallet_Transactions(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWallet) (ret graphql.Marshaler) {
@@ -5516,10 +5518,10 @@ func (ec *executionContext) _MultiSignatureWalletOwner_UnlockHash(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureWalletOwner_PublicKey(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWalletOwner) (ret graphql.Marshaler) {
@@ -5550,10 +5552,10 @@ func (ec *executionContext) _MultiSignatureWalletOwner_PublicKey(ctx context.Con
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*crypto.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOPublicKey2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _NilCondition_Version(ctx context.Context, field graphql.CollectedField, obj *NilCondition) (ret graphql.Marshaler) {
@@ -5587,10 +5589,10 @@ func (ec *executionContext) _NilCondition_Version(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _NilCondition_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *NilCondition) (ret graphql.Marshaler) {
@@ -5624,10 +5626,10 @@ func (ec *executionContext) _NilCondition_UnlockHash(ctx context.Context, field 
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Output_ID(ctx context.Context, field graphql.CollectedField, obj *Output) (ret graphql.Marshaler) {
@@ -5661,10 +5663,10 @@ func (ec *executionContext) _Output_ID(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Output_Value(ctx context.Context, field graphql.CollectedField, obj *Output) (ret graphql.Marshaler) {
@@ -5698,10 +5700,10 @@ func (ec *executionContext) _Output_Value(ctx context.Context, field graphql.Col
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(BigInt)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Output_Condition(ctx context.Context, field graphql.CollectedField, obj *Output) (ret graphql.Marshaler) {
@@ -5801,7 +5803,7 @@ func (ec *executionContext) _QueryRoot_object(ctx context.Context, field graphql
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Object(rctx, args["id"].(*string))
+		return ec.resolvers.QueryRoot().Object(rctx, args["id"].(*BinaryData))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5842,7 +5844,7 @@ func (ec *executionContext) _QueryRoot_transaction(ctx context.Context, field gr
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Transaction(rctx, args["id"].(*string))
+		return ec.resolvers.QueryRoot().Transaction(rctx, args["id"].(*crypto.Hash))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5883,7 +5885,7 @@ func (ec *executionContext) _QueryRoot_transactions(ctx context.Context, field g
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Transactions(rctx, args["after"].(*string), args["first"].(*int), args["before"].(*string), args["last"].(*int))
+		return ec.resolvers.QueryRoot().Transactions(rctx, args["after"].(*ReferencePoint), args["first"].(*int), args["before"].(*ReferencePoint), args["last"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5924,7 +5926,7 @@ func (ec *executionContext) _QueryRoot_block(ctx context.Context, field graphql.
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Block(rctx, args["id"].(*string))
+		return ec.resolvers.QueryRoot().Block(rctx, args["id"].(*crypto.Hash))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5965,7 +5967,7 @@ func (ec *executionContext) _QueryRoot_blocks(ctx context.Context, field graphql
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Blocks(rctx, args["after"].(*string), args["first"].(*int), args["before"].(*string), args["last"].(*int))
+		return ec.resolvers.QueryRoot().Blocks(rctx, args["after"].(*ReferencePoint), args["first"].(*int), args["before"].(*ReferencePoint), args["last"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6006,7 +6008,7 @@ func (ec *executionContext) _QueryRoot_wallet(ctx context.Context, field graphql
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Wallet(rctx, args["unlockhash"].(*string))
+		return ec.resolvers.QueryRoot().Wallet(rctx, args["unlockhash"].(*types.UnlockHash))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6047,7 +6049,7 @@ func (ec *executionContext) _QueryRoot_contract(ctx context.Context, field graph
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Contract(rctx, args["unlockhash"].(*string))
+		return ec.resolvers.QueryRoot().Contract(rctx, args["unlockhash"].(*types.UnlockHash))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6168,10 +6170,10 @@ func (ec *executionContext) _SingleSignatureFulfillment_Version(ctx context.Cont
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureFulfillment_ParentCondition(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureFulfillment) (ret graphql.Marshaler) {
@@ -6239,10 +6241,10 @@ func (ec *executionContext) _SingleSignatureFulfillment_PublicKey(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNPublicKey2string(ctx, field.Selections, res)
+	return ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureFulfillment_Signature(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureFulfillment) (ret graphql.Marshaler) {
@@ -6276,10 +6278,10 @@ func (ec *executionContext) _SingleSignatureFulfillment_Signature(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Signature)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNSignature2string(ctx, field.Selections, res)
+	return ec.marshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureWallet_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
@@ -6313,10 +6315,10 @@ func (ec *executionContext) _SingleSignatureWallet_UnlockHash(ctx context.Contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureWallet_PublicKey(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
@@ -6347,10 +6349,10 @@ func (ec *executionContext) _SingleSignatureWallet_PublicKey(ctx context.Context
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*crypto.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOPublicKey2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureWallet_MultiSignatureWallets(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
@@ -6418,10 +6420,10 @@ func (ec *executionContext) _SingleSignatureWallet_BlockHeight(ctx context.Conte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBlockHeight2string(ctx, field.Selections, res)
+	return ec.marshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureWallet_BlockTime(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
@@ -6455,10 +6457,10 @@ func (ec *executionContext) _SingleSignatureWallet_BlockTime(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNTimestamp2string(ctx, field.Selections, res)
+	return ec.marshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureWallet_Transactions(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
@@ -6730,10 +6732,10 @@ func (ec *executionContext) _StandardTransaction_ID(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StandardTransaction_Version(ctx context.Context, field graphql.CollectedField, obj *StandardTransaction) (ret graphql.Marshaler) {
@@ -6767,10 +6769,10 @@ func (ec *executionContext) _StandardTransaction_Version(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StandardTransaction_BlockID(ctx context.Context, field graphql.CollectedField, obj *StandardTransaction) (ret graphql.Marshaler) {
@@ -6804,10 +6806,10 @@ func (ec *executionContext) _StandardTransaction_BlockID(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(crypto.Hash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNHash2string(ctx, field.Selections, res)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StandardTransaction_BlockHeight(ctx context.Context, field graphql.CollectedField, obj *StandardTransaction) (ret graphql.Marshaler) {
@@ -6838,10 +6840,10 @@ func (ec *executionContext) _StandardTransaction_BlockHeight(ctx context.Context
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.BlockHeight)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBlockHeight2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StandardTransaction_BlockTimestamp(ctx context.Context, field graphql.CollectedField, obj *StandardTransaction) (ret graphql.Marshaler) {
@@ -6872,10 +6874,10 @@ func (ec *executionContext) _StandardTransaction_BlockTimestamp(ctx context.Cont
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*types.Timestamp)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOTimestamp2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StandardTransaction_TransactionOrder(ctx context.Context, field graphql.CollectedField, obj *StandardTransaction) (ret graphql.Marshaler) {
@@ -7110,10 +7112,10 @@ func (ec *executionContext) _StandardTransaction_ArbitraryData(ctx context.Conte
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(*BinaryData)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBinaryData2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UnlockHashCondition_Version(ctx context.Context, field graphql.CollectedField, obj *UnlockHashCondition) (ret graphql.Marshaler) {
@@ -7147,10 +7149,10 @@ func (ec *executionContext) _UnlockHashCondition_Version(ctx context.Context, fi
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(ByteVersion)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNByteVersion2string(ctx, field.Selections, res)
+	return ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UnlockHashCondition_UnlockHash(ctx context.Context, field graphql.CollectedField, obj *UnlockHashCondition) (ret graphql.Marshaler) {
@@ -7184,10 +7186,10 @@ func (ec *executionContext) _UnlockHashCondition_UnlockHash(ctx context.Context,
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(types.UnlockHash)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNUnlockHash2string(ctx, field.Selections, res)
+	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -8378,10 +8380,10 @@ func (ec *executionContext) _Object(ctx context.Context, sel ast.SelectionSet, o
 		return ec._MintCoinCreationTransaction(ctx, sel, &obj)
 	case *MintCoinCreationTransaction:
 		return ec._MintCoinCreationTransaction(ctx, sel, obj)
-	case MintCoinCreationTransaction:
-		return ec._MintCoinCreationTransaction(ctx, sel, &obj)
-	case *MintCoinCreationTransaction:
-		return ec._MintCoinCreationTransaction(ctx, sel, obj)
+	case MintCoinDestructionTransaction:
+		return ec._MintCoinDestructionTransaction(ctx, sel, &obj)
+	case *MintCoinDestructionTransaction:
+		return ec._MintCoinDestructionTransaction(ctx, sel, obj)
 	case Input:
 		return ec._Input(ctx, sel, &obj)
 	case *Input:
@@ -8921,7 +8923,7 @@ func (ec *executionContext) _LockTimeCondition(ctx context.Context, sel ast.Sele
 	return out
 }
 
-var mintCoinCreationTransactionImplementors = []string{"MintCoinCreationTransaction", "Object", "Object", "Transaction"}
+var mintCoinCreationTransactionImplementors = []string{"MintCoinCreationTransaction", "Object", "Transaction"}
 
 func (ec *executionContext) _MintCoinCreationTransaction(ctx context.Context, sel ast.SelectionSet, obj *MintCoinCreationTransaction) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, mintCoinCreationTransactionImplementors)
@@ -8987,7 +8989,7 @@ func (ec *executionContext) _MintCoinCreationTransaction(ctx context.Context, se
 	return out
 }
 
-var mintCoinDestructionTransactionImplementors = []string{"MintCoinDestructionTransaction", "Transaction"}
+var mintCoinDestructionTransactionImplementors = []string{"MintCoinDestructionTransaction", "Object", "Transaction"}
 
 func (ec *executionContext) _MintCoinDestructionTransaction(ctx context.Context, sel ast.SelectionSet, obj *MintCoinDestructionTransaction) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, mintCoinDestructionTransactionImplementors)
@@ -9906,32 +9908,29 @@ func (ec *executionContext) marshalNAtomicSwapParticipant2ᚖgithubᚗcomᚋthre
 	return ec._AtomicSwapParticipant(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNBigInt2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx context.Context, v interface{}) (BigInt, error) {
+	if v == nil {
+		return nil, nil
+	}
+	return ec.unmarshalInputBigInt(ctx, v)
 }
 
-func (ec *executionContext) marshalNBigInt2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
+func (ec *executionContext) marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx context.Context, sel ast.SelectionSet, v BigInt) graphql.Marshaler {
+	if v == nil {
 		if !ec.HasError(graphql.GetResolverContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
 		}
+		return graphql.Null
 	}
-	return res
+	return ec._BigInt(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNBinaryData2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, v interface{}) (BinaryData, error) {
+	return ec.unmarshalInputBinaryData(ctx, v)
 }
 
-func (ec *executionContext) marshalNBinaryData2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, sel ast.SelectionSet, v BinaryData) graphql.Marshaler {
+	return ec._BinaryData(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNBlockHeader2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockHeader(ctx context.Context, sel ast.SelectionSet, v BlockHeader) graphql.Marshaler {
@@ -9948,18 +9947,12 @@ func (ec *executionContext) marshalNBlockHeader2ᚖgithubᚗcomᚋthreefoldtech�
 	return ec._BlockHeader(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNBlockHeight2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, v interface{}) (types.BlockHeight, error) {
+	return ec.unmarshalInputBlockHeight(ctx, v)
 }
 
-func (ec *executionContext) marshalNBlockHeight2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, sel ast.SelectionSet, v types.BlockHeight) graphql.Marshaler {
+	return ec._BlockHeight(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNBlockPayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx context.Context, sel ast.SelectionSet, v BlockPayout) graphql.Marshaler {
@@ -9990,18 +9983,12 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNByteVersion2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx context.Context, v interface{}) (ByteVersion, error) {
+	return ec.unmarshalInputByteVersion(ctx, v)
 }
 
-func (ec *executionContext) marshalNByteVersion2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx context.Context, sel ast.SelectionSet, v ByteVersion) graphql.Marshaler {
+	return ec._ByteVersion(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNFeePayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx context.Context, sel ast.SelectionSet, v FeePayout) graphql.Marshaler {
@@ -10018,18 +10005,12 @@ func (ec *executionContext) marshalNFeePayout2ᚖgithubᚗcomᚋthreefoldtechᚋ
 	return ec._FeePayout(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNHash2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
+	return ec.unmarshalInputHash(ctx, v)
 }
 
-func (ec *executionContext) marshalNHash2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, sel ast.SelectionSet, v crypto.Hash) graphql.Marshaler {
+	return ec._Hash(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNInput2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx context.Context, sel ast.SelectionSet, v Input) graphql.Marshaler {
@@ -10097,18 +10078,12 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) unmarshalNLockTime2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNLockTime2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockTime(ctx context.Context, v interface{}) (LockTime, error) {
+	return ec.unmarshalInputLockTime(ctx, v)
 }
 
-func (ec *executionContext) marshalNLockTime2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNLockTime2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockTime(ctx context.Context, sel ast.SelectionSet, v LockTime) graphql.Marshaler {
+	return ec._LockTime(ctx, sel, &v)
 }
 
 func (ec *executionContext) unmarshalNLockType2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockType(ctx context.Context, v interface{}) (LockType, error) {
@@ -10171,21 +10146,15 @@ func (ec *executionContext) marshalNOutput2ᚖgithubᚗcomᚋthreefoldtechᚋriv
 	return ec._Output(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNPublicKey2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) (crypto.PublicKey, error) {
+	return ec.unmarshalInputPublicKey(ctx, v)
 }
 
-func (ec *executionContext) marshalNPublicKey2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v crypto.PublicKey) graphql.Marshaler {
+	return ec._PublicKey(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalNPublicKey2ᚕstring(ctx context.Context, v interface{}) ([]string, error) {
+func (ec *executionContext) unmarshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) ([]crypto.PublicKey, error) {
 	var vSlice []interface{}
 	if v != nil {
 		if tmp1, ok := v.([]interface{}); ok {
@@ -10195,9 +10164,9 @@ func (ec *executionContext) unmarshalNPublicKey2ᚕstring(ctx context.Context, v
 		}
 	}
 	var err error
-	res := make([]string, len(vSlice))
+	res := make([]crypto.PublicKey, len(vSlice))
 	for i := range vSlice {
-		res[i], err = ec.unmarshalNPublicKey2string(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -10205,30 +10174,24 @@ func (ec *executionContext) unmarshalNPublicKey2ᚕstring(ctx context.Context, v
 	return res, nil
 }
 
-func (ec *executionContext) marshalNPublicKey2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+func (ec *executionContext) marshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v []crypto.PublicKey) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalNPublicKey2string(ctx, sel, v[i])
+		ret[i] = ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, sel, v[i])
 	}
 
 	return ret
 }
 
-func (ec *executionContext) unmarshalNSignature2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx context.Context, v interface{}) (crypto.Signature, error) {
+	return ec.unmarshalInputSignature(ctx, v)
 }
 
-func (ec *executionContext) marshalNSignature2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx context.Context, sel ast.SelectionSet, v crypto.Signature) graphql.Marshaler {
+	return ec._Signature(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalNSignature2ᚕstring(ctx context.Context, v interface{}) ([]string, error) {
+func (ec *executionContext) unmarshalNSignature2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx context.Context, v interface{}) ([]crypto.Signature, error) {
 	var vSlice []interface{}
 	if v != nil {
 		if tmp1, ok := v.([]interface{}); ok {
@@ -10238,9 +10201,9 @@ func (ec *executionContext) unmarshalNSignature2ᚕstring(ctx context.Context, v
 		}
 	}
 	var err error
-	res := make([]string, len(vSlice))
+	res := make([]crypto.Signature, len(vSlice))
 	for i := range vSlice {
-		res[i], err = ec.unmarshalNSignature2string(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -10248,10 +10211,10 @@ func (ec *executionContext) unmarshalNSignature2ᚕstring(ctx context.Context, v
 	return res, nil
 }
 
-func (ec *executionContext) marshalNSignature2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+func (ec *executionContext) marshalNSignature2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx context.Context, sel ast.SelectionSet, v []crypto.Signature) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalNSignature2string(ctx, sel, v[i])
+		ret[i] = ec.marshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx, sel, v[i])
 	}
 
 	return ret
@@ -10271,18 +10234,12 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) unmarshalNTimestamp2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, v interface{}) (types.Timestamp, error) {
+	return ec.unmarshalInputTimestamp(ctx, v)
 }
 
-func (ec *executionContext) marshalNTimestamp2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, sel ast.SelectionSet, v types.Timestamp) graphql.Marshaler {
+	return ec._Timestamp(ctx, sel, &v)
 }
 
 func (ec *executionContext) marshalNTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx context.Context, sel ast.SelectionSet, v Transaction) graphql.Marshaler {
@@ -10352,21 +10309,15 @@ func (ec *executionContext) marshalNUnlockFulfillment2githubᚗcomᚋthreefoldte
 	return ec._UnlockFulfillment(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNUnlockHash2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) (types.UnlockHash, error) {
+	return ec.unmarshalInputUnlockHash(ctx, v)
 }
 
-func (ec *executionContext) marshalNUnlockHash2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-	}
-	return res
+func (ec *executionContext) marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, sel ast.SelectionSet, v types.UnlockHash) graphql.Marshaler {
+	return ec._UnlockHash(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalNUnlockHash2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
+func (ec *executionContext) unmarshalNUnlockHash2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) ([]*types.UnlockHash, error) {
 	var vSlice []interface{}
 	if v != nil {
 		if tmp1, ok := v.([]interface{}); ok {
@@ -10376,9 +10327,9 @@ func (ec *executionContext) unmarshalNUnlockHash2ᚕᚖstring(ctx context.Contex
 		}
 	}
 	var err error
-	res := make([]*string, len(vSlice))
+	res := make([]*types.UnlockHash, len(vSlice))
 	for i := range vSlice {
-		res[i], err = ec.unmarshalOUnlockHash2ᚖstring(ctx, vSlice[i])
+		res[i], err = ec.unmarshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -10386,10 +10337,10 @@ func (ec *executionContext) unmarshalNUnlockHash2ᚕᚖstring(ctx context.Contex
 	return res, nil
 }
 
-func (ec *executionContext) marshalNUnlockHash2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
+func (ec *executionContext) marshalNUnlockHash2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, sel ast.SelectionSet, v []*types.UnlockHash) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalOUnlockHash2ᚖstring(ctx, sel, v[i])
+		ret[i] = ec.marshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, sel, v[i])
 	}
 
 	return ret
@@ -10643,27 +10594,27 @@ func (ec *executionContext) marshalOBalance2ᚖgithubᚗcomᚋthreefoldtechᚋri
 	return ec._Balance(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOBinaryData2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalOBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, v interface{}) (BinaryData, error) {
+	return ec.unmarshalInputBinaryData(ctx, v)
 }
 
-func (ec *executionContext) marshalOBinaryData2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalString(v)
+func (ec *executionContext) marshalOBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, sel ast.SelectionSet, v BinaryData) graphql.Marshaler {
+	return ec._BinaryData(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalOBinaryData2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, v interface{}) (*BinaryData, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOBinaryData2string(ctx, v)
+	res, err := ec.unmarshalOBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOBinaryData2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, sel ast.SelectionSet, v *BinaryData) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOBinaryData2string(ctx, sel, *v)
+	return ec._BinaryData(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOBlock2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx context.Context, sel ast.SelectionSet, v Block) graphql.Marshaler {
@@ -10677,27 +10628,27 @@ func (ec *executionContext) marshalOBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivi
 	return ec._Block(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOBlockHeight2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalOBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, v interface{}) (types.BlockHeight, error) {
+	return ec.unmarshalInputBlockHeight(ctx, v)
 }
 
-func (ec *executionContext) marshalOBlockHeight2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalString(v)
+func (ec *executionContext) marshalOBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, sel ast.SelectionSet, v types.BlockHeight) graphql.Marshaler {
+	return ec._BlockHeight(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalOBlockHeight2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, v interface{}) (*types.BlockHeight, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOBlockHeight2string(ctx, v)
+	res, err := ec.unmarshalOBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOBlockHeight2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, sel ast.SelectionSet, v *types.BlockHeight) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOBlockHeight2string(ctx, sel, *v)
+	return ec._BlockHeight(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOBlockPayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx context.Context, sel ast.SelectionSet, v []*BlockPayout) graphql.Marshaler {
@@ -10834,27 +10785,27 @@ func (ec *executionContext) marshalOFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtech
 	return ret
 }
 
-func (ec *executionContext) unmarshalOID2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalID(v)
+func (ec *executionContext) unmarshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
+	return ec.unmarshalInputHash(ctx, v)
 }
 
-func (ec *executionContext) marshalOID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalID(v)
+func (ec *executionContext) marshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, sel ast.SelectionSet, v crypto.Hash) graphql.Marshaler {
+	return ec._Hash(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (*crypto.Hash, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOID2string(ctx, v)
+	res, err := ec.unmarshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, sel ast.SelectionSet, v *crypto.Hash) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOID2string(ctx, sel, *v)
+	return ec._Hash(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOInput2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx context.Context, sel ast.SelectionSet, v Input) graphql.Marshaler {
@@ -11091,50 +11042,50 @@ func (ec *executionContext) marshalOOutput2ᚖgithubᚗcomᚋthreefoldtechᚋriv
 	return ec._Output(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOPublicKey2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) (crypto.PublicKey, error) {
+	return ec.unmarshalInputPublicKey(ctx, v)
 }
 
-func (ec *executionContext) marshalOPublicKey2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalString(v)
+func (ec *executionContext) marshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v crypto.PublicKey) graphql.Marshaler {
+	return ec._PublicKey(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalOPublicKey2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) (*crypto.PublicKey, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOPublicKey2string(ctx, v)
+	res, err := ec.unmarshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOPublicKey2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v *crypto.PublicKey) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOPublicKey2string(ctx, sel, *v)
+	return ec._PublicKey(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOReferencePoint2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalOReferencePoint2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, v interface{}) (ReferencePoint, error) {
+	return ec.unmarshalInputReferencePoint(ctx, v)
 }
 
-func (ec *executionContext) marshalOReferencePoint2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalString(v)
+func (ec *executionContext) marshalOReferencePoint2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, sel ast.SelectionSet, v ReferencePoint) graphql.Marshaler {
+	return ec._ReferencePoint(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalOReferencePoint2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, v interface{}) (*ReferencePoint, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOReferencePoint2string(ctx, v)
+	res, err := ec.unmarshalOReferencePoint2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOReferencePoint2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, sel ast.SelectionSet, v *ReferencePoint) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOReferencePoint2string(ctx, sel, *v)
+	return ec._ReferencePoint(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
@@ -11160,27 +11111,27 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return ec.marshalOString2string(ctx, sel, *v)
 }
 
-func (ec *executionContext) unmarshalOTimestamp2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalOTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, v interface{}) (types.Timestamp, error) {
+	return ec.unmarshalInputTimestamp(ctx, v)
 }
 
-func (ec *executionContext) marshalOTimestamp2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalString(v)
+func (ec *executionContext) marshalOTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, sel ast.SelectionSet, v types.Timestamp) graphql.Marshaler {
+	return ec._Timestamp(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalOTimestamp2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, v interface{}) (*types.Timestamp, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOTimestamp2string(ctx, v)
+	res, err := ec.unmarshalOTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOTimestamp2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, sel ast.SelectionSet, v *types.Timestamp) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOTimestamp2string(ctx, sel, *v)
+	return ec._Timestamp(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx context.Context, sel ast.SelectionSet, v Transaction) graphql.Marshaler {
@@ -11237,27 +11188,27 @@ func (ec *executionContext) marshalOUnlockCondition2githubᚗcomᚋthreefoldtech
 	return ec._UnlockCondition(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOUnlockHash2string(ctx context.Context, v interface{}) (string, error) {
-	return graphql.UnmarshalString(v)
+func (ec *executionContext) unmarshalOUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) (types.UnlockHash, error) {
+	return ec.unmarshalInputUnlockHash(ctx, v)
 }
 
-func (ec *executionContext) marshalOUnlockHash2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	return graphql.MarshalString(v)
+func (ec *executionContext) marshalOUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, sel ast.SelectionSet, v types.UnlockHash) graphql.Marshaler {
+	return ec._UnlockHash(ctx, sel, &v)
 }
 
-func (ec *executionContext) unmarshalOUnlockHash2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+func (ec *executionContext) unmarshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) (*types.UnlockHash, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOUnlockHash2string(ctx, v)
+	res, err := ec.unmarshalOUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOUnlockHash2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+func (ec *executionContext) marshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, sel ast.SelectionSet, v *types.UnlockHash) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec.marshalOUnlockHash2string(ctx, sel, *v)
+	return ec._UnlockHash(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOWallet2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐWallet(ctx context.Context, sel ast.SelectionSet, v Wallet) graphql.Marshaler {
