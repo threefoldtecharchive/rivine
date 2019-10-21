@@ -2597,10 +2597,10 @@ func (ec *executionContext) _AtomicSwapFulfillment_PublicKey(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(crypto.PublicKey)
+	res := resTmp.(types.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
+	return ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapFulfillment_Signature(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapFulfillment) (ret graphql.Marshaler) {
@@ -2739,10 +2739,10 @@ func (ec *executionContext) _AtomicSwapParticipant_PublicKey(ctx context.Context
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*crypto.PublicKey)
+	res := resTmp.(*types.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
+	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Balance_Unlocked(ctx context.Context, field graphql.CollectedField, obj *Balance) (ret graphql.Marshaler) {
@@ -5097,10 +5097,10 @@ func (ec *executionContext) _MultiSignatureFulfillment_PublicKeys(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]crypto.PublicKey)
+	res := resTmp.([]*types.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
+	return ec.marshalNPublicKey2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MultiSignatureFulfillment_Signatures(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureFulfillment) (ret graphql.Marshaler) {
@@ -5622,10 +5622,10 @@ func (ec *executionContext) _MultiSignatureWalletOwner_PublicKey(ctx context.Con
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*crypto.PublicKey)
+	res := resTmp.(*types.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
+	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _NilCondition_Version(ctx context.Context, field graphql.CollectedField, obj *NilCondition) (ret graphql.Marshaler) {
@@ -6311,10 +6311,10 @@ func (ec *executionContext) _SingleSignatureFulfillment_PublicKey(ctx context.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(crypto.PublicKey)
+	res := resTmp.(types.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
+	return ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureFulfillment_Signature(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureFulfillment) (ret graphql.Marshaler) {
@@ -6419,10 +6419,10 @@ func (ec *executionContext) _SingleSignatureWallet_PublicKey(ctx context.Context
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*crypto.PublicKey)
+	res := resTmp.(*types.PublicKey)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, field.Selections, res)
+	return ec.marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureWallet_MultiSignatureWallets(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
@@ -10097,11 +10097,17 @@ func (ec *executionContext) marshalNBlockHeader2ᚖgithubᚗcomᚋthreefoldtech�
 }
 
 func (ec *executionContext) unmarshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, v interface{}) (types.BlockHeight, error) {
-	return ec.unmarshalInputBlockHeight(ctx, v)
+	return UnmarshalBlockHeight(v)
 }
 
 func (ec *executionContext) marshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, sel ast.SelectionSet, v types.BlockHeight) graphql.Marshaler {
-	return ec._BlockHeight(ctx, sel, &v)
+	res := MarshalBlockHeight(v)
+	if res == graphql.Null {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalNBlockPayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx context.Context, sel ast.SelectionSet, v BlockPayout) graphql.Marshaler {
@@ -10142,11 +10148,17 @@ func (ec *executionContext) marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋr
 }
 
 func (ec *executionContext) unmarshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
-	return ec.unmarshalInputHash(ctx, v)
+	return UnmarshalHash(v)
 }
 
 func (ec *executionContext) marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, sel ast.SelectionSet, v crypto.Hash) graphql.Marshaler {
-	return ec._Hash(ctx, sel, &v)
+	res := MarshalHash(v)
+	if res == graphql.Null {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalNInput2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx context.Context, sel ast.SelectionSet, v Input) graphql.Marshaler {
@@ -10283,15 +10295,21 @@ func (ec *executionContext) marshalNOutput2ᚖgithubᚗcomᚋthreefoldtechᚋriv
 	return ec._Output(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) (crypto.PublicKey, error) {
-	return ec.unmarshalInputPublicKey(ctx, v)
+func (ec *executionContext) unmarshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, v interface{}) (types.PublicKey, error) {
+	return UnmarshalPublicKey(v)
 }
 
-func (ec *executionContext) marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v crypto.PublicKey) graphql.Marshaler {
-	return ec._PublicKey(ctx, sel, &v)
+func (ec *executionContext) marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v types.PublicKey) graphql.Marshaler {
+	res := MarshalPublicKey(v)
+	if res == graphql.Null {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
-func (ec *executionContext) unmarshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) ([]crypto.PublicKey, error) {
+func (ec *executionContext) unmarshalNPublicKey2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, v interface{}) ([]*types.PublicKey, error) {
 	var vSlice []interface{}
 	if v != nil {
 		if tmp1, ok := v.([]interface{}); ok {
@@ -10301,9 +10319,9 @@ func (ec *executionContext) unmarshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtech�
 		}
 	}
 	var err error
-	res := make([]crypto.PublicKey, len(vSlice))
+	res := make([]*types.PublicKey, len(vSlice))
 	for i := range vSlice {
-		res[i], err = ec.unmarshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, vSlice[i])
+		res[i], err = ec.unmarshalNPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -10311,21 +10329,45 @@ func (ec *executionContext) unmarshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtech�
 	return res, nil
 }
 
-func (ec *executionContext) marshalNPublicKey2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v []crypto.PublicKey) graphql.Marshaler {
+func (ec *executionContext) marshalNPublicKey2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v []*types.PublicKey) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, sel, v[i])
+		ret[i] = ec.marshalNPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, sel, v[i])
 	}
 
 	return ret
 }
 
+func (ec *executionContext) unmarshalNPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, v interface{}) (*types.PublicKey, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalNPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v *types.PublicKey) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec.marshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, sel, *v)
+}
+
 func (ec *executionContext) unmarshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx context.Context, v interface{}) (crypto.Signature, error) {
-	return ec.unmarshalInputSignature(ctx, v)
+	return UnmarshalSignature(v)
 }
 
 func (ec *executionContext) marshalNSignature2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx context.Context, sel ast.SelectionSet, v crypto.Signature) graphql.Marshaler {
-	return ec._Signature(ctx, sel, &v)
+	res := MarshalSignature(v)
+	if res == graphql.Null {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNSignature2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐSignature(ctx context.Context, v interface{}) ([]crypto.Signature, error) {
@@ -10372,11 +10414,17 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 }
 
 func (ec *executionContext) unmarshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, v interface{}) (types.Timestamp, error) {
-	return ec.unmarshalInputTimestamp(ctx, v)
+	return UnmarshalTimestamp(v)
 }
 
 func (ec *executionContext) marshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, sel ast.SelectionSet, v types.Timestamp) graphql.Marshaler {
-	return ec._Timestamp(ctx, sel, &v)
+	res := MarshalTimestamp(v)
+	if res == graphql.Null {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalNTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx context.Context, sel ast.SelectionSet, v Transaction) graphql.Marshaler {
@@ -10461,11 +10509,17 @@ func (ec *executionContext) marshalNUnlockFulfillment2githubᚗcomᚋthreefoldte
 }
 
 func (ec *executionContext) unmarshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) (types.UnlockHash, error) {
-	return ec.unmarshalInputUnlockHash(ctx, v)
+	return UnmarshalUnlockHash(v)
 }
 
 func (ec *executionContext) marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, sel ast.SelectionSet, v types.UnlockHash) graphql.Marshaler {
-	return ec._UnlockHash(ctx, sel, &v)
+	res := MarshalUnlockHash(v)
+	if res == graphql.Null {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) unmarshalNUnlockHash2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) ([]*types.UnlockHash, error) {
@@ -10781,11 +10835,11 @@ func (ec *executionContext) marshalOBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivi
 }
 
 func (ec *executionContext) unmarshalOBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, v interface{}) (types.BlockHeight, error) {
-	return ec.unmarshalInputBlockHeight(ctx, v)
+	return UnmarshalBlockHeight(v)
 }
 
 func (ec *executionContext) marshalOBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, sel ast.SelectionSet, v types.BlockHeight) graphql.Marshaler {
-	return ec._BlockHeight(ctx, sel, &v)
+	return MarshalBlockHeight(v)
 }
 
 func (ec *executionContext) unmarshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx context.Context, v interface{}) (*types.BlockHeight, error) {
@@ -10800,7 +10854,7 @@ func (ec *executionContext) marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtech�
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._BlockHeight(ctx, sel, v)
+	return ec.marshalOBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, sel, *v)
 }
 
 func (ec *executionContext) marshalOBlockPayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx context.Context, sel ast.SelectionSet, v BlockPayout) graphql.Marshaler {
@@ -10909,11 +10963,11 @@ func (ec *executionContext) marshalOContract2githubᚗcomᚋthreefoldtechᚋrivi
 }
 
 func (ec *executionContext) unmarshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
-	return ec.unmarshalInputHash(ctx, v)
+	return UnmarshalHash(v)
 }
 
 func (ec *executionContext) marshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, sel ast.SelectionSet, v crypto.Hash) graphql.Marshaler {
-	return ec._Hash(ctx, sel, &v)
+	return MarshalHash(v)
 }
 
 func (ec *executionContext) unmarshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (*crypto.Hash, error) {
@@ -10928,7 +10982,7 @@ func (ec *executionContext) marshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivin
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._Hash(ctx, sel, v)
+	return ec.marshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, sel, *v)
 }
 
 func (ec *executionContext) marshalOInput2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx context.Context, sel ast.SelectionSet, v Input) graphql.Marshaler {
@@ -11165,27 +11219,27 @@ func (ec *executionContext) marshalOOutput2ᚖgithubᚗcomᚋthreefoldtechᚋriv
 	return ec._Output(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) (crypto.PublicKey, error) {
-	return ec.unmarshalInputPublicKey(ctx, v)
+func (ec *executionContext) unmarshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, v interface{}) (types.PublicKey, error) {
+	return UnmarshalPublicKey(v)
 }
 
-func (ec *executionContext) marshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v crypto.PublicKey) graphql.Marshaler {
-	return ec._PublicKey(ctx, sel, &v)
+func (ec *executionContext) marshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v types.PublicKey) graphql.Marshaler {
+	return MarshalPublicKey(v)
 }
 
-func (ec *executionContext) unmarshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, v interface{}) (*crypto.PublicKey, error) {
+func (ec *executionContext) unmarshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, v interface{}) (*types.PublicKey, error) {
 	if v == nil {
 		return nil, nil
 	}
-	res, err := ec.unmarshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx, v)
+	res, err := ec.unmarshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, v)
 	return &res, err
 }
 
-func (ec *executionContext) marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v *crypto.PublicKey) graphql.Marshaler {
+func (ec *executionContext) marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, sel ast.SelectionSet, v *types.PublicKey) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._PublicKey(ctx, sel, v)
+	return ec.marshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, sel, *v)
 }
 
 func (ec *executionContext) unmarshalOReferencePoint2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, v interface{}) (ReferencePoint, error) {
@@ -11236,11 +11290,11 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 }
 
 func (ec *executionContext) unmarshalOTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, v interface{}) (types.Timestamp, error) {
-	return ec.unmarshalInputTimestamp(ctx, v)
+	return UnmarshalTimestamp(v)
 }
 
 func (ec *executionContext) marshalOTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, sel ast.SelectionSet, v types.Timestamp) graphql.Marshaler {
-	return ec._Timestamp(ctx, sel, &v)
+	return MarshalTimestamp(v)
 }
 
 func (ec *executionContext) unmarshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx context.Context, v interface{}) (*types.Timestamp, error) {
@@ -11255,7 +11309,7 @@ func (ec *executionContext) marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋ
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._Timestamp(ctx, sel, v)
+	return ec.marshalOTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, sel, *v)
 }
 
 func (ec *executionContext) marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx context.Context, sel ast.SelectionSet, v Transaction) graphql.Marshaler {
@@ -11353,11 +11407,11 @@ func (ec *executionContext) marshalOUnlockCondition2githubᚗcomᚋthreefoldtech
 }
 
 func (ec *executionContext) unmarshalOUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) (types.UnlockHash, error) {
-	return ec.unmarshalInputUnlockHash(ctx, v)
+	return UnmarshalUnlockHash(v)
 }
 
 func (ec *executionContext) marshalOUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, sel ast.SelectionSet, v types.UnlockHash) graphql.Marshaler {
-	return ec._UnlockHash(ctx, sel, &v)
+	return MarshalUnlockHash(v)
 }
 
 func (ec *executionContext) unmarshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx context.Context, v interface{}) (*types.UnlockHash, error) {
@@ -11372,7 +11426,7 @@ func (ec *executionContext) marshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtech�
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._UnlockHash(ctx, sel, v)
+	return ec.marshalOUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, sel, *v)
 }
 
 func (ec *executionContext) marshalOWallet2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐWallet(ctx context.Context, sel ast.SelectionSet, v Wallet) graphql.Marshaler {

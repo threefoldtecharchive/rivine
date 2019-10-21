@@ -64,7 +64,7 @@ func (AtomicSwapContract) IsContract() {}
 type AtomicSwapFulfillment struct {
 	Version         ByteVersion      `json:"Version"`
 	ParentCondition UnlockCondition  `json:"ParentCondition"`
-	PublicKey       crypto.PublicKey `json:"PublicKey"`
+	PublicKey       types.PublicKey  `json:"PublicKey"`
 	Signature       crypto.Signature `json:"Signature"`
 	Secret          *BinaryData      `json:"Secret"`
 }
@@ -72,8 +72,8 @@ type AtomicSwapFulfillment struct {
 func (AtomicSwapFulfillment) IsUnlockFulfillment() {}
 
 type AtomicSwapParticipant struct {
-	UnlockHash types.UnlockHash  `json:"UnlockHash"`
-	PublicKey  *crypto.PublicKey `json:"PublicKey"`
+	UnlockHash types.UnlockHash `json:"UnlockHash"`
+	PublicKey  *types.PublicKey `json:"PublicKey"`
 }
 
 type Balance struct {
@@ -189,7 +189,7 @@ func (MultiSignatureCondition) IsUnlockCondition() {}
 type MultiSignatureFulfillment struct {
 	Version         ByteVersion        `json:"Version"`
 	ParentCondition UnlockCondition    `json:"ParentCondition"`
-	PublicKeys      []crypto.PublicKey `json:"PublicKeys"`
+	PublicKeys      []*types.PublicKey `json:"PublicKeys"`
 	Signatures      []crypto.Signature `json:"Signatures"`
 }
 
@@ -214,8 +214,8 @@ func (MultiSignatureWallet) IsObject() {}
 func (MultiSignatureWallet) IsWallet() {}
 
 type MultiSignatureWalletOwner struct {
-	UnlockHash types.UnlockHash  `json:"UnlockHash"`
-	PublicKey  *crypto.PublicKey `json:"PublicKey"`
+	UnlockHash types.UnlockHash `json:"UnlockHash"`
+	PublicKey  *types.PublicKey `json:"PublicKey"`
 }
 
 type NilCondition struct {
@@ -237,7 +237,7 @@ func (Output) IsObject() {}
 type SingleSignatureFulfillment struct {
 	Version         ByteVersion      `json:"Version"`
 	ParentCondition UnlockCondition  `json:"ParentCondition"`
-	PublicKey       crypto.PublicKey `json:"PublicKey"`
+	PublicKey       types.PublicKey  `json:"PublicKey"`
 	Signature       crypto.Signature `json:"Signature"`
 }
 
@@ -245,7 +245,7 @@ func (SingleSignatureFulfillment) IsUnlockFulfillment() {}
 
 type SingleSignatureWallet struct {
 	UnlockHash            types.UnlockHash        `json:"UnlockHash"`
-	PublicKey             *crypto.PublicKey       `json:"PublicKey"`
+	PublicKey             *types.PublicKey        `json:"PublicKey"`
 	MultiSignatureWallets []*MultiSignatureWallet `json:"MultiSignatureWallets"`
 	BlockHeight           types.BlockHeight       `json:"BlockHeight"`
 	BlockTime             types.Timestamp         `json:"BlockTime"`

@@ -2,6 +2,7 @@ package explorergraphql
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,7 +10,12 @@ import (
 	"strconv"
 
 	"github.com/99designs/gqlgen/graphql"
+	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/types"
 )
+
+// Custom Scalar Types
 
 type (
 	ReferencePoint uint64
@@ -102,6 +108,117 @@ func (bi *BigInt) UnmarshalGQL(v interface{}) error {
 	}
 	return nil
 }
+
+// custom third-party (Rivine) scalar types
+
+func MarshalBlockHeight(bh types.BlockHeight) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		io.WriteString(w, strconv.FormatUint(uint64(bh), 10))
+	})
+}
+
+func UnmarshalBlockHeight(v interface{}) (types.BlockHeight, error) {
+	x, err := unmarshalUint64(v)
+	if err != nil {
+		return 0, err
+	}
+	return types.BlockHeight(x), nil
+}
+
+func MarshalTimestamp(ts types.Timestamp) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		io.WriteString(w, strconv.FormatUint(uint64(ts), 10))
+	})
+}
+
+func UnmarshalTimestamp(v interface{}) (types.Timestamp, error) {
+	x, err := unmarshalUint64(v)
+	if err != nil {
+		return 0, err
+	}
+	return types.Timestamp(x), nil
+}
+
+func MarshalHash(hash crypto.Hash) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		io.WriteString(w, base64.StdEncoding.EncodeToString(hash[:]))
+	})
+}
+
+func UnmarshalHash(v interface{}) (crypto.Hash, error) {
+	b, err := unmarshalByteSlice(v)
+	if err != nil {
+		return crypto.Hash{}, err
+	}
+	if len(b) != crypto.HashSize {
+		return crypto.Hash{}, fmt.Errorf("invalid unmarshalled crypto hash of length %d: %s", len(b), hex.EncodeToString(b))
+	}
+	var hash crypto.Hash
+	copy(hash[:], b[:])
+	return hash, nil
+}
+
+func MarshalUnlockHash(uh types.UnlockHash) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		b, _ := rivbin.Marshal(uh)
+		io.WriteString(w, base64.StdEncoding.EncodeToString(b))
+	})
+}
+
+func UnmarshalUnlockHash(v interface{}) (types.UnlockHash, error) {
+	b, err := unmarshalByteSlice(v)
+	if err != nil {
+		return types.UnlockHash{}, err
+	}
+	var uh types.UnlockHash
+	err = rivbin.Unmarshal(b, &uh)
+	if err != nil {
+		return types.UnlockHash{}, err
+	}
+	return uh, nil
+}
+
+func MarshalPublicKey(pk types.PublicKey) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		b, _ := rivbin.Marshal(pk)
+		io.WriteString(w, base64.StdEncoding.EncodeToString(b))
+	})
+}
+
+func UnmarshalPublicKey(v interface{}) (types.PublicKey, error) {
+	b, err := unmarshalByteSlice(v)
+	if err != nil {
+		return types.PublicKey{}, err
+	}
+	var pk types.PublicKey
+	err = rivbin.Unmarshal(b, &pk)
+	if err != nil {
+		return types.PublicKey{}, err
+	}
+	return pk, nil
+}
+
+func MarshalSignature(sig crypto.Signature) graphql.Marshaler {
+	return graphql.WriterFunc(func(w io.Writer) {
+		b, _ := rivbin.Marshal(sig)
+		io.WriteString(w, base64.StdEncoding.EncodeToString(b))
+	})
+}
+
+func UnmarshalSignature(v interface{}) (crypto.Signature, error) {
+	b, err := unmarshalByteSlice(v)
+	if err != nil {
+		return crypto.Signature{}, err
+	}
+	var sig crypto.Signature
+	err = rivbin.Unmarshal(b, &sig)
+	if err != nil {
+		return crypto.Signature{}, err
+	}
+	return sig, nil
+}
+
+// scalar helpers
 
 func unmarshalUint8(v interface{}) (uint8, error) {
 	switch v := v.(type) {
