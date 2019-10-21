@@ -5,11 +5,15 @@ import (
 
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/types"
+
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
 )
 
 // THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
 
-type Resolver struct{}
+type Resolver struct {
+	db explorerdb.DB
+}
 
 func (r *Resolver) QueryRoot() QueryRootResolver {
 	return &queryRootResolver{r}

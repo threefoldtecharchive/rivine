@@ -80,6 +80,7 @@ func TestModuleMethodIdentifier(t *testing.T) {
 		{WalletModule, 'w'},
 		{BlockCreatorModule, 'b'},
 		{ExplorerModule, 'e'},
+		{ExplorerGraphQLModule, 'q'},
 	}
 	for idx, testCase := range testCases {
 		identifier := testCase.Module.Identifier()

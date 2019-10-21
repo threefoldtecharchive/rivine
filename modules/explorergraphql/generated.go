@@ -10065,28 +10065,21 @@ func (ec *executionContext) marshalNAtomicSwapParticipant2ᚖgithubᚗcomᚋthre
 }
 
 func (ec *executionContext) unmarshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx context.Context, v interface{}) (BigInt, error) {
-	if v == nil {
-		return nil, nil
-	}
-	return ec.unmarshalInputBigInt(ctx, v)
+	var res BigInt
+	return res, res.UnmarshalGQL(v)
 }
 
 func (ec *executionContext) marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx context.Context, sel ast.SelectionSet, v BigInt) graphql.Marshaler {
-	if v == nil {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._BigInt(ctx, sel, v)
+	return v
 }
 
 func (ec *executionContext) unmarshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, v interface{}) (BinaryData, error) {
-	return ec.unmarshalInputBinaryData(ctx, v)
+	var res BinaryData
+	return res, res.UnmarshalGQL(v)
 }
 
 func (ec *executionContext) marshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, sel ast.SelectionSet, v BinaryData) graphql.Marshaler {
-	return ec._BinaryData(ctx, sel, &v)
+	return v
 }
 
 func (ec *executionContext) marshalNBlockHeader2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockHeader(ctx context.Context, sel ast.SelectionSet, v BlockHeader) graphql.Marshaler {
@@ -10140,11 +10133,12 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 }
 
 func (ec *executionContext) unmarshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx context.Context, v interface{}) (ByteVersion, error) {
-	return ec.unmarshalInputByteVersion(ctx, v)
+	var res ByteVersion
+	return res, res.UnmarshalGQL(v)
 }
 
 func (ec *executionContext) marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx context.Context, sel ast.SelectionSet, v ByteVersion) graphql.Marshaler {
-	return ec._ByteVersion(ctx, sel, &v)
+	return v
 }
 
 func (ec *executionContext) unmarshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
@@ -10221,11 +10215,12 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 }
 
 func (ec *executionContext) unmarshalNLockTime2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockTime(ctx context.Context, v interface{}) (LockTime, error) {
-	return ec.unmarshalInputLockTime(ctx, v)
+	var res LockTime
+	return res, res.UnmarshalGQL(v)
 }
 
 func (ec *executionContext) marshalNLockTime2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockTime(ctx context.Context, sel ast.SelectionSet, v LockTime) graphql.Marshaler {
-	return ec._LockTime(ctx, sel, &v)
+	return v
 }
 
 func (ec *executionContext) unmarshalNLockType2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐLockType(ctx context.Context, v interface{}) (LockType, error) {
@@ -10751,11 +10746,12 @@ func (ec *executionContext) marshalOBalance2ᚖgithubᚗcomᚋthreefoldtechᚋri
 }
 
 func (ec *executionContext) unmarshalOBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, v interface{}) (BinaryData, error) {
-	return ec.unmarshalInputBinaryData(ctx, v)
+	var res BinaryData
+	return res, res.UnmarshalGQL(v)
 }
 
 func (ec *executionContext) marshalOBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, sel ast.SelectionSet, v BinaryData) graphql.Marshaler {
-	return ec._BinaryData(ctx, sel, &v)
+	return v
 }
 
 func (ec *executionContext) unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, v interface{}) (*BinaryData, error) {
@@ -10770,7 +10766,7 @@ func (ec *executionContext) marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtech�
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._BinaryData(ctx, sel, v)
+	return v
 }
 
 func (ec *executionContext) marshalOBlock2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx context.Context, sel ast.SelectionSet, v Block) graphql.Marshaler {
@@ -11193,11 +11189,12 @@ func (ec *executionContext) marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋ
 }
 
 func (ec *executionContext) unmarshalOReferencePoint2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, v interface{}) (ReferencePoint, error) {
-	return ec.unmarshalInputReferencePoint(ctx, v)
+	var res ReferencePoint
+	return res, res.UnmarshalGQL(v)
 }
 
 func (ec *executionContext) marshalOReferencePoint2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, sel ast.SelectionSet, v ReferencePoint) graphql.Marshaler {
-	return ec._ReferencePoint(ctx, sel, &v)
+	return v
 }
 
 func (ec *executionContext) unmarshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx context.Context, v interface{}) (*ReferencePoint, error) {
@@ -11212,7 +11209,7 @@ func (ec *executionContext) marshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldte
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._ReferencePoint(ctx, sel, v)
+	return v
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

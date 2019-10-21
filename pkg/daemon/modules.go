@@ -68,6 +68,16 @@ the blockchain.`,
 			ConsensusSetModule.Identifier(),
 		),
 	}
+
+	ExplorerGraphQLModule = &Module{
+		Name: "QGraphQL Explorer",
+		Description: `The GraphQL explorer provides statistics about the blockchain and can be
+queried for information about specific transactions or other objects on
+the blockchain.`,
+		Dependencies: ForceNewIdentifierSet(
+			ConsensusSetModule.Identifier(),
+		),
+	}
 )
 
 // DefaultModuleSetFlag returns a new ModuleSetFlag,
@@ -80,6 +90,7 @@ func DefaultModuleSetFlag() ModuleSetFlag {
 			TransactionPoolModule.Identifier(),
 			WalletModule.Identifier(),
 			BlockCreatorModule.Identifier(),
+			ExplorerGraphQLModule.Identifier(),
 		),
 		DefaultModuleSet())
 	if err != nil {
@@ -98,6 +109,7 @@ func DefaultModuleSet() ModuleSet {
 		WalletModule,
 		BlockCreatorModule,
 		ExplorerModule,
+		ExplorerGraphQLModule,
 	)
 	if err != nil {
 		build.Critical(err)
