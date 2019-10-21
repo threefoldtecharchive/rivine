@@ -2,6 +2,9 @@ schema {
     query: QueryRoot
 }
 
+# How to query transactions based on properties
+# How to query wallets based on properties
+
 type QueryRoot {
   object(id: BinaryData): Object
 
@@ -243,6 +246,9 @@ type MultiSignatureFulfillment implements UnlockFulfillment {
 type Balance {
     Unlocked: BigInt!
     Locked: BigInt!
+    LastUpdateTimestamp: Timestamp!
+    LastUpdateBlockHeight: BlockHeight!
+    LastUpdateTransaction: Hash!
 }
 
 interface Wallet {
@@ -323,6 +329,6 @@ type AtomicSwapContract {
 
     Transactions: [Transaction!]
 
-    CoinInputs: [Input!]
-    CoinOutputs: [Output!]
+    CoinInput: Input!
+    CoinOutput: Output
 }

@@ -55,8 +55,8 @@ type ComplexityRoot struct {
 	AtomicSwapContract struct {
 		BlockHeight         func(childComplexity int) int
 		BlockTime           func(childComplexity int) int
-		CoinInputs          func(childComplexity int) int
-		CoinOutputs         func(childComplexity int) int
+		CoinInput           func(childComplexity int) int
+		CoinOutput          func(childComplexity int) int
 		ContractCondition   func(childComplexity int) int
 		ContractFulfillment func(childComplexity int) int
 		ContractValue       func(childComplexity int) int
@@ -78,8 +78,11 @@ type ComplexityRoot struct {
 	}
 
 	Balance struct {
-		Locked   func(childComplexity int) int
-		Unlocked func(childComplexity int) int
+		LastUpdateBlockHeight func(childComplexity int) int
+		LastUpdateTimestamp   func(childComplexity int) int
+		LastUpdateTransaction func(childComplexity int) int
+		Locked                func(childComplexity int) int
+		Unlocked              func(childComplexity int) int
 	}
 
 	Block struct {
@@ -345,19 +348,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AtomicSwapContract.BlockTime(childComplexity), true
 
-	case "AtomicSwapContract.CoinInputs":
-		if e.complexity.AtomicSwapContract.CoinInputs == nil {
+	case "AtomicSwapContract.CoinInput":
+		if e.complexity.AtomicSwapContract.CoinInput == nil {
 			break
 		}
 
-		return e.complexity.AtomicSwapContract.CoinInputs(childComplexity), true
+		return e.complexity.AtomicSwapContract.CoinInput(childComplexity), true
 
-	case "AtomicSwapContract.CoinOutputs":
-		if e.complexity.AtomicSwapContract.CoinOutputs == nil {
+	case "AtomicSwapContract.CoinOutput":
+		if e.complexity.AtomicSwapContract.CoinOutput == nil {
 			break
 		}
 
-		return e.complexity.AtomicSwapContract.CoinOutputs(childComplexity), true
+		return e.complexity.AtomicSwapContract.CoinOutput(childComplexity), true
 
 	case "AtomicSwapContract.ContractCondition":
 		if e.complexity.AtomicSwapContract.ContractCondition == nil {
@@ -442,6 +445,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AtomicSwapParticipant.UnlockHash(childComplexity), true
+
+	case "Balance.LastUpdateBlockHeight":
+		if e.complexity.Balance.LastUpdateBlockHeight == nil {
+			break
+		}
+
+		return e.complexity.Balance.LastUpdateBlockHeight(childComplexity), true
+
+	case "Balance.LastUpdateTimestamp":
+		if e.complexity.Balance.LastUpdateTimestamp == nil {
+			break
+		}
+
+		return e.complexity.Balance.LastUpdateTimestamp(childComplexity), true
+
+	case "Balance.LastUpdateTransaction":
+		if e.complexity.Balance.LastUpdateTransaction == nil {
+			break
+		}
+
+		return e.complexity.Balance.LastUpdateTransaction(childComplexity), true
 
 	case "Balance.Locked":
 		if e.complexity.Balance.Locked == nil {
@@ -1392,6 +1416,9 @@ var parsedSchema = gqlparser.MustLoadSchema(
     query: QueryRoot
 }
 
+# How to query transactions based on properties
+# How to query wallets based on properties
+
 type QueryRoot {
   object(id: BinaryData): Object
 
@@ -1633,6 +1660,9 @@ type MultiSignatureFulfillment implements UnlockFulfillment {
 type Balance {
     Unlocked: BigInt!
     Locked: BigInt!
+    LastUpdateTimestamp: Timestamp!
+    LastUpdateBlockHeight: BlockHeight!
+    LastUpdateTransaction: Hash!
 }
 
 interface Wallet {
@@ -1713,8 +1743,8 @@ type AtomicSwapContract {
 
     Transactions: [Transaction!]
 
-    CoinInputs: [Input!]
-    CoinOutputs: [Output!]
+    CoinInput: Input!
+    CoinOutput: Output
 }
 `},
 )
@@ -2394,7 +2424,7 @@ func (ec *executionContext) _AtomicSwapContract_Transactions(ctx context.Context
 	return ec.marshalOTransaction2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AtomicSwapContract_CoinInputs(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
+func (ec *executionContext) _AtomicSwapContract_CoinInput(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -2413,22 +2443,25 @@ func (ec *executionContext) _AtomicSwapContract_CoinInputs(ctx context.Context, 
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.CoinInputs, nil
+		return obj.CoinInput, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.([]*Input)
+	res := resTmp.(*Input)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx, field.Selections, res)
+	return ec.marshalNInput2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AtomicSwapContract_CoinOutputs(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
+func (ec *executionContext) _AtomicSwapContract_CoinOutput(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapContract) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -2447,7 +2480,7 @@ func (ec *executionContext) _AtomicSwapContract_CoinOutputs(ctx context.Context,
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.CoinOutputs, nil
+		return obj.CoinOutput, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2456,10 +2489,10 @@ func (ec *executionContext) _AtomicSwapContract_CoinOutputs(ctx context.Context,
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*Output)
+	res := resTmp.(*Output)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
+	return ec.marshalOOutput2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AtomicSwapFulfillment_Version(ctx context.Context, field graphql.CollectedField, obj *AtomicSwapFulfillment) (ret graphql.Marshaler) {
@@ -2784,6 +2817,117 @@ func (ec *executionContext) _Balance_Locked(ctx context.Context, field graphql.C
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Balance_LastUpdateTimestamp(ctx context.Context, field graphql.CollectedField, obj *Balance) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Balance",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastUpdateTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(types.Timestamp)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Balance_LastUpdateBlockHeight(ctx context.Context, field graphql.CollectedField, obj *Balance) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Balance",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastUpdateBlockHeight, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(types.BlockHeight)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNBlockHeight2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Balance_LastUpdateTransaction(ctx context.Context, field graphql.CollectedField, obj *Balance) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Balance",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.LastUpdateTransaction, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(crypto.Hash)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Block_Header(ctx context.Context, field graphql.CollectedField, obj *Block) (ret graphql.Marshaler) {
@@ -8594,10 +8738,13 @@ func (ec *executionContext) _AtomicSwapContract(ctx context.Context, sel ast.Sel
 			}
 		case "Transactions":
 			out.Values[i] = ec._AtomicSwapContract_Transactions(ctx, field, obj)
-		case "CoinInputs":
-			out.Values[i] = ec._AtomicSwapContract_CoinInputs(ctx, field, obj)
-		case "CoinOutputs":
-			out.Values[i] = ec._AtomicSwapContract_CoinOutputs(ctx, field, obj)
+		case "CoinInput":
+			out.Values[i] = ec._AtomicSwapContract_CoinInput(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "CoinOutput":
+			out.Values[i] = ec._AtomicSwapContract_CoinOutput(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8697,6 +8844,21 @@ func (ec *executionContext) _Balance(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "Locked":
 			out.Values[i] = ec._Balance_Locked(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "LastUpdateTimestamp":
+			out.Values[i] = ec._Balance_LastUpdateTimestamp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "LastUpdateBlockHeight":
+			out.Values[i] = ec._Balance_LastUpdateBlockHeight(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "LastUpdateTransaction":
+			out.Values[i] = ec._Balance_LastUpdateTransaction(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

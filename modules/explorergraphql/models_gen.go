@@ -54,8 +54,8 @@ type AtomicSwapContract struct {
 	BlockHeight         types.BlockHeight      `json:"BlockHeight"`
 	BlockTime           types.Timestamp        `json:"BlockTime"`
 	Transactions        []Transaction          `json:"Transactions"`
-	CoinInputs          []*Input               `json:"CoinInputs"`
-	CoinOutputs         []*Output              `json:"CoinOutputs"`
+	CoinInput           *Input                 `json:"CoinInput"`
+	CoinOutput          *Output                `json:"CoinOutput"`
 }
 
 func (AtomicSwapContract) IsObject()   {}
@@ -77,8 +77,11 @@ type AtomicSwapParticipant struct {
 }
 
 type Balance struct {
-	Unlocked BigInt `json:"Unlocked"`
-	Locked   BigInt `json:"Locked"`
+	Unlocked              BigInt            `json:"Unlocked"`
+	Locked                BigInt            `json:"Locked"`
+	LastUpdateTimestamp   types.Timestamp   `json:"LastUpdateTimestamp"`
+	LastUpdateBlockHeight types.BlockHeight `json:"LastUpdateBlockHeight"`
+	LastUpdateTransaction crypto.Hash       `json:"LastUpdateTransaction"`
 }
 
 type Block struct {
