@@ -99,11 +99,6 @@ type ComplexityRoot struct {
 		Type   func(childComplexity int) int
 	}
 
-	FeePayout struct {
-		Output func(childComplexity int) int
-		Value  func(childComplexity int) int
-	}
-
 	Input struct {
 		Fulfillment func(childComplexity int) int
 		ID          func(childComplexity int) int
@@ -256,6 +251,11 @@ type ComplexityRoot struct {
 		ID                func(childComplexity int) int
 		TransactionOrder  func(childComplexity int) int
 		Version           func(childComplexity int) int
+	}
+
+	TransactionFeePayout struct {
+		BlockPayout func(childComplexity int) int
+		Value       func(childComplexity int) int
 	}
 
 	UnlockHashCondition struct {
@@ -512,20 +512,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.BlockPayout.Type(childComplexity), true
-
-	case "FeePayout.Output":
-		if e.complexity.FeePayout.Output == nil {
-			break
-		}
-
-		return e.complexity.FeePayout.Output(childComplexity), true
-
-	case "FeePayout.Value":
-		if e.complexity.FeePayout.Value == nil {
-			break
-		}
-
-		return e.complexity.FeePayout.Value(childComplexity), true
 
 	case "Input.Fulfillment":
 		if e.complexity.Input.Fulfillment == nil {
@@ -1325,6 +1311,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.StandardTransaction.Version(childComplexity), true
 
+	case "TransactionFeePayout.BlockPayout":
+		if e.complexity.TransactionFeePayout.BlockPayout == nil {
+			break
+		}
+
+		return e.complexity.TransactionFeePayout.BlockPayout(childComplexity), true
+
+	case "TransactionFeePayout.Value":
+		if e.complexity.TransactionFeePayout.Value == nil {
+			break
+		}
+
+		return e.complexity.TransactionFeePayout.Value(childComplexity), true
+
 	case "UnlockHashCondition.UnlockHash":
 		if e.complexity.UnlockHashCondition.UnlockHash == nil {
 			break
@@ -1443,7 +1443,7 @@ interface Transaction {
 
     CoinInputs: [Input!]
     CoinOutputs: [Output!]
-    FeePayouts: [FeePayout!]
+    FeePayouts: [TransactionFeePayout!]
     ArbitraryData: BinaryData
 }
 
@@ -1462,7 +1462,7 @@ type StandardTransaction implements Transaction {
     BlockStakeInputs: [Input!]
     BlockStakeOutputs: [Output!]
 
-    FeePayouts: [FeePayout!]
+    FeePayouts: [TransactionFeePayout!]
     ArbitraryData: BinaryData
 }
 
@@ -1483,7 +1483,7 @@ type MintConditionDefinitionTransaction implements Transaction {
     CoinInputs: [Input!]
     CoinOutputs: [Output!]
 
-    FeePayouts: [FeePayout!]
+    FeePayouts: [TransactionFeePayout!]
     ArbitraryData: BinaryData
 }
 
@@ -1503,7 +1503,7 @@ type MintCoinCreationTransaction implements Transaction {
     CoinInputs: [Input!]
     CoinOutputs: [Output!]!
 
-    FeePayouts: [FeePayout!]
+    FeePayouts: [TransactionFeePayout!]
     ArbitraryData: BinaryData
 }
 
@@ -1519,7 +1519,7 @@ type MintCoinDestructionTransaction implements Transaction {
     CoinInputs: [Input!]!
     CoinOutputs: [Output!]
 
-    FeePayouts: [FeePayout!]
+    FeePayouts: [TransactionFeePayout!]
     ArbitraryData: BinaryData
 }
 
@@ -1549,8 +1549,8 @@ type BlockPayout {
     Type: BlockPayoutType
 }
 
-type FeePayout {
-    Output: Output!
+type TransactionFeePayout {
+    BlockPayout: BlockPayout
     Value: BigInt!
 }
 
@@ -3070,80 +3070,6 @@ func (ec *executionContext) _BlockPayout_Type(ctx context.Context, field graphql
 	return ec.marshalOBlockPayoutType2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayoutType(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _FeePayout_Output(ctx context.Context, field graphql.CollectedField, obj *FeePayout) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "FeePayout",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Output, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !ec.HasError(rctx) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*Output)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNOutput2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _FeePayout_Value(ctx context.Context, field graphql.CollectedField, obj *FeePayout) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "FeePayout",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Value, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !ec.HasError(rctx) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(BigInt)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _Input_ID(ctx context.Context, field graphql.CollectedField, obj *Input) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -3891,10 +3817,10 @@ func (ec *executionContext) _MintCoinCreationTransaction_FeePayouts(ctx context.
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*FeePayout)
+	res := resTmp.([]*TransactionFeePayout)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx, field.Selections, res)
+	return ec.marshalOTransactionFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinCreationTransaction_ArbitraryData(ctx context.Context, field graphql.CollectedField, obj *MintCoinCreationTransaction) (ret graphql.Marshaler) {
@@ -4243,10 +4169,10 @@ func (ec *executionContext) _MintCoinDestructionTransaction_FeePayouts(ctx conte
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*FeePayout)
+	res := resTmp.([]*TransactionFeePayout)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx, field.Selections, res)
+	return ec.marshalOTransactionFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintCoinDestructionTransaction_ArbitraryData(ctx context.Context, field graphql.CollectedField, obj *MintCoinDestructionTransaction) (ret graphql.Marshaler) {
@@ -4737,10 +4663,10 @@ func (ec *executionContext) _MintConditionDefinitionTransaction_FeePayouts(ctx c
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*FeePayout)
+	res := resTmp.([]*TransactionFeePayout)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx, field.Selections, res)
+	return ec.marshalOTransactionFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _MintConditionDefinitionTransaction_ArbitraryData(ctx context.Context, field graphql.CollectedField, obj *MintConditionDefinitionTransaction) (ret graphql.Marshaler) {
@@ -7078,10 +7004,10 @@ func (ec *executionContext) _StandardTransaction_FeePayouts(ctx context.Context,
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*FeePayout)
+	res := resTmp.([]*TransactionFeePayout)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx, field.Selections, res)
+	return ec.marshalOTransactionFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _StandardTransaction_ArbitraryData(ctx context.Context, field graphql.CollectedField, obj *StandardTransaction) (ret graphql.Marshaler) {
@@ -7116,6 +7042,77 @@ func (ec *executionContext) _StandardTransaction_ArbitraryData(ctx context.Conte
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _TransactionFeePayout_BlockPayout(ctx context.Context, field graphql.CollectedField, obj *TransactionFeePayout) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "TransactionFeePayout",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BlockPayout, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*BlockPayout)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBlockPayout2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _TransactionFeePayout_Value(ctx context.Context, field graphql.CollectedField, obj *TransactionFeePayout) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "TransactionFeePayout",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(BigInt)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNBigInt2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _UnlockHashCondition_Version(ctx context.Context, field graphql.CollectedField, obj *UnlockHashCondition) (ret graphql.Marshaler) {
@@ -8808,38 +8805,6 @@ func (ec *executionContext) _BlockPayout(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
-var feePayoutImplementors = []string{"FeePayout"}
-
-func (ec *executionContext) _FeePayout(ctx context.Context, sel ast.SelectionSet, obj *FeePayout) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.RequestContext, sel, feePayoutImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("FeePayout")
-		case "Output":
-			out.Values[i] = ec._FeePayout_Output(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "Value":
-			out.Values[i] = ec._FeePayout_Value(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
 var inputImplementors = []string{"Input", "Object"}
 
 func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, obj *Input) graphql.Marshaler {
@@ -9603,6 +9568,35 @@ func (ec *executionContext) _StandardTransaction(ctx context.Context, sel ast.Se
 	return out
 }
 
+var transactionFeePayoutImplementors = []string{"TransactionFeePayout"}
+
+func (ec *executionContext) _TransactionFeePayout(ctx context.Context, sel ast.SelectionSet, obj *TransactionFeePayout) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, transactionFeePayoutImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("TransactionFeePayout")
+		case "BlockPayout":
+			out.Values[i] = ec._TransactionFeePayout_BlockPayout(ctx, field, obj)
+		case "Value":
+			out.Values[i] = ec._TransactionFeePayout_Value(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var unlockHashConditionImplementors = []string{"UnlockHashCondition", "UnlockCondition"}
 
 func (ec *executionContext) _UnlockHashCondition(ctx context.Context, sel ast.SelectionSet, obj *UnlockHashCondition) graphql.Marshaler {
@@ -9991,20 +9985,6 @@ func (ec *executionContext) marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋr
 	return ec._ByteVersion(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFeePayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx context.Context, sel ast.SelectionSet, v FeePayout) graphql.Marshaler {
-	return ec._FeePayout(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNFeePayout2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx context.Context, sel ast.SelectionSet, v *FeePayout) graphql.Marshaler {
-	if v == nil {
-		if !ec.HasError(graphql.GetResolverContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._FeePayout(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
 	return ec.unmarshalInputHash(ctx, v)
 }
@@ -10287,6 +10267,20 @@ func (ec *executionContext) marshalNTransaction2ᚕgithubᚗcomᚋthreefoldtech�
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalNTransactionFeePayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx context.Context, sel ast.SelectionSet, v TransactionFeePayout) graphql.Marshaler {
+	return ec._TransactionFeePayout(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTransactionFeePayout2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx context.Context, sel ast.SelectionSet, v *TransactionFeePayout) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._TransactionFeePayout(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNUnlockCondition2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockCondition(ctx context.Context, sel ast.SelectionSet, v UnlockCondition) graphql.Marshaler {
@@ -10651,6 +10645,10 @@ func (ec *executionContext) marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtech�
 	return ec._BlockHeight(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalOBlockPayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx context.Context, sel ast.SelectionSet, v BlockPayout) graphql.Marshaler {
+	return ec._BlockPayout(ctx, sel, &v)
+}
+
 func (ec *executionContext) marshalOBlockPayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx context.Context, sel ast.SelectionSet, v []*BlockPayout) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -10689,6 +10687,13 @@ func (ec *executionContext) marshalOBlockPayout2ᚕᚖgithubᚗcomᚋthreefoldte
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalOBlockPayout2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayout(ctx context.Context, sel ast.SelectionSet, v *BlockPayout) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._BlockPayout(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOBlockPayoutType2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayoutType(ctx context.Context, v interface{}) (BlockPayoutType, error) {
@@ -10743,46 +10748,6 @@ func (ec *executionContext) marshalOContract2githubᚗcomᚋthreefoldtechᚋrivi
 		return graphql.Null
 	}
 	return ec._Contract(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalOFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx context.Context, sel ast.SelectionSet, v []*FeePayout) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		rctx := &graphql.ResolverContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithResolverContext(ctx, rctx)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNFeePayout2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐFeePayout(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
 }
 
 func (ec *executionContext) unmarshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
@@ -11169,6 +11134,46 @@ func (ec *executionContext) marshalOTransaction2ᚕgithubᚗcomᚋthreefoldtech�
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalNTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalOTransactionFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx context.Context, sel ast.SelectionSet, v []*TransactionFeePayout) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		rctx := &graphql.ResolverContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithResolverContext(ctx, rctx)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNTransactionFeePayout2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

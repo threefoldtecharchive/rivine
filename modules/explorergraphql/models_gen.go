@@ -100,11 +100,6 @@ type BlockPayout struct {
 	Type   *BlockPayoutType `json:"Type"`
 }
 
-type FeePayout struct {
-	Output *Output `json:"Output"`
-	Value  BigInt  `json:"Value"`
-}
-
 type Input struct {
 	ID          crypto.Hash       `json:"ID"`
 	Value       BigInt            `json:"Value"`
@@ -125,55 +120,55 @@ type LockTimeCondition struct {
 func (LockTimeCondition) IsUnlockCondition() {}
 
 type MintCoinCreationTransaction struct {
-	ID               crypto.Hash        `json:"ID"`
-	Version          ByteVersion        `json:"Version"`
-	BlockID          crypto.Hash        `json:"BlockID"`
-	BlockHeight      *types.BlockHeight `json:"BlockHeight"`
-	BlockTimestamp   *types.Timestamp   `json:"BlockTimestamp"`
-	TransactionOrder *int               `json:"TransactionOrder"`
-	Nonce            BinaryData         `json:"Nonce"`
-	MintCondition    UnlockCondition    `json:"MintCondition"`
-	MintFulfillment  UnlockFulfillment  `json:"MintFulfillment"`
-	CoinInputs       []*Input           `json:"CoinInputs"`
-	CoinOutputs      []*Output          `json:"CoinOutputs"`
-	FeePayouts       []*FeePayout       `json:"FeePayouts"`
-	ArbitraryData    *BinaryData        `json:"ArbitraryData"`
+	ID               crypto.Hash             `json:"ID"`
+	Version          ByteVersion             `json:"Version"`
+	BlockID          crypto.Hash             `json:"BlockID"`
+	BlockHeight      *types.BlockHeight      `json:"BlockHeight"`
+	BlockTimestamp   *types.Timestamp        `json:"BlockTimestamp"`
+	TransactionOrder *int                    `json:"TransactionOrder"`
+	Nonce            BinaryData              `json:"Nonce"`
+	MintCondition    UnlockCondition         `json:"MintCondition"`
+	MintFulfillment  UnlockFulfillment       `json:"MintFulfillment"`
+	CoinInputs       []*Input                `json:"CoinInputs"`
+	CoinOutputs      []*Output               `json:"CoinOutputs"`
+	FeePayouts       []*TransactionFeePayout `json:"FeePayouts"`
+	ArbitraryData    *BinaryData             `json:"ArbitraryData"`
 }
 
 func (MintCoinCreationTransaction) IsObject()      {}
 func (MintCoinCreationTransaction) IsTransaction() {}
 
 type MintCoinDestructionTransaction struct {
-	ID               crypto.Hash        `json:"ID"`
-	Version          ByteVersion        `json:"Version"`
-	BlockID          crypto.Hash        `json:"BlockID"`
-	BlockHeight      *types.BlockHeight `json:"BlockHeight"`
-	BlockTimestamp   *types.Timestamp   `json:"BlockTimestamp"`
-	TransactionOrder *int               `json:"TransactionOrder"`
-	CoinInputs       []*Input           `json:"CoinInputs"`
-	CoinOutputs      []*Output          `json:"CoinOutputs"`
-	FeePayouts       []*FeePayout       `json:"FeePayouts"`
-	ArbitraryData    *BinaryData        `json:"ArbitraryData"`
+	ID               crypto.Hash             `json:"ID"`
+	Version          ByteVersion             `json:"Version"`
+	BlockID          crypto.Hash             `json:"BlockID"`
+	BlockHeight      *types.BlockHeight      `json:"BlockHeight"`
+	BlockTimestamp   *types.Timestamp        `json:"BlockTimestamp"`
+	TransactionOrder *int                    `json:"TransactionOrder"`
+	CoinInputs       []*Input                `json:"CoinInputs"`
+	CoinOutputs      []*Output               `json:"CoinOutputs"`
+	FeePayouts       []*TransactionFeePayout `json:"FeePayouts"`
+	ArbitraryData    *BinaryData             `json:"ArbitraryData"`
 }
 
 func (MintCoinDestructionTransaction) IsObject()      {}
 func (MintCoinDestructionTransaction) IsTransaction() {}
 
 type MintConditionDefinitionTransaction struct {
-	ID               crypto.Hash        `json:"ID"`
-	Version          ByteVersion        `json:"Version"`
-	BlockID          crypto.Hash        `json:"BlockID"`
-	BlockHeight      *types.BlockHeight `json:"BlockHeight"`
-	BlockTimestamp   *types.Timestamp   `json:"BlockTimestamp"`
-	TransactionOrder *int               `json:"TransactionOrder"`
-	Nonce            BinaryData         `json:"Nonce"`
-	MintCondition    UnlockCondition    `json:"MintCondition"`
-	MintFulfillment  UnlockFulfillment  `json:"MintFulfillment"`
-	NewMintCondition UnlockCondition    `json:"NewMintCondition"`
-	CoinInputs       []*Input           `json:"CoinInputs"`
-	CoinOutputs      []*Output          `json:"CoinOutputs"`
-	FeePayouts       []*FeePayout       `json:"FeePayouts"`
-	ArbitraryData    *BinaryData        `json:"ArbitraryData"`
+	ID               crypto.Hash             `json:"ID"`
+	Version          ByteVersion             `json:"Version"`
+	BlockID          crypto.Hash             `json:"BlockID"`
+	BlockHeight      *types.BlockHeight      `json:"BlockHeight"`
+	BlockTimestamp   *types.Timestamp        `json:"BlockTimestamp"`
+	TransactionOrder *int                    `json:"TransactionOrder"`
+	Nonce            BinaryData              `json:"Nonce"`
+	MintCondition    UnlockCondition         `json:"MintCondition"`
+	MintFulfillment  UnlockFulfillment       `json:"MintFulfillment"`
+	NewMintCondition UnlockCondition         `json:"NewMintCondition"`
+	CoinInputs       []*Input                `json:"CoinInputs"`
+	CoinOutputs      []*Output               `json:"CoinOutputs"`
+	FeePayouts       []*TransactionFeePayout `json:"FeePayouts"`
+	ArbitraryData    *BinaryData             `json:"ArbitraryData"`
 }
 
 func (MintConditionDefinitionTransaction) IsObject()      {}
@@ -264,22 +259,27 @@ func (SingleSignatureWallet) IsObject() {}
 func (SingleSignatureWallet) IsWallet() {}
 
 type StandardTransaction struct {
-	ID                crypto.Hash        `json:"ID"`
-	Version           ByteVersion        `json:"Version"`
-	BlockID           crypto.Hash        `json:"BlockID"`
-	BlockHeight       *types.BlockHeight `json:"BlockHeight"`
-	BlockTimestamp    *types.Timestamp   `json:"BlockTimestamp"`
-	TransactionOrder  *int               `json:"TransactionOrder"`
-	CoinInputs        []*Input           `json:"CoinInputs"`
-	CoinOutputs       []*Output          `json:"CoinOutputs"`
-	BlockStakeInputs  []*Input           `json:"BlockStakeInputs"`
-	BlockStakeOutputs []*Output          `json:"BlockStakeOutputs"`
-	FeePayouts        []*FeePayout       `json:"FeePayouts"`
-	ArbitraryData     *BinaryData        `json:"ArbitraryData"`
+	ID                crypto.Hash             `json:"ID"`
+	Version           ByteVersion             `json:"Version"`
+	BlockID           crypto.Hash             `json:"BlockID"`
+	BlockHeight       *types.BlockHeight      `json:"BlockHeight"`
+	BlockTimestamp    *types.Timestamp        `json:"BlockTimestamp"`
+	TransactionOrder  *int                    `json:"TransactionOrder"`
+	CoinInputs        []*Input                `json:"CoinInputs"`
+	CoinOutputs       []*Output               `json:"CoinOutputs"`
+	BlockStakeInputs  []*Input                `json:"BlockStakeInputs"`
+	BlockStakeOutputs []*Output               `json:"BlockStakeOutputs"`
+	FeePayouts        []*TransactionFeePayout `json:"FeePayouts"`
+	ArbitraryData     *BinaryData             `json:"ArbitraryData"`
 }
 
 func (StandardTransaction) IsObject()      {}
 func (StandardTransaction) IsTransaction() {}
+
+type TransactionFeePayout struct {
+	BlockPayout *BlockPayout `json:"BlockPayout"`
+	Value       BigInt       `json:"Value"`
+}
 
 type UnlockHashCondition struct {
 	Version    ByteVersion      `json:"Version"`
