@@ -1,5 +1,31 @@
 # eosio
 
 ## Consensus
-A permissioned blockchain using a delegated proof of stake algorithm.
 
+Permissioned blockchain using a delegated proof of stake algorithm.
+
+## Smart contracts
+
+Written in C++ and compiled to wasm.
+
+While other compilers exist for rust and solidity, verifying a smart contract can not be done without the source code being published and having a reproducible build and it is still hard to read the code and find flaws.
+
+Smart contracts can simply be upgraded by the publisher.
+
+## Private chains
+
+Using the eos.io toolkit, it is easy to set up private chains.
+
+## Controversy
+
+A lot of discussion is going on about the centralization of Block propagators (90% in China) and some questionable actions they took(freezing of accounts).
+
+Even a sentiment of calling the entire EOS system a Scam.
+
+Block.one, the company behind eos managed to raise a huge amount during their ICO.
+Yet they fail to deliver on some promises like withdrawing the announced decentralized facebook project.
+
+## Questions
+
+* While it seems that the platform is created for making private chains, what does the public EOS token serve?
+  * "A Developer needs to hold eos tokens, not spend them in order to use network resources and to build and run dApps".
