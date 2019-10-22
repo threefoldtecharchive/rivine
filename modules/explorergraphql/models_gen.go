@@ -93,6 +93,7 @@ func (Block) IsObject() {}
 
 type BlockHeader struct {
 	ID          crypto.Hash        `json:"ID"`
+	ParentID    *crypto.Hash       `json:"ParentID"`
 	BlockTime   *types.Timestamp   `json:"BlockTime"`
 	BlockHeight *types.BlockHeight `json:"BlockHeight"`
 	Payouts     []*BlockPayout     `json:"Payouts"`

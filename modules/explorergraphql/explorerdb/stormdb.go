@@ -1,7 +1,9 @@
 package explorerdb
 
 import (
+	"encoding/hex"
 	"fmt"
+	"reflect"
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
@@ -42,6 +44,13 @@ const (
 type rivbinMarshalUnmarshaler struct{}
 
 func (rb rivbinMarshalUnmarshaler) Marshal(v interface{}) ([]byte, error) {
+	// do not marshal ptrs, this function is only called on root objects, so should be fine
+	// ... last famous words o.o
+	val := reflect.ValueOf(v)
+	if val.IsValid() && val.Kind() == reflect.Ptr && !val.IsNil() {
+		val = val.Elem()
+	}
+	v = val.Interface()
 	return rivbin.Marshal(v)
 }
 func (rb rivbinMarshalUnmarshaler) Unmarshal(b []byte, v interface{}) error {
@@ -54,7 +63,8 @@ func (rb rivbinMarshalUnmarshaler) Name() string {
 func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
 	b, err := rivbin.Marshal(chainCtx)
 	if err != nil {
-		return err
+		return fmt.Errorf(
+			"failed to marshal chain context %v: %v", chainCtx, err)
 	}
 	return sdb.db.Bolt.Update(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketNameMetadata)
@@ -86,7 +96,9 @@ func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 	var chainCtx ChainContext
 	err = rivbin.Unmarshal(chainCtxBytes, &chainCtx)
 	if err != nil {
-		return ChainContext{}, err
+		return ChainContext{}, fmt.Errorf(
+			"failed to unmarshal chain context %s: %v",
+			hex.EncodeToString(chainCtxBytes), err)
 	}
 	return chainCtx, nil
 }
@@ -94,22 +106,26 @@ func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error {
 	node := sdb.db.From(nodeNameObjects)
 	// store block
-	err := node.Save(block)
+	err := node.Save(&block)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to apply block: failed to save block %s: %v", block.ID.String(), err)
 	}
 	// store transactions
-	for _, tx := range txs {
-		err = node.Save(tx)
+	for idx, tx := range txs {
+		err = node.Save(&tx)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to apply block: failed to save txn %s (#%d) of block %s: %v",
+				tx.ID.String(), idx+1, block.ID.String(), err)
 		}
 	}
 	// store outputs
-	for _, output := range outputs {
-		err = node.Save(output)
+	for idx, output := range outputs {
+		err = node.Save(&output)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to apply block: failed to save output %s (#%d) of parent %s: %v",
+				output.ID.String(), idx+1, output.ParentID.String(), err)
 		}
 	}
 	// store inputs
@@ -117,14 +133,19 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 		var output Output
 		err = node.One(nodeObjectKeyID, outputID, &output)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to apply block %s: failed to update output (as spent): failed to fetch existing output %s: %v",
+				block.ID.String(), outputID.String(), err)
 		}
 		if output.SpenditureData != nil {
-			return fmt.Errorf("inconsent data stored for output %s: spenditure data should still be nil at the moment", outputID.String())
+			return fmt.Errorf("failed to apply block %s: failed to update output (as spent): inconsent data stored for output %s: spenditure data should still be nil at the moment",
+				block.ID.String(), outputID.String())
 		}
-		err = node.UpdateField(output, "SpenditureData", &spenditureData)
+		err = node.UpdateField(&output, "SpenditureData", &spenditureData)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to apply block %s: failed to update output (as spent) from parent %s: failed to update field 'SpenditureData' of existing output %s: %v",
+				block.ID.String(), outputID.String(), output.ParentID.String(), err)
 		}
 	}
 	// all good
@@ -136,20 +157,24 @@ func (sdb *StormDB) RevertBlock(block types.BlockID, txs []types.TransactionID, 
 	// delete block
 	err := deleteFromNodeByID(node, block, new(Block))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to revert block: failed to delete block %s by ID: %v", block.String(), err)
 	}
 	// delete transactions
-	for _, tx := range txs {
+	for idx, tx := range txs {
 		err = deleteFromNodeByID(node, tx, new(Transaction))
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to revert block: failed to delete txn %s (#%d) of block %s by ID: %v",
+				tx.String(), idx+1, block.String(), err)
 		}
 	}
 	// delete outputs
 	for _, output := range outputs {
 		err = deleteFromNodeByID(node, output, new(Output))
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to revert block: failed to delete unspent output %s of block %s by ID: %v",
+				output.String(), block.String(), err)
 		}
 	}
 	// delete inputs
@@ -157,14 +182,19 @@ func (sdb *StormDB) RevertBlock(block types.BlockID, txs []types.TransactionID, 
 		var output Output
 		err = node.One(nodeObjectKeyID, inputID, &output)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to revert block: failed to unmark spent output %s of block %s: failed to fetch by ID: %v",
+				inputID.String(), block.String(), err)
 		}
 		if output.SpenditureData == nil {
-			return fmt.Errorf("inconsent data stored for output %s: spenditure data should not be nil at the moment", inputID.String())
+			return fmt.Errorf("failed to revert block: failed to unmark spent output %s of block %s: inconsent data stored for output: spenditure data should not be nil at the moment",
+				inputID.String(), block.String())
 		}
-		err = node.UpdateField(output, "SpenditureData", nil)
+		err = node.UpdateField(&output, "SpenditureData", nil)
 		if err != nil {
-			return err
+			return fmt.Errorf(
+				"failed to revert block: failed to unmark spent output %s from parent %s of block %s: failed to write field 'SpenditureData' as nil: %v",
+				inputID.String(), output.ParentID.String(), block.String(), err)
 		}
 	}
 	// all good

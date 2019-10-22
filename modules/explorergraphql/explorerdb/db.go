@@ -1,8 +1,10 @@
 package explorerdb
 
 import (
+	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -44,7 +46,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 		chainCtx.Height--
 		chainCtx.Timestamp = revertedBlock.Timestamp
 
-		block := RivineBlockAsExplorerBlock(revertedBlock)
+		block := RivineBlockAsExplorerBlock(chainCtx.Height, revertedBlock)
 		chainCtx.BlockID = block.ID
 
 		outputs := make([]types.OutputID, 0, len(revertedBlock.MinerPayouts))
@@ -80,7 +82,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 	}
 
 	for _, appliedBlock := range csc.AppliedBlocks {
-		block := RivineBlockAsExplorerBlock(appliedBlock)
+		block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock)
 
 		outputs := make([]Output, 0, len(appliedBlock.MinerPayouts))
 		for idx, mp := range appliedBlock.MinerPayouts {
@@ -95,7 +97,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 			))
 		}
 		// TODO: customize this per chain network
-		feePayoutID := block.Payouts[0]
+		var feePayoutID types.OutputID
 		if len(block.Payouts) > 1 {
 			feePayoutID = block.Payouts[1]
 		}
@@ -156,7 +158,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 	return err
 }
 
-func RivineBlockAsExplorerBlock(block types.Block) Block {
+func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block) Block {
 	// aggregate payouts (as a list of identifiers)
 	payouts := make([]types.OutputID, 0, len(block.MinerPayouts))
 	for idx := range block.MinerPayouts {
@@ -170,6 +172,9 @@ func RivineBlockAsExplorerBlock(block types.Block) Block {
 	// return the block
 	return Block{
 		ID:           block.ID(),
+		ParentID:     block.ParentID,
+		Height:       height,
+		Timestamp:    block.Timestamp,
 		Payouts:      payouts,
 		Transactions: transactions,
 	}
@@ -187,10 +192,19 @@ func RivineTransactionAsTransaction(parent types.BlockID, id types.TransactionID
 	// aggregate outputs (as a list of identifiers)
 	outputs := make([]types.OutputID, 0, len(rtxn.CoinOutputs)+len(rtxn.BlockStakeOutputs))
 	for idx := range rtxn.CoinOutputs {
-		outputs = append(inputs, types.OutputID(rtxn.CoinOutputID(uint64(idx))))
+		outputs = append(outputs, types.OutputID(rtxn.CoinOutputID(uint64(idx))))
 	}
 	for idx := range rtxn.BlockStakeOutputs {
-		outputs = append(inputs, types.OutputID(rtxn.BlockStakeOutputID(uint64(idx))))
+		outputs = append(outputs, types.OutputID(rtxn.BlockStakeOutputID(uint64(idx))))
+	}
+	// encode extension data
+	var encodedExtensionData []byte
+	if rtxn.Extension != nil {
+		var err error
+		encodedExtensionData, err = rivbin.Marshal(rtxn.Extension)
+		if err != nil {
+			build.Severe("failed to encode rivine txn extension data", err)
+		}
 	}
 	// return transaction
 	return Transaction{
@@ -206,7 +220,7 @@ func RivineTransactionAsTransaction(parent types.BlockID, id types.TransactionID
 			Values:   rtxn.MinerFees,
 		},
 
-		ExtensionData: rtxn.Extension,
+		EncodedExtensionData: encodedExtensionData,
 	}
 }
 

@@ -14,6 +14,14 @@ resolver:
   type: Resolver
 autobind: []
 models:
+  BlockHeader:
+    fields:
+      Payouts:
+        resolver: true # force a resolver to be generated
+  Block:
+    fields:
+      Transactions:
+        resolver: true # force a resolver to be generated
   BlockHeight:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.BlockHeight
   Timestamp:

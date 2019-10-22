@@ -11,7 +11,7 @@ type QueryRoot {
   transaction(id: Hash): Transaction
   transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
-  block(id: Hash): Block
+  block(id: Hash, reference: ReferencePoint): Block
   blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
   wallet(unlockhash: UnlockHash): Wallet
@@ -40,6 +40,7 @@ type Block {
 
 type BlockHeader {
     ID: Hash!
+    ParentID: Hash
     BlockTime: Timestamp
     BlockHeight: BlockHeight
     Payouts: [BlockPayout!]

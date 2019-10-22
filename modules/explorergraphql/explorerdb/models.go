@@ -47,12 +47,15 @@ type (
 		Outputs   []types.OutputID
 		FeePayout TransactionFeePayoutInfo
 
-		ExtensionData interface{}
+		EncodedExtensionData []byte
 	}
 
 	Block struct {
-		ID      types.BlockID `storm:"id"`
-		Payouts []types.OutputID
+		ID        types.BlockID `storm:"id"`
+		ParentID  types.BlockID
+		Height    types.BlockHeight
+		Timestamp types.Timestamp
+		Payouts   []types.OutputID
 
 		Transactions []types.TransactionID
 	}

@@ -333,7 +333,7 @@ func runDaemon(cfg ExtendedDaemonConfig, moduleIdentifiers daemon.ModuleIdentifi
 		if moduleIdentifiers.Contains(daemon.ExplorerGraphQLModule.Identifier()) {
 			printModuleIsLoading("graphql explorer")
 			q, err = explorergraphql.New(cs,
-				filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir),
+				filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir, "graphql"),
 				cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
 			if err != nil {
 				servErrs <- err

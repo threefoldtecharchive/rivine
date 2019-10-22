@@ -94,6 +94,7 @@ type ComplexityRoot struct {
 		BlockHeight func(childComplexity int) int
 		BlockTime   func(childComplexity int) int
 		ID          func(childComplexity int) int
+		ParentID    func(childComplexity int) int
 		Payouts     func(childComplexity int) int
 	}
 
@@ -210,7 +211,7 @@ type ComplexityRoot struct {
 	}
 
 	QueryRoot struct {
-		Block        func(childComplexity int, id *crypto.Hash) int
+		Block        func(childComplexity int, id *crypto.Hash, reference *ReferencePoint) int
 		Blocks       func(childComplexity int, after *ReferencePoint, first *int, before *ReferencePoint, last *int) int
 		Contract     func(childComplexity int, unlockhash *types.UnlockHash) int
 		Object       func(childComplexity int, id *BinaryData) int
@@ -271,7 +272,7 @@ type QueryRootResolver interface {
 	Object(ctx context.Context, id *BinaryData) (Object, error)
 	Transaction(ctx context.Context, id *crypto.Hash) (Transaction, error)
 	Transactions(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error)
-	Block(ctx context.Context, id *crypto.Hash) (*Block, error)
+	Block(ctx context.Context, id *crypto.Hash, reference *ReferencePoint) (*Block, error)
 	Blocks(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error)
 	Wallet(ctx context.Context, unlockhash *types.UnlockHash) (Wallet, error)
 	Contract(ctx context.Context, unlockhash *types.UnlockHash) (Contract, error)
@@ -515,6 +516,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.BlockHeader.ID(childComplexity), true
+
+	case "BlockHeader.ParentID":
+		if e.complexity.BlockHeader.ParentID == nil {
+			break
+		}
+
+		return e.complexity.BlockHeader.ParentID(childComplexity), true
 
 	case "BlockHeader.Payouts":
 		if e.complexity.BlockHeader.Payouts == nil {
@@ -1065,7 +1073,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Block(childComplexity, args["id"].(*crypto.Hash)), true
+		return e.complexity.QueryRoot.Block(childComplexity, args["id"].(*crypto.Hash), args["reference"].(*ReferencePoint)), true
 
 	case "QueryRoot.blocks":
 		if e.complexity.QueryRoot.Blocks == nil {
@@ -1425,7 +1433,7 @@ type QueryRoot {
   transaction(id: Hash): Transaction
   transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
-  block(id: Hash): Block
+  block(id: Hash, reference: ReferencePoint): Block
   blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
   wallet(unlockhash: UnlockHash): Wallet
@@ -1454,6 +1462,7 @@ type Block {
 
 type BlockHeader {
     ID: Hash!
+    ParentID: Hash
     BlockTime: Timestamp
     BlockHeight: BlockHeight
     Payouts: [BlockPayout!]
@@ -1778,6 +1787,14 @@ func (ec *executionContext) field_QueryRoot_block_args(ctx context.Context, rawA
 		}
 	}
 	args["id"] = arg0
+	var arg1 *ReferencePoint
+	if tmp, ok := rawArgs["reference"]; ok {
+		arg1, err = ec.unmarshalOReferencePoint2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐReferencePoint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["reference"] = arg1
 	return args, nil
 }
 
@@ -3039,6 +3056,40 @@ func (ec *executionContext) _BlockHeader_ID(ctx context.Context, field graphql.C
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _BlockHeader_ParentID(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "BlockHeader",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*crypto.Hash)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockHeader_BlockTime(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
@@ -5996,7 +6047,7 @@ func (ec *executionContext) _QueryRoot_block(ctx context.Context, field graphql.
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Block(rctx, args["id"].(*crypto.Hash))
+		return ec.resolvers.QueryRoot().Block(rctx, args["id"].(*crypto.Hash), args["reference"].(*ReferencePoint))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8921,6 +8972,8 @@ func (ec *executionContext) _BlockHeader(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "ParentID":
+			out.Values[i] = ec._BlockHeader_ParentID(ctx, field, obj)
 		case "BlockTime":
 			out.Values[i] = ec._BlockHeader_BlockTime(ctx, field, obj)
 		case "BlockHeight":

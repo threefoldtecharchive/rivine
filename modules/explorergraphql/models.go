@@ -1,7 +1,6 @@
 package explorergraphql
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -59,7 +57,7 @@ func (lt *LockTime) UnmarshalGQL(v interface{}) error {
 
 // MarshalGQL implements the graphql.Marshaler interface
 func (bd BinaryData) MarshalGQL(w io.Writer) {
-	io.WriteString(w, base64.StdEncoding.EncodeToString([]byte(bd)))
+	marshalByteSlice(w, bd[:])
 }
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
@@ -141,37 +139,28 @@ func UnmarshalTimestamp(v interface{}) (types.Timestamp, error) {
 
 func MarshalHash(hash crypto.Hash) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		io.WriteString(w, base64.StdEncoding.EncodeToString(hash[:]))
+		marshalStringer(w, &hash)
 	})
 }
 
 func UnmarshalHash(v interface{}) (crypto.Hash, error) {
-	b, err := unmarshalByteSlice(v)
+	var h crypto.Hash
+	err := unmarshalStringer(v, &h)
 	if err != nil {
 		return crypto.Hash{}, err
 	}
-	if len(b) != crypto.HashSize {
-		return crypto.Hash{}, fmt.Errorf("invalid unmarshalled crypto hash of length %d: %s", len(b), hex.EncodeToString(b))
-	}
-	var hash crypto.Hash
-	copy(hash[:], b[:])
-	return hash, nil
+	return h, nil
 }
 
 func MarshalUnlockHash(uh types.UnlockHash) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		b, _ := rivbin.Marshal(uh)
-		io.WriteString(w, base64.StdEncoding.EncodeToString(b))
+		marshalStringer(w, &uh)
 	})
 }
 
 func UnmarshalUnlockHash(v interface{}) (types.UnlockHash, error) {
-	b, err := unmarshalByteSlice(v)
-	if err != nil {
-		return types.UnlockHash{}, err
-	}
 	var uh types.UnlockHash
-	err = rivbin.Unmarshal(b, &uh)
+	err := unmarshalStringer(v, &uh)
 	if err != nil {
 		return types.UnlockHash{}, err
 	}
@@ -180,18 +169,13 @@ func UnmarshalUnlockHash(v interface{}) (types.UnlockHash, error) {
 
 func MarshalPublicKey(pk types.PublicKey) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		b, _ := rivbin.Marshal(pk)
-		io.WriteString(w, base64.StdEncoding.EncodeToString(b))
+		marshalStringer(w, &pk)
 	})
 }
 
 func UnmarshalPublicKey(v interface{}) (types.PublicKey, error) {
-	b, err := unmarshalByteSlice(v)
-	if err != nil {
-		return types.PublicKey{}, err
-	}
 	var pk types.PublicKey
-	err = rivbin.Unmarshal(b, &pk)
+	err := unmarshalStringer(v, &pk)
 	if err != nil {
 		return types.PublicKey{}, err
 	}
@@ -200,8 +184,7 @@ func UnmarshalPublicKey(v interface{}) (types.PublicKey, error) {
 
 func MarshalSignature(sig crypto.Signature) graphql.Marshaler {
 	return graphql.WriterFunc(func(w io.Writer) {
-		b, _ := rivbin.Marshal(sig)
-		io.WriteString(w, base64.StdEncoding.EncodeToString(b))
+		marshalByteSlice(w, sig[:])
 	})
 }
 
@@ -210,11 +193,13 @@ func UnmarshalSignature(v interface{}) (crypto.Signature, error) {
 	if err != nil {
 		return crypto.Signature{}, err
 	}
-	var sig crypto.Signature
-	err = rivbin.Unmarshal(b, &sig)
-	if err != nil {
-		return crypto.Signature{}, err
+	if lb := len(b); lb != crypto.SignatureSize {
+		return crypto.Signature{}, fmt.Errorf(
+			"signature is supposed to be of length %d not %d: invalid '0x%s'",
+			crypto.SignatureSize, lb, hex.EncodeToString(b))
 	}
+	var sig crypto.Signature
+	copy(sig[:], b[:])
 	return sig, nil
 }
 
@@ -227,6 +212,16 @@ func unmarshalUint8(v interface{}) (uint8, error) {
 		return uint8(x), err
 	case uint8:
 		return v, nil
+	case int64:
+		if v < 0 || v > 255 {
+			return 0, fmt.Errorf("%d is out of range: cannot be casted to an uint8", v)
+		}
+		return uint8(v), nil
+	case int:
+		if v < 0 || v > 255 {
+			return 0, fmt.Errorf("%d is out of range: cannot be casted to an uint8", v)
+		}
+		return uint8(v), nil
 	case json.Number:
 		x, err := strconv.ParseUint(string(v), 10, 8)
 		return uint8(x), err
@@ -243,6 +238,16 @@ func unmarshalUint64(v interface{}) (uint64, error) {
 		return uint64(v), nil
 	case uint64:
 		return v, nil
+	case int64:
+		if v < 0 {
+			return 0, fmt.Errorf("%d is out of range: cannot be casted to an uint64 as it is negative", v)
+		}
+		return uint64(v), nil
+	case int:
+		if v < 0 {
+			return 0, fmt.Errorf("%d is out of range: cannot be casted to an uint64 as it is negative", v)
+		}
+		return uint64(v), nil
 	case json.Number:
 		return strconv.ParseUint(string(v), 10, 64)
 	default:
@@ -250,10 +255,32 @@ func unmarshalUint64(v interface{}) (uint64, error) {
 	}
 }
 
+type stringer interface {
+	String() string
+	LoadString(string) error
+}
+
+func marshalStringer(w io.Writer, s stringer) {
+	graphql.MarshalString(s.String()).MarshalGQL(w)
+}
+
+func unmarshalStringer(v interface{}, s stringer) error {
+	switch v := v.(type) {
+	case string:
+		return s.LoadString(v)
+	default:
+		return fmt.Errorf("%T is not a string", v)
+	}
+}
+
+func marshalByteSlice(w io.Writer, b []byte) {
+	graphql.MarshalString(hex.EncodeToString(b)).MarshalGQL(w)
+}
+
 func unmarshalByteSlice(v interface{}) ([]byte, error) {
 	switch v := v.(type) {
 	case string:
-		return base64.RawStdEncoding.DecodeString(v)
+		return hex.DecodeString(v)
 	case []byte:
 		return v, nil
 	default:

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/threefoldtech/rivine/build"
@@ -38,7 +39,13 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		return nil, errNilCS
 	}
 
-	db, err := explorerdb.NewStormDB(persistDir)
+	// Make the persist directory
+	err := os.MkdirAll(persistDir, 0700)
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := explorerdb.NewStormDB(filepath.Join(persistDir, "explorer.db"))
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +84,12 @@ func (e *Explorer) SetHTTPHandlers(router *httprouter.Router, endpoint string) {
 	})
 	queryHandler := handler.GraphQL(NewExecutableSchema(Config{Resolvers: &Resolver{db: e.db}}))
 	router.Handle("GET", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		queryHandler(w, r)
+	})
+	router.Handle("POST", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		queryHandler(w, r)
+	})
+	router.Handle("PUT", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		queryHandler(w, r)
 	})
 }
