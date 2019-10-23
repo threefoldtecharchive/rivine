@@ -36,12 +36,12 @@ type Wallet interface {
 }
 
 type AtomicSwapCondition struct {
-	Version      ByteVersion            `json:"Version"`
-	UnlockHash   types.UnlockHash       `json:"UnlockHash"`
-	Sender       *AtomicSwapParticipant `json:"Sender"`
-	Receiver     *AtomicSwapParticipant `json:"Receiver"`
-	HashedSecret BinaryData             `json:"HashedSecret"`
-	TimeLock     LockTime               `json:"TimeLock"`
+	Version      ByteVersion              `json:"Version"`
+	UnlockHash   types.UnlockHash         `json:"UnlockHash"`
+	Sender       *UnlockHashPublicKeyPair `json:"Sender"`
+	Receiver     *UnlockHashPublicKeyPair `json:"Receiver"`
+	HashedSecret BinaryData               `json:"HashedSecret"`
+	TimeLock     LockTime                 `json:"TimeLock"`
 }
 
 func (AtomicSwapCondition) IsUnlockCondition() {}
@@ -62,19 +62,14 @@ func (AtomicSwapContract) IsObject()   {}
 func (AtomicSwapContract) IsContract() {}
 
 type AtomicSwapFulfillment struct {
-	Version         ByteVersion      `json:"Version"`
-	ParentCondition UnlockCondition  `json:"ParentCondition"`
-	PublicKey       types.PublicKey  `json:"PublicKey"`
-	Signature       crypto.Signature `json:"Signature"`
-	Secret          *BinaryData      `json:"Secret"`
+	Version         ByteVersion     `json:"Version"`
+	ParentCondition UnlockCondition `json:"ParentCondition"`
+	PublicKey       types.PublicKey `json:"PublicKey"`
+	Signature       Signature       `json:"Signature"`
+	Secret          *BinaryData     `json:"Secret"`
 }
 
 func (AtomicSwapFulfillment) IsUnlockFulfillment() {}
-
-type AtomicSwapParticipant struct {
-	UnlockHash types.UnlockHash `json:"UnlockHash"`
-	PublicKey  *types.PublicKey `json:"PublicKey"`
-}
 
 type Balance struct {
 	Unlocked              BigInt            `json:"Unlocked"`
@@ -105,10 +100,10 @@ type BlockPayout struct {
 }
 
 type Input struct {
-	ID          crypto.Hash       `json:"ID"`
-	Value       BigInt            `json:"Value"`
-	Fulfillment UnlockFulfillment `json:"Fulfillment"`
-	Parent      *Output           `json:"Parent"`
+	ID           crypto.Hash       `json:"ID"`
+	Value        BigInt            `json:"Value"`
+	Fulfillment  UnlockFulfillment `json:"Fulfillment"`
+	ParentOutput *Output           `json:"ParentOutput"`
 }
 
 func (Input) IsObject() {}
@@ -124,35 +119,28 @@ type LockTimeCondition struct {
 func (LockTimeCondition) IsUnlockCondition() {}
 
 type MintCoinCreationTransaction struct {
-	ID               crypto.Hash             `json:"ID"`
-	Version          ByteVersion             `json:"Version"`
-	BlockID          crypto.Hash             `json:"BlockID"`
-	BlockHeight      *types.BlockHeight      `json:"BlockHeight"`
-	BlockTimestamp   *types.Timestamp        `json:"BlockTimestamp"`
-	TransactionOrder *int                    `json:"TransactionOrder"`
-	Nonce            BinaryData              `json:"Nonce"`
-	MintCondition    UnlockCondition         `json:"MintCondition"`
-	MintFulfillment  UnlockFulfillment       `json:"MintFulfillment"`
-	CoinInputs       []*Input                `json:"CoinInputs"`
-	CoinOutputs      []*Output               `json:"CoinOutputs"`
-	FeePayouts       []*TransactionFeePayout `json:"FeePayouts"`
-	ArbitraryData    *BinaryData             `json:"ArbitraryData"`
+	ID              crypto.Hash             `json:"ID"`
+	Version         ByteVersion             `json:"Version"`
+	ParentBlock     *TransactionParentInfo  `json:"ParentBlock"`
+	Nonce           BinaryData              `json:"Nonce"`
+	MintFulfillment UnlockFulfillment       `json:"MintFulfillment"`
+	CoinInputs      []*Input                `json:"CoinInputs"`
+	CoinOutputs     []*Output               `json:"CoinOutputs"`
+	FeePayouts      []*TransactionFeePayout `json:"FeePayouts"`
+	ArbitraryData   *BinaryData             `json:"ArbitraryData"`
 }
 
 func (MintCoinCreationTransaction) IsObject()      {}
 func (MintCoinCreationTransaction) IsTransaction() {}
 
 type MintCoinDestructionTransaction struct {
-	ID               crypto.Hash             `json:"ID"`
-	Version          ByteVersion             `json:"Version"`
-	BlockID          crypto.Hash             `json:"BlockID"`
-	BlockHeight      *types.BlockHeight      `json:"BlockHeight"`
-	BlockTimestamp   *types.Timestamp        `json:"BlockTimestamp"`
-	TransactionOrder *int                    `json:"TransactionOrder"`
-	CoinInputs       []*Input                `json:"CoinInputs"`
-	CoinOutputs      []*Output               `json:"CoinOutputs"`
-	FeePayouts       []*TransactionFeePayout `json:"FeePayouts"`
-	ArbitraryData    *BinaryData             `json:"ArbitraryData"`
+	ID            crypto.Hash             `json:"ID"`
+	Version       ByteVersion             `json:"Version"`
+	ParentBlock   *TransactionParentInfo  `json:"ParentBlock"`
+	CoinInputs    []*Input                `json:"CoinInputs"`
+	CoinOutputs   []*Output               `json:"CoinOutputs"`
+	FeePayouts    []*TransactionFeePayout `json:"FeePayouts"`
+	ArbitraryData *BinaryData             `json:"ArbitraryData"`
 }
 
 func (MintCoinDestructionTransaction) IsObject()      {}
@@ -161,12 +149,8 @@ func (MintCoinDestructionTransaction) IsTransaction() {}
 type MintConditionDefinitionTransaction struct {
 	ID               crypto.Hash             `json:"ID"`
 	Version          ByteVersion             `json:"Version"`
-	BlockID          crypto.Hash             `json:"BlockID"`
-	BlockHeight      *types.BlockHeight      `json:"BlockHeight"`
-	BlockTimestamp   *types.Timestamp        `json:"BlockTimestamp"`
-	TransactionOrder *int                    `json:"TransactionOrder"`
+	ParentBlock      *TransactionParentInfo  `json:"ParentBlock"`
 	Nonce            BinaryData              `json:"Nonce"`
-	MintCondition    UnlockCondition         `json:"MintCondition"`
 	MintFulfillment  UnlockFulfillment       `json:"MintFulfillment"`
 	NewMintCondition UnlockCondition         `json:"NewMintCondition"`
 	CoinInputs       []*Input                `json:"CoinInputs"`
@@ -179,45 +163,39 @@ func (MintConditionDefinitionTransaction) IsObject()      {}
 func (MintConditionDefinitionTransaction) IsTransaction() {}
 
 type MultiSignatureCondition struct {
-	Version                ByteVersion         `json:"Version"`
-	UnlockHash             types.UnlockHash    `json:"UnlockHash"`
-	UnlockHashes           []*types.UnlockHash `json:"UnlockHashes"`
-	RequiredSignatureCount int                 `json:"RequiredSignatureCount"`
+	Version                ByteVersion                `json:"Version"`
+	UnlockHash             types.UnlockHash           `json:"UnlockHash"`
+	Owners                 []*UnlockHashPublicKeyPair `json:"Owners"`
+	RequiredSignatureCount int                        `json:"RequiredSignatureCount"`
 }
 
 func (MultiSignatureCondition) IsUnlockCondition() {}
 
 type MultiSignatureFulfillment struct {
-	Version         ByteVersion        `json:"Version"`
-	ParentCondition UnlockCondition    `json:"ParentCondition"`
-	PublicKeys      []*types.PublicKey `json:"PublicKeys"`
-	Signatures      []crypto.Signature `json:"Signatures"`
+	Version         ByteVersion               `json:"Version"`
+	ParentCondition UnlockCondition           `json:"ParentCondition"`
+	Pairs           []*PublicKeySignaturePair `json:"Pairs"`
 }
 
 func (MultiSignatureFulfillment) IsUnlockFulfillment() {}
 
 type MultiSignatureWallet struct {
-	UnlockHash             types.UnlockHash             `json:"UnlockHash"`
-	Owners                 []*MultiSignatureWalletOwner `json:"Owners"`
-	RequiredSignatureCount *int                         `json:"RequiredSignatureCount"`
-	BlockHeight            types.BlockHeight            `json:"BlockHeight"`
-	BlockTime              types.Timestamp              `json:"BlockTime"`
-	Transactions           []Transaction                `json:"Transactions"`
-	CoinInputs             []*Input                     `json:"CoinInputs"`
-	CoinOutputs            []*Output                    `json:"CoinOutputs"`
-	BlockStakeInputs       []*Input                     `json:"BlockStakeInputs"`
-	BlockStakeOutputs      []*Output                    `json:"BlockStakeOutputs"`
-	CoinBalance            *Balance                     `json:"CoinBalance"`
-	BlockStakeBalance      *Balance                     `json:"BlockStakeBalance"`
+	UnlockHash             types.UnlockHash           `json:"UnlockHash"`
+	Owners                 []*UnlockHashPublicKeyPair `json:"Owners"`
+	RequiredSignatureCount int                        `json:"RequiredSignatureCount"`
+	BlockHeight            types.BlockHeight          `json:"BlockHeight"`
+	BlockTime              types.Timestamp            `json:"BlockTime"`
+	Transactions           []Transaction              `json:"Transactions"`
+	CoinInputs             []*Input                   `json:"CoinInputs"`
+	CoinOutputs            []*Output                  `json:"CoinOutputs"`
+	BlockStakeInputs       []*Input                   `json:"BlockStakeInputs"`
+	BlockStakeOutputs      []*Output                  `json:"BlockStakeOutputs"`
+	CoinBalance            *Balance                   `json:"CoinBalance"`
+	BlockStakeBalance      *Balance                   `json:"BlockStakeBalance"`
 }
 
 func (MultiSignatureWallet) IsObject() {}
 func (MultiSignatureWallet) IsWallet() {}
-
-type MultiSignatureWalletOwner struct {
-	UnlockHash types.UnlockHash `json:"UnlockHash"`
-	PublicKey  *types.PublicKey `json:"PublicKey"`
-}
 
 type NilCondition struct {
 	Version    ByteVersion      `json:"Version"`
@@ -227,19 +205,24 @@ type NilCondition struct {
 func (NilCondition) IsUnlockCondition() {}
 
 type Output struct {
-	ID        crypto.Hash     `json:"ID"`
-	Value     BigInt          `json:"Value"`
-	Condition UnlockCondition `json:"Condition"`
-	Sibling   *Input          `json:"Sibling"`
+	ID         crypto.Hash     `json:"ID"`
+	Value      BigInt          `json:"Value"`
+	Condition  UnlockCondition `json:"Condition"`
+	ChildInput *Input          `json:"ChildInput"`
 }
 
 func (Output) IsObject() {}
 
+type PublicKeySignaturePair struct {
+	PublicKey types.PublicKey `json:"PublicKey"`
+	Signature Signature       `json:"Signature"`
+}
+
 type SingleSignatureFulfillment struct {
-	Version         ByteVersion      `json:"Version"`
-	ParentCondition UnlockCondition  `json:"ParentCondition"`
-	PublicKey       types.PublicKey  `json:"PublicKey"`
-	Signature       crypto.Signature `json:"Signature"`
+	Version         ByteVersion     `json:"Version"`
+	ParentCondition UnlockCondition `json:"ParentCondition"`
+	PublicKey       types.PublicKey `json:"PublicKey"`
+	Signature       Signature       `json:"Signature"`
 }
 
 func (SingleSignatureFulfillment) IsUnlockFulfillment() {}
@@ -265,10 +248,7 @@ func (SingleSignatureWallet) IsWallet() {}
 type StandardTransaction struct {
 	ID                crypto.Hash             `json:"ID"`
 	Version           ByteVersion             `json:"Version"`
-	BlockID           crypto.Hash             `json:"BlockID"`
-	BlockHeight       *types.BlockHeight      `json:"BlockHeight"`
-	BlockTimestamp    *types.Timestamp        `json:"BlockTimestamp"`
-	TransactionOrder  *int                    `json:"TransactionOrder"`
+	ParentBlock       *TransactionParentInfo  `json:"ParentBlock"`
 	CoinInputs        []*Input                `json:"CoinInputs"`
 	CoinOutputs       []*Output               `json:"CoinOutputs"`
 	BlockStakeInputs  []*Input                `json:"BlockStakeInputs"`
@@ -285,12 +265,27 @@ type TransactionFeePayout struct {
 	Value       BigInt       `json:"Value"`
 }
 
+type TransactionParentInfo struct {
+	ID                  crypto.Hash        `json:"ID"`
+	ParentID            *crypto.Hash       `json:"ParentID"`
+	Height              *types.BlockHeight `json:"Height"`
+	Timestamp           *types.Timestamp   `json:"Timestamp"`
+	TransactionOrder    *int               `json:"TransactionOrder"`
+	SiblingTransactions []Transaction      `json:"SiblingTransactions"`
+}
+
 type UnlockHashCondition struct {
 	Version    ByteVersion      `json:"Version"`
 	UnlockHash types.UnlockHash `json:"UnlockHash"`
+	PublicKey  *types.PublicKey `json:"PublicKey"`
 }
 
 func (UnlockHashCondition) IsUnlockCondition() {}
+
+type UnlockHashPublicKeyPair struct {
+	UnlockHash types.UnlockHash `json:"UnlockHash"`
+	PublicKey  *types.PublicKey `json:"PublicKey"`
+}
 
 type BlockPayoutType string
 

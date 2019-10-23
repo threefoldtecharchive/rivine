@@ -1,27 +1,37 @@
 package explorerdb
 
 import (
+	"fmt"
+
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
+
+	"github.com/threefoldtech/rivine/extensions/minting"
 )
+
+// TODO: integrate context.Context in each call
 
 type DB interface {
 	SetChainContext(ChainContext) error
 	GetChainContext() (ChainContext, error)
 
-	ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error
-	RevertBlock(block types.BlockID, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error
+	ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error
+	// TODO: should we also revert public key (from UH) mapping?
+	RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error
 
 	GetBlock(types.BlockID) (Block, error)
+	GetBlockByReferencePoint(ReferencePoint) (Block, error)
 	GetTransaction(types.TransactionID) (Transaction, error)
 	GetOutput(types.OutputID) (Output, error)
 
 	GetWallet(types.UnlockHash) (WalletData, error)
 	GetMultiSignatureWallet(types.UnlockHash) (MultiSignatureWalletData, error)
 	GetAtomicSwapContract(types.UnlockHash) (AtomicSwapContract, error)
+
+	GetPublicKey(types.UnlockHash) (types.PublicKey, error)
 
 	Close() error
 }
@@ -31,6 +41,12 @@ type ChainContext struct {
 	Height            types.BlockHeight
 	Timestamp         types.Timestamp
 	BlockID           types.BlockID
+}
+
+type BlockRevertContext struct {
+	ID        types.BlockID
+	Height    types.BlockHeight
+	Timestamp types.Timestamp
 }
 
 // TODO: handle also chain-specific stuff, such as chains that do not have block rewards
@@ -75,7 +91,11 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 			}
 		}
 
-		err = db.RevertBlock(block.ID, transactions, outputs, inputs)
+		err = db.RevertBlock(BlockRevertContext{
+			ID:        block.ID,
+			Height:    chainCtx.Height,
+			Timestamp: chainCtx.Timestamp,
+		}, transactions, outputs, inputs)
 		if err != nil {
 			return err
 		}
@@ -83,6 +103,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 
 	for _, appliedBlock := range csc.AppliedBlocks {
 		block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock)
+		publicKeys := make(map[types.UnlockHash]types.PublicKey)
 
 		outputs := make([]Output, 0, len(appliedBlock.MinerPayouts))
 		for idx, mp := range appliedBlock.MinerPayouts {
@@ -110,6 +131,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 				block.Transactions[idx],
 				txn,
 				feePayoutID,
+				publicKeys,
 			)
 			transactions = append(transactions, transaction)
 			// add inputs
@@ -118,32 +140,39 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 					Fulfillment:              input.Fulfillment,
 					FulfillmentTransactionID: block.Transactions[idx],
 				}
+				pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(input.Fulfillment)
+				for _, pair := range pairs {
+					publicKeys[pair.UnlockHash] = pair.PublicKey
+				}
 			}
 			for _, input := range txn.BlockStakeInputs {
 				inputs[types.OutputID(input.ParentID)] = OutputSpenditureData{
 					Fulfillment:              input.Fulfillment,
 					FulfillmentTransactionID: block.Transactions[idx],
 				}
+				pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(input.Fulfillment)
+				for _, pair := range pairs {
+					publicKeys[pair.UnlockHash] = pair.PublicKey
+				}
 			}
 			// add outputs
 			for idx, output := range txn.CoinOutputs {
 				outputs = append(outputs, RivineCoinOutputAsOutput(
 					block.Transactions[idx],
-					types.CoinOutputID(transaction.Outputs[idx]),
+					types.CoinOutputID(transaction.CoinOutputs[idx]),
 					output,
 				))
 			}
-			outputOffset := len(txn.CoinOutputs)
 			for idx, output := range txn.BlockStakeOutputs {
 				outputs = append(outputs, RivineBlockStakeOutputAsOutput(
 					block.Transactions[idx],
-					types.BlockStakeOutputID(transaction.Outputs[outputOffset+idx]),
+					types.BlockStakeOutputID(transaction.BlockStakeOutputs[idx]),
 					output,
 				))
 			}
 		}
 
-		err = db.ApplyBlock(block, transactions, outputs, inputs)
+		err = db.ApplyBlock(block, transactions, outputs, inputs, publicKeys)
 		if err != nil {
 			return err
 		}
@@ -154,6 +183,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 		chainCtx.BlockID = block.ID
 	}
 
+	chainCtx.ConsensusChangeID = csc.ID
 	err = db.SetChainContext(chainCtx)
 	return err
 }
@@ -180,22 +210,24 @@ func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block) Blo
 	}
 }
 
-func RivineTransactionAsTransaction(parent types.BlockID, id types.TransactionID, rtxn types.Transaction, feePayoutID types.OutputID) Transaction {
+func RivineTransactionAsTransaction(parent types.BlockID, id types.TransactionID, rtxn types.Transaction, feePayoutID types.OutputID, publicKeys map[types.UnlockHash]types.PublicKey) Transaction {
 	// aggregate inputs (as a list of identifiers)
-	inputs := make([]types.OutputID, 0, len(rtxn.CoinInputs)+len(rtxn.BlockStakeInputs))
+	coinInputs := make([]types.OutputID, 0, len(rtxn.CoinInputs))
 	for _, input := range rtxn.CoinInputs {
-		inputs = append(inputs, types.OutputID(input.ParentID))
+		coinInputs = append(coinInputs, types.OutputID(input.ParentID))
 	}
+	blockStakeInputs := make([]types.OutputID, 0, len(rtxn.BlockStakeInputs))
 	for _, input := range rtxn.BlockStakeInputs {
-		inputs = append(inputs, types.OutputID(input.ParentID))
+		blockStakeInputs = append(blockStakeInputs, types.OutputID(input.ParentID))
 	}
 	// aggregate outputs (as a list of identifiers)
-	outputs := make([]types.OutputID, 0, len(rtxn.CoinOutputs)+len(rtxn.BlockStakeOutputs))
+	coinOutputs := make([]types.OutputID, 0, len(rtxn.CoinOutputs))
 	for idx := range rtxn.CoinOutputs {
-		outputs = append(outputs, types.OutputID(rtxn.CoinOutputID(uint64(idx))))
+		coinOutputs = append(coinOutputs, types.OutputID(rtxn.CoinOutputID(uint64(idx))))
 	}
+	blockStakeOutputs := make([]types.OutputID, 0, len(rtxn.BlockStakeOutputs))
 	for idx := range rtxn.BlockStakeOutputs {
-		outputs = append(outputs, types.OutputID(rtxn.BlockStakeOutputID(uint64(idx))))
+		blockStakeOutputs = append(blockStakeOutputs, types.OutputID(rtxn.BlockStakeOutputID(uint64(idx))))
 	}
 	// encode extension data
 	var encodedExtensionData []byte
@@ -206,6 +238,20 @@ func RivineTransactionAsTransaction(parent types.BlockID, id types.TransactionID
 			build.Severe("failed to encode rivine txn extension data", err)
 		}
 	}
+	// TODO: handle this in a transactionControllerSupportedManner
+	if rtxn.Version == 128 {
+		data := rtxn.Extension.(*minting.MinterDefinitionTransactionExtension)
+		pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(data.MintFulfillment)
+		for _, pair := range pairs {
+			publicKeys[pair.UnlockHash] = pair.PublicKey
+		}
+	} else if rtxn.Version == 129 {
+		data := rtxn.Extension.(*minting.CoinCreationTransactionExtension)
+		pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(data.MintFulfillment)
+		for _, pair := range pairs {
+			publicKeys[pair.UnlockHash] = pair.PublicKey
+		}
+	}
 	// return transaction
 	return Transaction{
 		ID: id,
@@ -213,15 +259,60 @@ func RivineTransactionAsTransaction(parent types.BlockID, id types.TransactionID
 		ParentBlock: parent,
 		Version:     rtxn.Version,
 
-		Inputs:  inputs,
-		Outputs: outputs,
+		CoinInputs:  coinInputs,
+		CoinOutputs: coinOutputs,
+
+		BlockStakeInputs:  blockStakeInputs,
+		BlockStakeOutputs: blockStakeOutputs,
+
 		FeePayout: TransactionFeePayoutInfo{
 			PayoutID: feePayoutID,
 			Values:   rtxn.MinerFees,
 		},
 
+		ArbitraryData:        rtxn.ArbitraryData,
 		EncodedExtensionData: encodedExtensionData,
 	}
+}
+
+type UnlockHashPublicKeyPair struct {
+	UnlockHash types.UnlockHash
+	PublicKey  types.PublicKey
+}
+
+func RivineUnlockHashPublicKeyPairsFromFulfillment(fulfillment types.UnlockFulfillmentProxy) []UnlockHashPublicKeyPair {
+	switch ft := fulfillment.FulfillmentType(); ft {
+	case types.FulfillmentTypeSingleSignature:
+		ssft := fulfillment.Fulfillment.(*types.SingleSignatureFulfillment)
+		return []UnlockHashPublicKeyPair{
+			{
+				UnlockHash: RivineUnlockHashFromPublicKey(ssft.PublicKey),
+				PublicKey:  ssft.PublicKey,
+			},
+		}
+	case types.FulfillmentTypeMultiSignature:
+		msft := fulfillment.Fulfillment.(*types.MultiSignatureFulfillment)
+		var pairs []UnlockHashPublicKeyPair
+		for _, pair := range msft.Pairs {
+			pairs = append(pairs, UnlockHashPublicKeyPair{
+				UnlockHash: RivineUnlockHashFromPublicKey(pair.PublicKey),
+				PublicKey:  pair.PublicKey,
+			})
+		}
+		return pairs
+	default:
+		build.Critical(fmt.Sprintf("unsupported fulfillment type %d: %v", ft, fulfillment))
+	}
+	// should never reach here
+	return nil
+}
+
+func RivineUnlockHashFromPublicKey(pk types.PublicKey) types.UnlockHash {
+	uh, err := types.NewPubKeyUnlockHash(pk)
+	if err != nil {
+		build.Severe("failed to convert unlock hash to public key", pk, err)
+	}
+	return uh
 }
 
 func RivineMinerPayoutAsOutput(parent types.BlockID, id types.CoinOutputID, payout types.MinerPayout, reward bool, height types.BlockHeight, delay types.BlockHeight) Output {

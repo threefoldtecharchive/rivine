@@ -43,10 +43,15 @@ type (
 		ParentBlock types.BlockID
 		Version     types.TransactionVersion
 
-		Inputs    []types.OutputID
-		Outputs   []types.OutputID
+		CoinInputs  []types.OutputID
+		CoinOutputs []types.OutputID
+
+		BlockStakeInputs  []types.OutputID
+		BlockStakeOutputs []types.OutputID
+
 		FeePayout TransactionFeePayoutInfo
 
+		ArbitraryData        []byte
 		EncodedExtensionData []byte
 	}
 
@@ -117,3 +122,11 @@ type (
 		SpenditureData *AtomicSwapContractSpenditureData
 	}
 )
+
+func (rp ReferencePoint) IsTimestamp() bool {
+	return rp >= types.LockTimeMinTimestampValue
+}
+
+func (rp ReferencePoint) IsBlockHeight() bool {
+	return rp < types.LockTimeMinTimestampValue
+}

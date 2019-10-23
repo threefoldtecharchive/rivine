@@ -19,11 +19,20 @@ type (
 	ReferencePoint uint64
 	LockTime       uint64
 	BinaryData     []byte
+	Signature      []byte
 	ByteVersion    byte
 	BigInt         struct {
 		*big.Int
 	}
 )
+
+func (rp ReferencePoint) IsTimestamp() bool {
+	return rp >= types.LockTimeMinTimestampValue
+}
+
+func (rp ReferencePoint) IsBlockHeight() bool {
+	return rp < types.LockTimeMinTimestampValue
+}
 
 // MarshalGQL implements the graphql.Marshaler interface
 func (rp ReferencePoint) MarshalGQL(w io.Writer) {
@@ -67,6 +76,21 @@ func (bd *BinaryData) UnmarshalGQL(v interface{}) error {
 		return err
 	}
 	*bd = BinaryData(b)
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (sig Signature) MarshalGQL(w io.Writer) {
+	marshalByteSlice(w, sig[:])
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (sig *Signature) UnmarshalGQL(v interface{}) error {
+	b, err := unmarshalByteSlice(v)
+	if err != nil {
+		return err
+	}
+	*sig = Signature(b)
 	return nil
 }
 
@@ -180,27 +204,6 @@ func UnmarshalPublicKey(v interface{}) (types.PublicKey, error) {
 		return types.PublicKey{}, err
 	}
 	return pk, nil
-}
-
-func MarshalSignature(sig crypto.Signature) graphql.Marshaler {
-	return graphql.WriterFunc(func(w io.Writer) {
-		marshalByteSlice(w, sig[:])
-	})
-}
-
-func UnmarshalSignature(v interface{}) (crypto.Signature, error) {
-	b, err := unmarshalByteSlice(v)
-	if err != nil {
-		return crypto.Signature{}, err
-	}
-	if lb := len(b); lb != crypto.SignatureSize {
-		return crypto.Signature{}, fmt.Errorf(
-			"signature is supposed to be of length %d not %d: invalid '0x%s'",
-			crypto.SignatureSize, lb, hex.EncodeToString(b))
-	}
-	var sig crypto.Signature
-	copy(sig[:], b[:])
-	return sig, nil
 }
 
 // scalar helpers

@@ -83,13 +83,7 @@ func (e *Explorer) SetHTTPHandlers(router *httprouter.Router, endpoint string) {
 		rootHandler(w, r)
 	})
 	queryHandler := handler.GraphQL(NewExecutableSchema(Config{Resolvers: &Resolver{db: e.db}}))
-	router.Handle("GET", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		queryHandler(w, r)
-	})
 	router.Handle("POST", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		queryHandler(w, r)
-	})
-	router.Handle("PUT", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		queryHandler(w, r)
 	})
 }

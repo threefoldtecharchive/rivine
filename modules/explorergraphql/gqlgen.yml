@@ -10,18 +10,70 @@ exec:
 model:
   filename: models_gen.go
 resolver:
-  filename: resolver.go
+  filename: resolver_new.go
   type: Resolver
 autobind: []
 models:
   BlockHeader:
     fields:
       Payouts:
-        resolver: true # force a resolver to be generated
+        resolver: true
   Block:
     fields:
       Transactions:
-        resolver: true # force a resolver to be generated
+        resolver: true
+  TransactionFeePayout:
+    fields:
+      BlockPayout:
+        resolver: true
+  TransactionParentInfo:
+    fields:
+      SiblingTransactions:
+        resolver: true
+  StandardTransaction:
+    fields:
+      ParentBlock:
+        resolver: true
+      CoinInputs:
+        resolver: true
+      CoinOutputs:
+        resolver: true
+      BlockStakeInputs:
+        resolver: true
+      BlockStakeOutputs:
+        resolver: true
+  MintConditionDefinitionTransaction:
+    fields:
+      ParentBlock:
+        resolver: true
+      CoinInputs:
+        resolver: true
+      CoinOutputs:
+        resolver: true
+  MintCoinCreationTransaction:
+    fields:
+      ParentBlock:
+        resolver: true
+      CoinInputs:
+        resolver: true
+      CoinOutputs:
+        resolver: true
+  MintCoinDestructionTransaction:
+    fields:
+      ParentBlock:
+        resolver: true
+      CoinInputs:
+        resolver: true
+      CoinOutputs:
+        resolver: true
+  UnlockHashPublicKeyPair:
+    fields:
+      PublicKey:
+        resolver: true
+  UnlockHashCondition:
+    fields:
+      PublicKey:
+        resolver: true
   BlockHeight:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.BlockHeight
   Timestamp:

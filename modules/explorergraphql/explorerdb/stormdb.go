@@ -35,10 +35,17 @@ var (
 )
 
 const (
-	nodeNameObjects         = "Objects"
-	nodeNameUnlockhashes    = "UnlockHashes"
+	nodeNameObjects      = "Objects"
+	nodeNameUnlockhashes = "UnlockHashes"
+	nodeNamePublicKeys   = "PublicKeys"
+	nodeNameBlocks       = "Blocks"
+
 	nodeObjectKeyID         = "ID"
 	nodeObjectKeyUnlockHash = "UnlockHash"
+
+	nodePublicKeysKeyUnlockHash = "UnlockHash"
+
+	nodeBlocksKeyReference = "Reference"
 )
 
 type rivbinMarshalUnmarshaler struct{}
@@ -58,6 +65,18 @@ func (rb rivbinMarshalUnmarshaler) Unmarshal(b []byte, v interface{}) error {
 }
 func (rb rivbinMarshalUnmarshaler) Name() string {
 	return "rivbin"
+}
+
+// used for block rp -> bID node
+type blockReferencePointIDPair struct {
+	Reference ReferencePoint `storm:"id"`
+	BlockID   types.BlockID
+}
+
+// used for unlockHash -> PublicKey node
+type unlockHashPublicKeyPair struct {
+	UnlockHash types.UnlockHash `storm:"id"`
+	PublicKey  types.PublicKey
 }
 
 func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
@@ -103,12 +122,30 @@ func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 	return chainCtx, nil
 }
 
-func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error {
+func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error {
 	node := sdb.db.From(nodeNameObjects)
+	blockNode := sdb.db.From(nodeNameBlocks)
+	publicKeysNode := sdb.db.From(nodeNamePublicKeys)
+
 	// store block
 	err := node.Save(&block)
 	if err != nil {
 		return fmt.Errorf("failed to apply block: failed to save block %s: %v", block.ID.String(), err)
+	}
+	// store block reference point parings
+	err = blockNode.Save(&blockReferencePointIDPair{
+		Reference: ReferencePoint(block.Height) + 1, // require +1, as a storm identifier cannot be 0
+		BlockID:   block.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to apply block: failed to save block %s's height %d as reference point: %v", block.ID.String(), block.Height, err)
+	}
+	err = blockNode.Save(&blockReferencePointIDPair{
+		Reference: ReferencePoint(block.Timestamp),
+		BlockID:   block.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to apply block: failed to save block %s's timestamp %d as reference point: %v", block.ID.String(), block.Timestamp, err)
 	}
 	// store transactions
 	for idx, tx := range txs {
@@ -148,16 +185,43 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 				block.ID.String(), outputID.String(), output.ParentID.String(), err)
 		}
 	}
+	// store public keys
+	for uh, pk := range publicKeys {
+		err = publicKeysNode.Save(&unlockHashPublicKeyPair{
+			UnlockHash: uh,
+			PublicKey:  pk,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to apply block: failed to save block %s's unlock hash %s mapped to public key %s: %v", block.ID.String(), uh.String(), pk.String(), err)
+		}
+	}
 	// all good
 	return nil
 }
 
-func (sdb *StormDB) RevertBlock(block types.BlockID, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error {
+func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error {
 	node := sdb.db.From(nodeNameObjects)
+	blockNode := sdb.db.From(nodeNameBlocks)
+
 	// delete block
-	err := deleteFromNodeByID(node, block, new(Block))
+	err := deleteFromNodeByID(node, blockContext.ID, new(Block))
 	if err != nil {
-		return fmt.Errorf("failed to revert block: failed to delete block %s by ID: %v", block.String(), err)
+		return fmt.Errorf("failed to revert block: failed to delete block %s by ID: %v", blockContext.ID.String(), err)
+	}
+	// delete block reference point parings
+	err = blockNode.DeleteStruct(&blockReferencePointIDPair{
+		Reference: ReferencePoint(blockContext.Height) + 1, // require +1, as a storm identifier cannot be 0
+		BlockID:   blockContext.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to revert block: failed to delete block %s's height %d by reference point: %v", blockContext.ID.String(), blockContext.Height, err)
+	}
+	err = blockNode.Save(&blockReferencePointIDPair{
+		Reference: ReferencePoint(blockContext.Timestamp),
+		BlockID:   blockContext.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to revert block: failed to delete block %s's timestamp %d by reference point: %v", blockContext.ID.String(), blockContext.Timestamp, err)
 	}
 	// delete transactions
 	for idx, tx := range txs {
@@ -165,7 +229,7 @@ func (sdb *StormDB) RevertBlock(block types.BlockID, txs []types.TransactionID, 
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to delete txn %s (#%d) of block %s by ID: %v",
-				tx.String(), idx+1, block.String(), err)
+				tx.String(), idx+1, blockContext.ID.String(), err)
 		}
 	}
 	// delete outputs
@@ -174,7 +238,7 @@ func (sdb *StormDB) RevertBlock(block types.BlockID, txs []types.TransactionID, 
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to delete unspent output %s of block %s by ID: %v",
-				output.String(), block.String(), err)
+				output.String(), blockContext.ID.String(), err)
 		}
 	}
 	// delete inputs
@@ -184,17 +248,17 @@ func (sdb *StormDB) RevertBlock(block types.BlockID, txs []types.TransactionID, 
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to unmark spent output %s of block %s: failed to fetch by ID: %v",
-				inputID.String(), block.String(), err)
+				inputID.String(), blockContext.ID.String(), err)
 		}
 		if output.SpenditureData == nil {
 			return fmt.Errorf("failed to revert block: failed to unmark spent output %s of block %s: inconsent data stored for output: spenditure data should not be nil at the moment",
-				inputID.String(), block.String())
+				inputID.String(), blockContext.ID.String())
 		}
 		err = node.UpdateField(&output, "SpenditureData", nil)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to unmark spent output %s from parent %s of block %s: failed to write field 'SpenditureData' as nil: %v",
-				inputID.String(), output.ParentID.String(), block.String(), err)
+				inputID.String(), output.ParentID.String(), blockContext.ID.String(), err)
 		}
 	}
 	// all good
@@ -213,6 +277,19 @@ func (sdb *StormDB) GetBlock(id types.BlockID) (block Block, err error) {
 	node := sdb.db.From(nodeNameObjects)
 	err = node.One(nodeObjectKeyID, id, &block)
 	return
+}
+
+func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
+	node := sdb.db.From(nodeNameBlocks)
+	var pair blockReferencePointIDPair
+	if rp.IsBlockHeight() {
+		rp++
+	}
+	err := node.One(nodeBlocksKeyReference, rp, &pair)
+	if err != nil {
+		return Block{}, err
+	}
+	return sdb.GetBlock(pair.BlockID)
 }
 
 func (sdb *StormDB) GetTransaction(id types.TransactionID) (txn Transaction, err error) {
@@ -243,6 +320,16 @@ func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (contract AtomicS
 	node := sdb.db.From(nodeNameUnlockhashes)
 	err = node.One(nodeObjectKeyUnlockHash, uh, &contract)
 	return
+}
+
+func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
+	node := sdb.db.From(nodeNamePublicKeys)
+	var pair unlockHashPublicKeyPair
+	err := node.One(nodePublicKeysKeyUnlockHash, uh, &pair)
+	if err != nil {
+		return types.PublicKey{}, err
+	}
+	return pair.PublicKey, nil
 }
 
 func (sdb *StormDB) Close() error {
