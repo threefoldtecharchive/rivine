@@ -100,7 +100,9 @@ type ComplexityRoot struct {
 	BlockHeader struct {
 		BlockHeight func(childComplexity int) int
 		BlockTime   func(childComplexity int) int
+		Child       func(childComplexity int) int
 		ID          func(childComplexity int) int
+		Parent      func(childComplexity int) int
 		ParentID    func(childComplexity int) int
 		Payouts     func(childComplexity int) int
 	}
@@ -284,6 +286,9 @@ type BlockResolver interface {
 	Transactions(ctx context.Context, obj *Block) ([]Transaction, error)
 }
 type BlockHeaderResolver interface {
+	Parent(ctx context.Context, obj *BlockHeader) (*Block, error)
+	Child(ctx context.Context, obj *BlockHeader) (*Block, error)
+
 	Payouts(ctx context.Context, obj *BlockHeader) ([]*BlockPayout, error)
 }
 type MintCoinCreationTransactionResolver interface {
@@ -554,12 +559,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.BlockHeader.BlockTime(childComplexity), true
 
+	case "BlockHeader.Child":
+		if e.complexity.BlockHeader.Child == nil {
+			break
+		}
+
+		return e.complexity.BlockHeader.Child(childComplexity), true
+
 	case "BlockHeader.ID":
 		if e.complexity.BlockHeader.ID == nil {
 			break
 		}
 
 		return e.complexity.BlockHeader.ID(childComplexity), true
+
+	case "BlockHeader.Parent":
+		if e.complexity.BlockHeader.Parent == nil {
+			break
+		}
+
+		return e.complexity.BlockHeader.Parent(childComplexity), true
 
 	case "BlockHeader.ParentID":
 		if e.complexity.BlockHeader.ParentID == nil {
@@ -1510,6 +1529,8 @@ type Block {
 type BlockHeader {
     ID: Hash!
     ParentID: Hash
+    Parent: Block
+    Child: Block
     BlockTime: Timestamp
     BlockHeight: BlockHeight
     Payouts: [BlockPayout!]
@@ -3089,6 +3110,74 @@ func (ec *executionContext) _BlockHeader_ParentID(ctx context.Context, field gra
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _BlockHeader_Parent(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "BlockHeader",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.BlockHeader().Parent(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*Block)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _BlockHeader_Child(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "BlockHeader",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.BlockHeader().Child(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*Block)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockHeader_BlockTime(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
@@ -8957,6 +9046,28 @@ func (ec *executionContext) _BlockHeader(ctx context.Context, sel ast.SelectionS
 			}
 		case "ParentID":
 			out.Values[i] = ec._BlockHeader_ParentID(ctx, field, obj)
+		case "Parent":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._BlockHeader_Parent(ctx, field, obj)
+				return res
+			})
+		case "Child":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._BlockHeader_Child(ctx, field, obj)
+				return res
+			})
 		case "BlockTime":
 			out.Values[i] = ec._BlockHeader_BlockTime(ctx, field, obj)
 		case "BlockHeight":

@@ -5,7 +5,10 @@ schema {
 # How to query transactions based on properties
 # How to query wallets based on properties
 
-# TODO: support querying of outputs
+# TODO: support providing arguments to certain field resolvers,
+#    ... for example: allowing only the first item of a list to be retuned (e.g. payout)
+
+# TODO: add some quick documentation to schema as a test of generated documentation
 
 type QueryRoot {
   object(id: ObjectID): Object
@@ -46,6 +49,8 @@ type Block {
 type BlockHeader {
     ID: Hash!
     ParentID: Hash
+    Parent: Block
+    Child: Block
     BlockTime: Timestamp
     BlockHeight: BlockHeight
     Payouts: [BlockPayout!]

@@ -3,6 +3,7 @@ package explorergraphql
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/threefoldtech/rivine/crypto"
@@ -110,6 +111,27 @@ func (r *blockResolver) Transactions(ctx context.Context, obj *Block) ([]Transac
 
 type blockHeaderResolver struct{ *Resolver }
 
+func (r *blockHeaderResolver) Parent(ctx context.Context, obj *BlockHeader) (*Block, error) {
+	if obj.ParentID == nil {
+		return nil, nil // no block to return
+	}
+	dbBlock, err := r.db.GetBlock(types.BlockID(*obj.ParentID))
+	if err != nil {
+		return nil, fmt.Errorf("internal DB error while fetching parent block %s: %v", obj.ParentID.String(), err)
+	}
+	return dbBlockAsGQL(ctx, r.db, &dbBlock)
+}
+func (r *blockHeaderResolver) Child(ctx context.Context, obj *BlockHeader) (*Block, error) {
+	if obj.BlockHeight == nil {
+		return nil, errors.New("internal server error: Block BlockHeight is not set")
+	}
+	dbBlock, err := r.db.GetBlockByReferencePoint(explorerdb.ReferencePoint(*obj.BlockHeight) + 1)
+	if err != nil {
+		// TODO: distinguish between NotFound (possible if last block) and other types of errors
+		return nil, nil
+	}
+	return dbBlockAsGQL(ctx, r.db, &dbBlock)
+}
 func (r *blockHeaderResolver) Payouts(ctx context.Context, obj *BlockHeader) ([]*BlockPayout, error) {
 	payoutLen := len(obj.Payouts)
 	if payoutLen == 0 {

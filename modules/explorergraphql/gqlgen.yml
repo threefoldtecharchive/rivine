@@ -18,6 +18,10 @@ models:
     fields:
       Payouts:
         resolver: true
+      Parent:
+        resolver: true
+      Child:
+        resolver: true
   Block:
     fields:
       Transactions:
