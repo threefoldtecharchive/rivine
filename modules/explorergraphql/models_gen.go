@@ -85,11 +85,40 @@ type Balance struct {
 
 type Block struct {
 	Header       *BlockHeader  `json:"Header"`
+	Facts        *BlockFacts   `json:"Facts"`
 	Transactions []Transaction `json:"Transactions"`
 }
 
 func (Block) IsObject()       {}
 func (Block) IsOutputParent() {}
+
+type BlockAggregatedFacts struct {
+	TransactionCount       *int    `json:"TransactionCount"`
+	MinerFeeCount          *int    `json:"MinerFeeCount"`
+	CoinInputCount         *int    `json:"CoinInputCount"`
+	CoinInputValue         *BigInt `json:"CoinInputValue"`
+	CoinOutputCount        *int    `json:"CoinOutputCount"`
+	CoinOutputValue        *BigInt `json:"CoinOutputValue"`
+	PayoutCount            *int    `json:"PayoutCount"`
+	PayoutValue            *BigInt `json:"PayoutValue"`
+	BlockStakeInputCount   *int    `json:"BlockStakeInputCount"`
+	BlockStakeInputValue   *BigInt `json:"BlockStakeInputValue"`
+	BlockStakeOutputCount  *int    `json:"BlockStakeOutputCount"`
+	BlockStakeOutputValue  *BigInt `json:"BlockStakeOutputValue"`
+	ArbitraryDataTotalSize *int    `json:"ArbitraryDataTotalSize"`
+}
+
+type BlockFacts struct {
+	Difficulty                 *BigInt               `json:"Difficulty"`
+	EstimatedActiveBlockStakes *BigInt               `json:"EstimatedActiveBlockStakes"`
+	PayoutMaturityHeight       *types.BlockHeight    `json:"PayoutMaturityHeight"`
+	Target                     *crypto.Hash          `json:"Target"`
+	TotalCoins                 *BigInt               `json:"TotalCoins"`
+	TotalLockedCoins           *BigInt               `json:"TotalLockedCoins"`
+	TotalBlockStakes           *BigInt               `json:"TotalBlockStakes"`
+	TotalLockedBlockStakes     *BigInt               `json:"TotalLockedBlockStakes"`
+	Aggregated                 *BlockAggregatedFacts `json:"Aggregated"`
+}
 
 type BlockHeader struct {
 	ID          crypto.Hash        `json:"ID"`
@@ -104,6 +133,40 @@ type BlockHeader struct {
 type BlockPayout struct {
 	Output *Output          `json:"Output"`
 	Type   *BlockPayoutType `json:"Type"`
+}
+
+type ChainAggregatedData struct {
+	TotalCoins             *BigInt `json:"TotalCoins"`
+	TotalLockedCoins       *BigInt `json:"TotalLockedCoins"`
+	TotalBlockStakes       *BigInt `json:"TotalBlockStakes"`
+	TotalActiveBlockStakes *BigInt `json:"TotalActiveBlockStakes"`
+	TotalLockedBlockStakes *BigInt `json:"TotalLockedBlockStakes"`
+}
+
+type ChainConstants struct {
+	Name                              string            `json:"Name"`
+	NetworkName                       string            `json:"NetworkName"`
+	CoinUnit                          string            `json:"CoinUnit"`
+	CoinPecision                      int               `json:"CoinPecision"`
+	ChainVersion                      string            `json:"ChainVersion"`
+	DefaultTransactionVersion         ByteVersion       `json:"DefaultTransactionVersion"`
+	GatewayProtocolVersion            string            `json:"GatewayProtocolVersion"`
+	ConsensusPlugins                  []string          `json:"ConsensusPlugins"`
+	GenesisTimestamp                  types.Timestamp   `json:"GenesisTimestamp"`
+	BlockSizeLimitInBytes             int               `json:"BlockSizeLimitInBytes"`
+	AverageBlockCreationTimeInSeconds int               `json:"AverageBlockCreationTimeInSeconds"`
+	GenesisTotalBlockStakes           BigInt            `json:"GenesisTotalBlockStakes"`
+	BlockStakeAging                   int               `json:"BlockStakeAging"`
+	BlockCreatorFee                   *BigInt           `json:"BlockCreatorFee"`
+	MinimumTransactionFee             *BigInt           `json:"MinimumTransactionFee"`
+	TransactionFeeBeneficiary         UnlockCondition   `json:"TransactionFeeBeneficiary"`
+	PayoutMaturityDelay               types.BlockHeight `json:"PayoutMaturityDelay"`
+}
+
+type ChainFacts struct {
+	Constants  *ChainConstants      `json:"Constants"`
+	LastBlock  *Block               `json:"LastBlock"`
+	Aggregated *ChainAggregatedData `json:"Aggregated"`
 }
 
 type Input struct {

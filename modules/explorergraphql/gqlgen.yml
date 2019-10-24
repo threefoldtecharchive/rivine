@@ -14,6 +14,12 @@ resolver:
   type: Resolver
 autobind: []
 models:
+  ChainFacts:
+    fields:
+      LastBlock:
+        resolver: true
+      Aggregated:
+        resolver: true
   BlockHeader:
     fields:
       Payouts:
@@ -22,8 +28,14 @@ models:
         resolver: true
       Child:
         resolver: true
+  BlockFacts:
+    fields:
+      Aggregated:
+        resolver: true
   Block:
     fields:
+      Facts:
+        resolver: true
       Transactions:
         resolver: true
   Output:

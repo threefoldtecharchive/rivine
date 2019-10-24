@@ -22,9 +22,11 @@ import (
 // An Explorer contains a more comprehensive view of the blockchain,
 // including various statistics and metrics.
 type Explorer struct {
-	db  explorerdb.DB
-	cs  modules.ConsensusSet
-	log *persist.Logger
+	db             explorerdb.DB
+	cs             modules.ConsensusSet
+	chainConstants types.ChainConstants
+	blockChainInfo types.BlockchainInfo
+	log            *persist.Logger
 }
 
 var (
@@ -33,7 +35,7 @@ var (
 
 // New creates the internal data structures, and subscribes to
 // consensus for changes to the blockchain
-func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo, _ types.ChainConstants, verboseLogging bool) (*Explorer, error) {
+func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo, chainConstants types.ChainConstants, verboseLogging bool) (*Explorer, error) {
 	// Check that input modules are non-nil
 	if cs == nil {
 		return nil, errNilCS
@@ -63,9 +65,11 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 	}
 
 	e := &Explorer{
-		db:  db,
-		cs:  cs,
-		log: logger,
+		db:             db,
+		cs:             cs,
+		chainConstants: chainConstants,
+		blockChainInfo: bcInfo,
+		log:            logger,
 	}
 
 	err = cs.ConsensusSetSubscribe(e, chainCtx.ConsensusChangeID, nil)
@@ -82,7 +86,12 @@ func (e *Explorer) SetHTTPHandlers(router *httprouter.Router, endpoint string) {
 	router.Handle("GET", endpoint, func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rootHandler(w, r)
 	})
-	queryHandler := handler.GraphQL(NewExecutableSchema(Config{Resolvers: &Resolver{db: e.db}}))
+	queryHandler := handler.GraphQL(NewExecutableSchema(Config{Resolvers: &Resolver{
+		db:             e.db,
+		cs:             e.cs,
+		chainConstants: e.chainConstants,
+		blockchainInfo: e.blockChainInfo,
+	}}))
 	router.Handle("POST", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		queryHandler(w, r)
 	})

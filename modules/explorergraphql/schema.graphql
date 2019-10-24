@@ -11,13 +11,14 @@ schema {
 # TODO: add some quick documentation to schema as a test of generated documentation
 
 type QueryRoot {
+  chain: ChainFacts
+
   object(id: ObjectID): Object
 
   block(id: Hash, reference: ReferencePoint): Block
   blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
   transaction(id: Hash!): Transaction
-  transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
   output(id: Hash!): Output
 
@@ -41,9 +42,76 @@ scalar ByteVersion
 union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
+type ChainFacts {
+    Constants: ChainConstants!
+    LastBlock: Block!
+    Aggregated: ChainAggregatedData
+}
+
+type ChainConstants {
+    Name: String!
+    NetworkName: String!
+    CoinUnit: String!
+    CoinPecision: Int!
+    ChainVersion: String!
+    DefaultTransactionVersion: ByteVersion!
+    GatewayProtocolVersion: String!
+    ConsensusPlugins: [String!]
+    GenesisTimestamp: Timestamp!
+    BlockSizeLimitInBytes: Int!
+    AverageBlockCreationTimeInSeconds: Int!
+    GenesisTotalBlockStakes: BigInt!
+    BlockStakeAging: Int!
+    BlockCreatorFee: BigInt
+    MinimumTransactionFee: BigInt
+    TransactionFeeBeneficiary: UnlockCondition
+    PayoutMaturityDelay: BlockHeight!
+}
+
+type ChainAggregatedData {
+    TotalCoins: BigInt
+    TotalLockedCoins: BigInt
+
+    TotalBlockStakes: BigInt
+    TotalActiveBlockStakes: BigInt # means spend in last 1000 blocks
+    TotalLockedBlockStakes: BigInt
+}
+
 type Block {
     Header: BlockHeader!
+    Facts: BlockFacts
     Transactions: [Transaction!]!
+}
+
+type BlockFacts {
+    Difficulty: BigInt
+    EstimatedActiveBlockStakes: BigInt
+    PayoutMaturityHeight: BlockHeight
+    Target: Hash
+
+    # snapshot based on chain facts at that moment
+    TotalCoins: BigInt
+    TotalLockedCoins: BigInt
+    TotalBlockStakes: BigInt
+    TotalLockedBlockStakes: BigInt
+
+    Aggregated: BlockAggregatedFacts
+}
+
+type BlockAggregatedFacts {
+    TransactionCount: Int
+    MinerFeeCount: Int
+    CoinInputCount: Int
+    CoinInputValue: BigInt
+    CoinOutputCount: Int
+    CoinOutputValue: BigInt
+    PayoutCount: Int
+    PayoutValue: BigInt
+    BlockStakeInputCount: Int
+    BlockStakeInputValue: BigInt
+    BlockStakeOutputCount: Int
+    BlockStakeOutputValue: BigInt
+    ArbitraryDataTotalSize: Int
 }
 
 type BlockHeader {

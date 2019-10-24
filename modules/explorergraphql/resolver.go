@@ -8,6 +8,7 @@ import (
 
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/extensions/minting"
+	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
@@ -22,14 +23,23 @@ import (
 //            and do not stop the world for one property failure)
 
 type Resolver struct {
-	db explorerdb.DB
+	db             explorerdb.DB
+	cs             modules.ConsensusSet
+	chainConstants types.ChainConstants
+	blockchainInfo types.BlockchainInfo
 }
 
 func (r *Resolver) Block() BlockResolver {
 	return &blockResolver{r}
 }
+func (r *Resolver) BlockFacts() BlockFactsResolver {
+	return &blockFactsResolver{r}
+}
 func (r *Resolver) BlockHeader() BlockHeaderResolver {
 	return &blockHeaderResolver{r}
+}
+func (r *Resolver) ChainFacts() ChainFactsResolver {
+	return &chainFactsResolver{r}
 }
 func (r *Resolver) MintCoinCreationTransaction() MintCoinCreationTransactionResolver {
 	return &mintCoinCreationTransactionResolver{r}
@@ -64,20 +74,9 @@ func (r *Resolver) UnlockHashPublicKeyPair() UnlockHashPublicKeyPairResolver {
 
 type blockResolver struct{ *Resolver }
 
-func allTransactionsExcept(txns []Transaction, ignoreIndex int) []Transaction {
-	ltxns := len(txns)
-	if ltxns == 0 {
-		return nil
-	}
-	ntxns := make([]Transaction, 0, ltxns-1)
-	for idx, txn := range txns {
-		if idx != ignoreIndex {
-			ntxns = append(ntxns, txn)
-		}
-	}
-	return ntxns
+func (r *blockResolver) Facts(ctx context.Context, obj *Block) (*BlockFacts, error) {
+	panic("not implemented")
 }
-
 func (r *blockResolver) Transactions(ctx context.Context, obj *Block) ([]Transaction, error) {
 	ltxns := len(obj.Transactions)
 	txns := make([]Transaction, 0, ltxns)
@@ -107,6 +106,26 @@ func (r *blockResolver) Transactions(ctx context.Context, obj *Block) ([]Transac
 		txnParents[idx].SiblingTransactions = allTransactionsExcept(txns, idx)
 	}
 	return txns, nil
+}
+
+func allTransactionsExcept(txns []Transaction, ignoreIndex int) []Transaction {
+	ltxns := len(txns)
+	if ltxns == 0 {
+		return nil
+	}
+	ntxns := make([]Transaction, 0, ltxns-1)
+	for idx, txn := range txns {
+		if idx != ignoreIndex {
+			ntxns = append(ntxns, txn)
+		}
+	}
+	return ntxns
+}
+
+type blockFactsResolver struct{ *Resolver }
+
+func (r *blockFactsResolver) Aggregated(ctx context.Context, obj *BlockFacts) (*BlockAggregatedFacts, error) {
+	panic("not implemented")
 }
 
 type blockHeaderResolver struct{ *Resolver }
@@ -162,6 +181,29 @@ func (r *blockHeaderResolver) Payouts(ctx context.Context, obj *BlockHeader) ([]
 		})
 	}
 	return payouts, nil
+}
+
+type chainFactsResolver struct{ *Resolver }
+
+func (r *chainFactsResolver) LastBlock(ctx context.Context, obj *ChainFacts) (*Block, error) {
+	// default to latest block
+	chainCtx, err := r.db.GetChainContext()
+	if err != nil {
+		return nil, err
+	}
+	ref := chainCtx.Height
+	if ref > 0 {
+		ref-- // chainCtx.Height defines the amount of blocks (in other words, the height of the chain), not the height of latest
+	}
+
+	dbBlock, err := r.db.GetBlockByReferencePoint(explorerdb.ReferencePoint(ref))
+	if err != nil {
+		return nil, fmt.Errorf("internal DB error while fetching last block: %v", err)
+	}
+	return dbBlockAsGQL(ctx, r.db, &dbBlock)
+}
+func (r *chainFactsResolver) Aggregated(ctx context.Context, obj *ChainFacts) (*ChainAggregatedData, error) {
+	panic("not implemented")
 }
 
 type mintCoinCreationTransactionResolver struct{ *Resolver }
@@ -229,6 +271,60 @@ func (r *outputResolver) Parent(ctx context.Context, obj *Output) (OutputParent,
 
 type queryRootResolver struct{ *Resolver }
 
+func (r *queryRootResolver) Chain(ctx context.Context) (*ChainFacts, error) {
+	constants, err := rivConstantsAsGQL(r.cs, &r.chainConstants, &r.blockchainInfo)
+	if err != nil {
+		return nil, fmt.Errorf("internal server error: failed to resolve chain constants: %v", err)
+	}
+	return &ChainFacts{
+		Constants:  constants,
+		LastBlock:  nil, // resolved by another lazy resolver
+		Aggregated: nil, // TODO: support in explorer DB
+	}, nil
+}
+
+func rivConstantsAsGQL(cs modules.ConsensusSet, chainConstants *types.ChainConstants, blockchainInfo *types.BlockchainInfo) (*ChainConstants, error) {
+	coinPrecision := len(chainConstants.CurrencyUnits.OneCoin.String())
+	if coinPrecision > 0 {
+		coinPrecision--
+	}
+	var (
+		blockCreatorFee       *BigInt
+		minimumTransactionFee *BigInt
+	)
+	if !chainConstants.BlockCreatorFee.Equals64(0) {
+		bi := dbCurrencyAsBigInt(chainConstants.BlockCreatorFee)
+		blockCreatorFee = &bi
+	}
+	if !chainConstants.MinimumTransactionFee.Equals64(0) {
+		bi := dbCurrencyAsBigInt(chainConstants.MinimumTransactionFee)
+		minimumTransactionFee = &bi
+	}
+	txFeeBeneficiary, err := dbConditionAsUnlockCondition(chainConstants.TransactionFeeCondition)
+	if err != nil {
+		return nil, fmt.Errorf("failed to cast transaction fee breneficiary as GQL UnlockCondition: %v", err)
+	}
+	return &ChainConstants{
+		Name:                              blockchainInfo.Name,
+		NetworkName:                       blockchainInfo.NetworkName,
+		CoinUnit:                          blockchainInfo.CoinUnit,
+		CoinPecision:                      coinPrecision,
+		ChainVersion:                      blockchainInfo.ChainVersion.String(),
+		GatewayProtocolVersion:            blockchainInfo.ProtocolVersion.String(),
+		DefaultTransactionVersion:         ByteVersion(chainConstants.DefaultTransactionVersion),
+		ConsensusPlugins:                  cs.LoadedPlugins(),
+		GenesisTimestamp:                  chainConstants.GenesisTimestamp,
+		BlockSizeLimitInBytes:             int(chainConstants.BlockSizeLimit),
+		AverageBlockCreationTimeInSeconds: int(chainConstants.BlockFrequency),
+		GenesisTotalBlockStakes:           dbCurrencyAsBigInt(chainConstants.GenesisBlockStakeCount()),
+		BlockStakeAging:                   int(chainConstants.BlockStakeAging),
+		BlockCreatorFee:                   blockCreatorFee,
+		MinimumTransactionFee:             minimumTransactionFee,
+		TransactionFeeBeneficiary:         txFeeBeneficiary,
+		PayoutMaturityDelay:               chainConstants.MaturityDelay,
+	}, nil
+}
+
 func (r *queryRootResolver) Object(ctx context.Context, id *ObjectID) (Object, error) {
 	if id == nil {
 		// default to latest block if no ID is given, the only thing that makes sense
@@ -286,9 +382,6 @@ func (r *queryRootResolver) Output(ctx context.Context, id crypto.Hash) (*Output
 		return nil, fmt.Errorf("internal DB error while fetching output: %v", err)
 	}
 	return dbOutputAsGQL(&dbOutput, nil)
-}
-func (r *queryRootResolver) Transactions(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error) {
-	panic("not implemented")
 }
 func (r *queryRootResolver) Block(ctx context.Context, id *crypto.Hash, reference *ReferencePoint) (*Block, error) {
 	if id == nil {
