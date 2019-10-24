@@ -42,6 +42,7 @@ type ResolverRoot interface {
 	MintCoinCreationTransaction() MintCoinCreationTransactionResolver
 	MintCoinDestructionTransaction() MintCoinDestructionTransactionResolver
 	MintConditionDefinitionTransaction() MintConditionDefinitionTransactionResolver
+	Output() OutputResolver
 	QueryRoot() QueryRootResolver
 	StandardTransaction() StandardTransactionResolver
 	TransactionFeePayout() TransactionFeePayoutResolver
@@ -113,6 +114,7 @@ type ComplexityRoot struct {
 		Fulfillment  func(childComplexity int) int
 		ID           func(childComplexity int) int
 		ParentOutput func(childComplexity int) int
+		Type         func(childComplexity int) int
 		Value        func(childComplexity int) int
 	}
 
@@ -196,6 +198,9 @@ type ComplexityRoot struct {
 		ChildInput func(childComplexity int) int
 		Condition  func(childComplexity int) int
 		ID         func(childComplexity int) int
+		Parent     func(childComplexity int) int
+		ParentID   func(childComplexity int) int
+		Type       func(childComplexity int) int
 		Value      func(childComplexity int) int
 	}
 
@@ -207,11 +212,12 @@ type ComplexityRoot struct {
 	QueryRoot struct {
 		Block        func(childComplexity int, id *crypto.Hash, reference *ReferencePoint) int
 		Blocks       func(childComplexity int, after *ReferencePoint, first *int, before *ReferencePoint, last *int) int
-		Contract     func(childComplexity int, unlockhash *types.UnlockHash) int
-		Object       func(childComplexity int, id *BinaryData) int
-		Transaction  func(childComplexity int, id *crypto.Hash) int
+		Contract     func(childComplexity int, unlockhash types.UnlockHash) int
+		Object       func(childComplexity int, id *ObjectID) int
+		Output       func(childComplexity int, id crypto.Hash) int
+		Transaction  func(childComplexity int, id crypto.Hash) int
 		Transactions func(childComplexity int, after *ReferencePoint, first *int, before *ReferencePoint, last *int) int
-		Wallet       func(childComplexity int, unlockhash *types.UnlockHash) int
+		Wallet       func(childComplexity int, unlockhash types.UnlockHash) int
 	}
 
 	SingleSignatureFulfillment struct {
@@ -297,14 +303,18 @@ type MintConditionDefinitionTransactionResolver interface {
 	CoinInputs(ctx context.Context, obj *MintConditionDefinitionTransaction) ([]*Input, error)
 	CoinOutputs(ctx context.Context, obj *MintConditionDefinitionTransaction) ([]*Output, error)
 }
+type OutputResolver interface {
+	Parent(ctx context.Context, obj *Output) (OutputParent, error)
+}
 type QueryRootResolver interface {
-	Object(ctx context.Context, id *BinaryData) (Object, error)
-	Transaction(ctx context.Context, id *crypto.Hash) (Transaction, error)
-	Transactions(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error)
+	Object(ctx context.Context, id *ObjectID) (Object, error)
 	Block(ctx context.Context, id *crypto.Hash, reference *ReferencePoint) (*Block, error)
 	Blocks(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error)
-	Wallet(ctx context.Context, unlockhash *types.UnlockHash) (Wallet, error)
-	Contract(ctx context.Context, unlockhash *types.UnlockHash) (Contract, error)
+	Transaction(ctx context.Context, id crypto.Hash) (Transaction, error)
+	Transactions(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error)
+	Output(ctx context.Context, id crypto.Hash) (*Output, error)
+	Wallet(ctx context.Context, unlockhash types.UnlockHash) (Wallet, error)
+	Contract(ctx context.Context, unlockhash types.UnlockHash) (Contract, error)
 }
 type StandardTransactionResolver interface {
 	ParentBlock(ctx context.Context, obj *StandardTransaction) (*TransactionParentInfo, error)
@@ -599,6 +609,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.ParentOutput(childComplexity), true
+
+	case "Input.Type":
+		if e.complexity.Input.Type == nil {
+			break
+		}
+
+		return e.complexity.Input.Type(childComplexity), true
 
 	case "Input.Value":
 		if e.complexity.Input.Value == nil {
@@ -992,6 +1009,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Output.ID(childComplexity), true
 
+	case "Output.Parent":
+		if e.complexity.Output.Parent == nil {
+			break
+		}
+
+		return e.complexity.Output.Parent(childComplexity), true
+
+	case "Output.ParentID":
+		if e.complexity.Output.ParentID == nil {
+			break
+		}
+
+		return e.complexity.Output.ParentID(childComplexity), true
+
+	case "Output.Type":
+		if e.complexity.Output.Type == nil {
+			break
+		}
+
+		return e.complexity.Output.Type(childComplexity), true
+
 	case "Output.Value":
 		if e.complexity.Output.Value == nil {
 			break
@@ -1047,7 +1085,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Contract(childComplexity, args["unlockhash"].(*types.UnlockHash)), true
+		return e.complexity.QueryRoot.Contract(childComplexity, args["unlockhash"].(types.UnlockHash)), true
 
 	case "QueryRoot.object":
 		if e.complexity.QueryRoot.Object == nil {
@@ -1059,7 +1097,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Object(childComplexity, args["id"].(*BinaryData)), true
+		return e.complexity.QueryRoot.Object(childComplexity, args["id"].(*ObjectID)), true
+
+	case "QueryRoot.output":
+		if e.complexity.QueryRoot.Output == nil {
+			break
+		}
+
+		args, err := ec.field_QueryRoot_output_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.QueryRoot.Output(childComplexity, args["id"].(crypto.Hash)), true
 
 	case "QueryRoot.transaction":
 		if e.complexity.QueryRoot.Transaction == nil {
@@ -1071,7 +1121,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Transaction(childComplexity, args["id"].(*crypto.Hash)), true
+		return e.complexity.QueryRoot.Transaction(childComplexity, args["id"].(crypto.Hash)), true
 
 	case "QueryRoot.transactions":
 		if e.complexity.QueryRoot.Transactions == nil {
@@ -1095,7 +1145,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.Wallet(childComplexity, args["unlockhash"].(*types.UnlockHash)), true
+		return e.complexity.QueryRoot.Wallet(childComplexity, args["unlockhash"].(types.UnlockHash)), true
 
 	case "SingleSignatureFulfillment.ParentCondition":
 		if e.complexity.SingleSignatureFulfillment.ParentCondition == nil {
@@ -1419,19 +1469,24 @@ var parsedSchema = gqlparser.MustLoadSchema(
 # How to query transactions based on properties
 # How to query wallets based on properties
 
-type QueryRoot {
-  object(id: BinaryData): Object
+# TODO: support querying of outputs
 
-  transaction(id: Hash): Transaction
-  transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
+type QueryRoot {
+  object(id: ObjectID): Object
 
   block(id: Hash, reference: ReferencePoint): Block
   blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
-  wallet(unlockhash: UnlockHash): Wallet
-  contract(unlockhash: UnlockHash): Contract
+  transaction(id: Hash!): Transaction
+  transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
+
+  output(id: Hash!): Output
+
+  wallet(unlockhash: UnlockHash!): Wallet
+  contract(unlockhash: UnlockHash!): Contract
 }
 
+scalar ObjectID
 scalar BlockHeight
 scalar Timestamp
 scalar ReferencePoint # BlockHeight or TimeStamp
@@ -1444,7 +1499,7 @@ scalar Signature
 scalar BigInt
 scalar ByteVersion
 
-union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Input | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
 type Block {
@@ -1545,20 +1600,35 @@ type MintCoinDestructionTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+enum OutputType {
+	COIN
+	BLOCK_STAKE
+	BLOCK_CREATION_REWARD
+	TRANSACTION_FEE
+}
+
 type Input {
     ID: Hash!
+    Type: OutputType
     Value: BigInt!
     Fulfillment: UnlockFulfillment!
 
     ParentOutput: Output
 }
 
+# TODO: replace txn implementations by Transaction interface once possible
+union OutputParent = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction
+
 type Output {
     ID: Hash!
+    Type: OutputType
     Value: BigInt!
     Condition: UnlockCondition!
 
     ChildInput: Input
+
+    ParentID: Hash!
+    Parent: OutputParent!
 }
 
 enum BlockPayoutType {
@@ -1825,9 +1895,9 @@ func (ec *executionContext) field_QueryRoot_blocks_args(ctx context.Context, raw
 func (ec *executionContext) field_QueryRoot_contract_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *types.UnlockHash
+	var arg0 types.UnlockHash
 	if tmp, ok := rawArgs["unlockhash"]; ok {
-		arg0, err = ec.unmarshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, tmp)
+		arg0, err = ec.unmarshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1839,9 +1909,23 @@ func (ec *executionContext) field_QueryRoot_contract_args(ctx context.Context, r
 func (ec *executionContext) field_QueryRoot_object_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *BinaryData
+	var arg0 *ObjectID
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, tmp)
+		arg0, err = ec.unmarshalOObjectID2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐObjectID(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_QueryRoot_output_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 crypto.Hash
+	if tmp, ok := rawArgs["id"]; ok {
+		arg0, err = ec.unmarshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1853,9 +1937,9 @@ func (ec *executionContext) field_QueryRoot_object_args(ctx context.Context, raw
 func (ec *executionContext) field_QueryRoot_transaction_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *crypto.Hash
+	var arg0 crypto.Hash
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, tmp)
+		arg0, err = ec.unmarshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1905,9 +1989,9 @@ func (ec *executionContext) field_QueryRoot_transactions_args(ctx context.Contex
 func (ec *executionContext) field_QueryRoot_wallet_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *types.UnlockHash
+	var arg0 types.UnlockHash
 	if tmp, ok := rawArgs["unlockhash"]; ok {
-		arg0, err = ec.unmarshalOUnlockHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, tmp)
+		arg0, err = ec.unmarshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -3215,6 +3299,40 @@ func (ec *executionContext) _Input_ID(ctx context.Context, field graphql.Collect
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Input_Type(ctx context.Context, field graphql.CollectedField, obj *Input) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Input",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*OutputType)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOOutputType2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Input_Value(ctx context.Context, field graphql.CollectedField, obj *Input) (ret graphql.Marshaler) {
@@ -5220,6 +5338,40 @@ func (ec *executionContext) _Output_ID(ctx context.Context, field graphql.Collec
 	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Output_Type(ctx context.Context, field graphql.CollectedField, obj *Output) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Output",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Type, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*OutputType)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOOutputType2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputType(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Output_Value(ctx context.Context, field graphql.CollectedField, obj *Output) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -5328,6 +5480,80 @@ func (ec *executionContext) _Output_ChildInput(ctx context.Context, field graphq
 	return ec.marshalOInput2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Output_ParentID(ctx context.Context, field graphql.CollectedField, obj *Output) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Output",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(crypto.Hash)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Output_Parent(ctx context.Context, field graphql.CollectedField, obj *Output) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "Output",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Output().Parent(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(OutputParent)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNOutputParent2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputParent(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _PublicKeySignaturePair_PublicKey(ctx context.Context, field graphql.CollectedField, obj *PublicKeySignaturePair) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -5428,7 +5654,7 @@ func (ec *executionContext) _QueryRoot_object(ctx context.Context, field graphql
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Object(rctx, args["id"].(*BinaryData))
+		return ec.resolvers.QueryRoot().Object(rctx, args["id"].(*ObjectID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5441,88 +5667,6 @@ func (ec *executionContext) _QueryRoot_object(ctx context.Context, field graphql
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalOObject2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐObject(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _QueryRoot_transaction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "QueryRoot",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_QueryRoot_transaction_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	rctx.Args = args
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Transaction(rctx, args["id"].(*crypto.Hash))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(Transaction)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _QueryRoot_transactions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "QueryRoot",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_QueryRoot_transactions_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	rctx.Args = args
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Transactions(rctx, args["after"].(*ReferencePoint), args["first"].(*int), args["before"].(*ReferencePoint), args["last"].(*int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(Transaction)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _QueryRoot_block(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5607,6 +5751,129 @@ func (ec *executionContext) _QueryRoot_blocks(ctx context.Context, field graphql
 	return ec.marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _QueryRoot_transaction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "QueryRoot",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_QueryRoot_transaction_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.QueryRoot().Transaction(rctx, args["id"].(crypto.Hash))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(Transaction)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _QueryRoot_transactions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "QueryRoot",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_QueryRoot_transactions_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.QueryRoot().Transactions(rctx, args["after"].(*ReferencePoint), args["first"].(*int), args["before"].(*ReferencePoint), args["last"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(Transaction)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _QueryRoot_output(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "QueryRoot",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_QueryRoot_output_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.QueryRoot().Output(rctx, args["id"].(crypto.Hash))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*Output)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOOutput2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _QueryRoot_wallet(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -5633,7 +5900,7 @@ func (ec *executionContext) _QueryRoot_wallet(ctx context.Context, field graphql
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Wallet(rctx, args["unlockhash"].(*types.UnlockHash))
+		return ec.resolvers.QueryRoot().Wallet(rctx, args["unlockhash"].(types.UnlockHash))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5674,7 +5941,7 @@ func (ec *executionContext) _QueryRoot_contract(ctx context.Context, field graph
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().Contract(rctx, args["unlockhash"].(*types.UnlockHash))
+		return ec.resolvers.QueryRoot().Contract(rctx, args["unlockhash"].(types.UnlockHash))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8287,10 +8554,6 @@ func (ec *executionContext) _Object(ctx context.Context, sel ast.SelectionSet, o
 		return ec._MintCoinDestructionTransaction(ctx, sel, &obj)
 	case *MintCoinDestructionTransaction:
 		return ec._MintCoinDestructionTransaction(ctx, sel, obj)
-	case Input:
-		return ec._Input(ctx, sel, &obj)
-	case *Input:
-		return ec._Input(ctx, sel, obj)
 	case Output:
 		return ec._Output(ctx, sel, &obj)
 	case *Output:
@@ -8307,6 +8570,35 @@ func (ec *executionContext) _Object(ctx context.Context, sel ast.SelectionSet, o
 		return ec._AtomicSwapContract(ctx, sel, &obj)
 	case *AtomicSwapContract:
 		return ec._AtomicSwapContract(ctx, sel, obj)
+	default:
+		panic(fmt.Errorf("unexpected type %T", obj))
+	}
+}
+
+func (ec *executionContext) _OutputParent(ctx context.Context, sel ast.SelectionSet, obj OutputParent) graphql.Marshaler {
+	switch obj := (obj).(type) {
+	case nil:
+		return graphql.Null
+	case Block:
+		return ec._Block(ctx, sel, &obj)
+	case *Block:
+		return ec._Block(ctx, sel, obj)
+	case StandardTransaction:
+		return ec._StandardTransaction(ctx, sel, &obj)
+	case *StandardTransaction:
+		return ec._StandardTransaction(ctx, sel, obj)
+	case MintConditionDefinitionTransaction:
+		return ec._MintConditionDefinitionTransaction(ctx, sel, &obj)
+	case *MintConditionDefinitionTransaction:
+		return ec._MintConditionDefinitionTransaction(ctx, sel, obj)
+	case MintCoinCreationTransaction:
+		return ec._MintCoinCreationTransaction(ctx, sel, &obj)
+	case *MintCoinCreationTransaction:
+		return ec._MintCoinCreationTransaction(ctx, sel, obj)
+	case MintCoinDestructionTransaction:
+		return ec._MintCoinDestructionTransaction(ctx, sel, &obj)
+	case *MintCoinDestructionTransaction:
+		return ec._MintCoinDestructionTransaction(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -8606,7 +8898,7 @@ func (ec *executionContext) _Balance(ctx context.Context, sel ast.SelectionSet, 
 	return out
 }
 
-var blockImplementors = []string{"Block", "Object"}
+var blockImplementors = []string{"Block", "Object", "OutputParent"}
 
 func (ec *executionContext) _Block(ctx context.Context, sel ast.SelectionSet, obj *Block) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, blockImplementors)
@@ -8720,7 +9012,7 @@ func (ec *executionContext) _BlockPayout(ctx context.Context, sel ast.SelectionS
 	return out
 }
 
-var inputImplementors = []string{"Input", "Object"}
+var inputImplementors = []string{"Input"}
 
 func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, obj *Input) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, inputImplementors)
@@ -8736,6 +9028,8 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "Type":
+			out.Values[i] = ec._Input_Type(ctx, field, obj)
 		case "Value":
 			out.Values[i] = ec._Input_Value(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -8803,7 +9097,7 @@ func (ec *executionContext) _LockTimeCondition(ctx context.Context, sel ast.Sele
 	return out
 }
 
-var mintCoinCreationTransactionImplementors = []string{"MintCoinCreationTransaction", "Object", "Transaction"}
+var mintCoinCreationTransactionImplementors = []string{"MintCoinCreationTransaction", "Object", "Transaction", "OutputParent"}
 
 func (ec *executionContext) _MintCoinCreationTransaction(ctx context.Context, sel ast.SelectionSet, obj *MintCoinCreationTransaction) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, mintCoinCreationTransactionImplementors)
@@ -8885,7 +9179,7 @@ func (ec *executionContext) _MintCoinCreationTransaction(ctx context.Context, se
 	return out
 }
 
-var mintCoinDestructionTransactionImplementors = []string{"MintCoinDestructionTransaction", "Object", "Transaction"}
+var mintCoinDestructionTransactionImplementors = []string{"MintCoinDestructionTransaction", "Object", "Transaction", "OutputParent"}
 
 func (ec *executionContext) _MintCoinDestructionTransaction(ctx context.Context, sel ast.SelectionSet, obj *MintCoinDestructionTransaction) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, mintCoinDestructionTransactionImplementors)
@@ -8957,7 +9251,7 @@ func (ec *executionContext) _MintCoinDestructionTransaction(ctx context.Context,
 	return out
 }
 
-var mintConditionDefinitionTransactionImplementors = []string{"MintConditionDefinitionTransaction", "Object", "Transaction"}
+var mintConditionDefinitionTransactionImplementors = []string{"MintConditionDefinitionTransaction", "Object", "Transaction", "OutputParent"}
 
 func (ec *executionContext) _MintConditionDefinitionTransaction(ctx context.Context, sel ast.SelectionSet, obj *MintConditionDefinitionTransaction) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, mintConditionDefinitionTransactionImplementors)
@@ -9224,20 +9518,41 @@ func (ec *executionContext) _Output(ctx context.Context, sel ast.SelectionSet, o
 		case "ID":
 			out.Values[i] = ec._Output_ID(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "Type":
+			out.Values[i] = ec._Output_Type(ctx, field, obj)
 		case "Value":
 			out.Values[i] = ec._Output_Value(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "Condition":
 			out.Values[i] = ec._Output_Condition(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "ChildInput":
 			out.Values[i] = ec._Output_ChildInput(ctx, field, obj)
+		case "ParentID":
+			out.Values[i] = ec._Output_ParentID(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "Parent":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Output_Parent(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9307,6 +9622,28 @@ func (ec *executionContext) _QueryRoot(ctx context.Context, sel ast.SelectionSet
 				res = ec._QueryRoot_object(ctx, field)
 				return res
 			})
+		case "block":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QueryRoot_block(ctx, field)
+				return res
+			})
+		case "blocks":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QueryRoot_blocks(ctx, field)
+				return res
+			})
 		case "transaction":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -9329,7 +9666,7 @@ func (ec *executionContext) _QueryRoot(ctx context.Context, sel ast.SelectionSet
 				res = ec._QueryRoot_transactions(ctx, field)
 				return res
 			})
-		case "block":
+		case "output":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -9337,18 +9674,7 @@ func (ec *executionContext) _QueryRoot(ctx context.Context, sel ast.SelectionSet
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._QueryRoot_block(ctx, field)
-				return res
-			})
-		case "blocks":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._QueryRoot_blocks(ctx, field)
+				res = ec._QueryRoot_output(ctx, field)
 				return res
 			})
 		case "wallet":
@@ -9482,7 +9808,7 @@ func (ec *executionContext) _SingleSignatureWallet(ctx context.Context, sel ast.
 	return out
 }
 
-var standardTransactionImplementors = []string{"StandardTransaction", "Object", "Transaction"}
+var standardTransactionImplementors = []string{"StandardTransaction", "Object", "Transaction", "OutputParent"}
 
 func (ec *executionContext) _StandardTransaction(ctx context.Context, sel ast.SelectionSet, obj *StandardTransaction) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.RequestContext, sel, standardTransactionImplementors)
@@ -10226,6 +10552,16 @@ func (ec *executionContext) marshalNOutput2ᚖgithubᚗcomᚋthreefoldtechᚋriv
 		return graphql.Null
 	}
 	return ec._Output(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNOutputParent2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputParent(ctx context.Context, sel ast.SelectionSet, v OutputParent) graphql.Marshaler {
+	if v == nil {
+		if !ec.HasError(graphql.GetResolverContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._OutputParent(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, v interface{}) (types.PublicKey, error) {
@@ -11042,6 +11378,30 @@ func (ec *executionContext) marshalOObject2githubᚗcomᚋthreefoldtechᚋrivine
 	return ec._Object(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOObjectID2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐObjectID(ctx context.Context, v interface{}) (ObjectID, error) {
+	var res ObjectID
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalOObjectID2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐObjectID(ctx context.Context, sel ast.SelectionSet, v ObjectID) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalOObjectID2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐObjectID(ctx context.Context, v interface{}) (*ObjectID, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOObjectID2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐObjectID(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOObjectID2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐObjectID(ctx context.Context, sel ast.SelectionSet, v *ObjectID) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
 func (ec *executionContext) marshalOOutput2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx context.Context, sel ast.SelectionSet, v Output) graphql.Marshaler {
 	return ec._Output(ctx, sel, &v)
 }
@@ -11091,6 +11451,30 @@ func (ec *executionContext) marshalOOutput2ᚖgithubᚗcomᚋthreefoldtechᚋriv
 		return graphql.Null
 	}
 	return ec._Output(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOOutputType2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputType(ctx context.Context, v interface{}) (OutputType, error) {
+	var res OutputType
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalOOutputType2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputType(ctx context.Context, sel ast.SelectionSet, v OutputType) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalOOutputType2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputType(ctx context.Context, v interface{}) (*OutputType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOOutputType2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputType(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOOutputType2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutputType(ctx context.Context, sel ast.SelectionSet, v *OutputType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx context.Context, v interface{}) (types.PublicKey, error) {

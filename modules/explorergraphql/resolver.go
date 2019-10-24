@@ -14,6 +14,12 @@ import (
 
 // THIS CODE IS A STARTING POINT ONLY. IT WILL NOT BE UPDATED WITH SCHEMA CHANGES.
 
+// TODO: check how to do better error handling
+
+// TODO: ensure we handle errors as gracefully as possible
+//      (e.g. do not return errors when a warning is sufficient,
+//            and do not stop the world for one property failure)
+
 type Resolver struct {
 	db explorerdb.DB
 }
@@ -32,6 +38,9 @@ func (r *Resolver) MintCoinDestructionTransaction() MintCoinDestructionTransacti
 }
 func (r *Resolver) MintConditionDefinitionTransaction() MintConditionDefinitionTransactionResolver {
 	return &mintConditionDefinitionTransactionResolver{r}
+}
+func (r *Resolver) Output() OutputResolver {
+	return &outputResolver{r}
 }
 func (r *Resolver) QueryRoot() QueryRootResolver {
 	return &queryRootResolver{r}
@@ -169,13 +178,77 @@ func (r *mintConditionDefinitionTransactionResolver) CoinOutputs(ctx context.Con
 	return resolveCoinOutputs(ctx, obj.CoinOutputs, r.db)
 }
 
+type outputResolver struct{ *Resolver }
+
+func (r *outputResolver) Parent(ctx context.Context, obj *Output) (OutputParent, error) {
+	dbObject, err := r.db.GetObject(explorerdb.ObjectID(obj.ParentID[:]))
+	if err != nil {
+		return nil, fmt.Errorf("internal DB error while fetching transaction: %v", err)
+	}
+	switch dbObject.Type {
+	case explorerdb.ObjectTypeBlock:
+		dbBlock, ok := dbObject.Data.(explorerdb.Block)
+		if !ok {
+			return nil, fmt.Errorf("internal server error: unexpected type %T for object of type block (%d)", dbObject.Data, dbObject.Type)
+		}
+		return dbBlockAsGQL(ctx, r.db, &dbBlock)
+	case explorerdb.ObjectTypeTransaction:
+		dbTransaction, ok := dbObject.Data.(explorerdb.Transaction)
+		if !ok {
+			return nil, fmt.Errorf("internal server error: unexpected type %T for object of type transaction (%d)", dbObject.Data, dbObject.Type)
+		}
+		return dbTransactionAsOutputParent(&TransactionParentInfo{
+			ID: crypto.Hash(dbTransaction.ParentBlock),
+		}, &dbTransaction)
+	default:
+		return nil, fmt.Errorf("internal server error: unsupported object type %d used as output parent", dbObject.Type)
+	}
+}
+
 type queryRootResolver struct{ *Resolver }
 
-func (r *queryRootResolver) Object(ctx context.Context, id *BinaryData) (Object, error) {
-	panic("not implemented")
+func (r *queryRootResolver) Object(ctx context.Context, id *ObjectID) (Object, error) {
+	if id == nil {
+		// default to latest block if no ID is given, the only thing that makes sense
+		return r.Block(ctx, nil, nil)
+	}
+	dbObject, err := r.db.GetObject(explorerdb.ObjectID(*id))
+	if err != nil {
+		return nil, fmt.Errorf("internal DB error while fetching transaction: %v", err)
+	}
+	switch dbObject.Type {
+	case explorerdb.ObjectTypeBlock:
+		dbBlock, ok := dbObject.Data.(explorerdb.Block)
+		if !ok {
+			return nil, fmt.Errorf("internal server error: unexpected type %T for object of type block (%d)", dbObject.Data, dbObject.Type)
+		}
+		return dbBlockAsGQL(ctx, r.db, &dbBlock)
+	case explorerdb.ObjectTypeTransaction:
+		dbTransaction, ok := dbObject.Data.(explorerdb.Transaction)
+		if !ok {
+			return nil, fmt.Errorf("internal server error: unexpected type %T for object of type transaction (%d)", dbObject.Data, dbObject.Type)
+		}
+		return dbTransactionAsObject(&TransactionParentInfo{
+			ID: crypto.Hash(dbTransaction.ParentBlock),
+		}, &dbTransaction)
+	case explorerdb.ObjectTypeOutput:
+		dbOutput, ok := dbObject.Data.(explorerdb.Output)
+		if !ok {
+			return nil, fmt.Errorf("internal server error: unexpected type %T for object of type output (%d)", dbObject.Data, dbObject.Type)
+		}
+		return dbOutputAsGQL(&dbOutput, nil)
+	case explorerdb.ObjectTypeWallet:
+		return nil, fmt.Errorf("internal server error: wallet of object type %d is not yet supported", dbObject.Type)
+	case explorerdb.ObjectTypeMultiSignatureWallet:
+		return nil, fmt.Errorf("internal server error: multi signature wallet of object type %d is not yet supported", dbObject.Type)
+	case explorerdb.ObjectTypeAtomicSwapContract:
+		return nil, fmt.Errorf("internal server error: atomic swap contract of object type %d is not yet supported", dbObject.Type)
+	default:
+		return nil, fmt.Errorf("internal server error: unsupported object type %d", dbObject.Type)
+	}
 }
-func (r *queryRootResolver) Transaction(ctx context.Context, id *crypto.Hash) (Transaction, error) {
-	transactionID := types.TransactionID(*id)
+func (r *queryRootResolver) Transaction(ctx context.Context, id crypto.Hash) (Transaction, error) {
+	transactionID := types.TransactionID(id)
 	dbTxn, err := r.db.GetTransaction(transactionID)
 	if err != nil {
 		return nil, fmt.Errorf("internal DB error while fetching transaction: %v", err)
@@ -183,6 +256,14 @@ func (r *queryRootResolver) Transaction(ctx context.Context, id *crypto.Hash) (T
 	return dbTransactionAsGQL(&TransactionParentInfo{
 		ID: crypto.Hash(dbTxn.ParentBlock),
 	}, &dbTxn)
+}
+func (r *queryRootResolver) Output(ctx context.Context, id crypto.Hash) (*Output, error) {
+	outputID := types.OutputID(id)
+	dbOutput, err := r.db.GetOutput(outputID)
+	if err != nil {
+		return nil, fmt.Errorf("internal DB error while fetching output: %v", err)
+	}
+	return dbOutputAsGQL(&dbOutput, nil)
 }
 func (r *queryRootResolver) Transactions(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error) {
 	panic("not implemented")
@@ -270,10 +351,10 @@ func dbBlockAsGQL(ctx context.Context, db explorerdb.DB, dbBlock *explorerdb.Blo
 func (r *queryRootResolver) Blocks(ctx context.Context, after *ReferencePoint, first *int, before *ReferencePoint, last *int) (Transaction, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Wallet(ctx context.Context, unlockhash *types.UnlockHash) (Wallet, error) {
+func (r *queryRootResolver) Wallet(ctx context.Context, unlockhash types.UnlockHash) (Wallet, error) {
 	panic("not implemented")
 }
-func (r *queryRootResolver) Contract(ctx context.Context, unlockhash *types.UnlockHash) (Contract, error) {
+func (r *queryRootResolver) Contract(ctx context.Context, unlockhash types.UnlockHash) (Contract, error) {
 	panic("not implemented")
 }
 
@@ -502,6 +583,44 @@ func dbTransactionAsGQL(parentBlockInfo *TransactionParentInfo, dbTxn *explorerd
 	}
 }
 
+// TODO: is there a way to cast a Transaction directly do an object, without this duplication???
+func dbTransactionAsObject(parentBlockInfo *TransactionParentInfo, dbTxn *explorerdb.Transaction) (Object, error) {
+	switch dbTxn.Version {
+	case types.TransactionVersionOne, types.TransactionVersionZero:
+		return dbTransactionAsStandardTransaction(parentBlockInfo, dbTxn)
+	// TODO: do not hardcode these versions
+	// TODO: how to support non standard transactions???
+	case 128:
+		return dbMintConditionDefinitionTransactionAsGQL(parentBlockInfo, dbTxn)
+	case 129:
+		return dbMintCoinCreationTransactionAsGQL(parentBlockInfo, dbTxn)
+	case 130:
+		return dbMintCoinDestructionTransactionAsGQL(parentBlockInfo, dbTxn)
+	default:
+		// TODO: support extensions and render unknowns as an except unknown transaction schema type
+		return nil, fmt.Errorf("unsupported transaction version %d", dbTxn.Version)
+	}
+}
+
+// TODO: is there a way to cast a Transaction directly do an outputParent, without this duplication???
+func dbTransactionAsOutputParent(parentBlockInfo *TransactionParentInfo, dbTxn *explorerdb.Transaction) (OutputParent, error) {
+	switch dbTxn.Version {
+	case types.TransactionVersionOne, types.TransactionVersionZero:
+		return dbTransactionAsStandardTransaction(parentBlockInfo, dbTxn)
+	// TODO: do not hardcode these versions
+	// TODO: how to support non standard transactions???
+	case 128:
+		return dbMintConditionDefinitionTransactionAsGQL(parentBlockInfo, dbTxn)
+	case 129:
+		return dbMintCoinCreationTransactionAsGQL(parentBlockInfo, dbTxn)
+	case 130:
+		return dbMintCoinDestructionTransactionAsGQL(parentBlockInfo, dbTxn)
+	default:
+		// TODO: support extensions and render unknowns as an except unknown transaction schema type
+		return nil, fmt.Errorf("unsupported transaction version %d", dbTxn.Version)
+	}
+}
+
 func dbTransactionAsStandardTransaction(txParentInfo *TransactionParentInfo, dbTxn *explorerdb.Transaction) (*StandardTransaction, error) {
 	var (
 		outputID          types.OutputID
@@ -690,8 +809,10 @@ func dbOutputAsGQL(output *explorerdb.Output, sibling *Input) (*Output, error) {
 	}
 	gqlOutput := &Output{
 		ID:        crypto.Hash(output.ID),
+		Type:      dbOutputTypeAsGQL(output.Type),
 		Value:     dbCurrencyAsBigInt(output.Value),
 		Condition: gqlCondition,
+		ParentID:  output.ParentID,
 	}
 	if sibling != nil {
 		gqlOutput.ChildInput = sibling
@@ -724,6 +845,7 @@ func dbOutputAsInputGQL(output *explorerdb.Output, parent *Output) (*Input, erro
 	}
 	glqInput := &Input{
 		ID:          crypto.Hash(output.ID),
+		Type:        dbOutputTypeAsGQL(output.Type),
 		Value:       dbCurrencyAsBigInt(output.Value),
 		Fulfillment: ff,
 	}
@@ -737,6 +859,25 @@ func dbOutputAsInputGQL(output *explorerdb.Output, parent *Output) (*Input, erro
 		glqInput.ParentOutput = parent
 	}
 	return glqInput, nil
+}
+
+func dbOutputTypeAsGQL(outputType explorerdb.OutputType) *OutputType {
+	switch outputType {
+	case explorerdb.OutputTypeCoin:
+		ot := OutputTypeCoin
+		return &ot
+	case explorerdb.OutputTypeBlockStake:
+		ot := OutputTypeBlockStake
+		return &ot
+	case explorerdb.OutputTypeBlockCreationReward:
+		ot := OutputTypeBlockCreationReward
+		return &ot
+	case explorerdb.OutputTypeTransactionFee:
+		ot := OutputTypeTransactionFee
+		return &ot
+	default:
+		return nil
+	}
 }
 
 func dbFulfillmentAsUnlockFulfillment(fulfillment types.UnlockFulfillmentProxy, parentCondition UnlockCondition) (UnlockFulfillment, error) {

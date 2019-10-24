@@ -3,6 +3,7 @@ package rivbin
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 )
@@ -236,7 +237,7 @@ func (d *Decoder) decode(val reflect.Value) error {
 		return nil
 
 	default:
-		return errors.New("unknown type")
+		return fmt.Errorf("unknown type: %[1]v (%[1]T)", val.Interface())
 	}
 }
 

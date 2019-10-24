@@ -18,6 +18,7 @@ import (
 type (
 	ReferencePoint uint64
 	LockTime       uint64
+	ObjectID       []byte
 	BinaryData     []byte
 	Signature      []byte
 	ByteVersion    byte
@@ -76,6 +77,36 @@ func (bd *BinaryData) UnmarshalGQL(v interface{}) error {
 		return err
 	}
 	*bd = BinaryData(b)
+	return nil
+}
+
+// MarshalGQL implements the graphql.Marshaler interface
+func (id ObjectID) MarshalGQL(w io.Writer) {
+	marshalByteSlice(w, id[:])
+}
+
+// UnmarshalGQL implements the graphql.Unmarshaler interface
+func (id *ObjectID) UnmarshalGQL(v interface{}) error {
+	b, err := unmarshalByteSlice(v)
+	if err != nil {
+		return err
+	}
+	const unlockHashDecodedSize = 39
+	switch lb := len(b); lb {
+	case crypto.HashSize:
+		// nothing to do
+	case unlockHashDecodedSize:
+		str := hex.EncodeToString(b)
+		var uh types.UnlockHash
+		err = uh.LoadString(str)
+		if err != nil {
+			return fmt.Errorf("invalid objectID: it has the size of an unlockhash but is invalid: %v", err)
+		}
+		// valid
+	default:
+		return fmt.Errorf("%d is an invalid binary size for an object ID", lb)
+	}
+	*id = ObjectID(b)
 	return nil
 }
 

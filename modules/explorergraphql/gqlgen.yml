@@ -22,6 +22,10 @@ models:
     fields:
       Transactions:
         resolver: true
+  Output:
+    fields:
+      Parent:
+        resolver: true
   TransactionFeePayout:
     fields:
       BlockPayout:
@@ -74,6 +78,8 @@ models:
     fields:
       PublicKey:
         resolver: true
+  ObjectID:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.ObjectID
   BlockHeight:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.BlockHeight
   Timestamp:

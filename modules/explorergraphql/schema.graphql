@@ -5,19 +5,24 @@ schema {
 # How to query transactions based on properties
 # How to query wallets based on properties
 
-type QueryRoot {
-  object(id: BinaryData): Object
+# TODO: support querying of outputs
 
-  transaction(id: Hash): Transaction
-  transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
+type QueryRoot {
+  object(id: ObjectID): Object
 
   block(id: Hash, reference: ReferencePoint): Block
   blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
-  wallet(unlockhash: UnlockHash): Wallet
-  contract(unlockhash: UnlockHash): Contract
+  transaction(id: Hash!): Transaction
+  transactions(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
+
+  output(id: Hash!): Output
+
+  wallet(unlockhash: UnlockHash!): Wallet
+  contract(unlockhash: UnlockHash!): Contract
 }
 
+scalar ObjectID
 scalar BlockHeight
 scalar Timestamp
 scalar ReferencePoint # BlockHeight or TimeStamp
@@ -30,7 +35,7 @@ scalar Signature
 scalar BigInt
 scalar ByteVersion
 
-union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Input | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
 type Block {
@@ -131,20 +136,35 @@ type MintCoinDestructionTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+enum OutputType {
+	COIN
+	BLOCK_STAKE
+	BLOCK_CREATION_REWARD
+	TRANSACTION_FEE
+}
+
 type Input {
     ID: Hash!
+    Type: OutputType
     Value: BigInt!
     Fulfillment: UnlockFulfillment!
 
     ParentOutput: Output
 }
 
+# TODO: replace txn implementations by Transaction interface once possible
+union OutputParent = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction
+
 type Output {
     ID: Hash!
+    Type: OutputType
     Value: BigInt!
     Condition: UnlockCondition!
 
     ChildInput: Input
+
+    ParentID: Hash!
+    Parent: OutputParent!
 }
 
 enum BlockPayoutType {

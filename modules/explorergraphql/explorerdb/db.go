@@ -14,6 +14,8 @@ import (
 
 // TODO: integrate context.Context in each call
 
+// TODO: support batching (to allow speeding up the process as well as intermediate rollbacks)
+
 type DB interface {
 	SetChainContext(ChainContext) error
 	GetChainContext() (ChainContext, error)
@@ -21,6 +23,8 @@ type DB interface {
 	ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error
 	// TODO: should we also revert public key (from UH) mapping?
 	RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error
+
+	GetObject(ObjectID) (Object, error)
 
 	GetBlock(types.BlockID) (Block, error)
 	GetBlockByReferencePoint(ReferencePoint) (Block, error)

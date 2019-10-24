@@ -19,6 +19,10 @@ type Object interface {
 	IsObject()
 }
 
+type OutputParent interface {
+	IsOutputParent()
+}
+
 type Transaction interface {
 	IsTransaction()
 }
@@ -84,7 +88,8 @@ type Block struct {
 	Transactions []Transaction `json:"Transactions"`
 }
 
-func (Block) IsObject() {}
+func (Block) IsObject()       {}
+func (Block) IsOutputParent() {}
 
 type BlockHeader struct {
 	ID          crypto.Hash        `json:"ID"`
@@ -101,12 +106,11 @@ type BlockPayout struct {
 
 type Input struct {
 	ID           crypto.Hash       `json:"ID"`
+	Type         *OutputType       `json:"Type"`
 	Value        BigInt            `json:"Value"`
 	Fulfillment  UnlockFulfillment `json:"Fulfillment"`
 	ParentOutput *Output           `json:"ParentOutput"`
 }
-
-func (Input) IsObject() {}
 
 type LockTimeCondition struct {
 	Version    ByteVersion       `json:"Version"`
@@ -130,8 +134,9 @@ type MintCoinCreationTransaction struct {
 	ArbitraryData   *BinaryData             `json:"ArbitraryData"`
 }
 
-func (MintCoinCreationTransaction) IsObject()      {}
-func (MintCoinCreationTransaction) IsTransaction() {}
+func (MintCoinCreationTransaction) IsObject()       {}
+func (MintCoinCreationTransaction) IsTransaction()  {}
+func (MintCoinCreationTransaction) IsOutputParent() {}
 
 type MintCoinDestructionTransaction struct {
 	ID            crypto.Hash             `json:"ID"`
@@ -143,8 +148,9 @@ type MintCoinDestructionTransaction struct {
 	ArbitraryData *BinaryData             `json:"ArbitraryData"`
 }
 
-func (MintCoinDestructionTransaction) IsObject()      {}
-func (MintCoinDestructionTransaction) IsTransaction() {}
+func (MintCoinDestructionTransaction) IsObject()       {}
+func (MintCoinDestructionTransaction) IsTransaction()  {}
+func (MintCoinDestructionTransaction) IsOutputParent() {}
 
 type MintConditionDefinitionTransaction struct {
 	ID               crypto.Hash             `json:"ID"`
@@ -159,8 +165,9 @@ type MintConditionDefinitionTransaction struct {
 	ArbitraryData    *BinaryData             `json:"ArbitraryData"`
 }
 
-func (MintConditionDefinitionTransaction) IsObject()      {}
-func (MintConditionDefinitionTransaction) IsTransaction() {}
+func (MintConditionDefinitionTransaction) IsObject()       {}
+func (MintConditionDefinitionTransaction) IsTransaction()  {}
+func (MintConditionDefinitionTransaction) IsOutputParent() {}
 
 type MultiSignatureCondition struct {
 	Version                ByteVersion                `json:"Version"`
@@ -206,9 +213,12 @@ func (NilCondition) IsUnlockCondition() {}
 
 type Output struct {
 	ID         crypto.Hash     `json:"ID"`
+	Type       *OutputType     `json:"Type"`
 	Value      BigInt          `json:"Value"`
 	Condition  UnlockCondition `json:"Condition"`
 	ChildInput *Input          `json:"ChildInput"`
+	ParentID   crypto.Hash     `json:"ParentID"`
+	Parent     OutputParent    `json:"Parent"`
 }
 
 func (Output) IsObject() {}
@@ -257,8 +267,9 @@ type StandardTransaction struct {
 	ArbitraryData     *BinaryData             `json:"ArbitraryData"`
 }
 
-func (StandardTransaction) IsObject()      {}
-func (StandardTransaction) IsTransaction() {}
+func (StandardTransaction) IsObject()       {}
+func (StandardTransaction) IsTransaction()  {}
+func (StandardTransaction) IsOutputParent() {}
 
 type TransactionFeePayout struct {
 	BlockPayout *BlockPayout `json:"BlockPayout"`
@@ -366,5 +377,50 @@ func (e *LockType) UnmarshalGQL(v interface{}) error {
 }
 
 func (e LockType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type OutputType string
+
+const (
+	OutputTypeCoin                OutputType = "COIN"
+	OutputTypeBlockStake          OutputType = "BLOCK_STAKE"
+	OutputTypeBlockCreationReward OutputType = "BLOCK_CREATION_REWARD"
+	OutputTypeTransactionFee      OutputType = "TRANSACTION_FEE"
+)
+
+var AllOutputType = []OutputType{
+	OutputTypeCoin,
+	OutputTypeBlockStake,
+	OutputTypeBlockCreationReward,
+	OutputTypeTransactionFee,
+}
+
+func (e OutputType) IsValid() bool {
+	switch e {
+	case OutputTypeCoin, OutputTypeBlockStake, OutputTypeBlockCreationReward, OutputTypeTransactionFee:
+		return true
+	}
+	return false
+}
+
+func (e OutputType) String() string {
+	return string(e)
+}
+
+func (e *OutputType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = OutputType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid OutputType", str)
+	}
+	return nil
+}
+
+func (e OutputType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

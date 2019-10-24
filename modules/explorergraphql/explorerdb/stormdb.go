@@ -13,6 +13,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+// TODO: store atomic swap contract updates
+
 // TODO: store wallet updates
 
 type StormDB struct {
@@ -35,10 +37,9 @@ var (
 )
 
 const (
-	nodeNameObjects      = "Objects"
-	nodeNameUnlockhashes = "UnlockHashes"
-	nodeNamePublicKeys   = "PublicKeys"
-	nodeNameBlocks       = "Blocks"
+	nodeNameObjects    = "Objects"
+	nodeNamePublicKeys = "PublicKeys"
+	nodeNameBlocks     = "Blocks"
 
 	nodeObjectKeyID         = "ID"
 	nodeObjectKeyUnlockHash = "UnlockHash"
@@ -128,7 +129,7 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 	publicKeysNode := sdb.db.From(nodeNamePublicKeys)
 
 	// store block
-	err := node.Save(&block)
+	err := node.Save(block.AsObject())
 	if err != nil {
 		return fmt.Errorf("failed to apply block: failed to save block %s: %v", block.ID.String(), err)
 	}
@@ -149,7 +150,7 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 	}
 	// store transactions
 	for idx, tx := range txs {
-		err = node.Save(&tx)
+		err = node.Save(tx.AsObject())
 		if err != nil {
 			return fmt.Errorf(
 				"failed to apply block: failed to save txn %s (#%d) of block %s: %v",
@@ -158,7 +159,7 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 	}
 	// store outputs
 	for idx, output := range outputs {
-		err = node.Save(&output)
+		err = node.Save(output.AsObject())
 		if err != nil {
 			return fmt.Errorf(
 				"failed to apply block: failed to save output %s (#%d) of parent %s: %v",
@@ -167,8 +168,7 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 	}
 	// store inputs
 	for outputID, spenditureData := range inputs {
-		var output Output
-		err = node.One(nodeObjectKeyID, outputID, &output)
+		output, err := sdb.getOutputFromNode(node, outputID)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to apply block %s: failed to update output (as spent): failed to fetch existing output %s: %v",
@@ -178,10 +178,11 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 			return fmt.Errorf("failed to apply block %s: failed to update output (as spent): inconsent data stored for output %s: spenditure data should still be nil at the moment",
 				block.ID.String(), outputID.String())
 		}
-		err = node.UpdateField(&output, "SpenditureData", &spenditureData)
+		output.SpenditureData = &spenditureData // set to be applied spenditure data
+		err = node.Update(output.AsObject())
 		if err != nil {
 			return fmt.Errorf(
-				"failed to apply block %s: failed to update output (as spent) from parent %s: failed to update field 'SpenditureData' of existing output %s: %v",
+				"failed to apply block %s: failed to update output (as spent) from parent %s: failed to update existing output %s: %v",
 				block.ID.String(), outputID.String(), output.ParentID.String(), err)
 		}
 	}
@@ -204,7 +205,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	blockNode := sdb.db.From(nodeNameBlocks)
 
 	// delete block
-	err := deleteFromNodeByID(node, blockContext.ID, new(Block))
+	err := deleteFromNodeByID(node, blockContext.ID, new(Object))
 	if err != nil {
 		return fmt.Errorf("failed to revert block: failed to delete block %s by ID: %v", blockContext.ID.String(), err)
 	}
@@ -225,7 +226,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	}
 	// delete transactions
 	for idx, tx := range txs {
-		err = deleteFromNodeByID(node, tx, new(Transaction))
+		err = deleteFromNodeByID(node, tx, new(Object))
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to delete txn %s (#%d) of block %s by ID: %v",
@@ -234,7 +235,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	}
 	// delete outputs
 	for _, output := range outputs {
-		err = deleteFromNodeByID(node, output, new(Output))
+		err = deleteFromNodeByID(node, output, new(Object))
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to delete unspent output %s of block %s by ID: %v",
@@ -243,8 +244,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	}
 	// delete inputs
 	for _, inputID := range inputs {
-		var output Output
-		err = node.One(nodeObjectKeyID, inputID, &output)
+		output, err := sdb.getOutputFromNode(node, inputID)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to unmark spent output %s of block %s: failed to fetch by ID: %v",
@@ -254,10 +254,11 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 			return fmt.Errorf("failed to revert block: failed to unmark spent output %s of block %s: inconsent data stored for output: spenditure data should not be nil at the moment",
 				inputID.String(), blockContext.ID.String())
 		}
-		err = node.UpdateField(&output, "SpenditureData", nil)
+		output.SpenditureData = nil // remove reverted spenditure data
+		err = node.Update(output.AsObject())
 		if err != nil {
 			return fmt.Errorf(
-				"failed to revert block: failed to unmark spent output %s from parent %s of block %s: failed to write field 'SpenditureData' as nil: %v",
+				"failed to revert block: failed to unmark spent output %s from parent %s of block %s: failed to update existing output: %v",
 				inputID.String(), output.ParentID.String(), blockContext.ID.String(), err)
 		}
 	}
@@ -273,10 +274,21 @@ func deleteFromNodeByID(node storm.Node, ID interface{}, value interface{}) erro
 	return node.DeleteStruct(value)
 }
 
-func (sdb *StormDB) GetBlock(id types.BlockID) (block Block, err error) {
+func (sdb *StormDB) GetObject(id ObjectID) (object Object, err error) {
 	node := sdb.db.From(nodeNameObjects)
-	err = node.One(nodeObjectKeyID, id, &block)
+	err = node.One(nodeObjectKeyID, id, &object)
 	return
+}
+
+func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
+	object, err := sdb.GetObject(ObjectID(id[:]))
+	if err != nil {
+		return Block{}, err
+	}
+	if object.Type != ObjectTypeBlock {
+		return Block{}, fmt.Errorf("cannot cast object %s of type %d to a block (type %d)", id.String(), object.Type, ObjectTypeBlock)
+	}
+	return object.Data.(Block), nil
 }
 
 func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
@@ -292,34 +304,69 @@ func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
 	return sdb.GetBlock(pair.BlockID)
 }
 
-func (sdb *StormDB) GetTransaction(id types.TransactionID) (txn Transaction, err error) {
+func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {
+	object, err := sdb.GetObject(ObjectID(id[:]))
+	if err != nil {
+		return Transaction{}, err
+	}
+	if object.Type != ObjectTypeTransaction {
+		return Transaction{}, fmt.Errorf("cannot cast object %s of type %d to a transaction (type %d)", id.String(), object.Type, ObjectTypeTransaction)
+	}
+	return object.Data.(Transaction), nil
+}
+
+func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
 	node := sdb.db.From(nodeNameObjects)
-	err = node.One(nodeObjectKeyID, id, &txn)
-	return
+	return sdb.getOutputFromNode(node, id)
 }
 
-func (sdb *StormDB) GetOutput(id types.OutputID) (output Output, err error) {
-	node := sdb.db.From(nodeNameObjects)
-	err = node.One(nodeObjectKeyID, id, &output)
-	return
+func (sdb *StormDB) getOutputFromNode(node storm.Node, id types.OutputID) (Output, error) {
+	var object Object
+	err := node.One(nodeObjectKeyID, ObjectID(id[:]), &object)
+	if err != nil {
+		return Output{}, err
+	}
+	if object.Type != ObjectTypeOutput {
+		return Output{}, fmt.Errorf("cannot cast object %s of type %d to an output (type %d)", id.String(), object.Type, ObjectTypeOutput)
+	}
+	return object.Data.(Output), nil
 }
 
-func (sdb *StormDB) GetWallet(uh types.UnlockHash) (wallet WalletData, err error) {
-	node := sdb.db.From(nodeNameUnlockhashes)
-	err = node.One(nodeObjectKeyUnlockHash, uh, &wallet)
-	return
+func (sdb *StormDB) GetWallet(uh types.UnlockHash) (WalletData, error) {
+	object, err := sdb.GetObject(ObjectIDFromUnlockHash(uh))
+	if err != nil {
+		return WalletData{}, err
+	}
+	if object.Type != ObjectTypeWallet {
+		return WalletData{}, fmt.Errorf("cannot cast object %s of type %d to a wallet (type %d)", uh.String(), object.Type, ObjectTypeWallet)
+	}
+	return object.Data.(WalletData), nil
 }
 
-func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (wallet MultiSignatureWalletData, err error) {
-	node := sdb.db.From(nodeNameUnlockhashes)
-	err = node.One(nodeObjectKeyUnlockHash, uh, &wallet)
-	return
+func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
+	object, err := sdb.GetObject(ObjectIDFromUnlockHash(uh))
+	if err != nil {
+		return MultiSignatureWalletData{}, err
+	}
+	if object.Type != ObjectTypeMultiSignatureWallet {
+		return MultiSignatureWalletData{}, fmt.Errorf(
+			"cannot cast object %s of type %d to a multisig wallet (type %d)",
+			uh.String(), object.Type, ObjectTypeMultiSignatureWallet)
+	}
+	return object.Data.(MultiSignatureWalletData), nil
 }
 
-func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (contract AtomicSwapContract, err error) {
-	node := sdb.db.From(nodeNameUnlockhashes)
-	err = node.One(nodeObjectKeyUnlockHash, uh, &contract)
-	return
+func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
+	object, err := sdb.GetObject(ObjectIDFromUnlockHash(uh))
+	if err != nil {
+		return AtomicSwapContract{}, err
+	}
+	if object.Type != ObjectTypeAtomicSwapContract {
+		return AtomicSwapContract{}, fmt.Errorf(
+			"cannot cast object %s of type %d to an atomic swap contract (type %d)",
+			uh.String(), object.Type, ObjectTypeAtomicSwapContract)
+	}
+	return object.Data.(AtomicSwapContract), nil
 }
 
 func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
