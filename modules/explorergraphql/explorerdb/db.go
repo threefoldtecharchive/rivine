@@ -16,9 +16,13 @@ import (
 
 // TODO: support batching (to allow speeding up the process as well as intermediate rollbacks)
 
+// TODO: we should not have to rely on CS data for getting the child target
+
 type DB interface {
 	SetChainContext(ChainContext) error
 	GetChainContext() (ChainContext, error)
+
+	GetChainAggregatedFacts() (ChainAggregatedFacts, error)
 
 	ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error
 	// TODO: should we also revert public key (from UH) mapping?
@@ -31,7 +35,7 @@ type DB interface {
 	GetTransaction(types.TransactionID) (Transaction, error)
 	GetOutput(types.OutputID) (Output, error)
 
-	GetWallet(types.UnlockHash) (WalletData, error)
+	GetSingleSignatureWallet(types.UnlockHash) (SingleSignatureWalletData, error)
 	GetMultiSignatureWallet(types.UnlockHash) (MultiSignatureWalletData, error)
 	GetAtomicSwapContract(types.UnlockHash) (AtomicSwapContract, error)
 
@@ -40,22 +44,9 @@ type DB interface {
 	Close() error
 }
 
-type ChainContext struct {
-	ConsensusChangeID modules.ConsensusChangeID
-	Height            types.BlockHeight
-	Timestamp         types.Timestamp
-	BlockID           types.BlockID
-}
-
-type BlockRevertContext struct {
-	ID        types.BlockID
-	Height    types.BlockHeight
-	Timestamp types.Timestamp
-}
-
 // TODO: handle also chain-specific stuff, such as chains that do not have block rewards
 
-func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
+func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusChange, chainCts *types.ChainConstants) error {
 	chainCtx, err := db.GetChainContext()
 	if err != nil {
 		return err
@@ -66,7 +57,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 		chainCtx.Height--
 		chainCtx.Timestamp = revertedBlock.Timestamp
 
-		block := RivineBlockAsExplorerBlock(chainCtx.Height, revertedBlock)
+		block := RivineBlockAsExplorerBlock(chainCtx.Height, revertedBlock, types.Target{}) // target not valid here
 		chainCtx.BlockID = block.ID
 
 		outputs := make([]types.OutputID, 0, len(revertedBlock.MinerPayouts))
@@ -106,7 +97,18 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 	}
 
 	for _, appliedBlock := range csc.AppliedBlocks {
-		block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock)
+		var target types.Target
+		if chainCtx.Height > 0 {
+			// TODO: find a better way than having to get this target from the consensusSet DB
+			var ok bool
+			target, ok = cs.ChildTarget(appliedBlock.ParentID)
+			if !ok {
+				return fmt.Errorf("failed to look up child target for parent block %s", appliedBlock.ParentID.String())
+			}
+		} else {
+			target = chainCts.RootTarget()
+		}
+		block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock, target)
 		publicKeys := make(map[types.UnlockHash]types.PublicKey)
 
 		outputs := make([]Output, 0, len(appliedBlock.MinerPayouts))
@@ -118,7 +120,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 				// TODO: customize this per chain network (behaviour and constants)
 				idx == 0,
 				chainCtx.Height,
-				720,
+				chainCts.MaturityDelay,
 			))
 		}
 		// TODO: customize this per chain network
@@ -192,7 +194,7 @@ func ApplyConsensusChange(db DB, csc modules.ConsensusChange) error {
 	return err
 }
 
-func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block) Block {
+func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block, target types.Target) Block {
 	// aggregate payouts (as a list of identifiers)
 	payouts := make([]types.OutputID, 0, len(block.MinerPayouts))
 	for idx := range block.MinerPayouts {
@@ -207,6 +209,7 @@ func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block) Blo
 	return Block{
 		ID:           block.ID(),
 		ParentID:     block.ParentID,
+		Target:       target,
 		Height:       height,
 		Timestamp:    block.Timestamp,
 		Payouts:      payouts,
@@ -328,35 +331,43 @@ func RivineMinerPayoutAsOutput(parent types.BlockID, id types.CoinOutputID, payo
 		ot = OutputTypeTransactionFee
 	}
 
+	condition := types.NewCondition(types.NewTimeLockCondition(
+		uint64(height+delay),
+		types.NewUnlockHashCondition(payout.UnlockHash)))
+	unlockReferencePoint, _ := UnlockReferencePointFromCondition(condition)
+
 	// return output
 	return Output{
-		ID:       types.OutputID(id),
-		ParentID: crypto.Hash(parent),
-		Type:     ot,
-		Value:    payout.Value,
-		Condition: types.NewCondition(types.NewTimeLockCondition(
-			uint64(height+delay),
-			types.NewUnlockHashCondition(payout.UnlockHash))),
-		SpenditureData: nil,
+		ID:                   types.OutputID(id),
+		ParentID:             crypto.Hash(parent),
+		Type:                 ot,
+		Value:                payout.Value,
+		Condition:            condition,
+		UnlockReferencePoint: unlockReferencePoint,
+		SpenditureData:       nil,
 	}
 }
 
 func RivineCoinOutputAsOutput(parent types.TransactionID, id types.CoinOutputID, output types.CoinOutput) Output {
+	unlockReferencePoint, _ := UnlockReferencePointFromCondition(output.Condition)
 	return Output{
-		ID:        types.OutputID(id),
-		ParentID:  crypto.Hash(parent),
-		Type:      OutputTypeCoin,
-		Value:     output.Value,
-		Condition: output.Condition,
+		ID:                   types.OutputID(id),
+		ParentID:             crypto.Hash(parent),
+		Type:                 OutputTypeCoin,
+		Value:                output.Value,
+		Condition:            output.Condition,
+		UnlockReferencePoint: unlockReferencePoint,
 	}
 }
 
 func RivineBlockStakeOutputAsOutput(parent types.TransactionID, id types.BlockStakeOutputID, output types.BlockStakeOutput) Output {
+	unlockReferencePoint, _ := UnlockReferencePointFromCondition(output.Condition)
 	return Output{
-		ID:        types.OutputID(id),
-		ParentID:  crypto.Hash(parent),
-		Type:      OutputTypeBlockStake,
-		Value:     output.Value,
-		Condition: output.Condition,
+		ID:                   types.OutputID(id),
+		ParentID:             crypto.Hash(parent),
+		Type:                 OutputTypeBlockStake,
+		Value:                output.Value,
+		Condition:            output.Condition,
+		UnlockReferencePoint: unlockReferencePoint,
 	}
 }

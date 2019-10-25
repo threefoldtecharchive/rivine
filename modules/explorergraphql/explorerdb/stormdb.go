@@ -1,7 +1,6 @@
 package explorerdb
 
 import (
-	"encoding/hex"
 	"fmt"
 	"reflect"
 
@@ -18,31 +17,32 @@ import (
 // TODO: store wallet updates
 
 type StormDB struct {
-	db *storm.DB
+	db       *storm.DB
+	chainCts types.ChainConstants
 }
 
-func NewStormDB(path string) (*StormDB, error) {
+func NewStormDB(path string, chainCts types.ChainConstants) (*StormDB, error) {
 	db, err := storm.Open(path, storm.Codec(rivbinMarshalUnmarshaler{}))
 	if err != nil {
 		return nil, err
 	}
 	return &StormDB{
-		db: db,
+		db:       db,
+		chainCts: chainCts,
 	}, nil
 }
 
 var (
-	bucketNameMetadata      = []byte("Metadata")
-	MetadataKeyChainContext = []byte("ChainContext")
+	bucketNameMetadata              = []byte("Metadata")
+	metadataKeyChainContext         = []byte("ChainContext")
+	metadataKeyInternalData         = []byte("InternalData")
+	metadataKeyChainAggregatedFacts = []byte("ChainAggregatedFacts")
 )
 
 const (
 	nodeNameObjects    = "Objects"
 	nodeNamePublicKeys = "PublicKeys"
 	nodeNameBlocks     = "Blocks"
-
-	nodeObjectKeyID         = "ID"
-	nodeObjectKeyUnlockHash = "UnlockHash"
 
 	nodePublicKeysKeyUnlockHash = "UnlockHash"
 
@@ -80,6 +80,54 @@ type unlockHashPublicKeyPair struct {
 	PublicKey  types.PublicKey
 }
 
+type stormDBInternalData struct {
+	LastDataID stormDataID
+}
+
+// TODO: where we use manual bolt calls, re-use existing bolt.Tx, once we do start using those somehow
+
+func (sdb *StormDB) saveInternalData(internalData stormDBInternalData) error {
+	b, err := rivbin.Marshal(internalData)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to marshal internal stormDB data %v: %v", internalData, err)
+	}
+	return sdb.db.Bolt.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists(bucketNameMetadata)
+		if err != nil {
+			return fmt.Errorf("bucket %s is not created while it is expected to be: %v", string(bucketNameMetadata), err)
+		}
+		return bucket.Put(metadataKeyInternalData, b)
+	})
+}
+
+func (sdb *StormDB) getInternalData() (stormDBInternalData, error) {
+	var internalDataBytes []byte
+	err := sdb.db.Bolt.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketNameMetadata)
+		if bucket == nil {
+			return nil
+		}
+		internalDataBytes = bucket.Get(metadataKeyInternalData)
+		return nil
+	})
+	if err != nil {
+		return stormDBInternalData{}, err
+	}
+	if len(internalDataBytes) == 0 { // start from zero
+		return stormDBInternalData{
+			LastDataID: 1, // start at index 1, as stormDB doesn't allow a 0-index
+		}, nil
+	}
+	var internalData stormDBInternalData
+	err = rivbin.Unmarshal(internalDataBytes, &internalData)
+	if err != nil {
+		return stormDBInternalData{}, fmt.Errorf(
+			"failed to unmarshal internal stormDB data %x: %v", internalDataBytes, err)
+	}
+	return internalData, nil
+}
+
 func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
 	b, err := rivbin.Marshal(chainCtx)
 	if err != nil {
@@ -91,7 +139,7 @@ func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
 		if err != nil {
 			return fmt.Errorf("bucket %s is not created while it is expected to be: %v", string(bucketNameMetadata), err)
 		}
-		return bucket.Put(MetadataKeyChainContext, b)
+		return bucket.Put(metadataKeyChainContext, b)
 	})
 }
 
@@ -102,7 +150,7 @@ func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 		if bucket == nil {
 			return nil
 		}
-		chainCtxBytes = bucket.Get(MetadataKeyChainContext)
+		chainCtxBytes = bucket.Get(metadataKeyChainContext)
 		return nil
 	})
 	if err != nil {
@@ -117,19 +165,84 @@ func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 	err = rivbin.Unmarshal(chainCtxBytes, &chainCtx)
 	if err != nil {
 		return ChainContext{}, fmt.Errorf(
-			"failed to unmarshal chain context %s: %v",
-			hex.EncodeToString(chainCtxBytes), err)
+			"failed to unmarshal chain context %x: %v", chainCtxBytes, err)
 	}
 	return chainCtx, nil
 }
 
+func (sdb *StormDB) GetChainAggregatedFacts() (ChainAggregatedFacts, error) {
+	var factsBytes []byte
+	err := sdb.db.Bolt.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket(bucketNameMetadata)
+		if bucket == nil {
+			return nil
+		}
+		factsBytes = bucket.Get(metadataKeyChainAggregatedFacts)
+		return nil
+	})
+	if err != nil {
+		return ChainAggregatedFacts{}, err
+	}
+	if len(factsBytes) == 0 { // start from zero
+		return ChainAggregatedFacts{}, nil
+	}
+	var facts ChainAggregatedFacts
+	err = rivbin.Unmarshal(factsBytes, &facts)
+	if err != nil {
+		return ChainAggregatedFacts{}, fmt.Errorf(
+			"failed to unmarshal chain aggregated facts %x: %v", factsBytes, err)
+	}
+	return facts, nil
+}
+
+func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *ChainAggregatedFacts) error) error {
+	return sdb.db.Bolt.Update(func(tx *bolt.Tx) error {
+		bucket, err := tx.CreateBucketIfNotExists(bucketNameMetadata)
+		if err != nil {
+			return err
+		}
+
+		var (
+			facts      ChainAggregatedFacts
+			factsBytes []byte
+		)
+		if factsBytes = bucket.Get(metadataKeyChainAggregatedFacts); len(factsBytes) != 0 {
+			err = rivbin.Unmarshal(factsBytes, &facts)
+			if err != nil {
+				return fmt.Errorf(
+					"failed to unmarshal chain aggregated facts %x: %v", factsBytes, err)
+			}
+		}
+
+		err = cb(&facts)
+		if err != nil {
+			return err
+		}
+
+		factsBytes, err = rivbin.Marshal(facts)
+		if err != nil {
+			return err
+		}
+
+		return bucket.Put(metadataKeyChainAggregatedFacts, factsBytes)
+	})
+}
+
 func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error {
-	node := sdb.db.From(nodeNameObjects)
+	sdbInternalData, err := sdb.getInternalData()
+	if err != nil {
+		return err
+	}
+
+	node := &stormObjectNode{
+		node:       sdb.db.From(nodeNameObjects),
+		lastDataID: sdbInternalData.LastDataID,
+	}
 	blockNode := sdb.db.From(nodeNameBlocks)
 	publicKeysNode := sdb.db.From(nodeNamePublicKeys)
 
 	// store block
-	err := node.Save(block.AsObject())
+	err = node.SaveBlock(&block)
 	if err != nil {
 		return fmt.Errorf("failed to apply block: failed to save block %s: %v", block.ID.String(), err)
 	}
@@ -150,7 +263,7 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 	}
 	// store transactions
 	for idx, tx := range txs {
-		err = node.Save(tx.AsObject())
+		err = node.SaveTransaction(&tx)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to apply block: failed to save txn %s (#%d) of block %s: %v",
@@ -159,7 +272,7 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 	}
 	// store outputs
 	for idx, output := range outputs {
-		err = node.Save(output.AsObject())
+		err = node.SaveOutput(&output)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to apply block: failed to save output %s (#%d) of parent %s: %v",
@@ -167,24 +280,15 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 		}
 	}
 	// store inputs
+	inputOutputSlice := make([]*Output, 0, len(inputs))
 	for outputID, spenditureData := range inputs {
-		output, err := sdb.getOutputFromNode(node, outputID)
+		output, err := node.UpdateOutputSpenditureData(outputID, &spenditureData)
 		if err != nil {
 			return fmt.Errorf(
-				"failed to apply block %s: failed to update output (as spent): failed to fetch existing output %s: %v",
+				"failed to apply block %s: failed to update output (as spent): failed to update existing output %s: %v",
 				block.ID.String(), outputID.String(), err)
 		}
-		if output.SpenditureData != nil {
-			return fmt.Errorf("failed to apply block %s: failed to update output (as spent): inconsent data stored for output %s: spenditure data should still be nil at the moment",
-				block.ID.String(), outputID.String())
-		}
-		output.SpenditureData = &spenditureData // set to be applied spenditure data
-		err = node.Update(output.AsObject())
-		if err != nil {
-			return fmt.Errorf(
-				"failed to apply block %s: failed to update output (as spent) from parent %s: failed to update existing output %s: %v",
-				block.ID.String(), outputID.String(), output.ParentID.String(), err)
-		}
+		inputOutputSlice = append(inputOutputSlice, &output)
 	}
 	// store public keys
 	for uh, pk := range publicKeys {
@@ -196,16 +300,117 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 			return fmt.Errorf("failed to apply block: failed to save block %s's unlock hash %s mapped to public key %s: %v", block.ID.String(), uh.String(), pk.String(), err)
 		}
 	}
-	// all good
-	return nil
+	// update aggregated facts
+	err = sdb.applyBlockToAggregatedFacts(block.Height, block.Timestamp, node, outputs, inputOutputSlice, block.Target)
+	if err != nil {
+		return fmt.Errorf("failed to apply block: failed to save aggregated chain facts at block %s (height: %d): %v", block.ID.String(), block.Height, err)
+	}
+
+	// finally store the internal stormDB data
+	sdbInternalData.LastDataID = node.lastDataID
+	return sdb.saveInternalData(sdbInternalData)
+}
+
+func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode *stormObjectNode, outputs []Output, inputs []*Output, target types.Target) error {
+	var (
+		err             error
+		isLocked        bool
+		outputsUnlocked []stormOutput
+	)
+	// get outputs unlocked by height and timestamp
+	if height != 0 { // do not do it for block 0, as it will return all outputs that do not have a lock
+		outputsUnlocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, timestamp)
+		if err != nil {
+			if err == storm.ErrNotFound {
+				// ignore not found
+				outputsUnlocked = nil
+			} else {
+				return fmt.Errorf("failed to get outputs unlocked by height %d or timestamp %d: %v", height, timestamp, err)
+			}
+		}
+	}
+	// get outputs unlocked by timestamp
+	return sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
+		// discount all new inputs from total coins/blockstakes
+		for _, input := range inputs {
+			if input.Type == OutputTypeBlockStake {
+				facts.TotalBlockStakes = facts.TotalBlockStakes.Sub(input.Value)
+			} else {
+				facts.TotalCoins = facts.TotalCoins.Sub(input.Value)
+			}
+		}
+		// count all new outputs, and if locked also add them to the total locked assets
+		for _, output := range outputs {
+			isLocked = output.UnlockReferencePoint > 0 && !output.UnlockReferencePoint.Overreached(height, timestamp)
+			if output.Type == OutputTypeBlockStake {
+				facts.TotalBlockStakes = facts.TotalBlockStakes.Add(output.Value)
+				if isLocked {
+					facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Add(output.Value)
+				}
+			} else {
+				facts.TotalCoins = facts.TotalCoins.Add(output.Value)
+				if isLocked {
+					facts.TotalLockedCoins = facts.TotalLockedCoins.Add(output.Value)
+				}
+			}
+		}
+		// discount all unlocked outputs from total locked coins/blockstakes
+		for _, output := range outputsUnlocked {
+			if output.Type == OutputTypeBlockStake {
+				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Sub(output.Value)
+			} else {
+				facts.TotalLockedCoins = facts.TotalLockedCoins.Sub(output.Value)
+			}
+		}
+		// update estimated active block stakes
+		facts.AddLastBlockContext(BlockFactsContext{
+			Target:    target,
+			Timestamp: timestamp,
+		})
+		facts.EstimatedActiveBlockStakes = sdb.estimateActiveBS(height, timestamp, facts.LastBlocks)
+		return nil
+	})
+}
+
+func (sdb *StormDB) estimateActiveBS(height types.BlockHeight, timestamp types.Timestamp, blocks []BlockFactsContext) types.Currency {
+	if len(blocks) == 0 {
+		return types.Currency{}
+	}
+	var (
+		estimatedActiveBS types.Difficulty
+		block             BlockFactsContext
+
+		lBlockOffset    = len(blocks) - 1
+		oldestTimestamp = blocks[lBlockOffset].Timestamp
+		totalDifficulty = blocks[lBlockOffset].Target
+	)
+	for i := range blocks[:lBlockOffset] {
+		block = blocks[lBlockOffset-i]
+		totalDifficulty = totalDifficulty.AddDifficulties(block.Target, sdb.chainCts.RootDepth)
+		oldestTimestamp = block.Timestamp
+	}
+	secondsPassed := timestamp - oldestTimestamp
+	estimatedActiveBS = totalDifficulty.Difficulty(sdb.chainCts.RootDepth)
+	if secondsPassed > 0 {
+		estimatedActiveBS = estimatedActiveBS.Div64(uint64(secondsPassed))
+	}
+	return types.NewCurrency(estimatedActiveBS.Big())
 }
 
 func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error {
-	node := sdb.db.From(nodeNameObjects)
+	sdbInternalData, err := sdb.getInternalData()
+	if err != nil {
+		return err
+	}
+
+	node := &stormObjectNode{
+		node:       sdb.db.From(nodeNameObjects),
+		lastDataID: sdbInternalData.LastDataID,
+	}
 	blockNode := sdb.db.From(nodeNameBlocks)
 
 	// delete block
-	err := deleteFromNodeByID(node, blockContext.ID, new(Object))
+	err = node.DeleteBlock(blockContext.ID)
 	if err != nil {
 		return fmt.Errorf("failed to revert block: failed to delete block %s by ID: %v", blockContext.ID.String(), err)
 	}
@@ -226,7 +431,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	}
 	// delete transactions
 	for idx, tx := range txs {
-		err = deleteFromNodeByID(node, tx, new(Object))
+		err = node.DeleteTransaction(tx)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to delete txn %s (#%d) of block %s by ID: %v",
@@ -234,61 +439,120 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		}
 	}
 	// delete outputs
+	outputSlice := make([]*Output, 0, len(outputs))
 	for _, output := range outputs {
-		err = deleteFromNodeByID(node, output, new(Object))
+		var obj Object
+		err = node.DeleteOutput(output)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to delete unspent output %s of block %s by ID: %v",
 				output.String(), blockContext.ID.String(), err)
 		}
+		if obj.Type != ObjectTypeOutput {
+			return fmt.Errorf(
+				"failed to revert block: unspent output %s of block %s was stored as unexpected object type %d (expected %d)",
+				output.String(), blockContext.ID.String(), obj.Type, ObjectTypeOutput)
+		}
+		outputObj, ok := obj.Data.(Output)
+		if !ok {
+			return fmt.Errorf(
+				"failed to revert block: unspent output %s of block %s was stored as unexpected object data type %T (expected %T)",
+				output.String(), blockContext.ID.String(), obj.Data, Output{})
+		}
+		outputSlice = append(outputSlice, &outputObj)
 	}
 	// delete inputs
+	inputOutputSlice := make([]*Output, 0, len(inputs))
 	for _, inputID := range inputs {
-		output, err := sdb.getOutputFromNode(node, inputID)
+		output, err := node.UpdateOutputSpenditureData(inputID, nil)
 		if err != nil {
 			return fmt.Errorf(
-				"failed to revert block: failed to unmark spent output %s of block %s: failed to fetch by ID: %v",
+				"failed to revert block: failed to unmark spent output %s of block %s: failed to update existing output: %v",
 				inputID.String(), blockContext.ID.String(), err)
 		}
-		if output.SpenditureData == nil {
-			return fmt.Errorf("failed to revert block: failed to unmark spent output %s of block %s: inconsent data stored for output: spenditure data should not be nil at the moment",
-				inputID.String(), blockContext.ID.String())
-		}
-		output.SpenditureData = nil // remove reverted spenditure data
-		err = node.Update(output.AsObject())
-		if err != nil {
-			return fmt.Errorf(
-				"failed to revert block: failed to unmark spent output %s from parent %s of block %s: failed to update existing output: %v",
-				inputID.String(), output.ParentID.String(), blockContext.ID.String(), err)
-		}
+		inputOutputSlice = append(inputOutputSlice, &output)
 	}
-	// all good
-	return nil
-}
-
-func deleteFromNodeByID(node storm.Node, ID interface{}, value interface{}) error {
-	err := node.One(nodeObjectKeyID, ID, value)
+	// update aggregated facts
+	err = sdb.revertBlockToAggregatedFacts(blockContext.Height, blockContext.Timestamp, node, outputSlice, inputOutputSlice)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to apply block: failed to save aggregated chain facts at block %s (height: %d): %v", blockContext.ID.String(), blockContext.Height, err)
 	}
-	return node.DeleteStruct(value)
+
+	// finally store the internal stormDB data
+	sdbInternalData.LastDataID = node.lastDataID
+	return sdb.saveInternalData(sdbInternalData)
 }
 
-func (sdb *StormDB) GetObject(id ObjectID) (object Object, err error) {
-	node := sdb.db.From(nodeNameObjects)
-	err = node.One(nodeObjectKeyID, id, &object)
-	return
+func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode *stormObjectNode, outputs []*Output, inputs []*Output) error {
+	var (
+		err           error
+		isLocked      bool
+		outputsLocked []stormOutput
+	)
+	// get outputs unlocked by height and timestamp
+	if height != 0 { // do not do it for block 0, as it will return all outputs that do not have a lock
+		outputsLocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, timestamp)
+		if err != nil {
+			if err == storm.ErrNotFound {
+				// ignore not found
+				outputsLocked = nil
+			} else {
+				return fmt.Errorf("failed to get outputs locked until height %d or timestamp %d: %v", height, timestamp, err)
+			}
+		}
+	}
+	// get outputs unlocked by timestamp
+	return sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
+		// re-apply all reverted inputs to total coins/blockstakes
+		for _, input := range inputs {
+			if input.Type == OutputTypeBlockStake {
+				facts.TotalBlockStakes = facts.TotalBlockStakes.Add(input.Value)
+			} else {
+				facts.TotalCoins = facts.TotalCoins.Add(input.Value)
+			}
+		}
+		// re-apply all locked outputs to total locked coins/blockstakes
+		for _, output := range outputsLocked {
+			if output.Type == OutputTypeBlockStake {
+				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Add(output.Value)
+			} else {
+				facts.TotalLockedCoins = facts.TotalLockedCoins.Add(output.Value)
+			}
+		}
+		// discount all reverted outputs, and if locked also subtract them to the total locked assets
+		for _, output := range outputs {
+			isLocked = output.UnlockReferencePoint > 0 && !output.UnlockReferencePoint.Overreached(height, timestamp)
+			if output.Type == OutputTypeBlockStake {
+				facts.TotalBlockStakes = facts.TotalBlockStakes.Sub(output.Value)
+				if isLocked {
+					facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Sub(output.Value)
+				}
+			} else {
+				facts.TotalCoins = facts.TotalCoins.Sub(output.Value)
+				if isLocked {
+					facts.TotalLockedCoins = facts.TotalLockedCoins.Sub(output.Value)
+				}
+			}
+		}
+		facts.RemoveLastBlockContext()
+		facts.EstimatedActiveBlockStakes = sdb.estimateActiveBS(height, timestamp, facts.LastBlocks)
+		// all good
+		return nil
+	})
+}
+
+func (sdb *StormDB) GetObject(id ObjectID) (Object, error) {
+	// lastDataID is not needed here, so no need to fetch the lastDataID
+	// from the internal stormDB data
+	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	return node.GetObject(id)
 }
 
 func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
-	object, err := sdb.GetObject(ObjectID(id[:]))
-	if err != nil {
-		return Block{}, err
-	}
-	if object.Type != ObjectTypeBlock {
-		return Block{}, fmt.Errorf("cannot cast object %s of type %d to a block (type %d)", id.String(), object.Type, ObjectTypeBlock)
-	}
-	return object.Data.(Block), nil
+	// lastDataID is not needed here, so no need to fetch the lastDataID
+	// from the internal stormDB data
+	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	return node.GetBlock(id)
 }
 
 func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
@@ -305,68 +569,38 @@ func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
 }
 
 func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {
-	object, err := sdb.GetObject(ObjectID(id[:]))
-	if err != nil {
-		return Transaction{}, err
-	}
-	if object.Type != ObjectTypeTransaction {
-		return Transaction{}, fmt.Errorf("cannot cast object %s of type %d to a transaction (type %d)", id.String(), object.Type, ObjectTypeTransaction)
-	}
-	return object.Data.(Transaction), nil
+	// lastDataID is not needed here, so no need to fetch the lastDataID
+	// from the internal stormDB data
+	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	return node.GetTransaction(id)
 }
 
 func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
-	node := sdb.db.From(nodeNameObjects)
-	return sdb.getOutputFromNode(node, id)
+	// lastDataID is not needed here, so no need to fetch the lastDataID
+	// from the internal stormDB data
+	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	return node.GetOutput(id)
 }
 
-func (sdb *StormDB) getOutputFromNode(node storm.Node, id types.OutputID) (Output, error) {
-	var object Object
-	err := node.One(nodeObjectKeyID, ObjectID(id[:]), &object)
-	if err != nil {
-		return Output{}, err
-	}
-	if object.Type != ObjectTypeOutput {
-		return Output{}, fmt.Errorf("cannot cast object %s of type %d to an output (type %d)", id.String(), object.Type, ObjectTypeOutput)
-	}
-	return object.Data.(Output), nil
-}
-
-func (sdb *StormDB) GetWallet(uh types.UnlockHash) (WalletData, error) {
-	object, err := sdb.GetObject(ObjectIDFromUnlockHash(uh))
-	if err != nil {
-		return WalletData{}, err
-	}
-	if object.Type != ObjectTypeWallet {
-		return WalletData{}, fmt.Errorf("cannot cast object %s of type %d to a wallet (type %d)", uh.String(), object.Type, ObjectTypeWallet)
-	}
-	return object.Data.(WalletData), nil
+func (sdb *StormDB) GetSingleSignatureWallet(uh types.UnlockHash) (SingleSignatureWalletData, error) {
+	// lastDataID is not needed here, so no need to fetch the lastDataID
+	// from the internal stormDB data
+	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	return node.GetSingleSignatureWallet(uh)
 }
 
 func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
-	object, err := sdb.GetObject(ObjectIDFromUnlockHash(uh))
-	if err != nil {
-		return MultiSignatureWalletData{}, err
-	}
-	if object.Type != ObjectTypeMultiSignatureWallet {
-		return MultiSignatureWalletData{}, fmt.Errorf(
-			"cannot cast object %s of type %d to a multisig wallet (type %d)",
-			uh.String(), object.Type, ObjectTypeMultiSignatureWallet)
-	}
-	return object.Data.(MultiSignatureWalletData), nil
+	// lastDataID is not needed here, so no need to fetch the lastDataID
+	// from the internal stormDB data
+	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	return node.GetMultiSignatureWallet(uh)
 }
 
 func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
-	object, err := sdb.GetObject(ObjectIDFromUnlockHash(uh))
-	if err != nil {
-		return AtomicSwapContract{}, err
-	}
-	if object.Type != ObjectTypeAtomicSwapContract {
-		return AtomicSwapContract{}, fmt.Errorf(
-			"cannot cast object %s of type %d to an atomic swap contract (type %d)",
-			uh.String(), object.Type, ObjectTypeAtomicSwapContract)
-	}
-	return object.Data.(AtomicSwapContract), nil
+	// lastDataID is not needed here, so no need to fetch the lastDataID
+	// from the internal stormDB data
+	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	return node.GetAtomicSwapContract(uh)
 }
 
 func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {

@@ -39,6 +39,8 @@ scalar Signature
 scalar BigInt
 scalar ByteVersion
 
+# TODO: replace txn implementations by Transaction interface once possible
+#                   ... Same goes for AtomicSwapContract (Contract Union) and Wallets (Wallet Interface)
 union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
@@ -73,8 +75,8 @@ type ChainAggregatedData {
     TotalLockedCoins: BigInt
 
     TotalBlockStakes: BigInt
-    TotalActiveBlockStakes: BigInt # means spend in last 1000 blocks
     TotalLockedBlockStakes: BigInt
+    EstimatedActiveBlockStakes: BigInt
 }
 
 type Block {

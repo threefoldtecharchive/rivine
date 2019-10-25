@@ -47,7 +47,7 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		return nil, err
 	}
 
-	db, err := explorerdb.NewStormDB(filepath.Join(persistDir, "explorer.db"))
+	db, err := explorerdb.NewStormDB(filepath.Join(persistDir, "explorer.db"), chainConstants)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 	if len(cc.AppliedBlocks) == 0 {
 		build.Critical("Explorer.ProcessConsensusChange called with a ConsensusChange that has no AppliedBlocks")
 	}
-	err := explorerdb.ApplyConsensusChange(e.db, cc)
+	err := explorerdb.ApplyConsensusChange(e.db, e.cs, cc, &e.chainConstants)
 	if err != nil {
 		build.Critical("Explorer.ProcessConsensusChange failed", err)
 	}

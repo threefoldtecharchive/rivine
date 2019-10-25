@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/extensions/minting"
@@ -203,7 +204,24 @@ func (r *chainFactsResolver) LastBlock(ctx context.Context, obj *ChainFacts) (*B
 	return dbBlockAsGQL(ctx, r.db, &dbBlock)
 }
 func (r *chainFactsResolver) Aggregated(ctx context.Context, obj *ChainFacts) (*ChainAggregatedData, error) {
-	panic("not implemented")
+	if obj.Aggregated != nil && obj.Aggregated.TotalCoins.Cmp(new(big.Int)) != 0 {
+		return obj.Aggregated, nil // nothing to do anymore
+	}
+	dbChainAggregatedFacts, err := r.db.GetChainAggregatedFacts()
+	if err != nil {
+		return nil, fmt.Errorf("internal DB error while fetching chain aggregated facts: %v", err)
+	}
+	return dbChainAggregatedFactsAsGQL(&dbChainAggregatedFacts)
+}
+
+func dbChainAggregatedFactsAsGQL(facts *explorerdb.ChainAggregatedFacts) (*ChainAggregatedData, error) {
+	return &ChainAggregatedData{
+		TotalCoins:                 dbCurrencyAsBigIntRef(facts.TotalCoins),
+		TotalLockedCoins:           dbCurrencyAsBigIntRef(facts.TotalLockedCoins),
+		TotalBlockStakes:           dbCurrencyAsBigIntRef(facts.TotalBlockStakes),
+		TotalLockedBlockStakes:     dbCurrencyAsBigIntRef(facts.TotalLockedBlockStakes),
+		EstimatedActiveBlockStakes: dbCurrencyAsBigIntRef(facts.EstimatedActiveBlockStakes),
+	}, nil
 }
 
 type mintCoinCreationTransactionResolver struct{ *Resolver }
@@ -355,7 +373,7 @@ func (r *queryRootResolver) Object(ctx context.Context, id *ObjectID) (Object, e
 			return nil, fmt.Errorf("internal server error: unexpected type %T for object of type output (%d)", dbObject.Data, dbObject.Type)
 		}
 		return dbOutputAsGQL(&dbOutput, nil)
-	case explorerdb.ObjectTypeWallet:
+	case explorerdb.ObjectTypeSingleSignatureWallet:
 		return nil, fmt.Errorf("internal server error: wallet of object type %d is not yet supported", dbObject.Type)
 	case explorerdb.ObjectTypeMultiSignatureWallet:
 		return nil, fmt.Errorf("internal server error: multi signature wallet of object type %d is not yet supported", dbObject.Type)
@@ -1138,6 +1156,12 @@ func dbOutputIDAsHash(outputID types.OutputID) *crypto.Hash {
 func dbBlockIDAsHash(blockID types.BlockID) *crypto.Hash {
 	h := crypto.Hash(blockID)
 	return &h
+}
+
+func dbCurrencyAsBigIntRef(c types.Currency) *BigInt {
+	return &BigInt{
+		Int: c.Big(),
+	}
 }
 
 func dbCurrencyAsBigInt(c types.Currency) BigInt {

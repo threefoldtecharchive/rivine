@@ -136,11 +136,11 @@ type BlockPayout struct {
 }
 
 type ChainAggregatedData struct {
-	TotalCoins             *BigInt `json:"TotalCoins"`
-	TotalLockedCoins       *BigInt `json:"TotalLockedCoins"`
-	TotalBlockStakes       *BigInt `json:"TotalBlockStakes"`
-	TotalActiveBlockStakes *BigInt `json:"TotalActiveBlockStakes"`
-	TotalLockedBlockStakes *BigInt `json:"TotalLockedBlockStakes"`
+	TotalCoins                 *BigInt `json:"TotalCoins"`
+	TotalLockedCoins           *BigInt `json:"TotalLockedCoins"`
+	TotalBlockStakes           *BigInt `json:"TotalBlockStakes"`
+	TotalLockedBlockStakes     *BigInt `json:"TotalLockedBlockStakes"`
+	EstimatedActiveBlockStakes *BigInt `json:"EstimatedActiveBlockStakes"`
 }
 
 type ChainConstants struct {

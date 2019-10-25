@@ -144,11 +144,11 @@ type ComplexityRoot struct {
 	}
 
 	ChainAggregatedData struct {
-		TotalActiveBlockStakes func(childComplexity int) int
-		TotalBlockStakes       func(childComplexity int) int
-		TotalCoins             func(childComplexity int) int
-		TotalLockedBlockStakes func(childComplexity int) int
-		TotalLockedCoins       func(childComplexity int) int
+		EstimatedActiveBlockStakes func(childComplexity int) int
+		TotalBlockStakes           func(childComplexity int) int
+		TotalCoins                 func(childComplexity int) int
+		TotalLockedBlockStakes     func(childComplexity int) int
+		TotalLockedCoins           func(childComplexity int) int
 	}
 
 	ChainConstants struct {
@@ -842,12 +842,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.BlockPayout.Type(childComplexity), true
 
-	case "ChainAggregatedData.TotalActiveBlockStakes":
-		if e.complexity.ChainAggregatedData.TotalActiveBlockStakes == nil {
+	case "ChainAggregatedData.EstimatedActiveBlockStakes":
+		if e.complexity.ChainAggregatedData.EstimatedActiveBlockStakes == nil {
 			break
 		}
 
-		return e.complexity.ChainAggregatedData.TotalActiveBlockStakes(childComplexity), true
+		return e.complexity.ChainAggregatedData.EstimatedActiveBlockStakes(childComplexity), true
 
 	case "ChainAggregatedData.TotalBlockStakes":
 		if e.complexity.ChainAggregatedData.TotalBlockStakes == nil {
@@ -1926,6 +1926,8 @@ scalar Signature
 scalar BigInt
 scalar ByteVersion
 
+# TODO: replace txn implementations by Transaction interface once possible
+#                   ... Same goes for AtomicSwapContract (Contract Union) and Wallets (Wallet Interface)
 union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
@@ -1960,8 +1962,8 @@ type ChainAggregatedData {
     TotalLockedCoins: BigInt
 
     TotalBlockStakes: BigInt
-    TotalActiveBlockStakes: BigInt # means spend in last 1000 blocks
     TotalLockedBlockStakes: BigInt
+    EstimatedActiveBlockStakes: BigInt
 }
 
 type Block {
@@ -4674,40 +4676,6 @@ func (ec *executionContext) _ChainAggregatedData_TotalBlockStakes(ctx context.Co
 	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ChainAggregatedData_TotalActiveBlockStakes(ctx context.Context, field graphql.CollectedField, obj *ChainAggregatedData) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "ChainAggregatedData",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.TotalActiveBlockStakes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*BigInt)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _ChainAggregatedData_TotalLockedBlockStakes(ctx context.Context, field graphql.CollectedField, obj *ChainAggregatedData) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -4728,6 +4696,40 @@ func (ec *executionContext) _ChainAggregatedData_TotalLockedBlockStakes(ctx cont
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.TotalLockedBlockStakes, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*BigInt)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ChainAggregatedData_EstimatedActiveBlockStakes(ctx context.Context, field graphql.CollectedField, obj *ChainAggregatedData) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ChainAggregatedData",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EstimatedActiveBlockStakes, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -11355,10 +11357,10 @@ func (ec *executionContext) _ChainAggregatedData(ctx context.Context, sel ast.Se
 			out.Values[i] = ec._ChainAggregatedData_TotalLockedCoins(ctx, field, obj)
 		case "TotalBlockStakes":
 			out.Values[i] = ec._ChainAggregatedData_TotalBlockStakes(ctx, field, obj)
-		case "TotalActiveBlockStakes":
-			out.Values[i] = ec._ChainAggregatedData_TotalActiveBlockStakes(ctx, field, obj)
 		case "TotalLockedBlockStakes":
 			out.Values[i] = ec._ChainAggregatedData_TotalLockedBlockStakes(ctx, field, obj)
+		case "EstimatedActiveBlockStakes":
+			out.Values[i] = ec._ChainAggregatedData_EstimatedActiveBlockStakes(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13322,7 +13324,7 @@ func (ec *executionContext) marshalNUnlockHashPublicKeyPair2ᚕᚖgithubᚗcom�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNUnlockHashPublicKeyPair2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockHashPublicKeyPair(ctx, sel, v[i])
+			ret[i] = ec.marshalOUnlockHashPublicKeyPair2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockHashPublicKeyPair(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

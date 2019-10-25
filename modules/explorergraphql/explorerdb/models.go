@@ -5,8 +5,15 @@ import (
 	"io"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
+)
+
+const (
+	// ActiveBSEstimationBlocks is the number of blocks that are used to
+	// estimate the active block stake used to generate blocks.
+	ActiveBSEstimationBlocks = 500
 )
 
 type OutputType uint8
@@ -20,13 +27,43 @@ const (
 )
 
 type (
+	ChainContext struct {
+		ConsensusChangeID modules.ConsensusChangeID
+		Height            types.BlockHeight
+		Timestamp         types.Timestamp
+		BlockID           types.BlockID
+	}
+
+	ChainAggregatedFacts struct {
+		TotalCoins       types.Currency
+		TotalLockedCoins types.Currency
+
+		TotalBlockStakes           types.Currency
+		TotalLockedBlockStakes     types.Currency
+		EstimatedActiveBlockStakes types.Currency
+
+		LastBlocks []BlockFactsContext
+	}
+
+	BlockFactsContext struct {
+		Target    types.Target
+		Timestamp types.Timestamp
+	}
+
+	BlockRevertContext struct {
+		ID        types.BlockID
+		Height    types.BlockHeight
+		Timestamp types.Timestamp
+	}
+
 	Output struct {
 		ID       types.OutputID
 		ParentID crypto.Hash
 
-		Type      OutputType
-		Value     types.Currency
-		Condition types.UnlockConditionProxy
+		Type                 OutputType
+		Value                types.Currency
+		Condition            types.UnlockConditionProxy
+		UnlockReferencePoint ReferencePoint
 
 		SpenditureData *OutputSpenditureData
 	}
@@ -62,6 +99,7 @@ type (
 	Block struct {
 		ID        types.BlockID
 		ParentID  types.BlockID
+		Target    types.Target
 		Height    types.BlockHeight
 		Timestamp types.Timestamp
 		Payouts   []types.OutputID
@@ -88,7 +126,6 @@ type (
 
 	WalletData struct {
 		UnlockHash types.UnlockHash
-		PublicKey  types.PublicKey `storm:"index"`
 
 		CoinOutputs       []types.OutputID
 		BlockStakeOutputs types.OutputID
@@ -98,13 +135,19 @@ type (
 		BlockStakeBalance Balance
 	}
 
+	SingleSignatureWalletData struct {
+		WalletData
+
+		PublicKey types.PublicKey
+	}
+
 	MultiSignatureWalletOwner struct {
 		UnlockHash types.UnlockHash
 		PublicKey  types.PublicKey
 	}
 
 	MultiSignatureWalletData struct {
-		WalletData `storm:"inline"`
+		WalletData
 
 		Owners                []MultiSignatureWalletOwner
 		RequiredSgnatureCount int
@@ -126,6 +169,24 @@ type (
 		SpenditureData *AtomicSwapContractSpenditureData
 	}
 )
+
+func (facts *ChainAggregatedFacts) AddLastBlockContext(ctx BlockFactsContext) {
+	// assemble block fact ctx
+	facts.LastBlocks = append(facts.LastBlocks, ctx)
+	// trim if needed
+	blockLength := len(facts.LastBlocks)
+	if blockLength > ActiveBSEstimationBlocks {
+		facts.LastBlocks = facts.LastBlocks[blockLength-ActiveBSEstimationBlocks:]
+	}
+}
+
+func (facts *ChainAggregatedFacts) RemoveLastBlockContext() {
+	blockLength := len(facts.LastBlocks)
+	if blockLength == 0 {
+		return // nothing to do
+	}
+	facts.LastBlocks = facts.LastBlocks[:blockLength-1]
+}
 
 func (block *Block) AsObject() *Object {
 	return &Object{
@@ -154,7 +215,7 @@ func (output *Output) AsObject() *Object {
 func (wallet *WalletData) AsObject() *Object {
 	return &Object{
 		ID:   ObjectIDFromUnlockHash(wallet.UnlockHash),
-		Type: ObjectTypeWallet,
+		Type: ObjectTypeSingleSignatureWallet,
 		Data: *wallet,
 	}
 }
@@ -183,6 +244,31 @@ func (rp ReferencePoint) IsBlockHeight() bool {
 	return rp < types.LockTimeMinTimestampValue
 }
 
+func (rp ReferencePoint) Reached(height types.BlockHeight, timestamp types.Timestamp) bool {
+	if rp < types.LockTimeMinTimestampValue {
+		return types.BlockHeight(rp) <= height
+	}
+	return types.Timestamp(rp) <= timestamp
+}
+
+func (rp ReferencePoint) Overreached(height types.BlockHeight, timestamp types.Timestamp) bool {
+	if rp < types.LockTimeMinTimestampValue {
+		return types.BlockHeight(rp) < height
+	}
+	return types.Timestamp(rp) < timestamp
+}
+
+func UnlockReferencePointFromCondition(condition types.UnlockConditionProxy) (ReferencePoint, bool) {
+	if condition.ConditionType() != types.ConditionTypeTimeLock {
+		return 0, false
+	}
+	tlc, ok := condition.Condition.(*types.TimeLockCondition)
+	if !ok {
+		return 0, false
+	}
+	return ReferencePoint(tlc.LockTime), true
+}
+
 type ObjectType uint8
 
 const (
@@ -190,7 +276,7 @@ const (
 	ObjectTypeBlock
 	ObjectTypeTransaction
 	ObjectTypeOutput
-	ObjectTypeWallet
+	ObjectTypeSingleSignatureWallet
 	ObjectTypeMultiSignatureWallet
 	ObjectTypeAtomicSwapContract
 )
@@ -199,17 +285,42 @@ type (
 	ObjectID []byte
 
 	Object struct {
-		ID   ObjectID `storm:"id"`
+		ID   ObjectID
 		Type ObjectType
 		Data interface{}
 	}
 )
 
+const (
+	BinaryHashDataSize       = crypto.HashSize
+	BinaryUnlockHashDataSize = crypto.HashSize + 1
+)
+
 func ObjectIDFromUnlockHash(uh types.UnlockHash) ObjectID {
-	id := make(ObjectID, crypto.HashSize+1)
+	id := make(ObjectID, BinaryUnlockHashDataSize)
 	id[0] = byte(uh.Type)
 	copy(id[1:], uh.Hash[:])
 	return id
+}
+
+func (objectID ObjectID) AsUnlockHash() (types.UnlockHash, error) {
+	if length := len(objectID); length != BinaryUnlockHashDataSize {
+		return types.UnlockHash{}, fmt.Errorf("objectID %x cannot be casted as UnlockHash: expected byte size %d, but the size is %d", objectID, length, BinaryUnlockHashDataSize)
+	}
+	uh := types.UnlockHash{
+		Type: types.UnlockType(objectID[0]),
+	}
+	copy(uh.Hash[:], objectID[1:])
+	return uh, nil
+}
+
+func (objectID ObjectID) AsHash() (crypto.Hash, error) {
+	if length := len(objectID); length != BinaryHashDataSize {
+		return crypto.Hash{}, fmt.Errorf("objectID %x cannot be casted as Hash: expected byte size %d, but the size is %d", objectID, length, BinaryHashDataSize)
+	}
+	var hash crypto.Hash
+	copy(hash[:], objectID[:])
+	return hash, nil
 }
 
 func (obj Object) MarshalRivine(w io.Writer) error {
@@ -248,7 +359,7 @@ func (obj *Object) UnmarshalRivine(r io.Reader) error {
 		var output Output
 		err = dec.Decode(&output)
 		obj.Data = output
-	case ObjectTypeWallet:
+	case ObjectTypeSingleSignatureWallet:
 		var wd WalletData
 		err = dec.Decode(&wd)
 		obj.Data = wd
@@ -264,4 +375,70 @@ func (obj *Object) UnmarshalRivine(r io.Reader) error {
 		return fmt.Errorf("object type %d is unknown or is not expected to have data", obj.Type)
 	}
 	return err
+}
+
+func (obj *Object) AsBlock() (Block, error) {
+	if obj.Type != ObjectTypeBlock {
+		return Block{}, fmt.Errorf("object of type %d cannot be casted to block (type %d)", obj.Type, ObjectTypeBlock)
+	}
+	block, ok := obj.Data.(Block)
+	if !ok {
+		return Block{}, fmt.Errorf("object of type %d has block type but has wrong underlying data type of %T (expected: %T)", obj.Type, obj.Data, Block{})
+	}
+	return block, nil
+}
+
+func (obj *Object) AsTransaction() (Transaction, error) {
+	if obj.Type != ObjectTypeTransaction {
+		return Transaction{}, fmt.Errorf("object of type %d cannot be casted to transaction (type %d)", obj.Type, ObjectTypeTransaction)
+	}
+	txn, ok := obj.Data.(Transaction)
+	if !ok {
+		return Transaction{}, fmt.Errorf("object of type %d has transaction type but has wrong underlying data type of %T (expected: %T)", obj.Type, obj.Data, Transaction{})
+	}
+	return txn, nil
+}
+
+func (obj *Object) AsOutput() (Output, error) {
+	if obj.Type != ObjectTypeOutput {
+		return Output{}, fmt.Errorf("object of type %d cannot be casted to output (type %d)", obj.Type, ObjectTypeOutput)
+	}
+	output, ok := obj.Data.(Output)
+	if !ok {
+		return Output{}, fmt.Errorf("object of type %d has output type but has wrong underlying data type of %T (expected: %T)", obj.Type, obj.Data, Output{})
+	}
+	return output, nil
+}
+
+func (obj *Object) AsSingleSignatureWallet() (WalletData, error) {
+	if obj.Type != ObjectTypeSingleSignatureWallet {
+		return WalletData{}, fmt.Errorf("object of type %d cannot be casted to wallet (type %d)", obj.Type, ObjectTypeSingleSignatureWallet)
+	}
+	wd, ok := obj.Data.(WalletData)
+	if !ok {
+		return WalletData{}, fmt.Errorf("object of type %d has wallet type but has wrong underlying data type of %T (expected: %T)", obj.Type, obj.Data, WalletData{})
+	}
+	return wd, nil
+}
+
+func (obj *Object) AsMultiSignatureWallet() (MultiSignatureWalletData, error) {
+	if obj.Type != ObjectTypeMultiSignatureWallet {
+		return MultiSignatureWalletData{}, fmt.Errorf("object of type %d cannot be casted to multi signature wallet (type %d)", obj.Type, ObjectTypeMultiSignatureWallet)
+	}
+	mswd, ok := obj.Data.(MultiSignatureWalletData)
+	if !ok {
+		return MultiSignatureWalletData{}, fmt.Errorf("object of type %d has multi signature wallet type but has wrong underlying data type of %T (expected: %T)", obj.Type, obj.Data, MultiSignatureWalletData{})
+	}
+	return mswd, nil
+}
+
+func (obj *Object) AsAtomicSwapContract() (AtomicSwapContract, error) {
+	if obj.Type != ObjectTypeAtomicSwapContract {
+		return AtomicSwapContract{}, fmt.Errorf("object of type %d cannot be casted to atomic swap contract (type %d)", obj.Type, ObjectTypeAtomicSwapContract)
+	}
+	asc, ok := obj.Data.(AtomicSwapContract)
+	if !ok {
+		return AtomicSwapContract{}, fmt.Errorf("object of type %d has atomic swap contract type but has wrong underlying data type of %T (expected: %T)", obj.Type, obj.Data, AtomicSwapContract{})
+	}
+	return asc, nil
 }
