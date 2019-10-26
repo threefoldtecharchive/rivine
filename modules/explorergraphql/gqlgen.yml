@@ -28,10 +28,6 @@ models:
         resolver: true
       Child:
         resolver: true
-  BlockFacts:
-    fields:
-      Aggregated:
-        resolver: true
   Block:
     fields:
       Facts:

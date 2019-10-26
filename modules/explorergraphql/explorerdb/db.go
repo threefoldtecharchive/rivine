@@ -18,20 +18,24 @@ import (
 
 // TODO: we should not have to rely on CS data for getting the child target
 
+// TODO: keep reference counter for public keys, and delete it in case the reference count is 0 (see TODO (4))
+
 type DB interface {
 	SetChainContext(ChainContext) error
 	GetChainContext() (ChainContext, error)
 
 	GetChainAggregatedFacts() (ChainAggregatedFacts, error)
 
-	ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error
-	// TODO: should we also revert public key (from UH) mapping?
+	ApplyBlock(block Block, blockFacts BlockFactsConstants, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error
+	// TODO: should we also revert public key (from UH) mapping? (TODO 4)
 	RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error
 
 	GetObject(ObjectID) (Object, error)
 
 	GetBlock(types.BlockID) (Block, error)
+	GetBlockFacts(types.BlockID) (BlockFacts, error)
 	GetBlockByReferencePoint(ReferencePoint) (Block, error)
+	GetBlockFactsByReferencePoint(ReferencePoint) (BlockFacts, error)
 	GetTransaction(types.TransactionID) (Transaction, error)
 	GetOutput(types.OutputID) (Output, error)
 
@@ -57,7 +61,7 @@ func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusC
 		chainCtx.Height--
 		chainCtx.Timestamp = revertedBlock.Timestamp
 
-		block := RivineBlockAsExplorerBlock(chainCtx.Height, revertedBlock, types.Target{}) // target not valid here
+		block := RivineBlockAsExplorerBlock(chainCtx.Height, revertedBlock)
 		chainCtx.BlockID = block.ID
 
 		outputs := make([]types.OutputID, 0, len(revertedBlock.MinerPayouts))
@@ -108,7 +112,12 @@ func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusC
 		} else {
 			target = chainCts.RootTarget()
 		}
-		block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock, target)
+		blockFacts := BlockFactsConstants{
+			Target:     target,
+			Difficulty: target.Difficulty(chainCts.RootDepth),
+		}
+
+		block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock)
 		publicKeys := make(map[types.UnlockHash]types.PublicKey)
 
 		outputs := make([]Output, 0, len(appliedBlock.MinerPayouts))
@@ -178,7 +187,7 @@ func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusC
 			}
 		}
 
-		err = db.ApplyBlock(block, transactions, outputs, inputs, publicKeys)
+		err = db.ApplyBlock(block, blockFacts, transactions, outputs, inputs, publicKeys)
 		if err != nil {
 			return err
 		}
@@ -194,7 +203,7 @@ func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusC
 	return err
 }
 
-func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block, target types.Target) Block {
+func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block) Block {
 	// aggregate payouts (as a list of identifiers)
 	payouts := make([]types.OutputID, 0, len(block.MinerPayouts))
 	for idx := range block.MinerPayouts {
@@ -209,7 +218,6 @@ func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block, tar
 	return Block{
 		ID:           block.ID(),
 		ParentID:     block.ParentID,
-		Target:       target,
 		Height:       height,
 		Timestamp:    block.Timestamp,
 		Payouts:      payouts,

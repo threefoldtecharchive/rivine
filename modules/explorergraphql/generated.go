@@ -38,7 +38,6 @@ type Config struct {
 
 type ResolverRoot interface {
 	Block() BlockResolver
-	BlockFacts() BlockFactsResolver
 	BlockHeader() BlockHeaderResolver
 	ChainFacts() ChainFactsResolver
 	MintCoinCreationTransaction() MintCoinCreationTransactionResolver
@@ -100,32 +99,18 @@ type ComplexityRoot struct {
 		Transactions func(childComplexity int) int
 	}
 
-	BlockAggregatedFacts struct {
-		ArbitraryDataTotalSize func(childComplexity int) int
-		BlockStakeInputCount   func(childComplexity int) int
-		BlockStakeInputValue   func(childComplexity int) int
-		BlockStakeOutputCount  func(childComplexity int) int
-		BlockStakeOutputValue  func(childComplexity int) int
-		CoinInputCount         func(childComplexity int) int
-		CoinInputValue         func(childComplexity int) int
-		CoinOutputCount        func(childComplexity int) int
-		CoinOutputValue        func(childComplexity int) int
-		MinerFeeCount          func(childComplexity int) int
-		PayoutCount            func(childComplexity int) int
-		PayoutValue            func(childComplexity int) int
-		TransactionCount       func(childComplexity int) int
-	}
-
-	BlockFacts struct {
-		Aggregated                 func(childComplexity int) int
-		Difficulty                 func(childComplexity int) int
+	BlockChainSnapshotFacts struct {
 		EstimatedActiveBlockStakes func(childComplexity int) int
-		PayoutMaturityHeight       func(childComplexity int) int
-		Target                     func(childComplexity int) int
 		TotalBlockStakes           func(childComplexity int) int
 		TotalCoins                 func(childComplexity int) int
 		TotalLockedBlockStakes     func(childComplexity int) int
 		TotalLockedCoins           func(childComplexity int) int
+	}
+
+	BlockFacts struct {
+		ChainSnapshot func(childComplexity int) int
+		Difficulty    func(childComplexity int) int
+		Target        func(childComplexity int) int
 	}
 
 	BlockHeader struct {
@@ -350,9 +335,6 @@ type ComplexityRoot struct {
 type BlockResolver interface {
 	Facts(ctx context.Context, obj *Block) (*BlockFacts, error)
 	Transactions(ctx context.Context, obj *Block) ([]Transaction, error)
-}
-type BlockFactsResolver interface {
-	Aggregated(ctx context.Context, obj *BlockFacts) (*BlockAggregatedFacts, error)
 }
 type BlockHeaderResolver interface {
 	Parent(ctx context.Context, obj *BlockHeader) (*Block, error)
@@ -625,103 +607,47 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Block.Transactions(childComplexity), true
 
-	case "BlockAggregatedFacts.ArbitraryDataTotalSize":
-		if e.complexity.BlockAggregatedFacts.ArbitraryDataTotalSize == nil {
+	case "BlockChainSnapshotFacts.EstimatedActiveBlockStakes":
+		if e.complexity.BlockChainSnapshotFacts.EstimatedActiveBlockStakes == nil {
 			break
 		}
 
-		return e.complexity.BlockAggregatedFacts.ArbitraryDataTotalSize(childComplexity), true
+		return e.complexity.BlockChainSnapshotFacts.EstimatedActiveBlockStakes(childComplexity), true
 
-	case "BlockAggregatedFacts.BlockStakeInputCount":
-		if e.complexity.BlockAggregatedFacts.BlockStakeInputCount == nil {
+	case "BlockChainSnapshotFacts.TotalBlockStakes":
+		if e.complexity.BlockChainSnapshotFacts.TotalBlockStakes == nil {
 			break
 		}
 
-		return e.complexity.BlockAggregatedFacts.BlockStakeInputCount(childComplexity), true
+		return e.complexity.BlockChainSnapshotFacts.TotalBlockStakes(childComplexity), true
 
-	case "BlockAggregatedFacts.BlockStakeInputValue":
-		if e.complexity.BlockAggregatedFacts.BlockStakeInputValue == nil {
+	case "BlockChainSnapshotFacts.TotalCoins":
+		if e.complexity.BlockChainSnapshotFacts.TotalCoins == nil {
 			break
 		}
 
-		return e.complexity.BlockAggregatedFacts.BlockStakeInputValue(childComplexity), true
+		return e.complexity.BlockChainSnapshotFacts.TotalCoins(childComplexity), true
 
-	case "BlockAggregatedFacts.BlockStakeOutputCount":
-		if e.complexity.BlockAggregatedFacts.BlockStakeOutputCount == nil {
+	case "BlockChainSnapshotFacts.TotalLockedBlockStakes":
+		if e.complexity.BlockChainSnapshotFacts.TotalLockedBlockStakes == nil {
 			break
 		}
 
-		return e.complexity.BlockAggregatedFacts.BlockStakeOutputCount(childComplexity), true
+		return e.complexity.BlockChainSnapshotFacts.TotalLockedBlockStakes(childComplexity), true
 
-	case "BlockAggregatedFacts.BlockStakeOutputValue":
-		if e.complexity.BlockAggregatedFacts.BlockStakeOutputValue == nil {
+	case "BlockChainSnapshotFacts.TotalLockedCoins":
+		if e.complexity.BlockChainSnapshotFacts.TotalLockedCoins == nil {
 			break
 		}
 
-		return e.complexity.BlockAggregatedFacts.BlockStakeOutputValue(childComplexity), true
+		return e.complexity.BlockChainSnapshotFacts.TotalLockedCoins(childComplexity), true
 
-	case "BlockAggregatedFacts.CoinInputCount":
-		if e.complexity.BlockAggregatedFacts.CoinInputCount == nil {
+	case "BlockFacts.ChainSnapshot":
+		if e.complexity.BlockFacts.ChainSnapshot == nil {
 			break
 		}
 
-		return e.complexity.BlockAggregatedFacts.CoinInputCount(childComplexity), true
-
-	case "BlockAggregatedFacts.CoinInputValue":
-		if e.complexity.BlockAggregatedFacts.CoinInputValue == nil {
-			break
-		}
-
-		return e.complexity.BlockAggregatedFacts.CoinInputValue(childComplexity), true
-
-	case "BlockAggregatedFacts.CoinOutputCount":
-		if e.complexity.BlockAggregatedFacts.CoinOutputCount == nil {
-			break
-		}
-
-		return e.complexity.BlockAggregatedFacts.CoinOutputCount(childComplexity), true
-
-	case "BlockAggregatedFacts.CoinOutputValue":
-		if e.complexity.BlockAggregatedFacts.CoinOutputValue == nil {
-			break
-		}
-
-		return e.complexity.BlockAggregatedFacts.CoinOutputValue(childComplexity), true
-
-	case "BlockAggregatedFacts.MinerFeeCount":
-		if e.complexity.BlockAggregatedFacts.MinerFeeCount == nil {
-			break
-		}
-
-		return e.complexity.BlockAggregatedFacts.MinerFeeCount(childComplexity), true
-
-	case "BlockAggregatedFacts.PayoutCount":
-		if e.complexity.BlockAggregatedFacts.PayoutCount == nil {
-			break
-		}
-
-		return e.complexity.BlockAggregatedFacts.PayoutCount(childComplexity), true
-
-	case "BlockAggregatedFacts.PayoutValue":
-		if e.complexity.BlockAggregatedFacts.PayoutValue == nil {
-			break
-		}
-
-		return e.complexity.BlockAggregatedFacts.PayoutValue(childComplexity), true
-
-	case "BlockAggregatedFacts.TransactionCount":
-		if e.complexity.BlockAggregatedFacts.TransactionCount == nil {
-			break
-		}
-
-		return e.complexity.BlockAggregatedFacts.TransactionCount(childComplexity), true
-
-	case "BlockFacts.Aggregated":
-		if e.complexity.BlockFacts.Aggregated == nil {
-			break
-		}
-
-		return e.complexity.BlockFacts.Aggregated(childComplexity), true
+		return e.complexity.BlockFacts.ChainSnapshot(childComplexity), true
 
 	case "BlockFacts.Difficulty":
 		if e.complexity.BlockFacts.Difficulty == nil {
@@ -730,54 +656,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.BlockFacts.Difficulty(childComplexity), true
 
-	case "BlockFacts.EstimatedActiveBlockStakes":
-		if e.complexity.BlockFacts.EstimatedActiveBlockStakes == nil {
-			break
-		}
-
-		return e.complexity.BlockFacts.EstimatedActiveBlockStakes(childComplexity), true
-
-	case "BlockFacts.PayoutMaturityHeight":
-		if e.complexity.BlockFacts.PayoutMaturityHeight == nil {
-			break
-		}
-
-		return e.complexity.BlockFacts.PayoutMaturityHeight(childComplexity), true
-
 	case "BlockFacts.Target":
 		if e.complexity.BlockFacts.Target == nil {
 			break
 		}
 
 		return e.complexity.BlockFacts.Target(childComplexity), true
-
-	case "BlockFacts.TotalBlockStakes":
-		if e.complexity.BlockFacts.TotalBlockStakes == nil {
-			break
-		}
-
-		return e.complexity.BlockFacts.TotalBlockStakes(childComplexity), true
-
-	case "BlockFacts.TotalCoins":
-		if e.complexity.BlockFacts.TotalCoins == nil {
-			break
-		}
-
-		return e.complexity.BlockFacts.TotalCoins(childComplexity), true
-
-	case "BlockFacts.TotalLockedBlockStakes":
-		if e.complexity.BlockFacts.TotalLockedBlockStakes == nil {
-			break
-		}
-
-		return e.complexity.BlockFacts.TotalLockedBlockStakes(childComplexity), true
-
-	case "BlockFacts.TotalLockedCoins":
-		if e.complexity.BlockFacts.TotalLockedCoins == nil {
-			break
-		}
-
-		return e.complexity.BlockFacts.TotalLockedCoins(childComplexity), true
 
 	case "BlockHeader.BlockHeight":
 		if e.complexity.BlockHeader.BlockHeight == nil {
@@ -1974,33 +1858,17 @@ type Block {
 
 type BlockFacts {
     Difficulty: BigInt
-    EstimatedActiveBlockStakes: BigInt
-    PayoutMaturityHeight: BlockHeight
     Target: Hash
 
-    # snapshot based on chain facts at that moment
+    ChainSnapshot: BlockChainSnapshotFacts
+}
+
+type BlockChainSnapshotFacts {
     TotalCoins: BigInt
     TotalLockedCoins: BigInt
     TotalBlockStakes: BigInt
     TotalLockedBlockStakes: BigInt
-
-    Aggregated: BlockAggregatedFacts
-}
-
-type BlockAggregatedFacts {
-    TransactionCount: Int
-    MinerFeeCount: Int
-    CoinInputCount: Int
-    CoinInputValue: BigInt
-    CoinOutputCount: Int
-    CoinOutputValue: BigInt
-    PayoutCount: Int
-    PayoutValue: BigInt
-    BlockStakeInputCount: Int
-    BlockStakeInputValue: BigInt
-    BlockStakeOutputCount: Int
-    BlockStakeOutputValue: BigInt
-    ArbitraryDataTotalSize: Int
+    EstimatedActiveBlockStakes: BigInt
 }
 
 type BlockHeader {
@@ -3514,7 +3382,7 @@ func (ec *executionContext) _Block_Transactions(ctx context.Context, field graph
 	return ec.marshalNTransaction2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _BlockAggregatedFacts_TransactionCount(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
+func (ec *executionContext) _BlockChainSnapshotFacts_TotalCoins(ctx context.Context, field graphql.CollectedField, obj *BlockChainSnapshotFacts) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -3524,7 +3392,7 @@ func (ec *executionContext) _BlockAggregatedFacts_TransactionCount(ctx context.C
 		ec.Tracer.EndFieldExecution(ctx)
 	}()
 	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
+		Object:   "BlockChainSnapshotFacts",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -3533,109 +3401,7 @@ func (ec *executionContext) _BlockAggregatedFacts_TransactionCount(ctx context.C
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TransactionCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_MinerFeeCount(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.MinerFeeCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_CoinInputCount(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CoinInputCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_CoinInputValue(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CoinInputValue, nil
+		return obj.TotalCoins, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3650,7 +3416,7 @@ func (ec *executionContext) _BlockAggregatedFacts_CoinInputValue(ctx context.Con
 	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _BlockAggregatedFacts_CoinOutputCount(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
+func (ec *executionContext) _BlockChainSnapshotFacts_TotalLockedCoins(ctx context.Context, field graphql.CollectedField, obj *BlockChainSnapshotFacts) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -3660,7 +3426,7 @@ func (ec *executionContext) _BlockAggregatedFacts_CoinOutputCount(ctx context.Co
 		ec.Tracer.EndFieldExecution(ctx)
 	}()
 	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
+		Object:   "BlockChainSnapshotFacts",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -3669,41 +3435,7 @@ func (ec *executionContext) _BlockAggregatedFacts_CoinOutputCount(ctx context.Co
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.CoinOutputCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_CoinOutputValue(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CoinOutputValue, nil
+		return obj.TotalLockedCoins, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3718,7 +3450,7 @@ func (ec *executionContext) _BlockAggregatedFacts_CoinOutputValue(ctx context.Co
 	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _BlockAggregatedFacts_PayoutCount(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
+func (ec *executionContext) _BlockChainSnapshotFacts_TotalBlockStakes(ctx context.Context, field graphql.CollectedField, obj *BlockChainSnapshotFacts) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -3728,7 +3460,7 @@ func (ec *executionContext) _BlockAggregatedFacts_PayoutCount(ctx context.Contex
 		ec.Tracer.EndFieldExecution(ctx)
 	}()
 	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
+		Object:   "BlockChainSnapshotFacts",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -3737,41 +3469,7 @@ func (ec *executionContext) _BlockAggregatedFacts_PayoutCount(ctx context.Contex
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.PayoutCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_PayoutValue(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PayoutValue, nil
+		return obj.TotalBlockStakes, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3786,7 +3484,7 @@ func (ec *executionContext) _BlockAggregatedFacts_PayoutValue(ctx context.Contex
 	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _BlockAggregatedFacts_BlockStakeInputCount(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
+func (ec *executionContext) _BlockChainSnapshotFacts_TotalLockedBlockStakes(ctx context.Context, field graphql.CollectedField, obj *BlockChainSnapshotFacts) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -3796,7 +3494,7 @@ func (ec *executionContext) _BlockAggregatedFacts_BlockStakeInputCount(ctx conte
 		ec.Tracer.EndFieldExecution(ctx)
 	}()
 	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
+		Object:   "BlockChainSnapshotFacts",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -3805,41 +3503,7 @@ func (ec *executionContext) _BlockAggregatedFacts_BlockStakeInputCount(ctx conte
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.BlockStakeInputCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_BlockStakeInputValue(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.BlockStakeInputValue, nil
+		return obj.TotalLockedBlockStakes, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3854,7 +3518,7 @@ func (ec *executionContext) _BlockAggregatedFacts_BlockStakeInputValue(ctx conte
 	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _BlockAggregatedFacts_BlockStakeOutputCount(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
+func (ec *executionContext) _BlockChainSnapshotFacts_EstimatedActiveBlockStakes(ctx context.Context, field graphql.CollectedField, obj *BlockChainSnapshotFacts) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -3864,7 +3528,7 @@ func (ec *executionContext) _BlockAggregatedFacts_BlockStakeOutputCount(ctx cont
 		ec.Tracer.EndFieldExecution(ctx)
 	}()
 	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
+		Object:   "BlockChainSnapshotFacts",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -3873,41 +3537,7 @@ func (ec *executionContext) _BlockAggregatedFacts_BlockStakeOutputCount(ctx cont
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.BlockStakeOutputCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_BlockStakeOutputValue(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.BlockStakeOutputValue, nil
+		return obj.EstimatedActiveBlockStakes, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3920,40 +3550,6 @@ func (ec *executionContext) _BlockAggregatedFacts_BlockStakeOutputValue(ctx cont
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockAggregatedFacts_ArbitraryDataTotalSize(ctx context.Context, field graphql.CollectedField, obj *BlockAggregatedFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockAggregatedFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ArbitraryDataTotalSize, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*int)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockFacts_Difficulty(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
@@ -3990,74 +3586,6 @@ func (ec *executionContext) _BlockFacts_Difficulty(ctx context.Context, field gr
 	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _BlockFacts_EstimatedActiveBlockStakes(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.EstimatedActiveBlockStakes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*BigInt)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockFacts_PayoutMaturityHeight(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PayoutMaturityHeight, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*types.BlockHeight)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _BlockFacts_Target(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -4092,7 +3620,7 @@ func (ec *executionContext) _BlockFacts_Target(ctx context.Context, field graphq
 	return ec.marshalOHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _BlockFacts_TotalCoins(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
+func (ec *executionContext) _BlockFacts_ChainSnapshot(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
 		if r := recover(); r != nil {
@@ -4111,7 +3639,7 @@ func (ec *executionContext) _BlockFacts_TotalCoins(ctx context.Context, field gr
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TotalCoins, nil
+		return obj.ChainSnapshot, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4120,146 +3648,10 @@ func (ec *executionContext) _BlockFacts_TotalCoins(ctx context.Context, field gr
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*BigInt)
+	res := resTmp.(*BlockChainSnapshotFacts)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockFacts_TotalLockedCoins(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.TotalLockedCoins, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*BigInt)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockFacts_TotalBlockStakes(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.TotalBlockStakes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*BigInt)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockFacts_TotalLockedBlockStakes(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.TotalLockedBlockStakes, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*BigInt)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _BlockFacts_Aggregated(ctx context.Context, field graphql.CollectedField, obj *BlockFacts) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "BlockFacts",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.BlockFacts().Aggregated(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*BlockAggregatedFacts)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOBlockAggregatedFacts2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockAggregatedFacts(ctx, field.Selections, res)
+	return ec.marshalOBlockChainSnapshotFacts2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockChainSnapshotFacts(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockHeader_ID(ctx context.Context, field graphql.CollectedField, obj *BlockHeader) (ret graphql.Marshaler) {
@@ -11148,43 +10540,27 @@ func (ec *executionContext) _Block(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
-var blockAggregatedFactsImplementors = []string{"BlockAggregatedFacts"}
+var blockChainSnapshotFactsImplementors = []string{"BlockChainSnapshotFacts"}
 
-func (ec *executionContext) _BlockAggregatedFacts(ctx context.Context, sel ast.SelectionSet, obj *BlockAggregatedFacts) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.RequestContext, sel, blockAggregatedFactsImplementors)
+func (ec *executionContext) _BlockChainSnapshotFacts(ctx context.Context, sel ast.SelectionSet, obj *BlockChainSnapshotFacts) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, blockChainSnapshotFactsImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("BlockAggregatedFacts")
-		case "TransactionCount":
-			out.Values[i] = ec._BlockAggregatedFacts_TransactionCount(ctx, field, obj)
-		case "MinerFeeCount":
-			out.Values[i] = ec._BlockAggregatedFacts_MinerFeeCount(ctx, field, obj)
-		case "CoinInputCount":
-			out.Values[i] = ec._BlockAggregatedFacts_CoinInputCount(ctx, field, obj)
-		case "CoinInputValue":
-			out.Values[i] = ec._BlockAggregatedFacts_CoinInputValue(ctx, field, obj)
-		case "CoinOutputCount":
-			out.Values[i] = ec._BlockAggregatedFacts_CoinOutputCount(ctx, field, obj)
-		case "CoinOutputValue":
-			out.Values[i] = ec._BlockAggregatedFacts_CoinOutputValue(ctx, field, obj)
-		case "PayoutCount":
-			out.Values[i] = ec._BlockAggregatedFacts_PayoutCount(ctx, field, obj)
-		case "PayoutValue":
-			out.Values[i] = ec._BlockAggregatedFacts_PayoutValue(ctx, field, obj)
-		case "BlockStakeInputCount":
-			out.Values[i] = ec._BlockAggregatedFacts_BlockStakeInputCount(ctx, field, obj)
-		case "BlockStakeInputValue":
-			out.Values[i] = ec._BlockAggregatedFacts_BlockStakeInputValue(ctx, field, obj)
-		case "BlockStakeOutputCount":
-			out.Values[i] = ec._BlockAggregatedFacts_BlockStakeOutputCount(ctx, field, obj)
-		case "BlockStakeOutputValue":
-			out.Values[i] = ec._BlockAggregatedFacts_BlockStakeOutputValue(ctx, field, obj)
-		case "ArbitraryDataTotalSize":
-			out.Values[i] = ec._BlockAggregatedFacts_ArbitraryDataTotalSize(ctx, field, obj)
+			out.Values[i] = graphql.MarshalString("BlockChainSnapshotFacts")
+		case "TotalCoins":
+			out.Values[i] = ec._BlockChainSnapshotFacts_TotalCoins(ctx, field, obj)
+		case "TotalLockedCoins":
+			out.Values[i] = ec._BlockChainSnapshotFacts_TotalLockedCoins(ctx, field, obj)
+		case "TotalBlockStakes":
+			out.Values[i] = ec._BlockChainSnapshotFacts_TotalBlockStakes(ctx, field, obj)
+		case "TotalLockedBlockStakes":
+			out.Values[i] = ec._BlockChainSnapshotFacts_TotalLockedBlockStakes(ctx, field, obj)
+		case "EstimatedActiveBlockStakes":
+			out.Values[i] = ec._BlockChainSnapshotFacts_EstimatedActiveBlockStakes(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -11209,31 +10585,10 @@ func (ec *executionContext) _BlockFacts(ctx context.Context, sel ast.SelectionSe
 			out.Values[i] = graphql.MarshalString("BlockFacts")
 		case "Difficulty":
 			out.Values[i] = ec._BlockFacts_Difficulty(ctx, field, obj)
-		case "EstimatedActiveBlockStakes":
-			out.Values[i] = ec._BlockFacts_EstimatedActiveBlockStakes(ctx, field, obj)
-		case "PayoutMaturityHeight":
-			out.Values[i] = ec._BlockFacts_PayoutMaturityHeight(ctx, field, obj)
 		case "Target":
 			out.Values[i] = ec._BlockFacts_Target(ctx, field, obj)
-		case "TotalCoins":
-			out.Values[i] = ec._BlockFacts_TotalCoins(ctx, field, obj)
-		case "TotalLockedCoins":
-			out.Values[i] = ec._BlockFacts_TotalLockedCoins(ctx, field, obj)
-		case "TotalBlockStakes":
-			out.Values[i] = ec._BlockFacts_TotalBlockStakes(ctx, field, obj)
-		case "TotalLockedBlockStakes":
-			out.Values[i] = ec._BlockFacts_TotalLockedBlockStakes(ctx, field, obj)
-		case "Aggregated":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._BlockFacts_Aggregated(ctx, field, obj)
-				return res
-			})
+		case "ChainSnapshot":
+			out.Values[i] = ec._BlockFacts_ChainSnapshot(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13654,15 +13009,15 @@ func (ec *executionContext) marshalOBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivi
 	return ec._Block(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOBlockAggregatedFacts2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockAggregatedFacts(ctx context.Context, sel ast.SelectionSet, v BlockAggregatedFacts) graphql.Marshaler {
-	return ec._BlockAggregatedFacts(ctx, sel, &v)
+func (ec *executionContext) marshalOBlockChainSnapshotFacts2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockChainSnapshotFacts(ctx context.Context, sel ast.SelectionSet, v BlockChainSnapshotFacts) graphql.Marshaler {
+	return ec._BlockChainSnapshotFacts(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalOBlockAggregatedFacts2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockAggregatedFacts(ctx context.Context, sel ast.SelectionSet, v *BlockAggregatedFacts) graphql.Marshaler {
+func (ec *executionContext) marshalOBlockChainSnapshotFacts2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockChainSnapshotFacts(ctx context.Context, sel ast.SelectionSet, v *BlockChainSnapshotFacts) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._BlockAggregatedFacts(ctx, sel, v)
+	return ec._BlockChainSnapshotFacts(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOBlockFacts2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockFacts(ctx context.Context, sel ast.SelectionSet, v BlockFacts) graphql.Marshaler {

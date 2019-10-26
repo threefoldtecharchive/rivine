@@ -87,33 +87,17 @@ type Block {
 
 type BlockFacts {
     Difficulty: BigInt
-    EstimatedActiveBlockStakes: BigInt
-    PayoutMaturityHeight: BlockHeight
     Target: Hash
 
-    # snapshot based on chain facts at that moment
+    ChainSnapshot: BlockChainSnapshotFacts
+}
+
+type BlockChainSnapshotFacts {
     TotalCoins: BigInt
     TotalLockedCoins: BigInt
     TotalBlockStakes: BigInt
     TotalLockedBlockStakes: BigInt
-
-    Aggregated: BlockAggregatedFacts
-}
-
-type BlockAggregatedFacts {
-    TransactionCount: Int
-    MinerFeeCount: Int
-    CoinInputCount: Int
-    CoinInputValue: BigInt
-    CoinOutputCount: Int
-    CoinOutputValue: BigInt
-    PayoutCount: Int
-    PayoutValue: BigInt
-    BlockStakeInputCount: Int
-    BlockStakeInputValue: BigInt
-    BlockStakeOutputCount: Int
-    BlockStakeOutputValue: BigInt
-    ArbitraryDataTotalSize: Int
+    EstimatedActiveBlockStakes: BigInt
 }
 
 type BlockHeader {

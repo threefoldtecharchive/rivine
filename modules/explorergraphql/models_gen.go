@@ -92,32 +92,18 @@ type Block struct {
 func (Block) IsObject()       {}
 func (Block) IsOutputParent() {}
 
-type BlockAggregatedFacts struct {
-	TransactionCount       *int    `json:"TransactionCount"`
-	MinerFeeCount          *int    `json:"MinerFeeCount"`
-	CoinInputCount         *int    `json:"CoinInputCount"`
-	CoinInputValue         *BigInt `json:"CoinInputValue"`
-	CoinOutputCount        *int    `json:"CoinOutputCount"`
-	CoinOutputValue        *BigInt `json:"CoinOutputValue"`
-	PayoutCount            *int    `json:"PayoutCount"`
-	PayoutValue            *BigInt `json:"PayoutValue"`
-	BlockStakeInputCount   *int    `json:"BlockStakeInputCount"`
-	BlockStakeInputValue   *BigInt `json:"BlockStakeInputValue"`
-	BlockStakeOutputCount  *int    `json:"BlockStakeOutputCount"`
-	BlockStakeOutputValue  *BigInt `json:"BlockStakeOutputValue"`
-	ArbitraryDataTotalSize *int    `json:"ArbitraryDataTotalSize"`
+type BlockChainSnapshotFacts struct {
+	TotalCoins                 *BigInt `json:"TotalCoins"`
+	TotalLockedCoins           *BigInt `json:"TotalLockedCoins"`
+	TotalBlockStakes           *BigInt `json:"TotalBlockStakes"`
+	TotalLockedBlockStakes     *BigInt `json:"TotalLockedBlockStakes"`
+	EstimatedActiveBlockStakes *BigInt `json:"EstimatedActiveBlockStakes"`
 }
 
 type BlockFacts struct {
-	Difficulty                 *BigInt               `json:"Difficulty"`
-	EstimatedActiveBlockStakes *BigInt               `json:"EstimatedActiveBlockStakes"`
-	PayoutMaturityHeight       *types.BlockHeight    `json:"PayoutMaturityHeight"`
-	Target                     *crypto.Hash          `json:"Target"`
-	TotalCoins                 *BigInt               `json:"TotalCoins"`
-	TotalLockedCoins           *BigInt               `json:"TotalLockedCoins"`
-	TotalBlockStakes           *BigInt               `json:"TotalBlockStakes"`
-	TotalLockedBlockStakes     *BigInt               `json:"TotalLockedBlockStakes"`
-	Aggregated                 *BlockAggregatedFacts `json:"Aggregated"`
+	Difficulty    *BigInt                  `json:"Difficulty"`
+	Target        *crypto.Hash             `json:"Target"`
+	ChainSnapshot *BlockChainSnapshotFacts `json:"ChainSnapshot"`
 }
 
 type BlockHeader struct {

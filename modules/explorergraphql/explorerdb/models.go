@@ -99,12 +99,29 @@ type (
 	Block struct {
 		ID        types.BlockID
 		ParentID  types.BlockID
-		Target    types.Target
 		Height    types.BlockHeight
 		Timestamp types.Timestamp
 		Payouts   []types.OutputID
 
 		Transactions []types.TransactionID
+	}
+
+	BlockFacts struct {
+		Constants  BlockFactsConstants
+		Aggregated BlockFactsAggregated
+	}
+
+	BlockFactsConstants struct {
+		Difficulty types.Difficulty
+		Target     types.Target
+	}
+
+	BlockFactsAggregated struct {
+		TotalCoins                 types.Currency
+		TotalLockedCoins           types.Currency
+		TotalBlockStakes           types.Currency
+		TotalLockedBlockStakes     types.Currency
+		EstimatedActiveBlockStakes types.Currency
 	}
 
 	ReferencePoint uint64

@@ -40,7 +40,6 @@ var (
 )
 
 const (
-	nodeNameObjects    = "Objects"
 	nodeNamePublicKeys = "PublicKeys"
 	nodeNameBlocks     = "Blocks"
 
@@ -228,24 +227,16 @@ func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *ChainAggregatedFac
 	})
 }
 
-func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error {
+func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData, publicKeys map[types.UnlockHash]types.PublicKey) error {
 	sdbInternalData, err := sdb.getInternalData()
 	if err != nil {
 		return err
 	}
 
-	node := &stormObjectNode{
-		node:       sdb.db.From(nodeNameObjects),
-		lastDataID: sdbInternalData.LastDataID,
-	}
+	node := newStormObjectNodeReaderWriter(sdb.db, sdbInternalData.LastDataID)
 	blockNode := sdb.db.From(nodeNameBlocks)
 	publicKeysNode := sdb.db.From(nodeNamePublicKeys)
 
-	// store block
-	err = node.SaveBlock(&block)
-	if err != nil {
-		return fmt.Errorf("failed to apply block: failed to save block %s: %v", block.ID.String(), err)
-	}
 	// store block reference point parings
 	err = blockNode.Save(&blockReferencePointIDPair{
 		Reference: ReferencePoint(block.Height) + 1, // require +1, as a storm identifier cannot be 0
@@ -301,17 +292,32 @@ func (sdb *StormDB) ApplyBlock(block Block, txs []Transaction, outputs []Output,
 		}
 	}
 	// update aggregated facts
-	err = sdb.applyBlockToAggregatedFacts(block.Height, block.Timestamp, node, outputs, inputOutputSlice, block.Target)
+	facts, err := sdb.applyBlockToAggregatedFacts(block.Height, block.Timestamp, node, outputs, inputOutputSlice, blockFacts.Target)
 	if err != nil {
 		return fmt.Errorf("failed to apply block: failed to save aggregated chain facts at block %s (height: %d): %v", block.ID.String(), block.Height, err)
 	}
 
+	// store block with facts at the end, now that we have the final chain facts, after applying this block
+	err = node.SaveBlockWithFacts(&block, &BlockFacts{
+		Constants: blockFacts,
+		Aggregated: BlockFactsAggregated{
+			TotalCoins:                 facts.TotalCoins,
+			TotalLockedCoins:           facts.TotalLockedCoins,
+			TotalBlockStakes:           facts.TotalBlockStakes,
+			TotalLockedBlockStakes:     facts.TotalLockedBlockStakes,
+			EstimatedActiveBlockStakes: facts.EstimatedActiveBlockStakes,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to apply block: failed to save block %s with facts: %v", block.ID.String(), err)
+	}
+
 	// finally store the internal stormDB data
-	sdbInternalData.LastDataID = node.lastDataID
+	sdbInternalData.LastDataID = node.GetLastDataID()
 	return sdb.saveInternalData(sdbInternalData)
 }
 
-func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode *stormObjectNode, outputs []Output, inputs []*Output, target types.Target) error {
+func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []Output, inputs []*Output, target types.Target) (ChainAggregatedFacts, error) {
 	var (
 		err             error
 		isLocked        bool
@@ -325,12 +331,13 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 				// ignore not found
 				outputsUnlocked = nil
 			} else {
-				return fmt.Errorf("failed to get outputs unlocked by height %d or timestamp %d: %v", height, timestamp, err)
+				return ChainAggregatedFacts{}, fmt.Errorf("failed to get outputs unlocked by height %d or timestamp %d: %v", height, timestamp, err)
 			}
 		}
 	}
 	// get outputs unlocked by timestamp
-	return sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
+	var resultFacts ChainAggregatedFacts
+	err = sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
 		// discount all new inputs from total coins/blockstakes
 		for _, input := range inputs {
 			if input.Type == OutputTypeBlockStake {
@@ -368,8 +375,12 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 			Timestamp: timestamp,
 		})
 		facts.EstimatedActiveBlockStakes = sdb.estimateActiveBS(height, timestamp, facts.LastBlocks)
+
+		// keep a shallow copy of the facts
+		resultFacts = *facts
 		return nil
 	})
+	return resultFacts, err
 }
 
 func (sdb *StormDB) estimateActiveBS(height types.BlockHeight, timestamp types.Timestamp, blocks []BlockFactsContext) types.Currency {
@@ -403,10 +414,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		return err
 	}
 
-	node := &stormObjectNode{
-		node:       sdb.db.From(nodeNameObjects),
-		lastDataID: sdbInternalData.LastDataID,
-	}
+	node := newStormObjectNodeReaderWriter(sdb.db, sdbInternalData.LastDataID)
 	blockNode := sdb.db.From(nodeNameBlocks)
 
 	// delete block
@@ -479,11 +487,11 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	}
 
 	// finally store the internal stormDB data
-	sdbInternalData.LastDataID = node.lastDataID
+	sdbInternalData.LastDataID = node.GetLastDataID()
 	return sdb.saveInternalData(sdbInternalData)
 }
 
-func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode *stormObjectNode, outputs []*Output, inputs []*Output) error {
+func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []*Output, inputs []*Output) error {
 	var (
 		err           error
 		isLocked      bool
@@ -542,17 +550,18 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 }
 
 func (sdb *StormDB) GetObject(id ObjectID) (Object, error) {
-	// lastDataID is not needed here, so no need to fetch the lastDataID
-	// from the internal stormDB data
-	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	node := newStormObjectNodeReader(sdb.db)
 	return node.GetObject(id)
 }
 
 func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
-	// lastDataID is not needed here, so no need to fetch the lastDataID
-	// from the internal stormDB data
-	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	node := newStormObjectNodeReader(sdb.db)
 	return node.GetBlock(id)
+}
+
+func (sdb *StormDB) GetBlockFacts(id types.BlockID) (BlockFacts, error) {
+	node := newStormObjectNodeReader(sdb.db)
+	return node.GetBlockFacts(id)
 }
 
 func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
@@ -568,38 +577,41 @@ func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
 	return sdb.GetBlock(pair.BlockID)
 }
 
+func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts, error) {
+	node := sdb.db.From(nodeNameBlocks)
+	var pair blockReferencePointIDPair
+	if rp.IsBlockHeight() {
+		rp++
+	}
+	err := node.One(nodeBlocksKeyReference, rp, &pair)
+	if err != nil {
+		return BlockFacts{}, err
+	}
+	return sdb.GetBlockFacts(pair.BlockID)
+}
+
 func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {
-	// lastDataID is not needed here, so no need to fetch the lastDataID
-	// from the internal stormDB data
-	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	node := newStormObjectNodeReader(sdb.db)
 	return node.GetTransaction(id)
 }
 
 func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
-	// lastDataID is not needed here, so no need to fetch the lastDataID
-	// from the internal stormDB data
-	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	node := newStormObjectNodeReader(sdb.db)
 	return node.GetOutput(id)
 }
 
 func (sdb *StormDB) GetSingleSignatureWallet(uh types.UnlockHash) (SingleSignatureWalletData, error) {
-	// lastDataID is not needed here, so no need to fetch the lastDataID
-	// from the internal stormDB data
-	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	node := newStormObjectNodeReader(sdb.db)
 	return node.GetSingleSignatureWallet(uh)
 }
 
 func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
-	// lastDataID is not needed here, so no need to fetch the lastDataID
-	// from the internal stormDB data
-	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	node := newStormObjectNodeReader(sdb.db)
 	return node.GetMultiSignatureWallet(uh)
 }
 
 func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
-	// lastDataID is not needed here, so no need to fetch the lastDataID
-	// from the internal stormDB data
-	node := stormObjectNode{node: sdb.db.From(nodeNameObjects)}
+	node := newStormObjectNodeReader(sdb.db)
 	return node.GetAtomicSwapContract(uh)
 }
 

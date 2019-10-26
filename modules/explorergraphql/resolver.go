@@ -33,9 +33,6 @@ type Resolver struct {
 func (r *Resolver) Block() BlockResolver {
 	return &blockResolver{r}
 }
-func (r *Resolver) BlockFacts() BlockFactsResolver {
-	return &blockFactsResolver{r}
-}
 func (r *Resolver) BlockHeader() BlockHeaderResolver {
 	return &blockHeaderResolver{r}
 }
@@ -76,8 +73,27 @@ func (r *Resolver) UnlockHashPublicKeyPair() UnlockHashPublicKeyPairResolver {
 type blockResolver struct{ *Resolver }
 
 func (r *blockResolver) Facts(ctx context.Context, obj *Block) (*BlockFacts, error) {
-	panic("not implemented")
+	dbBlockFacts, err := r.db.GetBlockFacts(types.BlockID(obj.Header.ID))
+	if err != nil {
+		return nil, fmt.Errorf("internal DB error while fetching facts for block %s: %v", obj.Header.ID.String(), err)
+	}
+	return dbBlockFactsAsGQL(&dbBlockFacts), nil
 }
+
+func dbBlockFactsAsGQL(dbBlockFacts *explorerdb.BlockFacts) *BlockFacts {
+	return &BlockFacts{
+		Difficulty: dbBigIntAsGQLRef(dbBlockFacts.Constants.Difficulty.Big()),
+		Target:     dbTargetAsHash(dbBlockFacts.Constants.Target),
+		ChainSnapshot: &BlockChainSnapshotFacts{
+			TotalCoins:                 dbCurrencyAsBigIntRef(dbBlockFacts.Aggregated.TotalCoins),
+			TotalLockedCoins:           dbCurrencyAsBigIntRef(dbBlockFacts.Aggregated.TotalLockedCoins),
+			TotalBlockStakes:           dbCurrencyAsBigIntRef(dbBlockFacts.Aggregated.TotalBlockStakes),
+			TotalLockedBlockStakes:     dbCurrencyAsBigIntRef(dbBlockFacts.Aggregated.TotalLockedBlockStakes),
+			EstimatedActiveBlockStakes: dbCurrencyAsBigIntRef(dbBlockFacts.Aggregated.EstimatedActiveBlockStakes),
+		},
+	}
+}
+
 func (r *blockResolver) Transactions(ctx context.Context, obj *Block) ([]Transaction, error) {
 	ltxns := len(obj.Transactions)
 	txns := make([]Transaction, 0, ltxns)
@@ -121,12 +137,6 @@ func allTransactionsExcept(txns []Transaction, ignoreIndex int) []Transaction {
 		}
 	}
 	return ntxns
-}
-
-type blockFactsResolver struct{ *Resolver }
-
-func (r *blockFactsResolver) Aggregated(ctx context.Context, obj *BlockFacts) (*BlockAggregatedFacts, error) {
-	panic("not implemented")
 }
 
 type blockHeaderResolver struct{ *Resolver }
@@ -297,7 +307,7 @@ func (r *queryRootResolver) Chain(ctx context.Context) (*ChainFacts, error) {
 	return &ChainFacts{
 		Constants:  constants,
 		LastBlock:  nil, // resolved by another lazy resolver
-		Aggregated: nil, // TODO: support in explorer DB
+		Aggregated: nil, // resolved by another lazy resolver
 	}, nil
 }
 
@@ -477,6 +487,7 @@ func dbBlockAsGQL(ctx context.Context, db explorerdb.DB, dbBlock *explorerdb.Blo
 	}
 	return &Block{
 		Header:       header,
+		Facts:        nil, // resolved by another lazy resolver
 		Transactions: transactions,
 	}, nil
 }
@@ -1156,6 +1167,17 @@ func dbOutputIDAsHash(outputID types.OutputID) *crypto.Hash {
 func dbBlockIDAsHash(blockID types.BlockID) *crypto.Hash {
 	h := crypto.Hash(blockID)
 	return &h
+}
+
+func dbTargetAsHash(target types.Target) *crypto.Hash {
+	h := crypto.Hash(target)
+	return &h
+}
+
+func dbBigIntAsGQLRef(bi *big.Int) *BigInt {
+	return &BigInt{
+		Int: bi,
+	}
 }
 
 func dbCurrencyAsBigIntRef(c types.Currency) *BigInt {

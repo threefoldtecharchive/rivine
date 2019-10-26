@@ -23,12 +23,24 @@ type (
 		DataID stormDataID `storm:"id"`
 
 		ParentID  types.BlockID
-		Target    types.Target
 		Height    types.BlockHeight
 		Timestamp types.Timestamp
 		Payouts   []types.OutputID
 
 		Transactions []types.TransactionID
+	}
+
+	stormBlockFacts struct {
+		DataID stormDataID `storm:"id"`
+
+		Target     types.Target     `storm:"index"`
+		Difficulty types.Difficulty `storm:"index"`
+
+		AggregatedTotalCoins                 types.Currency `storm:"index"`
+		AggregatedTotalLockedCoins           types.Currency `storm:"index"`
+		AggregatedTotalBlockStakes           types.Currency `storm:"index"`
+		AggregatedTotalLockedBlockStakes     types.Currency `storm:"index"`
+		AggregatedEstimatedActiveBlockStakes types.Currency `storm:"index"`
 	}
 
 	stormTransaction struct {
@@ -105,12 +117,27 @@ func (sblock *stormBlock) AsBlock(blockID types.BlockID) Block {
 	return Block{
 		ID:        blockID,
 		ParentID:  sblock.ParentID,
-		Target:    sblock.Target,
 		Height:    sblock.Height,
 		Timestamp: sblock.Timestamp,
 		Payouts:   sblock.Payouts,
 
 		Transactions: sblock.Transactions,
+	}
+}
+
+func (sbfacts *stormBlockFacts) AsBlockFacts() BlockFacts {
+	return BlockFacts{
+		Constants: BlockFactsConstants{
+			Target:     sbfacts.Target,
+			Difficulty: sbfacts.Difficulty,
+		},
+		Aggregated: BlockFactsAggregated{
+			TotalCoins:                 sbfacts.AggregatedTotalCoins,
+			TotalLockedCoins:           sbfacts.AggregatedTotalLockedCoins,
+			TotalBlockStakes:           sbfacts.AggregatedTotalBlockStakes,
+			TotalLockedBlockStakes:     sbfacts.AggregatedTotalLockedBlockStakes,
+			EstimatedActiveBlockStakes: sbfacts.AggregatedEstimatedActiveBlockStakes,
+		},
 	}
 }
 
@@ -201,22 +228,81 @@ const (
 	nodeObjectOutputKeySpenditureData = "SpenditureData"
 )
 
+type (
+	stormObjectNodeReader interface {
+		GetObject(ObjectID) (Object, error)
+
+		GetBlock(types.BlockID) (Block, error)
+		GetBlockFacts(types.BlockID) (BlockFacts, error)
+		GetTransaction(types.TransactionID) (Transaction, error)
+		GetOutput(types.OutputID) (Output, error)
+		GetSingleSignatureWallet(types.UnlockHash) (SingleSignatureWalletData, error)
+		GetMultiSignatureWallet(types.UnlockHash) (MultiSignatureWalletData, error)
+		GetAtomicSwapContract(types.UnlockHash) (AtomicSwapContract, error)
+
+		GetStormOutputsbyUnlockReferencePoint(types.BlockHeight, types.Timestamp) ([]stormOutput, error)
+	}
+
+	stormObjectNodeReaderWriter interface {
+		stormObjectNodeReader
+
+		GetLastDataID() stormDataID
+
+		SaveBlockWithFacts(*Block, *BlockFacts) error
+		SaveTransaction(*Transaction) error
+		SaveOutput(*Output) error
+		SaveSingleSignatureWallet(*SingleSignatureWalletData) error
+		SaveMultiSignatureWallet(*MultiSignatureWalletData) error
+		SaveAtomicSwapContract(*AtomicSwapContract) error
+
+		UpdateOutputSpenditureData(types.OutputID, *OutputSpenditureData) (Output, error)
+
+		DeleteBlock(types.BlockID) error
+		DeleteTransaction(types.TransactionID) error
+		DeleteOutput(types.OutputID) error
+		DeleteSingleSignatureWallet(types.UnlockHash) error
+		DeleteMultiSignatureWallet(types.UnlockHash) error
+		DeleteAtomicSwapContract(types.UnlockHash) error
+	}
+)
+
+const (
+	nodeNameObjects = "Objects"
+)
+
 type stormObjectNode struct {
 	node       storm.Node
 	lastDataID stormDataID
 }
 
-func (son *stormObjectNode) NextDataID() (dataID stormDataID) {
+func newStormObjectNodeReader(db *storm.DB) stormObjectNodeReader {
+	return &stormObjectNode{
+		node: db.From(nodeNameObjects),
+	}
+}
+
+func newStormObjectNodeReaderWriter(db *storm.DB, lastDataID stormDataID) stormObjectNodeReaderWriter {
+	return &stormObjectNode{
+		node:       db.From(nodeNameObjects),
+		lastDataID: lastDataID,
+	}
+}
+
+func (son *stormObjectNode) nextDataID() (dataID stormDataID) {
 	son.lastDataID++
 	dataID = son.lastDataID
 	return
 }
 
-func (son *stormObjectNode) SaveBlock(block *Block) error {
+func (son *stormObjectNode) GetLastDataID() stormDataID {
+	return son.lastDataID
+}
+
+func (son *stormObjectNode) SaveBlockWithFacts(block *Block, facts *BlockFacts) error {
 	obj := stormObject{
 		ObjectID:   ObjectID(block.ID[:]),
 		ObjectType: ObjectTypeBlock,
-		DataID:     son.NextDataID(),
+		DataID:     son.nextDataID(),
 	}
 	err := son.node.Save(&obj)
 	if err != nil {
@@ -226,7 +312,6 @@ func (son *stormObjectNode) SaveBlock(block *Block) error {
 		DataID: obj.DataID, // automatically incremented in previous save call
 
 		ParentID:  block.ParentID,
-		Target:    block.Target,
 		Height:    block.Height,
 		Timestamp: block.Timestamp,
 		Payouts:   block.Payouts,
@@ -236,6 +321,21 @@ func (son *stormObjectNode) SaveBlock(block *Block) error {
 	if err != nil {
 		return fmt.Errorf("failed to save block %s by (object) data ID %d: %v", block.ID.String(), obj.DataID, err)
 	}
+	err = son.node.Save(&stormBlockFacts{
+		DataID: obj.DataID, // automatically incremented in previous save call
+
+		Target:     facts.Constants.Target,
+		Difficulty: facts.Constants.Difficulty,
+
+		AggregatedTotalCoins:                 facts.Aggregated.TotalCoins,
+		AggregatedTotalLockedCoins:           facts.Aggregated.TotalLockedCoins,
+		AggregatedTotalBlockStakes:           facts.Aggregated.TotalBlockStakes,
+		AggregatedTotalLockedBlockStakes:     facts.Aggregated.TotalLockedBlockStakes,
+		AggregatedEstimatedActiveBlockStakes: facts.Aggregated.EstimatedActiveBlockStakes,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to save facts for block %s by (object) data ID %d: %v", block.ID.String(), obj.DataID, err)
+	}
 	return nil
 }
 
@@ -243,7 +343,7 @@ func (son *stormObjectNode) SaveTransaction(txn *Transaction) error {
 	obj := stormObject{
 		ObjectID:   ObjectID(txn.ID[:]),
 		ObjectType: ObjectTypeTransaction,
-		DataID:     son.NextDataID(),
+		DataID:     son.nextDataID(),
 	}
 	err := son.node.Save(&obj)
 	if err != nil {
@@ -276,7 +376,7 @@ func (son *stormObjectNode) SaveOutput(output *Output) error {
 	obj := stormObject{
 		ObjectID:   ObjectID(output.ID[:]),
 		ObjectType: ObjectTypeOutput,
-		DataID:     son.NextDataID(),
+		DataID:     son.nextDataID(),
 	}
 	err := son.node.Save(&obj)
 	if err != nil {
@@ -304,7 +404,7 @@ func (son *stormObjectNode) SaveSingleSignatureWallet(wallet *SingleSignatureWal
 	obj := stormObject{
 		ObjectID:   ObjectIDFromUnlockHash(wallet.UnlockHash),
 		ObjectType: ObjectTypeSingleSignatureWallet,
-		DataID:     son.NextDataID(),
+		DataID:     son.nextDataID(),
 	}
 	err := son.node.Save(&obj)
 	if err != nil {
@@ -332,7 +432,7 @@ func (son *stormObjectNode) SaveMultiSignatureWallet(wallet *MultiSignatureWalle
 	obj := stormObject{
 		ObjectID:   ObjectIDFromUnlockHash(wallet.UnlockHash),
 		ObjectType: ObjectTypeMultiSignatureWallet,
-		DataID:     son.NextDataID(),
+		DataID:     son.nextDataID(),
 	}
 	err := son.node.Save(&obj)
 	if err != nil {
@@ -361,7 +461,7 @@ func (son *stormObjectNode) SaveAtomicSwapContract(contract *AtomicSwapContract)
 	obj := stormObject{
 		ObjectID:   ObjectIDFromUnlockHash(contract.UnlockHash),
 		ObjectType: ObjectTypeAtomicSwapContract,
-		DataID:     son.NextDataID(),
+		DataID:     son.nextDataID(),
 	}
 	err := son.node.Save(&obj)
 	if err != nil {
@@ -456,6 +556,15 @@ func (son *stormObjectNode) GetBlock(blockID types.BlockID) (Block, error) {
 		return Block{}, err
 	}
 	return sblock.AsBlock(blockID), nil
+}
+
+func (son *stormObjectNode) GetBlockFacts(blockID types.BlockID) (BlockFacts, error) {
+	var sbfacts stormBlockFacts
+	err := son.getTypedObject(ObjectID(blockID[:]), &sbfacts)
+	if err != nil {
+		return BlockFacts{}, err
+	}
+	return sbfacts.AsBlockFacts(), nil
 }
 
 func (son *stormObjectNode) getBlockByDataID(blockID types.BlockID, dataID stormDataID) (Block, error) {
