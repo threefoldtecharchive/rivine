@@ -6,9 +6,11 @@ Permissioned blockchain using a delegated proof of stake algorithm.
 
 ## Smart contracts
 
-Written in C++ and compiled to wasm.
+Written in C++ and compiled to wasm while other compilers exist for rust and solidity although they are not officially supported.
 
-While other compilers exist for rust and solidity, verifying a smart contract can not be done without the source code being published and having a reproducible build and it is still hard to read the code and find flaws.
+### Verification
+
+, verifying a smart contract can not be done without the source code being published and having a reproducible build( while needing the constructor arguments) and it is still hard to read the code and find flaws.
 
 Smart contracts can simply be upgraded by the publisher.
 
@@ -20,7 +22,7 @@ Using the eos.io toolkit, it is easy to set up private chains.
 
 A lot of discussion is going on about the centralization of Block propagators (90% in China) and some questionable actions they took(freezing of accounts).
 
-Even a sentiment of calling the entire EOS system a Scam.
+Even a sentiment of calling the entire EOS ecosystem a Scam.
 
 Block.one, the company behind eos managed to raise a huge amount during their ICO.
 Yet they fail to deliver on some promises like withdrawing the announced decentralized facebook project.
