@@ -13,10 +13,10 @@ import (
 )
 
 func main() {
-	var issuingAccountname string
+	var issuerAddress string
 	var sourceAccountName string
 	var assetCode string
-	flag.StringVar(&issuingAccountname, "issuer", "issuer", " The name of the issuing account")
+	flag.StringVar(&issuerAddress, "issuer", "issuer", " The adress of the issuing account")
 	flag.StringVar(&sourceAccountName, "source", "", " The name of the account to create the trustline")
 	flag.StringVar(&assetCode, "asset", "", "The asset code")
 
@@ -25,7 +25,7 @@ func main() {
 		flag.Usage()
 		log.Fatalln("source is a required parameter")
 	}
-	if issuingAccountname == "" {
+	if issuerAddress == "" {
 		flag.Usage()
 		log.Fatalln("issuer is a required parameter")
 	}
@@ -40,13 +40,6 @@ func main() {
 	}
 	log.Println("Seed:", sourcePair.Seed())
 	log.Println("Address:", sourcePair.Address())
-
-	issuerPair, err := config.GetKeyPairFromConfig(issuingAccountname)
-	if err != nil {
-		log.Fatal(err)
-	}
-	issuerAddress := issuerPair.Address()
-	log.Println("Issuer address:", issuerAddress)
 
 	//get the source account details
 	sourceAccount, err := getAccountDetails(sourcePair.Address())
@@ -70,6 +63,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	transactionID, err := tx.HashHex()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Transaction ID: ", transactionID)
 	client := horizonclient.DefaultTestNetClient
 	txSuccess, err := client.SubmitTransactionXDR(txe)
 	if err != nil {

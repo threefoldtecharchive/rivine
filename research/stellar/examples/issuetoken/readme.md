@@ -36,7 +36,7 @@ It requires
 
 > The trust limit parameter limits the number of tokens the distribution account will be able to hold at once. It is recommended to either make this number larger than the total number of tokens expected to be available on the network or set it to be the maximum value (a total of max int64 stroops) that an account can hold.
 
-`go run createtrustline.go  -source <distributoraddress> -issuer <issueraddress> -asset rivinetest`
+`go run createtrustline.go  -source distributor -issuer <issueraddress> -asset rivinetest`
 
 ## 5 Token creation
 
