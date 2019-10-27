@@ -15,8 +15,11 @@ import (
 func main() {
 	var issuingAccountname string
 	var sourceAccountName string
+	var assetCode string
 	flag.StringVar(&issuingAccountname, "issuer", "issuer", " The name of the issuing account")
 	flag.StringVar(&sourceAccountName, "source", "", " The name of the account to create the trustline")
+	flag.StringVar(&assetCode, "asset", "", "The asset code")
+
 	flag.Parse()
 	if sourceAccountName == "" {
 		flag.Usage()
@@ -25,6 +28,10 @@ func main() {
 	if issuingAccountname == "" {
 		flag.Usage()
 		log.Fatalln("issuer is a required parameter")
+	}
+	if assetCode == "" {
+		flag.Usage()
+		log.Fatalln("asset is a required parameter")
 	}
 
 	sourcePair, err := config.GetKeyPairFromConfig(sourceAccountName)
@@ -48,7 +55,7 @@ func main() {
 	}
 
 	op := txnbuild.ChangeTrust{
-		Line:  txnbuild.CreditAsset{Code: "ROBTEST", Issuer: issuerAddress},
+		Line:  txnbuild.CreditAsset{Code: assetCode, Issuer: issuerAddress},
 		Limit: "10000",
 	}
 

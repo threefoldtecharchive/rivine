@@ -12,3 +12,4 @@ passwords testing
 release/
 config.toml
 cmd/rivinecg/rivinecg
+cmd/rivined/rivined
