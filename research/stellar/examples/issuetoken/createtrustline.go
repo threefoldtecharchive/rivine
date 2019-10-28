@@ -16,9 +16,11 @@ func main() {
 	var issuerAddress string
 	var sourceAccountName string
 	var assetCode string
-	flag.StringVar(&issuerAddress, "issuer", "issuer", " The adress of the issuing account")
-	flag.StringVar(&sourceAccountName, "source", "", " The name of the account to create the trustline")
+	var limit string
+	flag.StringVar(&issuerAddress, "issuer", "", " The adress of the issuing account")
+	flag.StringVar(&sourceAccountName, "source", "", " The name of the account in the config to create the trustline for")
 	flag.StringVar(&assetCode, "asset", "", "The asset code")
+	flag.StringVar(&limit, "limit", "10000", "Limit of the trustline for")
 
 	flag.Parse()
 	if sourceAccountName == "" {
@@ -49,7 +51,7 @@ func main() {
 
 	op := txnbuild.ChangeTrust{
 		Line:  txnbuild.CreditAsset{Code: assetCode, Issuer: issuerAddress},
-		Limit: "10000",
+		Limit: limit,
 	}
 
 	tx := txnbuild.Transaction{
