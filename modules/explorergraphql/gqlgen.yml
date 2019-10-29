@@ -20,68 +20,6 @@ models:
         resolver: true
       Aggregated:
         resolver: true
-  BlockHeader:
-    fields:
-      Payouts:
-        resolver: true
-      Parent:
-        resolver: true
-      Child:
-        resolver: true
-  Block:
-    fields:
-      Facts:
-        resolver: true
-      Transactions:
-        resolver: true
-  Output:
-    fields:
-      Parent:
-        resolver: true
-  TransactionFeePayout:
-    fields:
-      BlockPayout:
-        resolver: true
-  TransactionParentInfo:
-    fields:
-      SiblingTransactions:
-        resolver: true
-  StandardTransaction:
-    fields:
-      ParentBlock:
-        resolver: true
-      CoinInputs:
-        resolver: true
-      CoinOutputs:
-        resolver: true
-      BlockStakeInputs:
-        resolver: true
-      BlockStakeOutputs:
-        resolver: true
-  MintConditionDefinitionTransaction:
-    fields:
-      ParentBlock:
-        resolver: true
-      CoinInputs:
-        resolver: true
-      CoinOutputs:
-        resolver: true
-  MintCoinCreationTransaction:
-    fields:
-      ParentBlock:
-        resolver: true
-      CoinInputs:
-        resolver: true
-      CoinOutputs:
-        resolver: true
-  MintCoinDestructionTransaction:
-    fields:
-      ParentBlock:
-        resolver: true
-      CoinInputs:
-        resolver: true
-      CoinOutputs:
-        resolver: true
   UnlockHashPublicKeyPair:
     fields:
       PublicKey:
@@ -90,6 +28,38 @@ models:
     fields:
       PublicKey:
         resolver: true
+
+  FreeForAllWallet:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.FreeForAllWallet
+  SingleSignatureWallet:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.SingleSignatureWallet
+  MultiSignatureWallet:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.MultiSignatureWallet
+  AtomicSwapContract:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.AtomicSwapContract
+
+  Block:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.Block
+  BlockPayout:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.BlockPayout
+  Output:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.Output
+  Input:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.Input
+
+  Transaction:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.Transaction
+  TransactionParentInfo:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.TransactionParentInfo
+  StandardTransaction:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.StandardTransaction
+  MintConditionDefinitionTransaction:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.MintConditionDefinitionTransaction
+  MintCoinCreationTransaction:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.MintCoinCreationTransaction
+  MintCoinDestructionTransaction:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.MintCoinDestructionTransaction
+
   ObjectID:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.ObjectID
   BlockHeight:

@@ -23,10 +23,6 @@ type OutputParent interface {
 	IsOutputParent()
 }
 
-type Transaction interface {
-	IsTransaction()
-}
-
 type UnlockCondition interface {
 	IsUnlockCondition()
 }
@@ -50,21 +46,6 @@ type AtomicSwapCondition struct {
 
 func (AtomicSwapCondition) IsUnlockCondition() {}
 
-type AtomicSwapContract struct {
-	UnlockHash          types.UnlockHash       `json:"UnlockHash"`
-	ContractCondition   *AtomicSwapCondition   `json:"ContractCondition"`
-	ContractFulfillment *AtomicSwapFulfillment `json:"ContractFulfillment"`
-	ContractValue       BigInt                 `json:"ContractValue"`
-	BlockHeight         types.BlockHeight      `json:"BlockHeight"`
-	BlockTime           types.Timestamp        `json:"BlockTime"`
-	Transactions        []Transaction          `json:"Transactions"`
-	CoinInput           *Input                 `json:"CoinInput"`
-	CoinOutput          *Output                `json:"CoinOutput"`
-}
-
-func (AtomicSwapContract) IsObject()   {}
-func (AtomicSwapContract) IsContract() {}
-
 type AtomicSwapFulfillment struct {
 	Version         ByteVersion     `json:"Version"`
 	ParentCondition UnlockCondition `json:"ParentCondition"`
@@ -76,21 +57,9 @@ type AtomicSwapFulfillment struct {
 func (AtomicSwapFulfillment) IsUnlockFulfillment() {}
 
 type Balance struct {
-	Unlocked              BigInt            `json:"Unlocked"`
-	Locked                BigInt            `json:"Locked"`
-	LastUpdateTimestamp   types.Timestamp   `json:"LastUpdateTimestamp"`
-	LastUpdateBlockHeight types.BlockHeight `json:"LastUpdateBlockHeight"`
-	LastUpdateTransaction crypto.Hash       `json:"LastUpdateTransaction"`
+	Unlocked BigInt `json:"Unlocked"`
+	Locked   BigInt `json:"Locked"`
 }
-
-type Block struct {
-	Header       *BlockHeader  `json:"Header"`
-	Facts        *BlockFacts   `json:"Facts"`
-	Transactions []Transaction `json:"Transactions"`
-}
-
-func (Block) IsObject()       {}
-func (Block) IsOutputParent() {}
 
 type BlockChainSnapshotFacts struct {
 	TotalCoins                 *BigInt `json:"TotalCoins"`
@@ -114,11 +83,6 @@ type BlockHeader struct {
 	BlockTime   *types.Timestamp   `json:"BlockTime"`
 	BlockHeight *types.BlockHeight `json:"BlockHeight"`
 	Payouts     []*BlockPayout     `json:"Payouts"`
-}
-
-type BlockPayout struct {
-	Output *Output          `json:"Output"`
-	Type   *BlockPayoutType `json:"Type"`
 }
 
 type ChainAggregatedData struct {
@@ -155,14 +119,6 @@ type ChainFacts struct {
 	Aggregated *ChainAggregatedData `json:"Aggregated"`
 }
 
-type Input struct {
-	ID           crypto.Hash       `json:"ID"`
-	Type         *OutputType       `json:"Type"`
-	Value        BigInt            `json:"Value"`
-	Fulfillment  UnlockFulfillment `json:"Fulfillment"`
-	ParentOutput *Output           `json:"ParentOutput"`
-}
-
 type LockTimeCondition struct {
 	Version    ByteVersion       `json:"Version"`
 	UnlockHash *types.UnlockHash `json:"UnlockHash"`
@@ -172,53 +128,6 @@ type LockTimeCondition struct {
 }
 
 func (LockTimeCondition) IsUnlockCondition() {}
-
-type MintCoinCreationTransaction struct {
-	ID              crypto.Hash             `json:"ID"`
-	Version         ByteVersion             `json:"Version"`
-	ParentBlock     *TransactionParentInfo  `json:"ParentBlock"`
-	Nonce           BinaryData              `json:"Nonce"`
-	MintFulfillment UnlockFulfillment       `json:"MintFulfillment"`
-	CoinInputs      []*Input                `json:"CoinInputs"`
-	CoinOutputs     []*Output               `json:"CoinOutputs"`
-	FeePayouts      []*TransactionFeePayout `json:"FeePayouts"`
-	ArbitraryData   *BinaryData             `json:"ArbitraryData"`
-}
-
-func (MintCoinCreationTransaction) IsObject()       {}
-func (MintCoinCreationTransaction) IsTransaction()  {}
-func (MintCoinCreationTransaction) IsOutputParent() {}
-
-type MintCoinDestructionTransaction struct {
-	ID            crypto.Hash             `json:"ID"`
-	Version       ByteVersion             `json:"Version"`
-	ParentBlock   *TransactionParentInfo  `json:"ParentBlock"`
-	CoinInputs    []*Input                `json:"CoinInputs"`
-	CoinOutputs   []*Output               `json:"CoinOutputs"`
-	FeePayouts    []*TransactionFeePayout `json:"FeePayouts"`
-	ArbitraryData *BinaryData             `json:"ArbitraryData"`
-}
-
-func (MintCoinDestructionTransaction) IsObject()       {}
-func (MintCoinDestructionTransaction) IsTransaction()  {}
-func (MintCoinDestructionTransaction) IsOutputParent() {}
-
-type MintConditionDefinitionTransaction struct {
-	ID               crypto.Hash             `json:"ID"`
-	Version          ByteVersion             `json:"Version"`
-	ParentBlock      *TransactionParentInfo  `json:"ParentBlock"`
-	Nonce            BinaryData              `json:"Nonce"`
-	MintFulfillment  UnlockFulfillment       `json:"MintFulfillment"`
-	NewMintCondition UnlockCondition         `json:"NewMintCondition"`
-	CoinInputs       []*Input                `json:"CoinInputs"`
-	CoinOutputs      []*Output               `json:"CoinOutputs"`
-	FeePayouts       []*TransactionFeePayout `json:"FeePayouts"`
-	ArbitraryData    *BinaryData             `json:"ArbitraryData"`
-}
-
-func (MintConditionDefinitionTransaction) IsObject()       {}
-func (MintConditionDefinitionTransaction) IsTransaction()  {}
-func (MintConditionDefinitionTransaction) IsOutputParent() {}
 
 type MultiSignatureCondition struct {
 	Version                ByteVersion                `json:"Version"`
@@ -237,23 +146,10 @@ type MultiSignatureFulfillment struct {
 
 func (MultiSignatureFulfillment) IsUnlockFulfillment() {}
 
-type MultiSignatureWallet struct {
-	UnlockHash             types.UnlockHash           `json:"UnlockHash"`
+type MultiSignatureWalletData struct {
 	Owners                 []*UnlockHashPublicKeyPair `json:"Owners"`
 	RequiredSignatureCount int                        `json:"RequiredSignatureCount"`
-	BlockHeight            types.BlockHeight          `json:"BlockHeight"`
-	BlockTime              types.Timestamp            `json:"BlockTime"`
-	Transactions           []Transaction              `json:"Transactions"`
-	CoinInputs             []*Input                   `json:"CoinInputs"`
-	CoinOutputs            []*Output                  `json:"CoinOutputs"`
-	BlockStakeInputs       []*Input                   `json:"BlockStakeInputs"`
-	BlockStakeOutputs      []*Output                  `json:"BlockStakeOutputs"`
-	CoinBalance            *Balance                   `json:"CoinBalance"`
-	BlockStakeBalance      *Balance                   `json:"BlockStakeBalance"`
 }
-
-func (MultiSignatureWallet) IsObject() {}
-func (MultiSignatureWallet) IsWallet() {}
 
 type NilCondition struct {
 	Version    ByteVersion      `json:"Version"`
@@ -261,18 +157,6 @@ type NilCondition struct {
 }
 
 func (NilCondition) IsUnlockCondition() {}
-
-type Output struct {
-	ID         crypto.Hash     `json:"ID"`
-	Type       *OutputType     `json:"Type"`
-	Value      BigInt          `json:"Value"`
-	Condition  UnlockCondition `json:"Condition"`
-	ChildInput *Input          `json:"ChildInput"`
-	ParentID   crypto.Hash     `json:"ParentID"`
-	Parent     OutputParent    `json:"Parent"`
-}
-
-func (Output) IsObject() {}
 
 type PublicKeySignaturePair struct {
 	PublicKey types.PublicKey `json:"PublicKey"`
@@ -288,52 +172,9 @@ type SingleSignatureFulfillment struct {
 
 func (SingleSignatureFulfillment) IsUnlockFulfillment() {}
 
-type SingleSignatureWallet struct {
-	UnlockHash            types.UnlockHash        `json:"UnlockHash"`
-	PublicKey             *types.PublicKey        `json:"PublicKey"`
-	MultiSignatureWallets []*MultiSignatureWallet `json:"MultiSignatureWallets"`
-	BlockHeight           types.BlockHeight       `json:"BlockHeight"`
-	BlockTime             types.Timestamp         `json:"BlockTime"`
-	Transactions          []Transaction           `json:"Transactions"`
-	CoinInputs            []*Input                `json:"CoinInputs"`
-	CoinOutputs           []*Output               `json:"CoinOutputs"`
-	BlockStakeInputs      []*Input                `json:"BlockStakeInputs"`
-	BlockStakeOutputs     []*Output               `json:"BlockStakeOutputs"`
-	CoinBalance           *Balance                `json:"CoinBalance"`
-	BlockStakeBalance     *Balance                `json:"BlockStakeBalance"`
-}
-
-func (SingleSignatureWallet) IsObject() {}
-func (SingleSignatureWallet) IsWallet() {}
-
-type StandardTransaction struct {
-	ID                crypto.Hash             `json:"ID"`
-	Version           ByteVersion             `json:"Version"`
-	ParentBlock       *TransactionParentInfo  `json:"ParentBlock"`
-	CoinInputs        []*Input                `json:"CoinInputs"`
-	CoinOutputs       []*Output               `json:"CoinOutputs"`
-	BlockStakeInputs  []*Input                `json:"BlockStakeInputs"`
-	BlockStakeOutputs []*Output               `json:"BlockStakeOutputs"`
-	FeePayouts        []*TransactionFeePayout `json:"FeePayouts"`
-	ArbitraryData     *BinaryData             `json:"ArbitraryData"`
-}
-
-func (StandardTransaction) IsObject()       {}
-func (StandardTransaction) IsTransaction()  {}
-func (StandardTransaction) IsOutputParent() {}
-
 type TransactionFeePayout struct {
 	BlockPayout *BlockPayout `json:"BlockPayout"`
 	Value       BigInt       `json:"Value"`
-}
-
-type TransactionParentInfo struct {
-	ID                  crypto.Hash        `json:"ID"`
-	ParentID            *crypto.Hash       `json:"ParentID"`
-	Height              *types.BlockHeight `json:"Height"`
-	Timestamp           *types.Timestamp   `json:"Timestamp"`
-	TransactionOrder    *int               `json:"TransactionOrder"`
-	SiblingTransactions []Transaction      `json:"SiblingTransactions"`
 }
 
 type UnlockHashCondition struct {

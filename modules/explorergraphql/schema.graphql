@@ -2,6 +2,10 @@ schema {
     query: QueryRoot
 }
 
+# TODO: provide also unconfirmed updates if desired for wallets
+
+# TODO: what other things should provide unconfirmed updates????
+
 # How to query transactions based on properties
 # How to query wallets based on properties
 
@@ -16,7 +20,6 @@ type QueryRoot {
   object(id: ObjectID): Object
 
   block(id: Hash, reference: ReferencePoint): Block
-  blocks(after: ReferencePoint, first: Int, before: ReferencePoint, last: Int): Transaction
 
   transaction(id: Hash!): Transaction
 
@@ -41,7 +44,7 @@ scalar ByteVersion
 
 # TODO: replace txn implementations by Transaction interface once possible
 #                   ... Same goes for AtomicSwapContract (Contract Union) and Wallets (Wallet Interface)
-union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | FreeForAllWallet | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 union Contract = AtomicSwapContract
 
 type ChainFacts {
@@ -325,23 +328,29 @@ type MultiSignatureFulfillment implements UnlockFulfillment {
 type Balance {
     Unlocked: BigInt!
     Locked: BigInt!
-    LastUpdateTimestamp: Timestamp!
-    LastUpdateBlockHeight: BlockHeight!
-    LastUpdateTransaction: Hash!
 }
 
 interface Wallet {
     UnlockHash: UnlockHash!
 
-    BlockHeight: BlockHeight!
-    BlockTime: Timestamp!
+    # TODO: support transactions and blocks in a paginated manner
 
-    Transactions: [Transaction!]
+    #Transactions: [Transaction!]
+    #Blocks: [Block!]
 
-    CoinInputs: [Input!]
+    # TODO: support inputs and outputs in a paginated manner
+
     CoinOutputs: [Output!]
+    BlockStakeOutputs: [Output!]
 
-    BlockStakeInputs: [Input!]
+    CoinBalance: Balance
+    BlockStakeBalance: Balance
+}
+
+type FreeForAllWallet implements Wallet {
+    UnlockHash: UnlockHash!
+
+    CoinOutputs: [Output!]
     BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
@@ -351,44 +360,32 @@ interface Wallet {
 type SingleSignatureWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    PublicKey: PublicKey
-
-    MultiSignatureWallets: [MultiSignatureWallet]
-
-    BlockHeight: BlockHeight!
-    BlockTime: Timestamp!
-
-    Transactions: [Transaction!]
-
-    CoinInputs: [Input!]
     CoinOutputs: [Output!]
-
-    BlockStakeInputs: [Input!]
     BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
+
+    PublicKey: PublicKey
+    MultiSignatureWallets: [MultiSignatureWallet!]
+}
+
+type MultiSignatureWalletData {
+    Owners: [UnlockHashPublicKeyPair!]!
+    RequiredSignatureCount: Int!
 }
 
 type MultiSignatureWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    Owners: [UnlockHashPublicKeyPair!]!
-    RequiredSignatureCount: Int!
-
-    BlockHeight: BlockHeight!
-    BlockTime: Timestamp!
-
-    Transactions: [Transaction!]
-
-    CoinInputs: [Input!]
     CoinOutputs: [Output!]
-
-    BlockStakeInputs: [Input!]
     BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
+
+    Owners: [UnlockHashPublicKeyPair!]!
+    RequiredSignatureCount: Int!
 }
 
 type AtomicSwapContract {
@@ -398,11 +395,7 @@ type AtomicSwapContract {
     ContractFulfillment: AtomicSwapFulfillment
     ContractValue: BigInt!
 
-    BlockHeight: BlockHeight!
-    BlockTime: Timestamp!
-
     Transactions: [Transaction!]
 
-    CoinInput: Input!
     CoinOutput: Output
 }

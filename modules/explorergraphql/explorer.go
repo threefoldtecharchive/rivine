@@ -2,15 +2,12 @@ package explorergraphql
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
-	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/99designs/gqlgen/handler"
@@ -26,7 +23,6 @@ type Explorer struct {
 	cs             modules.ConsensusSet
 	chainConstants types.ChainConstants
 	blockChainInfo types.BlockchainInfo
-	log            *persist.Logger
 }
 
 var (
@@ -47,7 +43,7 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		return nil, err
 	}
 
-	db, err := explorerdb.NewStormDB(filepath.Join(persistDir, "explorer.db"), chainConstants)
+	db, err := explorerdb.NewStormDB(persistDir, bcInfo, chainConstants, verboseLogging)
 	if err != nil {
 		return nil, err
 	}
@@ -56,20 +52,11 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 	if err != nil {
 		return nil, err
 	}
-
-	// Initialize the logger.
-	logFilePath := filepath.Join(persistDir, "explorer.log")
-	logger, err := persist.NewFileLogger(bcInfo, logFilePath, verboseLogging)
-	if err != nil {
-		return nil, err
-	}
-
 	e := &Explorer{
 		db:             db,
 		cs:             cs,
 		chainConstants: chainConstants,
 		blockChainInfo: bcInfo,
-		log:            logger,
 	}
 
 	err = cs.ConsensusSetSubscribe(e, chainCtx.ConsensusChangeID, nil)
@@ -112,13 +99,5 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 // Close closes the explorer.
 func (e *Explorer) Close() error {
 	e.cs.Unsubscribe(e)
-	// Set up closing the logger.
-	if e.log != nil {
-		err := e.log.Close()
-		if err != nil {
-			// State of the logger is unknown, a println will suffice.
-			fmt.Println("Error shutting down explorer logger:", err)
-		}
-	}
 	return e.db.Close()
 }

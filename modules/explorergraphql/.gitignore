@@ -1,2 +1,3 @@
 # we do not require generated GraphQL server, as we provide it ourselves
 server/
+resolver_new.go

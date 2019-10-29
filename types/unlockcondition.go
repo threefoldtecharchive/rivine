@@ -133,6 +133,16 @@ type (
 		UnlockHashSlice() []UnlockHash
 	}
 
+	// MultiSignatureConditionOwnerInfoGetter is an interfac that every MultiSignatureCondition
+	// should implement as rivine-code relies on the fact that for the MultiSignatureCondition Type
+	// this interface is implemented by the implementation of the condition,
+	// be it the standard or a custom one.
+	MultiSignatureConditionOwnerInfoGetter interface {
+		MarshalableUnlockCondition
+		UnlockHashSliceGetter
+		GetMinimumSignatureCount() uint64
+	}
+
 	// MarshalableUnlockConditionGetter is an optional interface an MarshalableUnlockCondition can implement,
 	// in case it wraps around another MarshalableUnlockCondition.
 	MarshalableUnlockConditionGetter interface {
@@ -605,6 +615,11 @@ type (
 		MarshalableUnlockFulfillment
 		AtomicSwapSecret() AtomicSwapSecret
 	}
+)
+
+// interface compile-time enforcers
+var (
+	_ MultiSignatureConditionOwnerInfoGetter = (*MultiSignatureCondition)(nil)
 )
 
 // Errors related to atomic swap validation.
