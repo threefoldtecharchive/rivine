@@ -40,8 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Seed:", sourcePair.Seed())
-	log.Println("Address:", sourcePair.Address())
+	log.Println("Account Address:", sourcePair.Address())
 
 	//get the source account details
 	sourceAccount, err := getAccountDetails(sourcePair.Address())
