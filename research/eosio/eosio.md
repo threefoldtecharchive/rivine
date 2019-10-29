@@ -6,7 +6,10 @@ Permissioned blockchain using a delegated proof of stake algorithm.
 
 ## Smart contracts
 
-Written in C++ and compiled to wasm while other compilers exist for rust and solidity although they are not officially supported.
+Written in C++ and compiled to wasm while other compilers exist for rust and solidity although they are not officially supported. Not all codestructures are supported, a bit unclear what is and what not.
+What state is permanent is a bit unclear too.
+
+Custom wasm interpreter.
 
 ### Verification
 
