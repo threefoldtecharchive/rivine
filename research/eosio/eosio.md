@@ -39,7 +39,7 @@ A lot of discussion is going on about the centralization of Block propagators (9
 Even a sentiment of calling the entire EOS ecosystem a Scam.
 
 Block.one, the company behind eos managed to raise a huge amount during their ICO.
-Yet they fail to deliver on some promises like withdrawing the announced decentralized facebook project.
+Yet they fail to deliver on some promises like the announced decentralized facebook project which they withdrew and should have served as a proof of the power of dapps on top of eosio.
 
 ## Questions
 
