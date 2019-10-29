@@ -10,9 +10,13 @@ Written in C++ and compiled to wasm while other compilers exist for rust and sol
 
 ### Verification
 
-, verifying a smart contract can not be done without the source code being published and having a reproducible build( while needing the constructor arguments) and it is still hard to read the code and find flaws.
+Verifying a smart contract can not be done without the source code being published and having a reproducible build( while needing the constructor arguments) and it is still hard to read the code and find flaws.
 
 Smart contracts can simply be upgraded by the publisher.
+
+## Scalability
+
+Eos procceses transactions by using 21 block propagators, which speeds up the process significantly. If one blockchain is not enough, other chains can be created to increase the number of transactions per second.
 
 ## Private chains
 
