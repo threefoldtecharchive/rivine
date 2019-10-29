@@ -21,7 +21,7 @@ Smart contracts can simply be upgraded by the publisher.
 
 Eos procceses transactions by using 21 block propagators, which speeds up the process significantly. If one blockchain is not enough, other chains can be created to increase the number of transactions per second.
 
-## Blochain interoperability
+## Blockchain interoperability
 
 - Relays: contracts on both chains, much like our erc-20 bridge.
 - atomic swaps possibility
