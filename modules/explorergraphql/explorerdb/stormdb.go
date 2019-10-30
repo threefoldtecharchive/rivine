@@ -22,11 +22,32 @@ const (
 type StormDB struct {
 	db       *storm.DB
 	logger   *persist.Logger
-	bcInfo   types.BlockchainInfo
-	chainCts types.ChainConstants
+	bcInfo   *types.BlockchainInfo
+	chainCts *types.ChainConstants
 
-	// keep in memory
-	lastTimestamp types.Timestamp
+	// optional
+	boltTx *bolt.Tx
+}
+
+func (sdb *StormDB) rootNode(name string) storm.Node {
+	if sdb.boltTx != nil {
+		return sdb.db.WithTransaction(sdb.boltTx).From(name)
+	}
+	return sdb.db.From(name)
+}
+
+func (sdb *StormDB) boltView(f func(tx *bolt.Tx) error) error {
+	if sdb.boltTx != nil {
+		return f(sdb.boltTx)
+	}
+	return sdb.db.Bolt.View(f)
+}
+
+func (sdb *StormDB) boltUpdate(f func(tx *bolt.Tx) error) error {
+	if sdb.boltTx != nil {
+		return f(sdb.boltTx)
+	}
+	return sdb.db.Bolt.Update(f)
 }
 
 func NewStormDB(path string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*StormDB, error) {
@@ -40,22 +61,13 @@ func NewStormDB(path string, bcInfo types.BlockchainInfo, chainCts types.ChainCo
 	if err != nil {
 		return nil, err
 	}
-	sdb := &StormDB{
+	return &StormDB{
 		db:       db,
 		logger:   logger,
-		chainCts: chainCts,
-	}
-	// get chain context
-	chainCtx, err := sdb.GetChainContext()
-	if err != nil {
-		cerr := sdb.Close()
-		if cerr != nil {
-			logger.Printf("[WARN] failed to close storm DB at startup: %v", err)
-		}
-		return nil, fmt.Errorf("failed to get initial chain ctx from storm DB: %v", err)
-	}
-	sdb.lastTimestamp = chainCtx.Timestamp
-	return sdb, nil
+		chainCts: &chainCts,
+		bcInfo:   &bcInfo,
+		boltTx:   nil, // not used in the root db
+	}, nil
 }
 
 var (
@@ -253,7 +265,7 @@ func (sdb *StormDB) saveInternalData(internalData stormDBInternalData) error {
 		return fmt.Errorf(
 			"failed to marshal internal stormDB data %v: %v", internalData, err)
 	}
-	return sdb.db.Bolt.Update(func(tx *bolt.Tx) error {
+	return sdb.boltUpdate(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketNameMetadata)
 		if err != nil {
 			return fmt.Errorf("bucket %s is not created while it is expected to be: %v", string(bucketNameMetadata), err)
@@ -264,7 +276,7 @@ func (sdb *StormDB) saveInternalData(internalData stormDBInternalData) error {
 
 func (sdb *StormDB) getInternalData() (stormDBInternalData, error) {
 	var internalDataBytes []byte
-	err := sdb.db.Bolt.View(func(tx *bolt.Tx) error {
+	err := sdb.boltView(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketNameMetadata)
 		if bucket == nil {
 			return nil
@@ -295,7 +307,7 @@ func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
 		return fmt.Errorf(
 			"failed to marshal chain context %v: %v", chainCtx, err)
 	}
-	return sdb.db.Bolt.Update(func(tx *bolt.Tx) error {
+	return sdb.boltUpdate(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketNameMetadata)
 		if err != nil {
 			return fmt.Errorf("bucket %s is not created while it is expected to be: %v", string(bucketNameMetadata), err)
@@ -306,7 +318,7 @@ func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
 
 func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 	var chainCtxBytes []byte
-	err := sdb.db.Bolt.View(func(tx *bolt.Tx) error {
+	err := sdb.boltView(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketNameMetadata)
 		if bucket == nil {
 			return nil
@@ -333,7 +345,7 @@ func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 
 func (sdb *StormDB) GetChainAggregatedFacts() (ChainAggregatedFacts, error) {
 	var factsBytes []byte
-	err := sdb.db.Bolt.View(func(tx *bolt.Tx) error {
+	err := sdb.boltView(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketNameMetadata)
 		if bucket == nil {
 			return nil
@@ -357,7 +369,7 @@ func (sdb *StormDB) GetChainAggregatedFacts() (ChainAggregatedFacts, error) {
 }
 
 func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *ChainAggregatedFacts) error) error {
-	return sdb.db.Bolt.Update(func(tx *bolt.Tx) error {
+	return sdb.boltUpdate(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketNameMetadata)
 		if err != nil {
 			return err
@@ -395,9 +407,9 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		return err
 	}
 
-	node := newStormObjectNodeReaderWriter(sdb.db, sdbInternalData.LastDataID)
-	blockNode := sdb.db.From(nodeNameBlocks)
-	publicKeysNode := sdb.db.From(nodeNamePublicKeys)
+	node := newStormObjectNodeReaderWriter(sdb, sdbInternalData.LastDataID)
+	blockNode := sdb.rootNode(nodeNameBlocks)
+	publicKeysNode := sdb.rootNode(nodeNamePublicKeys)
 
 	// used to update wallets and contracts
 	uhUpdateCollection := newUnlockHashUpdateCollection(block.ID, block.Height, block.Timestamp)
@@ -511,8 +523,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		return fmt.Errorf("failed to apply block %s: failed to save internal data: %v", block.ID.String(), err)
 	}
 
-	// set last timestamp and return no error
-	sdb.lastTimestamp = block.Timestamp
+	// all good
 	return nil
 }
 
@@ -524,7 +535,12 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 	)
 	// get outputs unlocked by height and timestamp
 	if height != 0 { // do not do it for block 0, as it will return all outputs that do not have a lock
-		outputsUnlocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, sdb.lastTimestamp, timestamp)
+		// get previous block
+		previousBlock, err := sdb.GetBlockByReferencePoint(ReferencePoint(height - 1))
+		if err != nil {
+			return ChainAggregatedFacts{}, nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
+		}
+		outputsUnlocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, previousBlock.Timestamp, timestamp)
 		if err != nil {
 			if err == storm.ErrNotFound {
 				// ignore not found
@@ -912,8 +928,8 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		return err
 	}
 
-	node := newStormObjectNodeReaderWriter(sdb.db, sdbInternalData.LastDataID)
-	blockNode := sdb.db.From(nodeNameBlocks)
+	node := newStormObjectNodeReaderWriter(sdb, sdbInternalData.LastDataID)
+	blockNode := sdb.rootNode(nodeNameBlocks)
 
 	// used to update wallets and contracts
 	uhUpdateCollection := newUnlockHashUpdateCollection(
@@ -1004,8 +1020,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		return fmt.Errorf("failed to revert block %s: failed to save internal data: %v", blockContext.ID.String(), err)
 	}
 
-	// set last timestamp (only used when applying blocks) and return no error
-	sdb.lastTimestamp = blockContext.Timestamp
+	// all good
 	return nil
 }
 
@@ -1329,25 +1344,25 @@ func mapStormErrorToExplorerDBError(err error) error {
 }
 
 func (sdb *StormDB) GetObject(id ObjectID) (Object, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	obj, err := node.GetObject(id)
 	return obj, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetObjectInfo(id ObjectID) (ObjectInfo, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	objInfo, err := node.GetObjectInfo(id)
 	return objInfo, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	block, err := node.GetBlock(id)
 	return block, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlockFacts(id types.BlockID) (BlockFacts, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	facts, err := node.GetBlockFacts(id)
 	return facts, mapStormErrorToExplorerDBError(err)
 }
@@ -1362,7 +1377,7 @@ func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
 }
 
 func (sdb *StormDB) GetBlockIDByReferencePoint(rp ReferencePoint) (types.BlockID, error) {
-	node := sdb.db.From(nodeNameBlocks)
+	node := sdb.rootNode(nodeNameBlocks)
 	var pair blockReferencePointIDPair
 	if rp.IsBlockHeight() {
 		rp++
@@ -1375,7 +1390,7 @@ func (sdb *StormDB) GetBlockIDByReferencePoint(rp ReferencePoint) (types.BlockID
 }
 
 func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts, error) {
-	node := sdb.db.From(nodeNameBlocks)
+	node := sdb.rootNode(nodeNameBlocks)
 	var pair blockReferencePointIDPair
 	if rp.IsBlockHeight() {
 		rp++
@@ -1389,49 +1404,79 @@ func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts
 }
 
 func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	txn, err := node.GetTransaction(id)
 	return txn, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	output, err := node.GetOutput(id)
 	return output, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetFreeForAllWallet(uh types.UnlockHash) (FreeForAllWalletData, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	wallet, err := node.GetFreeForAllWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetSingleSignatureWallet(uh types.UnlockHash) (SingleSignatureWalletData, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	wallet, err := node.GetSingleSignatureWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	wallet, err := node.GetMultiSignatureWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
-	node := newStormObjectNodeReader(sdb.db)
+	node := newStormObjectNodeReader(sdb)
 	contract, err := node.GetAtomicSwapContract(uh)
 	return contract, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
-	node := sdb.db.From(nodeNamePublicKeys)
+	node := sdb.rootNode(nodeNamePublicKeys)
 	var pair unlockHashPublicKeyPair
 	err := node.One(nodePublicKeysKeyUnlockHash, uh, &pair)
 	if err != nil {
 		return types.PublicKey{}, mapStormErrorToExplorerDBError(err)
 	}
 	return pair.PublicKey, nil
+}
+
+// ReadTransaction batches multiple read calls together,
+// to keep the disk I/O to a minimum
+func (sdb *StormDB) ReadTransaction(f func(RTxn) error) error {
+	return sdb.boltView(func(tx *bolt.Tx) error {
+		sdbCopy := &StormDB{
+			db:       sdb.db,
+			logger:   sdb.logger,
+			bcInfo:   sdb.bcInfo,
+			chainCts: sdb.chainCts,
+			boltTx:   tx,
+		}
+		return f(sdbCopy)
+	})
+}
+
+// ReadWriteTransaction batches multiple read-write calls together,
+// to keep the disk I/O to a minimum
+func (sdb *StormDB) ReadWriteTransaction(f func(RWTxn) error) error {
+	return sdb.boltUpdate(func(tx *bolt.Tx) error {
+		sdbCopy := &StormDB{
+			db:       sdb.db,
+			logger:   sdb.logger,
+			bcInfo:   sdb.bcInfo,
+			chainCts: sdb.chainCts,
+			boltTx:   tx,
+		}
+		return f(sdbCopy)
+	})
 }
 
 func (sdb *StormDB) Close() error {

@@ -12,21 +12,30 @@ import (
 
 // TODO: integrate context.Context in each call
 
-// TODO: support batching (to allow speeding up the process as well as intermediate rollbacks)
-
 // TODO: we should not have to rely on CS data for getting the child target
 
 // TODO: keep reference counter for public keys, and delete it in case the reference count is 0 (see TODO (4))
 
 type DB interface {
-	SetChainContext(ChainContext) error
+	// You can run each call in its own R/W  Txn by calling
+	// the txn command directly on the DB.
+	RWTxn
+
+	// ReadTransaction batches multiple read calls together,
+	// to keep the disk I/O to a minimum
+	ReadTransaction(func(RTxn) error) error
+	// ReadWriteTransaction batches multiple read-write calls together,
+	// to keep the disk I/O to a minimum
+	ReadWriteTransaction(func(RWTxn) error) error
+
+	// Close the DB
+	Close() error
+}
+
+type RTxn interface {
 	GetChainContext() (ChainContext, error)
 
 	GetChainAggregatedFacts() (ChainAggregatedFacts, error)
-
-	ApplyBlock(block Block, blockFacts BlockFactsConstants, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error
-	// TODO: should we also revert public key (from UH) mapping? (TODO 4)
-	RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error
 
 	GetObject(ObjectID) (Object, error)
 	GetObjectInfo(ObjectID) (ObjectInfo, error)
@@ -45,153 +54,163 @@ type DB interface {
 	GetAtomicSwapContract(types.UnlockHash) (AtomicSwapContract, error)
 
 	GetPublicKey(types.UnlockHash) (types.PublicKey, error)
+}
 
-	Close() error
+type RWTxn interface {
+	RTxn
+
+	SetChainContext(ChainContext) error
+
+	ApplyBlock(block Block, blockFacts BlockFactsConstants, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error
+	// TODO: should we also revert public key (from UH) mapping? (TODO 4)
+	RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error
 }
 
 // TODO: handle also chain-specific stuff, such as chains that do not have block rewards
 
 func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusChange, chainCts *types.ChainConstants) error {
-	chainCtx, err := db.GetChainContext()
-	if err != nil {
+	return db.ReadWriteTransaction(func(db RWTxn) error {
+		chainCtx, err := db.GetChainContext()
+		if err != nil {
+			return err
+		}
+
+		for _, revertedBlock := range csc.RevertedBlocks {
+			// TODO: verify if this is correct, or if it should be done after
+			chainCtx.Height--
+			chainCtx.Timestamp = revertedBlock.Timestamp
+
+			block := RivineBlockAsExplorerBlock(chainCtx.Height, revertedBlock)
+			chainCtx.BlockID = block.ID
+
+			outputs := make([]types.OutputID, 0, len(revertedBlock.MinerPayouts))
+			for idx := range revertedBlock.MinerPayouts {
+				outputs = append(outputs, block.Payouts[idx])
+			}
+
+			var inputs []types.OutputID
+			transactions := make([]types.TransactionID, 0, len(revertedBlock.Transactions))
+			for idx, txn := range revertedBlock.Transactions {
+				// add txn
+				transactions = append(transactions, block.Transactions[idx])
+				// add inputs
+				for _, input := range txn.CoinInputs {
+					inputs = append(inputs, types.OutputID(input.ParentID))
+				}
+				for _, input := range txn.BlockStakeInputs {
+					inputs = append(inputs, types.OutputID(input.ParentID))
+				}
+				// add outputs
+				for cidx := range txn.CoinOutputs {
+					outputs = append(outputs, types.OutputID(txn.CoinOutputID(uint64(cidx))))
+				}
+				for bsidx := range txn.BlockStakeOutputs {
+					outputs = append(outputs, types.OutputID(txn.BlockStakeOutputID(uint64(bsidx))))
+				}
+			}
+
+			err = db.RevertBlock(BlockRevertContext{
+				ID:        block.ID,
+				Height:    chainCtx.Height,
+				Timestamp: chainCtx.Timestamp,
+			}, transactions, outputs, inputs)
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, appliedBlock := range csc.AppliedBlocks {
+			var target types.Target
+			if chainCtx.Height > 0 {
+				// TODO: find a better way than having to get this target from the consensusSet DB
+				var ok bool
+				target, ok = cs.ChildTarget(appliedBlock.ParentID)
+				if !ok {
+					return fmt.Errorf("failed to look up child target for parent block %s", appliedBlock.ParentID.String())
+				}
+			} else {
+				target = chainCts.RootTarget()
+			}
+			blockFacts := BlockFactsConstants{
+				Target:     target,
+				Difficulty: target.Difficulty(chainCts.RootDepth),
+			}
+
+			block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock)
+
+			outputs := make([]Output, 0, len(appliedBlock.MinerPayouts))
+			for idx, mp := range appliedBlock.MinerPayouts {
+				outputs = append(outputs, RivineMinerPayoutAsOutput(
+					block.ID,
+					types.CoinOutputID(block.Payouts[idx]),
+					mp,
+					// TODO: customize this per chain network (behaviour and constants)
+					idx == 0,
+					chainCtx.Height,
+					chainCts.MaturityDelay,
+				))
+			}
+			// TODO: customize this per chain network
+			var feePayoutID types.OutputID
+			if len(block.Payouts) > 1 {
+				feePayoutID = block.Payouts[1]
+			}
+
+			inputs := make(map[types.OutputID]OutputSpenditureData)
+			transactions := make([]Transaction, 0, len(appliedBlock.Transactions))
+			for idx, txn := range appliedBlock.Transactions {
+				transaction := RivineTransactionAsTransaction(
+					block.ID,
+					block.Transactions[idx],
+					txn,
+					feePayoutID,
+				)
+				transactions = append(transactions, transaction)
+				// add inputs
+				for _, input := range txn.CoinInputs {
+					inputs[types.OutputID(input.ParentID)] = OutputSpenditureData{
+						Fulfillment:              input.Fulfillment,
+						FulfillmentTransactionID: block.Transactions[idx],
+					}
+				}
+				for _, input := range txn.BlockStakeInputs {
+					inputs[types.OutputID(input.ParentID)] = OutputSpenditureData{
+						Fulfillment:              input.Fulfillment,
+						FulfillmentTransactionID: block.Transactions[idx],
+					}
+				}
+				// add outputs
+				for idx, output := range txn.CoinOutputs {
+					outputs = append(outputs, RivineCoinOutputAsOutput(
+						block.Transactions[idx],
+						types.CoinOutputID(transaction.CoinOutputs[idx]),
+						output,
+					))
+				}
+				for idx, output := range txn.BlockStakeOutputs {
+					outputs = append(outputs, RivineBlockStakeOutputAsOutput(
+						block.Transactions[idx],
+						types.BlockStakeOutputID(transaction.BlockStakeOutputs[idx]),
+						output,
+					))
+				}
+			}
+
+			err = db.ApplyBlock(block, blockFacts, transactions, outputs, inputs)
+			if err != nil {
+				return err
+			}
+
+			// TODO: verify if this is correct, or if it should be done before
+			chainCtx.Height++
+			chainCtx.Timestamp = appliedBlock.Timestamp
+			chainCtx.BlockID = block.ID
+		}
+
+		chainCtx.ConsensusChangeID = csc.ID
+		err = db.SetChainContext(chainCtx)
 		return err
-	}
-
-	for _, revertedBlock := range csc.RevertedBlocks {
-		// TODO: verify if this is correct, or if it should be done after
-		chainCtx.Height--
-		chainCtx.Timestamp = revertedBlock.Timestamp
-
-		block := RivineBlockAsExplorerBlock(chainCtx.Height, revertedBlock)
-		chainCtx.BlockID = block.ID
-
-		outputs := make([]types.OutputID, 0, len(revertedBlock.MinerPayouts))
-		for idx := range revertedBlock.MinerPayouts {
-			outputs = append(outputs, block.Payouts[idx])
-		}
-
-		var inputs []types.OutputID
-		transactions := make([]types.TransactionID, 0, len(revertedBlock.Transactions))
-		for idx, txn := range revertedBlock.Transactions {
-			// add txn
-			transactions = append(transactions, block.Transactions[idx])
-			// add inputs
-			for _, input := range txn.CoinInputs {
-				inputs = append(inputs, types.OutputID(input.ParentID))
-			}
-			for _, input := range txn.BlockStakeInputs {
-				inputs = append(inputs, types.OutputID(input.ParentID))
-			}
-			// add outputs
-			for cidx := range txn.CoinOutputs {
-				outputs = append(outputs, types.OutputID(txn.CoinOutputID(uint64(cidx))))
-			}
-			for bsidx := range txn.BlockStakeOutputs {
-				outputs = append(outputs, types.OutputID(txn.BlockStakeOutputID(uint64(bsidx))))
-			}
-		}
-
-		err = db.RevertBlock(BlockRevertContext{
-			ID:        block.ID,
-			Height:    chainCtx.Height,
-			Timestamp: chainCtx.Timestamp,
-		}, transactions, outputs, inputs)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, appliedBlock := range csc.AppliedBlocks {
-		var target types.Target
-		if chainCtx.Height > 0 {
-			// TODO: find a better way than having to get this target from the consensusSet DB
-			var ok bool
-			target, ok = cs.ChildTarget(appliedBlock.ParentID)
-			if !ok {
-				return fmt.Errorf("failed to look up child target for parent block %s", appliedBlock.ParentID.String())
-			}
-		} else {
-			target = chainCts.RootTarget()
-		}
-		blockFacts := BlockFactsConstants{
-			Target:     target,
-			Difficulty: target.Difficulty(chainCts.RootDepth),
-		}
-
-		block := RivineBlockAsExplorerBlock(chainCtx.Height, appliedBlock)
-
-		outputs := make([]Output, 0, len(appliedBlock.MinerPayouts))
-		for idx, mp := range appliedBlock.MinerPayouts {
-			outputs = append(outputs, RivineMinerPayoutAsOutput(
-				block.ID,
-				types.CoinOutputID(block.Payouts[idx]),
-				mp,
-				// TODO: customize this per chain network (behaviour and constants)
-				idx == 0,
-				chainCtx.Height,
-				chainCts.MaturityDelay,
-			))
-		}
-		// TODO: customize this per chain network
-		var feePayoutID types.OutputID
-		if len(block.Payouts) > 1 {
-			feePayoutID = block.Payouts[1]
-		}
-
-		inputs := make(map[types.OutputID]OutputSpenditureData)
-		transactions := make([]Transaction, 0, len(appliedBlock.Transactions))
-		for idx, txn := range appliedBlock.Transactions {
-			transaction := RivineTransactionAsTransaction(
-				block.ID,
-				block.Transactions[idx],
-				txn,
-				feePayoutID,
-			)
-			transactions = append(transactions, transaction)
-			// add inputs
-			for _, input := range txn.CoinInputs {
-				inputs[types.OutputID(input.ParentID)] = OutputSpenditureData{
-					Fulfillment:              input.Fulfillment,
-					FulfillmentTransactionID: block.Transactions[idx],
-				}
-			}
-			for _, input := range txn.BlockStakeInputs {
-				inputs[types.OutputID(input.ParentID)] = OutputSpenditureData{
-					Fulfillment:              input.Fulfillment,
-					FulfillmentTransactionID: block.Transactions[idx],
-				}
-			}
-			// add outputs
-			for idx, output := range txn.CoinOutputs {
-				outputs = append(outputs, RivineCoinOutputAsOutput(
-					block.Transactions[idx],
-					types.CoinOutputID(transaction.CoinOutputs[idx]),
-					output,
-				))
-			}
-			for idx, output := range txn.BlockStakeOutputs {
-				outputs = append(outputs, RivineBlockStakeOutputAsOutput(
-					block.Transactions[idx],
-					types.BlockStakeOutputID(transaction.BlockStakeOutputs[idx]),
-					output,
-				))
-			}
-		}
-
-		err = db.ApplyBlock(block, blockFacts, transactions, outputs, inputs)
-		if err != nil {
-			return err
-		}
-
-		// TODO: verify if this is correct, or if it should be done before
-		chainCtx.Height++
-		chainCtx.Timestamp = appliedBlock.Timestamp
-		chainCtx.BlockID = block.ID
-	}
-
-	chainCtx.ConsensusChangeID = csc.ID
-	err = db.SetChainContext(chainCtx)
-	return err
+	})
 }
 
 func RivineBlockAsExplorerBlock(height types.BlockHeight, block types.Block) Block {

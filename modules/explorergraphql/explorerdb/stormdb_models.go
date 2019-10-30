@@ -353,15 +353,15 @@ type stormObjectNode struct {
 	lastDataID StormDataID
 }
 
-func newStormObjectNodeReader(db *storm.DB) stormObjectNodeReader {
+func newStormObjectNodeReader(db *StormDB) stormObjectNodeReader {
 	return &stormObjectNode{
-		node: db.From(nodeNameObjects),
+		node: db.rootNode(nodeNameObjects),
 	}
 }
 
-func newStormObjectNodeReaderWriter(db *storm.DB, lastDataID StormDataID) stormObjectNodeReaderWriter {
+func newStormObjectNodeReaderWriter(db *StormDB, lastDataID StormDataID) stormObjectNodeReaderWriter {
 	return &stormObjectNode{
-		node:       db.From(nodeNameObjects),
+		node:       db.rootNode(nodeNameObjects),
 		lastDataID: lastDataID,
 	}
 }
