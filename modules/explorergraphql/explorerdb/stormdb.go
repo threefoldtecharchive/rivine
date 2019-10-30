@@ -15,11 +15,18 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+const (
+	stormDBName = "Storm"
+)
+
 type StormDB struct {
 	db       *storm.DB
 	logger   *persist.Logger
 	bcInfo   types.BlockchainInfo
 	chainCts types.ChainConstants
+
+	// keep in memory
+	lastTimestamp types.Timestamp
 }
 
 func NewStormDB(path string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*StormDB, error) {
@@ -33,11 +40,22 @@ func NewStormDB(path string, bcInfo types.BlockchainInfo, chainCts types.ChainCo
 	if err != nil {
 		return nil, err
 	}
-	return &StormDB{
+	sdb := &StormDB{
 		db:       db,
 		logger:   logger,
 		chainCts: chainCts,
-	}, nil
+	}
+	// get chain context
+	chainCtx, err := sdb.GetChainContext()
+	if err != nil {
+		cerr := sdb.Close()
+		if cerr != nil {
+			logger.Printf("[WARN] failed to close storm DB at startup: %v", err)
+		}
+		return nil, fmt.Errorf("failed to get initial chain ctx from storm DB: %v", err)
+	}
+	sdb.lastTimestamp = chainCtx.Timestamp
+	return sdb, nil
 }
 
 var (
@@ -88,7 +106,7 @@ type unlockHashPublicKeyPair struct {
 }
 
 type stormDBInternalData struct {
-	LastDataID stormDataID
+	LastDataID StormDataID
 }
 
 // used for intermediate collections of updates to a specific unlock hash
@@ -109,8 +127,8 @@ type (
 		transactions    map[types.TransactionID]struct{}
 		linkedAddresses map[types.UnlockHash]struct{}
 
-		unlockedCoinOutputs       []*stormOutput
-		unlockedBlockStakeOutputs []*stormOutput
+		unlockedCoinOutputs       []*StormOutput
+		unlockedBlockStakeOutputs []*StormOutput
 	}
 )
 
@@ -204,11 +222,11 @@ func (uhuc *unlockHashUpdateCollection) RegisterOutput(output *Output) {
 	referenceParentHashAsTransactionIfNeeded(uhUpdate, output)
 }
 
-func (uhuc *unlockHashUpdateCollection) RegisterUnlockedOutputs(outputs []stormOutput) {
+func (uhuc *unlockHashUpdateCollection) RegisterUnlockedOutputs(outputs []StormOutput) {
 	var (
 		uh       types.UnlockHash
 		uhUpdate *unlockHashUpdate
-		output   *stormOutput
+		output   *StormOutput
 	)
 	for idx := range outputs {
 		output = &outputs[idx]
@@ -434,14 +452,16 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		}
 	}
 	// store outputs
-	for idx, output := range outputs {
-		err = node.SaveOutput(&output)
+	var output *Output
+	for idx := range outputs {
+		output = &outputs[idx]
+		err = node.SaveOutput(output)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to apply block: failed to save output %s (#%d) of parent %s: %v",
 				output.ID.String(), idx+1, output.ParentID.String(), err)
 		}
-		uhUpdateCollection.RegisterOutput(&output)
+		uhUpdateCollection.RegisterOutput(output)
 	}
 	// store inputs
 	inputOutputSlice := make([]*Output, 0, len(inputs))
@@ -475,7 +495,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to apply block %s: failed to save block %s with facts: %v", block.ID.String(), err)
+		return fmt.Errorf("failed to apply block %s: failed to save block with facts: %v", block.ID.String(), err)
 	}
 
 	// store all updates to unlockhashes
@@ -486,18 +506,25 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 
 	// finally store the internal stormDB data
 	sdbInternalData.LastDataID = node.GetLastDataID()
-	return sdb.saveInternalData(sdbInternalData)
+	err = sdb.saveInternalData(sdbInternalData)
+	if err != nil {
+		return fmt.Errorf("failed to apply block %s: failed to save internal data: %v", block.ID.String(), err)
+	}
+
+	// set last timestamp and return no error
+	sdb.lastTimestamp = block.Timestamp
+	return nil
 }
 
-func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []Output, inputs []*Output, target types.Target) (ChainAggregatedFacts, []stormOutput, error) {
+func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []Output, inputs []*Output, target types.Target) (ChainAggregatedFacts, []StormOutput, error) {
 	var (
 		err             error
 		isLocked        bool
-		outputsUnlocked []stormOutput
+		outputsUnlocked []StormOutput
 	)
 	// get outputs unlocked by height and timestamp
 	if height != 0 { // do not do it for block 0, as it will return all outputs that do not have a lock
-		outputsUnlocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, timestamp)
+		outputsUnlocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, sdb.lastTimestamp, timestamp)
 		if err != nil {
 			if err == storm.ErrNotFound {
 				// ignore not found
@@ -646,19 +673,19 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 	}
 
 	//  update block stake information
-	for _, ci := range uhUpdate.blockStakeInputs {
-		err = wallet.BlockStakeBalance.ApplyInput(ci)
+	for _, bsi := range uhUpdate.blockStakeInputs {
+		err = wallet.BlockStakeBalance.ApplyInput(bsi)
 		if err != nil {
-			return fmt.Errorf("failed to update wallet %s: failed to apply block stake input %s: %v", uh.String(), ci.ID.String(), err)
+			return fmt.Errorf("failed to update wallet %s: failed to apply block stake input %s: %v", uh.String(), bsi.ID.String(), err)
 		}
 	}
-	for _, co := range uhUpdate.blockStakeOutputs {
-		err = wallet.BlockStakeBalance.ApplyOutput(height, timestamp, co)
+	for _, bso := range uhUpdate.blockStakeOutputs {
+		err = wallet.BlockStakeBalance.ApplyOutput(height, timestamp, bso)
 		if err != nil {
-			return fmt.Errorf("failed to update wallet %s: failed to apply block stake output %s: %v", uh.String(), co.ID.String(), err)
+			return fmt.Errorf("failed to update wallet %s: failed to apply block stake output %s: %v", uh.String(), bso.ID.String(), err)
 		}
 		// only here we need to add block stake output ID info, as it is already known for block stake inputs because what we do here
-		wallet.BlockStakeOutputs = append(wallet.BlockStakeOutputs, co.ID)
+		wallet.BlockStakeOutputs = append(wallet.BlockStakeOutputs, bso.ID)
 	}
 	for _, bso := range uhUpdate.unlockedBlockStakeOutputs {
 		output := bso.AsOutput(types.OutputID{}) // that output ID is unknown here is not important
@@ -972,18 +999,30 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 
 	// finally store the internal stormDB data
 	sdbInternalData.LastDataID = node.GetLastDataID()
-	return sdb.saveInternalData(sdbInternalData)
+	err = sdb.saveInternalData(sdbInternalData)
+	if err != nil {
+		return fmt.Errorf("failed to revert block %s: failed to save internal data: %v", blockContext.ID.String(), err)
+	}
+
+	// set last timestamp (only used when applying blocks) and return no error
+	sdb.lastTimestamp = blockContext.Timestamp
+	return nil
 }
 
-func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []*Output, inputs []*Output) ([]stormOutput, error) {
+func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []*Output, inputs []*Output) ([]StormOutput, error) {
 	var (
 		err           error
 		isLocked      bool
-		outputsLocked []stormOutput
+		outputsLocked []StormOutput
 	)
 	// get outputs unlocked by height and timestamp
 	if height != 0 { // do not do it for block 0, as it will return all outputs that do not have a lock
-		outputsLocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, timestamp)
+		// get previous block
+		previousBlock, err := sdb.GetBlockByReferencePoint(ReferencePoint(height - 1))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
+		}
+		outputsLocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, previousBlock.Timestamp, timestamp)
 		if err != nil {
 			if err == storm.ErrNotFound {
 				// ignore not found
@@ -1278,32 +1317,48 @@ func (sdb *StormDB) revertAtomicSwapContractUpdate(node stormObjectNodeReaderWri
 	return nil
 }
 
+func mapStormErrorToExplorerDBError(err error) error {
+	switch err {
+	case nil:
+		return nil
+	case storm.ErrNotFound:
+		return ErrNotFound
+	default:
+		return NewInternalError(stormDBName, err)
+	}
+}
+
 func (sdb *StormDB) GetObject(id ObjectID) (Object, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetObject(id)
+	obj, err := node.GetObject(id)
+	return obj, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetObjectInfo(id ObjectID) (ObjectInfo, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetObjectInfo(id)
+	objInfo, err := node.GetObjectInfo(id)
+	return objInfo, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetBlock(id)
+	block, err := node.GetBlock(id)
+	return block, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlockFacts(id types.BlockID) (BlockFacts, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetBlockFacts(id)
+	facts, err := node.GetBlockFacts(id)
+	return facts, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
 	blockID, err := sdb.GetBlockIDByReferencePoint(rp)
 	if err != nil {
-		return Block{}, nil
+		return Block{}, mapStormErrorToExplorerDBError(err)
 	}
-	return sdb.GetBlock(blockID)
+	block, err := sdb.GetBlock(blockID)
+	return block, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlockIDByReferencePoint(rp ReferencePoint) (types.BlockID, error) {
@@ -1314,7 +1369,7 @@ func (sdb *StormDB) GetBlockIDByReferencePoint(rp ReferencePoint) (types.BlockID
 	}
 	err := node.One(nodeBlocksKeyReference, rp, &pair)
 	if err != nil {
-		return types.BlockID{}, err
+		return types.BlockID{}, mapStormErrorToExplorerDBError(err)
 	}
 	return pair.BlockID, nil
 }
@@ -1327,39 +1382,46 @@ func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts
 	}
 	err := node.One(nodeBlocksKeyReference, rp, &pair)
 	if err != nil {
-		return BlockFacts{}, err
+		return BlockFacts{}, mapStormErrorToExplorerDBError(err)
 	}
-	return sdb.GetBlockFacts(pair.BlockID)
+	facts, err := sdb.GetBlockFacts(pair.BlockID)
+	return facts, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetTransaction(id)
+	txn, err := node.GetTransaction(id)
+	return txn, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetOutput(id)
+	output, err := node.GetOutput(id)
+	return output, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetFreeForAllWallet(uh types.UnlockHash) (FreeForAllWalletData, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetFreeForAllWallet(uh)
+	wallet, err := node.GetFreeForAllWallet(uh)
+	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetSingleSignatureWallet(uh types.UnlockHash) (SingleSignatureWalletData, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetSingleSignatureWallet(uh)
+	wallet, err := node.GetSingleSignatureWallet(uh)
+	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetMultiSignatureWallet(uh)
+	wallet, err := node.GetMultiSignatureWallet(uh)
+	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
 	node := newStormObjectNodeReader(sdb.db)
-	return node.GetAtomicSwapContract(uh)
+	contract, err := node.GetAtomicSwapContract(uh)
+	return contract, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
@@ -1367,7 +1429,7 @@ func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
 	var pair unlockHashPublicKeyPair
 	err := node.One(nodePublicKeysKeyUnlockHash, uh, &pair)
 	if err != nil {
-		return types.PublicKey{}, err
+		return types.PublicKey{}, mapStormErrorToExplorerDBError(err)
 	}
 	return pair.PublicKey, nil
 }

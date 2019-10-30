@@ -35,6 +35,25 @@ var (
 	_ Object = (*Output)(nil)
 )
 
+func NewOutputParent(hash crypto.Hash, db explorerdb.DB) (OutputParent, error) {
+	objInfo, err := db.GetObjectInfo(explorerdb.ObjectID(hash[:]))
+	if err != nil {
+		return nil, err
+	}
+	switch objInfo.Type {
+	case explorerdb.ObjectTypeTransaction:
+		return NewTransactionWithVersion(
+			types.TransactionID(hash), types.TransactionVersion(objInfo.Version),
+			nil, db)
+	case explorerdb.ObjectTypeBlock:
+		return NewBlock(types.BlockID(hash), db), nil
+	default:
+		return nil, fmt.Errorf(
+			"unexpected explorer object %s type %d cannot be converted to OutputParent",
+			hash.String(), objInfo.Type)
+	}
+}
+
 func NewOutput(id types.OutputID, child *Input, parent OutputParent, db explorerdb.DB) *Output {
 	return &Output{
 		id:     id,
@@ -69,7 +88,13 @@ func (output *Output) _outputDataOnce() {
 		// already resolve data, as we already have it anyhow
 		output.child.resolveDataWithOutput(data.SpenditureData.Fulfillment)
 	}
-	return
+	if output.parent == nil {
+		output.parent, err = NewOutputParent(data.ParentID, output.db)
+		if err != nil {
+			output.dataErr = fmt.Errorf("failed to fetch output parent %s data from DB: %v", data.ParentID.String(), err)
+			return
+		}
+	}
 }
 
 // IsObject implements the GraphQL Object interface
@@ -131,7 +156,6 @@ func (output *Output) Parent(ctx context.Context) (OutputParent, error) {
 	// data is not used, but the internal function does resolve
 	// a non-nil parent if not given
 
-	// TODO: support parent output
 	return output.parent, nil
 }
 

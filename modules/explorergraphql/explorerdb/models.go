@@ -291,6 +291,18 @@ func (balance *Balance) ApplyOutput(height types.BlockHeight, timestamp types.Ti
 	return nil
 }
 
+func (balance *Balance) RevertOutput(height types.BlockHeight, timestamp types.Timestamp, output *Output) error {
+	if output.SpenditureData != nil {
+		return fmt.Errorf("cannot apply output %s to balance: non-nil spenditure data", output.ID.String())
+	}
+	if output.UnlockReferencePoint.Reached(height, timestamp) {
+		balance.Unlocked = balance.Unlocked.Sub(output.Value)
+	} else {
+		balance.Locked = balance.Locked.Sub(output.Value)
+	}
+	return nil
+}
+
 func (balance *Balance) ApplyUnlockedOutput(height types.BlockHeight, timestamp types.Timestamp, output *Output) error {
 	if output.SpenditureData != nil {
 		return fmt.Errorf("cannot apply unlocked output %s to balance: non-nil spenditure data", output.ID.String())
@@ -301,6 +313,7 @@ func (balance *Balance) ApplyUnlockedOutput(height types.BlockHeight, timestamp 
 			output.ID.String(), height, timestamp, output.UnlockReferencePoint)
 	}
 	balance.Locked = balance.Locked.Sub(output.Value)
+	balance.Unlocked = balance.Unlocked.Add(output.Value)
 	return nil
 }
 
@@ -314,18 +327,7 @@ func (balance *Balance) RevertUnlockedOutput(height types.BlockHeight, timestamp
 			output.ID.String(), height, timestamp, output.UnlockReferencePoint)
 	}
 	balance.Locked = balance.Locked.Add(output.Value)
-	return nil
-}
-
-func (balance *Balance) RevertOutput(height types.BlockHeight, timestamp types.Timestamp, output *Output) error {
-	if output.SpenditureData != nil {
-		return fmt.Errorf("cannot apply output %s to balance: non-nil spenditure data", output.ID.String())
-	}
-	if output.UnlockReferencePoint.Reached(height, timestamp) {
-		balance.Unlocked = balance.Unlocked.Sub(output.Value)
-	} else {
-		balance.Locked = balance.Locked.Sub(output.Value)
-	}
+	balance.Unlocked = balance.Unlocked.Sub(output.Value)
 	return nil
 }
 

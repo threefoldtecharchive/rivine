@@ -63,6 +63,7 @@ func (block *Block) _blockDataOnce() {
 	if data.ParentID != (types.BlockID{}) {
 		h := crypto.Hash(data.ParentID)
 		header.ParentID = &h
+		header.Parent = NewBlock(data.ParentID, block.db)
 	}
 	header.Payouts = make([]*BlockPayout, 0, len(data.Payouts))
 	for _, payoutID := range data.Payouts {

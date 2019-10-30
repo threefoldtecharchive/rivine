@@ -146,11 +146,6 @@ type MultiSignatureFulfillment struct {
 
 func (MultiSignatureFulfillment) IsUnlockFulfillment() {}
 
-type MultiSignatureWalletData struct {
-	Owners                 []*UnlockHashPublicKeyPair `json:"Owners"`
-	RequiredSignatureCount int                        `json:"RequiredSignatureCount"`
-}
-
 type NilCondition struct {
 	Version    ByteVersion      `json:"Version"`
 	UnlockHash types.UnlockHash `json:"UnlockHash"`

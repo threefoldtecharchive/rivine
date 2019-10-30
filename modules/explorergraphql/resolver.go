@@ -2,6 +2,7 @@ package explorergraphql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -29,6 +30,9 @@ type Resolver struct {
 	blockchainInfo types.BlockchainInfo
 }
 
+func (r *Resolver) BlockHeader() BlockHeaderResolver {
+	return &blockHeaderResolver{r}
+}
 func (r *Resolver) ChainFacts() ChainFactsResolver {
 	return &chainFactsResolver{r}
 }
@@ -40,6 +44,23 @@ func (r *Resolver) UnlockHashCondition() UnlockHashConditionResolver {
 }
 func (r *Resolver) UnlockHashPublicKeyPair() UnlockHashPublicKeyPairResolver {
 	return &unlockHashPublicKeyPairResolver{r}
+}
+
+type blockHeaderResolver struct{ *Resolver }
+
+func (r *blockHeaderResolver) Child(ctx context.Context, obj *BlockHeader) (*Block, error) {
+	if obj.BlockHeight == nil {
+		return nil, errors.New("internal error: block height not defined for block header")
+	}
+	height := ReferencePoint((*obj.BlockHeight) + 1)
+	block, err := blockByReferencePoint(ctx, r.db, &height)
+	if err != nil {
+		if err == explorerdb.ErrNotFound {
+			return nil, nil // this is acceptable, as it might be the latest block
+		}
+		return nil, err
+	}
+	return block, nil
 }
 
 type chainFactsResolver struct{ *Resolver }
@@ -56,7 +77,7 @@ func (r *chainFactsResolver) Aggregated(ctx context.Context, obj *ChainFacts) (*
 		return obj.Aggregated, nil // nothing to do anymore
 	}
 	dbChainAggregatedFacts, err := r.db.GetChainAggregatedFacts()
-	if err != nil {
+	if err != nil && err != explorerdb.ErrNotFound {
 		return nil, fmt.Errorf("internal DB error while fetching chain aggregated facts: %v", err)
 	}
 	return dbChainAggregatedFactsAsGQL(&dbChainAggregatedFacts)
@@ -233,6 +254,9 @@ type unlockHashConditionResolver struct{ *Resolver }
 func (r *unlockHashConditionResolver) PublicKey(ctx context.Context, obj *UnlockHashCondition) (*types.PublicKey, error) {
 	pk, err := r.db.GetPublicKey(obj.UnlockHash)
 	if err != nil {
+		if err == explorerdb.ErrNotFound {
+			return nil, nil // no error
+		}
 		return nil, err
 	}
 	return &pk, nil
@@ -243,7 +267,9 @@ type unlockHashPublicKeyPairResolver struct{ *Resolver }
 func (r *unlockHashPublicKeyPairResolver) PublicKey(ctx context.Context, obj *UnlockHashPublicKeyPair) (*types.PublicKey, error) {
 	pk, err := r.db.GetPublicKey(obj.UnlockHash)
 	if err != nil {
-		// TODO: handle err not found
+		if err == explorerdb.ErrNotFound {
+			return nil, nil // no error
+		}
 		return nil, err
 	}
 	return &pk, nil

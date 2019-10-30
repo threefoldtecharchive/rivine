@@ -370,11 +370,6 @@ type SingleSignatureWallet implements Wallet {
     MultiSignatureWallets: [MultiSignatureWallet!]
 }
 
-type MultiSignatureWalletData {
-    Owners: [UnlockHashPublicKeyPair!]!
-    RequiredSignatureCount: Int!
-}
-
 type MultiSignatureWallet implements Wallet {
     UnlockHash: UnlockHash!
 
@@ -384,8 +379,8 @@ type MultiSignatureWallet implements Wallet {
     CoinBalance: Balance
     BlockStakeBalance: Balance
 
-    Owners: [UnlockHashPublicKeyPair!]!
-    RequiredSignatureCount: Int!
+    Owners: [UnlockHashPublicKeyPair!]
+    RequiredSignatureCount: Int
 }
 
 type AtomicSwapContract {

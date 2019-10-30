@@ -106,8 +106,11 @@ func (wallet *FreeForAllWallet) walletData(ctx context.Context) (*baseWalletData
 func (wallet *FreeForAllWallet) _walletDataOnce() {
 	data, err := wallet.db.GetFreeForAllWallet(wallet.uh)
 	if err != nil {
-		wallet.dataErr = fmt.Errorf("failed to fetch free-for-all wallet %s data from DB: %v", wallet.uh.String(), err)
-		return
+		if err != explorerdb.ErrNotFound {
+			wallet.dataErr = fmt.Errorf("failed to fetch free-for-all wallet %s data from DB: %v", wallet.uh.String(), err)
+			return
+		}
+		data.UnlockHash = wallet.uh
 	}
 
 	// restructure all fetched data
@@ -166,8 +169,11 @@ func (wallet *SingleSignatureWallet) walletData(ctx context.Context) (*singleSig
 func (wallet *SingleSignatureWallet) _walletDataOnce() {
 	data, err := wallet.db.GetSingleSignatureWallet(wallet.uh)
 	if err != nil {
-		wallet.dataErr = fmt.Errorf("failed to fetch single signature wallet %s data from DB: %v", wallet.uh.String(), err)
-		return
+		if err != explorerdb.ErrNotFound {
+			wallet.dataErr = fmt.Errorf("failed to fetch single signature wallet %s data from DB: %v", wallet.uh.String(), err)
+			return
+		}
+		data.UnlockHash = wallet.uh
 	}
 
 	// restructure all fetched data
@@ -224,7 +230,9 @@ func (wallet *SingleSignatureWallet) BlockStakeBalance(ctx context.Context) (*Ba
 func (wallet *SingleSignatureWallet) PublicKey(ctx context.Context) (*types.PublicKey, error) {
 	pk, err := wallet.db.GetPublicKey(wallet.uh)
 	if err != nil {
-		// TODO: distinguish between not found and a regular error
+		if err == explorerdb.ErrNotFound {
+			return nil, nil // no error
+		}
 		return nil, err
 	}
 	return &pk, err
@@ -252,8 +260,11 @@ func (wallet *MultiSignatureWallet) walletData(ctx context.Context) (*multiSigna
 func (wallet *MultiSignatureWallet) _walletDataOnce() {
 	data, err := wallet.db.GetMultiSignatureWallet(wallet.uh)
 	if err != nil {
-		wallet.dataErr = fmt.Errorf("failed to fetch multi signature wallet %s data from DB: %v", wallet.uh.String(), err)
-		return
+		if err != explorerdb.ErrNotFound {
+			wallet.dataErr = fmt.Errorf("failed to fetch multi signature wallet %s data from DB: %v", wallet.uh.String(), err)
+			return
+		}
+		data.UnlockHash = wallet.uh
 	}
 
 	// restructure all fetched data

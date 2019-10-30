@@ -20,6 +20,10 @@ models:
         resolver: true
       Aggregated:
         resolver: true
+  BlockHeader:
+    fields:
+      Child:
+        resolver: true
   UnlockHashPublicKeyPair:
     fields:
       PublicKey:

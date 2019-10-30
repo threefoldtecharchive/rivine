@@ -2,28 +2,30 @@ package explorerdb
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/q"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
 )
 
 // TODO: link DataID instead of ObjectID
 
 type (
-	stormDataID uint64
+	StormDataID uint64
 
-	stormObject struct {
+	StormObject struct {
 		ObjectID      ObjectID    `storm:"id"`
 		ObjectType    ObjectType  `storm:"index"`
 		ObjectVersion ByteVersion `storm:"index"`
-		DataID        stormDataID `storm:"unique"`
+		DataID        StormDataID `storm:"unique"`
 	}
 
-	stormBlock struct {
-		DataID stormDataID `storm:"id"`
+	StormBlock struct {
+		DataID StormDataID `storm:"id"`
 
 		ParentID  types.BlockID
 		Height    types.BlockHeight
@@ -33,8 +35,8 @@ type (
 		Transactions []types.TransactionID
 	}
 
-	stormBlockFacts struct {
-		DataID stormDataID `storm:"id"`
+	StormBlockFacts struct {
+		DataID StormDataID `storm:"id"`
 
 		Target     types.Target     `storm:"index"`
 		Difficulty types.Difficulty `storm:"index"`
@@ -46,8 +48,8 @@ type (
 		AggregatedEstimatedActiveBlockStakes types.Currency `storm:"index"`
 	}
 
-	stormTransaction struct {
-		DataID stormDataID `storm:"id"`
+	StormTransaction struct {
+		DataID StormDataID `storm:"id"`
 
 		ParentBlock types.BlockID
 		Version     types.TransactionVersion `storm:"index"`
@@ -64,8 +66,8 @@ type (
 		EncodedExtensionData []byte
 	}
 
-	stormOutput struct {
-		DataID stormDataID `storm:"id"`
+	StormOutput struct {
+		DataID StormDataID `storm:"id"`
 
 		ParentID crypto.Hash
 
@@ -77,8 +79,8 @@ type (
 		SpenditureData *OutputSpenditureData `storm:"index"`
 	}
 
-	stormBaseWalletData struct {
-		DataID stormDataID `storm:"id"`
+	StormBaseWalletData struct {
+		DataID StormDataID `storm:"id"`
 
 		CoinOutputs       []types.OutputID
 		BlockStakeOutputs []types.OutputID
@@ -92,25 +94,25 @@ type (
 		BlockStakesLocked   types.Currency `storm:"index"`
 	}
 
-	stormFreeForAllWalletData struct {
-		stormBaseWalletData `storm:"inline"`
+	StormFreeForAllWalletData struct {
+		StormBaseWalletData `storm:"inline"`
 	}
 
-	stormSingleSignatureWalletData struct {
-		stormBaseWalletData `storm:"inline"`
+	StormSingleSignatureWalletData struct {
+		StormBaseWalletData `storm:"inline"`
 
 		MultiSignatureWallets []types.UnlockHash
 	}
 
-	stormMultiSignatureWalletData struct {
-		stormBaseWalletData `storm:"inline"`
+	StormMultiSignatureWalletData struct {
+		StormBaseWalletData `storm:"inline"`
 
 		Owners                []types.UnlockHash
 		RequiredSgnatureCount int
 	}
 
-	stormAtomicSwapContract struct {
-		DataID stormDataID `storm:"id"`
+	StormAtomicSwapContract struct {
+		DataID StormDataID `storm:"id"`
 
 		ContractValue     types.Currency
 		ContractCondition types.AtomicSwapCondition
@@ -121,7 +123,7 @@ type (
 	}
 )
 
-func (sblock *stormBlock) AsBlock(blockID types.BlockID) Block {
+func (sblock *StormBlock) AsBlock(blockID types.BlockID) Block {
 	return Block{
 		ID:        blockID,
 		ParentID:  sblock.ParentID,
@@ -133,7 +135,7 @@ func (sblock *stormBlock) AsBlock(blockID types.BlockID) Block {
 	}
 }
 
-func (sbfacts *stormBlockFacts) AsBlockFacts() BlockFacts {
+func (sbfacts *StormBlockFacts) AsBlockFacts() BlockFacts {
 	return BlockFacts{
 		Constants: BlockFactsConstants{
 			Target:     sbfacts.Target,
@@ -149,7 +151,7 @@ func (sbfacts *stormBlockFacts) AsBlockFacts() BlockFacts {
 	}
 }
 
-func (stxn *stormTransaction) AsTransaction(txnID types.TransactionID) Transaction {
+func (stxn *StormTransaction) AsTransaction(txnID types.TransactionID) Transaction {
 	return Transaction{
 		ID: txnID,
 
@@ -169,7 +171,7 @@ func (stxn *stormTransaction) AsTransaction(txnID types.TransactionID) Transacti
 	}
 }
 
-func (sout *stormOutput) AsOutput(outputID types.OutputID) Output {
+func (sout *StormOutput) AsOutput(outputID types.OutputID) Output {
 	return Output{
 		ID:       outputID,
 		ParentID: sout.ParentID,
@@ -182,8 +184,8 @@ func (sout *stormOutput) AsOutput(outputID types.OutputID) Output {
 	}
 }
 
-func walletDataAsSDB(dataID stormDataID, wallet *WalletData) *stormBaseWalletData {
-	return &stormBaseWalletData{
+func walletDataAsSDB(dataID StormDataID, wallet *WalletData) *StormBaseWalletData {
+	return &StormBaseWalletData{
 		DataID: dataID,
 
 		CoinOutputs:       wallet.CoinOutputs,
@@ -199,7 +201,7 @@ func walletDataAsSDB(dataID stormDataID, wallet *WalletData) *stormBaseWalletDat
 	}
 }
 
-func (swallet *stormBaseWalletData) AsWalletData(uh types.UnlockHash) WalletData {
+func (swallet *StormBaseWalletData) AsWalletData(uh types.UnlockHash) WalletData {
 	return WalletData{
 		UnlockHash: uh,
 
@@ -219,20 +221,45 @@ func (swallet *stormBaseWalletData) AsWalletData(uh types.UnlockHash) WalletData
 	}
 }
 
-func (swallet *stormFreeForAllWalletData) AsFreeForAllWallet(uh types.UnlockHash) FreeForAllWalletData {
+func (swallet *StormFreeForAllWalletData) AsFreeForAllWallet(uh types.UnlockHash) FreeForAllWalletData {
 	return FreeForAllWalletData{
 		WalletData: swallet.AsWalletData(uh),
 	}
 }
 
-func (swallet *stormSingleSignatureWalletData) AsSingleSignatureWallet(uh types.UnlockHash) SingleSignatureWalletData {
+// Required to write these functions ourselves,
+// as Rivine Encoding ignores anonymous fields (embedded fields are anonymous).
+// Not sure why Rivine Encoding (inspired by Sia Encoding) choose to ignore this,
+// but it does, that is what matters.
+func (swallet StormFreeForAllWalletData) MarshalRivine(w io.Writer) error {
+	return rivbin.NewEncoder(w).Encode(swallet.StormBaseWalletData)
+}
+func (swallet *StormFreeForAllWalletData) UnmarshalRivine(r io.Reader) error {
+	return rivbin.NewDecoder(r).Decode(&swallet.StormBaseWalletData)
+}
+
+func (swallet *StormSingleSignatureWalletData) AsSingleSignatureWallet(uh types.UnlockHash) SingleSignatureWalletData {
 	return SingleSignatureWalletData{
 		WalletData:            swallet.AsWalletData(uh),
 		MultiSignatureWallets: swallet.MultiSignatureWallets,
 	}
 }
 
-func (swallet *stormMultiSignatureWalletData) AsMultiSignatureWallet(uh types.UnlockHash) MultiSignatureWalletData {
+// Required to write these functions ourselves,
+// as Rivine Encoding ignores anonymous fields (embedded fields are anonymous).
+// Not sure why Rivine Encoding (inspired by Sia Encoding) choose to ignore this,
+// but it does, that is what matters.
+func (swallet StormSingleSignatureWalletData) MarshalRivine(w io.Writer) error {
+	return rivbin.NewEncoder(w).EncodeAll(
+		swallet.StormBaseWalletData, swallet.MultiSignatureWallets)
+}
+
+func (swallet *StormSingleSignatureWalletData) UnmarshalRivine(r io.Reader) error {
+	return rivbin.NewDecoder(r).DecodeAll(
+		&swallet.StormBaseWalletData, &swallet.MultiSignatureWallets)
+}
+
+func (swallet *StormMultiSignatureWalletData) AsMultiSignatureWallet(uh types.UnlockHash) MultiSignatureWalletData {
 	return MultiSignatureWalletData{
 		WalletData:            swallet.AsWalletData(uh),
 		Owners:                swallet.Owners,
@@ -240,7 +267,21 @@ func (swallet *stormMultiSignatureWalletData) AsMultiSignatureWallet(uh types.Un
 	}
 }
 
-func (scontract *stormAtomicSwapContract) AsAtomicSwapContract(uh types.UnlockHash) AtomicSwapContract {
+// Required to write these functions ourselves,
+// as Rivine Encoding ignores anonymous fields (embedded fields are anonymous).
+// Not sure why Rivine Encoding (inspired by Sia Encoding) choose to ignore this,
+// but it does, that is what matters.
+func (swallet StormMultiSignatureWalletData) MarshalRivine(w io.Writer) error {
+	return rivbin.NewEncoder(w).EncodeAll(
+		swallet.StormBaseWalletData, swallet.Owners, swallet.RequiredSgnatureCount)
+}
+
+func (swallet *StormMultiSignatureWalletData) UnmarshalRivine(r io.Reader) error {
+	return rivbin.NewDecoder(r).DecodeAll(
+		&swallet.StormBaseWalletData, &swallet.Owners, &swallet.RequiredSgnatureCount)
+}
+
+func (scontract *StormAtomicSwapContract) AsAtomicSwapContract(uh types.UnlockHash) AtomicSwapContract {
 	return AtomicSwapContract{
 		UnlockHash: uh,
 
@@ -275,13 +316,13 @@ type (
 		GetMultiSignatureWallet(types.UnlockHash) (MultiSignatureWalletData, error)
 		GetAtomicSwapContract(types.UnlockHash) (AtomicSwapContract, error)
 
-		GetStormOutputsbyUnlockReferencePoint(types.BlockHeight, types.Timestamp) ([]stormOutput, error)
+		GetStormOutputsbyUnlockReferencePoint(types.BlockHeight, types.Timestamp, types.Timestamp) ([]StormOutput, error)
 	}
 
 	stormObjectNodeReaderWriter interface {
 		stormObjectNodeReader
 
-		GetLastDataID() stormDataID
+		GetLastDataID() StormDataID
 
 		SaveBlockWithFacts(*Block, *BlockFacts) error
 		SaveTransaction(*Transaction) error
@@ -309,7 +350,7 @@ const (
 
 type stormObjectNode struct {
 	node       storm.Node
-	lastDataID stormDataID
+	lastDataID StormDataID
 }
 
 func newStormObjectNodeReader(db *storm.DB) stormObjectNodeReader {
@@ -318,25 +359,25 @@ func newStormObjectNodeReader(db *storm.DB) stormObjectNodeReader {
 	}
 }
 
-func newStormObjectNodeReaderWriter(db *storm.DB, lastDataID stormDataID) stormObjectNodeReaderWriter {
+func newStormObjectNodeReaderWriter(db *storm.DB, lastDataID StormDataID) stormObjectNodeReaderWriter {
 	return &stormObjectNode{
 		node:       db.From(nodeNameObjects),
 		lastDataID: lastDataID,
 	}
 }
 
-func (son *stormObjectNode) nextDataID() (dataID stormDataID) {
+func (son *stormObjectNode) nextDataID() (dataID StormDataID) {
 	son.lastDataID++
 	dataID = son.lastDataID
 	return
 }
 
-func (son *stormObjectNode) GetLastDataID() stormDataID {
+func (son *stormObjectNode) GetLastDataID() StormDataID {
 	return son.lastDataID
 }
 
 func (son *stormObjectNode) SaveBlockWithFacts(block *Block, facts *BlockFacts) error {
-	obj := stormObject{
+	obj := StormObject{
 		ObjectID:      ObjectID(block.ID[:]),
 		ObjectType:    ObjectTypeBlock,
 		ObjectVersion: 0, // there is only one version of blocks
@@ -346,7 +387,7 @@ func (son *stormObjectNode) SaveBlockWithFacts(block *Block, facts *BlockFacts) 
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for block %s: %v", block.ID.String(), err)
 	}
-	err = son.node.Save(&stormBlock{
+	err = son.node.Save(&StormBlock{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
 		ParentID:  block.ParentID,
@@ -359,7 +400,7 @@ func (son *stormObjectNode) SaveBlockWithFacts(block *Block, facts *BlockFacts) 
 	if err != nil {
 		return fmt.Errorf("failed to save block %s by (object) data ID %d: %v", block.ID.String(), obj.DataID, err)
 	}
-	err = son.node.Save(&stormBlockFacts{
+	err = son.node.Save(&StormBlockFacts{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
 		Target:     facts.Constants.Target,
@@ -378,7 +419,7 @@ func (son *stormObjectNode) SaveBlockWithFacts(block *Block, facts *BlockFacts) 
 }
 
 func (son *stormObjectNode) SaveTransaction(txn *Transaction) error {
-	obj := stormObject{
+	obj := StormObject{
 		ObjectID:      ObjectID(txn.ID[:]),
 		ObjectType:    ObjectTypeTransaction,
 		ObjectVersion: ByteVersion(txn.Version),
@@ -388,7 +429,7 @@ func (son *stormObjectNode) SaveTransaction(txn *Transaction) error {
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for transaction %s: %v", txn.ID.String(), err)
 	}
-	err = son.node.Save(&stormTransaction{
+	err = son.node.Save(&StormTransaction{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
 		ParentBlock: txn.ParentBlock,
@@ -412,7 +453,7 @@ func (son *stormObjectNode) SaveTransaction(txn *Transaction) error {
 }
 
 func (son *stormObjectNode) SaveOutput(output *Output) error {
-	obj := stormObject{
+	obj := StormObject{
 		ObjectID:      ObjectID(output.ID[:]),
 		ObjectType:    ObjectTypeOutput,
 		ObjectVersion: 0, // there is only one version of outputs
@@ -422,7 +463,7 @@ func (son *stormObjectNode) SaveOutput(output *Output) error {
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for output %s: %v", output.ID.String(), err)
 	}
-	err = son.node.Save(&stormOutput{
+	err = son.node.Save(&StormOutput{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
 		ParentID: output.ParentID,
@@ -441,7 +482,7 @@ func (son *stormObjectNode) SaveOutput(output *Output) error {
 }
 
 func (son *stormObjectNode) SaveFreeForAllWallet(wallet *FreeForAllWalletData) error {
-	obj := stormObject{
+	obj := StormObject{
 		ObjectID:      ObjectIDFromUnlockHash(wallet.UnlockHash),
 		ObjectType:    ObjectTypeSingleSignatureWallet,
 		ObjectVersion: ByteVersion(wallet.UnlockHash.Type),
@@ -451,9 +492,9 @@ func (son *stormObjectNode) SaveFreeForAllWallet(wallet *FreeForAllWalletData) e
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for wallet %s: %v", wallet.UnlockHash.String(), err)
 	}
-	err = son.node.Save(&stormFreeForAllWalletData{
+	err = son.node.Save(&StormFreeForAllWalletData{
 		// DataID was automatically incremented in previous save call
-		stormBaseWalletData: *walletDataAsSDB(obj.DataID, &wallet.WalletData),
+		StormBaseWalletData: *walletDataAsSDB(obj.DataID, &wallet.WalletData),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to save wallet %s by (object) data ID %d: %v", wallet.UnlockHash.String(), obj.DataID, err)
@@ -462,7 +503,7 @@ func (son *stormObjectNode) SaveFreeForAllWallet(wallet *FreeForAllWalletData) e
 }
 
 func (son *stormObjectNode) SaveSingleSignatureWallet(wallet *SingleSignatureWalletData) error {
-	obj := stormObject{
+	obj := StormObject{
 		ObjectID:      ObjectIDFromUnlockHash(wallet.UnlockHash),
 		ObjectType:    ObjectTypeSingleSignatureWallet,
 		ObjectVersion: ByteVersion(wallet.UnlockHash.Type),
@@ -472,9 +513,10 @@ func (son *stormObjectNode) SaveSingleSignatureWallet(wallet *SingleSignatureWal
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for wallet %s: %v", wallet.UnlockHash.String(), err)
 	}
-	err = son.node.Save(&stormSingleSignatureWalletData{
+
+	err = son.node.Save(&StormSingleSignatureWalletData{
 		// DataID was automatically incremented in previous save call
-		stormBaseWalletData:   *walletDataAsSDB(obj.DataID, &wallet.WalletData),
+		StormBaseWalletData:   *walletDataAsSDB(obj.DataID, &wallet.WalletData),
 		MultiSignatureWallets: wallet.MultiSignatureWallets,
 	})
 	if err != nil {
@@ -484,7 +526,7 @@ func (son *stormObjectNode) SaveSingleSignatureWallet(wallet *SingleSignatureWal
 }
 
 func (son *stormObjectNode) SaveMultiSignatureWallet(wallet *MultiSignatureWalletData) error {
-	obj := stormObject{
+	obj := StormObject{
 		ObjectID:      ObjectIDFromUnlockHash(wallet.UnlockHash),
 		ObjectType:    ObjectTypeMultiSignatureWallet,
 		ObjectVersion: ByteVersion(wallet.UnlockHash.Type),
@@ -494,9 +536,9 @@ func (son *stormObjectNode) SaveMultiSignatureWallet(wallet *MultiSignatureWalle
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for wallet %s: %v", wallet.UnlockHash.String(), err)
 	}
-	err = son.node.Save(&stormMultiSignatureWalletData{
+	err = son.node.Save(&StormMultiSignatureWalletData{
 		// DataID was automatically incremented in previous save call
-		stormBaseWalletData:   *walletDataAsSDB(obj.DataID, &wallet.WalletData),
+		StormBaseWalletData:   *walletDataAsSDB(obj.DataID, &wallet.WalletData),
 		Owners:                wallet.Owners,
 		RequiredSgnatureCount: wallet.RequiredSgnatureCount,
 	})
@@ -507,7 +549,7 @@ func (son *stormObjectNode) SaveMultiSignatureWallet(wallet *MultiSignatureWalle
 }
 
 func (son *stormObjectNode) SaveAtomicSwapContract(contract *AtomicSwapContract) error {
-	obj := stormObject{
+	obj := StormObject{
 		ObjectID:      ObjectIDFromUnlockHash(contract.UnlockHash),
 		ObjectType:    ObjectTypeAtomicSwapContract,
 		ObjectVersion: ByteVersion(contract.UnlockHash.Type),
@@ -517,7 +559,7 @@ func (son *stormObjectNode) SaveAtomicSwapContract(contract *AtomicSwapContract)
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for contract %s: %v", contract.UnlockHash.String(), err)
 	}
-	err = son.node.Save(&stormAtomicSwapContract{
+	err = son.node.Save(&StormAtomicSwapContract{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
 		ContractValue:     contract.ContractValue,
@@ -534,7 +576,7 @@ func (son *stormObjectNode) SaveAtomicSwapContract(contract *AtomicSwapContract)
 }
 
 func (son *stormObjectNode) GetObject(objectID ObjectID) (Object, error) {
-	var object stormObject
+	var object StormObject
 	err := son.node.One(nodeObjectKeyObjectID, objectID, &object)
 	if err != nil {
 		return Object{}, err
@@ -596,7 +638,7 @@ func (son *stormObjectNode) GetObject(objectID ObjectID) (Object, error) {
 }
 
 func (son *stormObjectNode) GetObjectInfo(objectID ObjectID) (ObjectInfo, error) {
-	var object stormObject
+	var object StormObject
 	err := son.node.One(nodeObjectKeyObjectID, objectID, &object)
 	if err != nil {
 		return ObjectInfo{}, err
@@ -608,7 +650,7 @@ func (son *stormObjectNode) GetObjectInfo(objectID ObjectID) (ObjectInfo, error)
 }
 
 func (son *stormObjectNode) getTypedObject(objectID ObjectID, value interface{}) error {
-	var object stormObject
+	var object StormObject
 	err := son.node.One(nodeObjectKeyObjectID, objectID, &object)
 	if err != nil {
 		return err
@@ -616,12 +658,12 @@ func (son *stormObjectNode) getTypedObject(objectID ObjectID, value interface{})
 	return son.getTypedObjectByDataID(object.DataID, value)
 }
 
-func (son *stormObjectNode) getTypedObjectByDataID(dataID stormDataID, value interface{}) error {
+func (son *stormObjectNode) getTypedObjectByDataID(dataID StormDataID, value interface{}) error {
 	return son.node.One(nodeObjectKeyDataID, dataID, value)
 }
 
 func (son *stormObjectNode) GetBlock(blockID types.BlockID) (Block, error) {
-	var sblock stormBlock
+	var sblock StormBlock
 	err := son.getTypedObject(ObjectID(blockID[:]), &sblock)
 	if err != nil {
 		return Block{}, err
@@ -630,7 +672,7 @@ func (son *stormObjectNode) GetBlock(blockID types.BlockID) (Block, error) {
 }
 
 func (son *stormObjectNode) GetBlockFacts(blockID types.BlockID) (BlockFacts, error) {
-	var sbfacts stormBlockFacts
+	var sbfacts StormBlockFacts
 	err := son.getTypedObject(ObjectID(blockID[:]), &sbfacts)
 	if err != nil {
 		return BlockFacts{}, err
@@ -638,8 +680,8 @@ func (son *stormObjectNode) GetBlockFacts(blockID types.BlockID) (BlockFacts, er
 	return sbfacts.AsBlockFacts(), nil
 }
 
-func (son *stormObjectNode) getBlockByDataID(blockID types.BlockID, dataID stormDataID) (Block, error) {
-	var sblock stormBlock
+func (son *stormObjectNode) getBlockByDataID(blockID types.BlockID, dataID StormDataID) (Block, error) {
+	var sblock StormBlock
 	err := son.getTypedObjectByDataID(dataID, &sblock)
 	if err != nil {
 		return Block{}, err
@@ -648,7 +690,7 @@ func (son *stormObjectNode) getBlockByDataID(blockID types.BlockID, dataID storm
 }
 
 func (son *stormObjectNode) GetTransaction(transactionID types.TransactionID) (Transaction, error) {
-	var stxn stormTransaction
+	var stxn StormTransaction
 	err := son.getTypedObject(ObjectID(transactionID[:]), &stxn)
 	if err != nil {
 		return Transaction{}, err
@@ -656,8 +698,8 @@ func (son *stormObjectNode) GetTransaction(transactionID types.TransactionID) (T
 	return stxn.AsTransaction(transactionID), nil
 }
 
-func (son *stormObjectNode) getTransactionByDataID(transactionID types.TransactionID, dataID stormDataID) (Transaction, error) {
-	var stxn stormTransaction
+func (son *stormObjectNode) getTransactionByDataID(transactionID types.TransactionID, dataID StormDataID) (Transaction, error) {
+	var stxn StormTransaction
 	err := son.getTypedObjectByDataID(dataID, &stxn)
 	if err != nil {
 		return Transaction{}, err
@@ -666,7 +708,7 @@ func (son *stormObjectNode) getTransactionByDataID(transactionID types.Transacti
 }
 
 func (son *stormObjectNode) GetOutput(outputID types.OutputID) (Output, error) {
-	var sout stormOutput
+	var sout StormOutput
 	err := son.getTypedObject(ObjectID(outputID[:]), &sout)
 	if err != nil {
 		return Output{}, err
@@ -674,8 +716,8 @@ func (son *stormObjectNode) GetOutput(outputID types.OutputID) (Output, error) {
 	return sout.AsOutput(outputID), nil
 }
 
-func (son *stormObjectNode) getOutputByDataID(outputID types.OutputID, dataID stormDataID) (Output, error) {
-	var sout stormOutput
+func (son *stormObjectNode) getOutputByDataID(outputID types.OutputID, dataID StormDataID) (Output, error) {
+	var sout StormOutput
 	err := son.getTypedObjectByDataID(dataID, &sout)
 	if err != nil {
 		return Output{}, err
@@ -684,7 +726,7 @@ func (son *stormObjectNode) getOutputByDataID(outputID types.OutputID, dataID st
 }
 
 func (son *stormObjectNode) GetFreeForAllWallet(uh types.UnlockHash) (FreeForAllWalletData, error) {
-	var swallet stormFreeForAllWalletData
+	var swallet StormFreeForAllWalletData
 	err := son.getTypedObject(ObjectIDFromUnlockHash(uh), &swallet)
 	if err != nil {
 		return FreeForAllWalletData{}, err
@@ -692,8 +734,8 @@ func (son *stormObjectNode) GetFreeForAllWallet(uh types.UnlockHash) (FreeForAll
 	return swallet.AsFreeForAllWallet(uh), nil
 }
 
-func (son *stormObjectNode) getFreeForAllWalletByDataID(uh types.UnlockHash, dataID stormDataID) (FreeForAllWalletData, error) {
-	var swallet stormFreeForAllWalletData
+func (son *stormObjectNode) getFreeForAllWalletByDataID(uh types.UnlockHash, dataID StormDataID) (FreeForAllWalletData, error) {
+	var swallet StormFreeForAllWalletData
 	err := son.getTypedObjectByDataID(dataID, &swallet)
 	if err != nil {
 		return FreeForAllWalletData{}, err
@@ -702,7 +744,7 @@ func (son *stormObjectNode) getFreeForAllWalletByDataID(uh types.UnlockHash, dat
 }
 
 func (son *stormObjectNode) GetSingleSignatureWallet(uh types.UnlockHash) (SingleSignatureWalletData, error) {
-	var swallet stormSingleSignatureWalletData
+	var swallet StormSingleSignatureWalletData
 	err := son.getTypedObject(ObjectIDFromUnlockHash(uh), &swallet)
 	if err != nil {
 		return SingleSignatureWalletData{}, err
@@ -710,8 +752,8 @@ func (son *stormObjectNode) GetSingleSignatureWallet(uh types.UnlockHash) (Singl
 	return swallet.AsSingleSignatureWallet(uh), nil
 }
 
-func (son *stormObjectNode) getSingleSignatureWalletByDataID(uh types.UnlockHash, dataID stormDataID) (SingleSignatureWalletData, error) {
-	var swallet stormSingleSignatureWalletData
+func (son *stormObjectNode) getSingleSignatureWalletByDataID(uh types.UnlockHash, dataID StormDataID) (SingleSignatureWalletData, error) {
+	var swallet StormSingleSignatureWalletData
 	err := son.getTypedObjectByDataID(dataID, &swallet)
 	if err != nil {
 		return SingleSignatureWalletData{}, err
@@ -720,7 +762,7 @@ func (son *stormObjectNode) getSingleSignatureWalletByDataID(uh types.UnlockHash
 }
 
 func (son *stormObjectNode) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
-	var swallet stormMultiSignatureWalletData
+	var swallet StormMultiSignatureWalletData
 	err := son.getTypedObject(ObjectIDFromUnlockHash(uh), &swallet)
 	if err != nil {
 		return MultiSignatureWalletData{}, err
@@ -728,8 +770,8 @@ func (son *stormObjectNode) GetMultiSignatureWallet(uh types.UnlockHash) (MultiS
 	return swallet.AsMultiSignatureWallet(uh), nil
 }
 
-func (son *stormObjectNode) getMultiSignatureWalletByDataID(uh types.UnlockHash, dataID stormDataID) (MultiSignatureWalletData, error) {
-	var swallet stormMultiSignatureWalletData
+func (son *stormObjectNode) getMultiSignatureWalletByDataID(uh types.UnlockHash, dataID StormDataID) (MultiSignatureWalletData, error) {
+	var swallet StormMultiSignatureWalletData
 	err := son.getTypedObjectByDataID(dataID, &swallet)
 	if err != nil {
 		return MultiSignatureWalletData{}, err
@@ -738,7 +780,7 @@ func (son *stormObjectNode) getMultiSignatureWalletByDataID(uh types.UnlockHash,
 }
 
 func (son *stormObjectNode) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
-	var scontract stormAtomicSwapContract
+	var scontract StormAtomicSwapContract
 	err := son.getTypedObject(ObjectIDFromUnlockHash(uh), &scontract)
 	if err != nil {
 		return AtomicSwapContract{}, err
@@ -746,8 +788,8 @@ func (son *stormObjectNode) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSw
 	return scontract.AsAtomicSwapContract(uh), nil
 }
 
-func (son *stormObjectNode) getAtomicSwapContractByDataID(uh types.UnlockHash, dataID stormDataID) (AtomicSwapContract, error) {
-	var scontract stormAtomicSwapContract
+func (son *stormObjectNode) getAtomicSwapContractByDataID(uh types.UnlockHash, dataID StormDataID) (AtomicSwapContract, error) {
+	var scontract StormAtomicSwapContract
 	err := son.getTypedObjectByDataID(dataID, &scontract)
 	if err != nil {
 		return AtomicSwapContract{}, err
@@ -755,20 +797,23 @@ func (son *stormObjectNode) getAtomicSwapContractByDataID(uh types.UnlockHash, d
 	return scontract.AsAtomicSwapContract(uh), nil
 }
 
-func (son *stormObjectNode) GetStormOutputsbyUnlockReferencePoint(height types.BlockHeight, timestamp types.Timestamp) (outputs []stormOutput, err error) {
+func (son *stormObjectNode) GetStormOutputsbyUnlockReferencePoint(height types.BlockHeight, minTimestamp, maxInclusiveTimestamp types.Timestamp) (outputs []StormOutput, err error) {
 	err = son.node.Select(q.Or(
 		q.Eq("UnlockReferencePoint", ReferencePoint(height)),
-		q.Eq("UnlockReferencePoint", ReferencePoint(timestamp)))).Find(&outputs)
+		q.And(
+			q.Gt("UnlockReferencePoint", ReferencePoint(minTimestamp)),
+			q.Lte("UnlockReferencePoint", ReferencePoint(maxInclusiveTimestamp)),
+		))).Find(&outputs)
 	return
 }
 
 func (son *stormObjectNode) UpdateOutputSpenditureData(outputID types.OutputID, spenditureData *OutputSpenditureData) (Output, error) {
-	var object stormObject
+	var object StormObject
 	err := son.node.One(nodeObjectKeyObjectID, ObjectID(outputID[:]), &object)
 	if err != nil {
 		return Output{}, err
 	}
-	var output stormOutput
+	var output StormOutput
 	err = son.node.One(nodeObjectKeyDataID, object.DataID, &output)
 	if err != nil {
 		return Output{}, err
@@ -782,7 +827,7 @@ func (son *stormObjectNode) UpdateOutputSpenditureData(outputID types.OutputID, 
 }
 
 func (son *stormObjectNode) DeleteBlock(blockID types.BlockID) (Block, error) {
-	var block stormBlock
+	var block StormBlock
 	err := son.deleteObject(ObjectID(blockID[:]), &block)
 	if err != nil {
 		return Block{}, err
@@ -791,7 +836,7 @@ func (son *stormObjectNode) DeleteBlock(blockID types.BlockID) (Block, error) {
 }
 
 func (son *stormObjectNode) DeleteTransaction(txnID types.TransactionID) (Transaction, error) {
-	var txn stormTransaction
+	var txn StormTransaction
 	err := son.deleteObject(ObjectID(txnID[:]), &txn)
 	if err != nil {
 		return Transaction{}, err
@@ -800,7 +845,7 @@ func (son *stormObjectNode) DeleteTransaction(txnID types.TransactionID) (Transa
 }
 
 func (son *stormObjectNode) DeleteOutput(outputID types.OutputID) (Output, error) {
-	var output stormOutput
+	var output StormOutput
 	err := son.deleteObject(ObjectID(outputID[:]), &output)
 	if err != nil {
 		return Output{}, err
@@ -809,24 +854,24 @@ func (son *stormObjectNode) DeleteOutput(outputID types.OutputID) (Output, error
 }
 
 func (son *stormObjectNode) DeleteFreeForAllWallet(uh types.UnlockHash) error {
-	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(stormFreeForAllWalletData))
+	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(StormFreeForAllWalletData))
 }
 
 func (son *stormObjectNode) DeleteSingleSignatureWallet(uh types.UnlockHash) error {
-	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(stormSingleSignatureWalletData))
+	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(StormSingleSignatureWalletData))
 }
 
 func (son *stormObjectNode) DeleteMultiSignatureWallet(uh types.UnlockHash) error {
-	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(stormMultiSignatureWalletData))
+	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(StormMultiSignatureWalletData))
 }
 
 func (son *stormObjectNode) DeleteAtomicSwapContract(uh types.UnlockHash) error {
-	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(stormAtomicSwapContract))
+	return son.deleteObject(ObjectIDFromUnlockHash(uh), new(StormAtomicSwapContract))
 }
 
 func (son *stormObjectNode) deleteObject(objectID ObjectID, value interface{}) error {
 	// delete object metadata
-	var object stormObject
+	var object StormObject
 	err := son.deleteByID(nodeObjectKeyObjectID, objectID, &object)
 	if err != nil {
 		return fmt.Errorf("failed to delete object metadata for %x: %v", objectID[:], err)

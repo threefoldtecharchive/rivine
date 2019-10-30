@@ -46,14 +46,14 @@ func NewTransaction(txid types.TransactionID, parentInfo *TransactionParentInfo,
 func NewTransactionWithVersion(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) (Transaction, error) {
 	switch version {
 	case types.TransactionVersionZero, types.TransactionVersionOne:
-		panic("TODO")
+		return NewStandardTransaction(txid, version, parentInfo, db), nil
 	// TODO: handle minting in a kind-off explorer extension manner
 	case 128: // Minter Condition Definition Txn
-		panic("TODO")
+		return NewMintConditionDefinitionTransaction(txid, version, parentInfo, db), nil
 	case 129: // Minter Coin Creation Txn
-		panic("TODO")
+		return NewMintCoinCreationTransaction(txid, version, parentInfo, db), nil
 	case 130: // Minter Coin Destruction Txn
-		panic("TODO")
+		return NewMintCoinDestructionTransaction(txid, version, parentInfo, db), nil
 	default:
 		// TODO: support extensions and render unknowns as an except unknown transaction schema type
 		return nil, fmt.Errorf("unsupported transaction version %d", version)
@@ -329,7 +329,7 @@ type (
 	}
 )
 
-func NewConditionDefinitionTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *MintConditionDefinitionTransaction {
+func NewMintConditionDefinitionTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *MintConditionDefinitionTransaction {
 	txn := &MintConditionDefinitionTransaction{
 		BaseTransaction: BaseTransaction{
 			TransactionID:         txid,

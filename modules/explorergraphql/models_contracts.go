@@ -52,8 +52,11 @@ func (contract *AtomicSwapContract) contractData(ctx context.Context) (*atomicSw
 func (contract *AtomicSwapContract) _contractDataOnce() {
 	dbContract, err := contract.db.GetAtomicSwapContract(contract.uh)
 	if err != nil {
-		contract.dataErr = fmt.Errorf("failed to fetch atomic swap contract %s data from DB: %v", contract.uh.String(), err)
-		return
+		if err != explorerdb.ErrNotFound {
+			contract.dataErr = fmt.Errorf("failed to fetch atomic swap contract %s data from DB: %v", contract.uh.String(), err)
+			return
+		}
+		dbContract.UnlockHash = contract.uh
 	}
 
 	// restructure all fetched data
