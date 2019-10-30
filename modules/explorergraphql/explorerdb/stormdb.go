@@ -486,6 +486,18 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		}
 		inputOutputSlice = append(inputOutputSlice, &output)
 		uhUpdateCollection.RegisterInput(&output)
+
+		// store found public key - unlock hash links
+		pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(spenditureData.Fulfillment)
+		for _, pair := range pairs {
+			err = publicKeysNode.Save(&unlockHashPublicKeyPair{
+				UnlockHash: pair.UnlockHash,
+				PublicKey:  pair.PublicKey,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to apply block: failed to save block %s's unlock hash %s mapped to public key %s: %v", block.ID.String(), pair.UnlockHash.String(), pair.PublicKey.String(), err)
+			}
+		}
 	}
 	// update aggregated facts
 	facts, outputsUnlocked, err := sdb.applyBlockToAggregatedFacts(block.Height, block.Timestamp, node, outputs, inputOutputSlice, blockFacts.Target)
