@@ -4,7 +4,7 @@ Links:
 
 - [Stellar Guide Custom asset Guide](https://www.stellar.org/developers/guides/walkthroughs/custom-assets.html)
 
-In this walkthrough, we create a *rivinetest* asset on the Stellar testnet.
+In this walkthrough, we create a *BTC* asset on the Stellar testnet.
 
 ## 1 Create a source account
 
@@ -36,9 +36,9 @@ It requires
 
 > The trust limit parameter limits the number of tokens the distribution account will be able to hold at once. It is recommended to either make this number larger than the total number of tokens expected to be available on the network or set it to be the maximum value (a total of max int64 stroops) that an account can hold.
 
-`go run createtrustline.go  -source distributor -issuer <issueraddress> -asset rivinetest`
+`go run createtrustline.go  -source <distributor> -issuer <issueraddress> -asset <assetcode> [-limit <limit>]`
 
 ## 5 Token creation
 
 The Issuing account creates tokens and sends them to the distributing account.
-`go run ../accounts/transfer.go -from issuer -destination <distributoraddress> -asset rivinetest:<issueraddress> -amount 100`
+`go run ../accounts/transfer.go -from issuer -destination <distributoraddress> -asset BTC:<issueraddress> -amount 100`
