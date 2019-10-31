@@ -402,6 +402,8 @@ func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *ChainAggregatedFac
 }
 
 func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error {
+	sdb.logger.Debugf("apply block %d (time: %d)", block.Height, block.Timestamp)
+
 	sdbInternalData, err := sdb.getInternalData()
 	if err != nil {
 		return err
@@ -565,14 +567,6 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 	// get outputs unlocked by timestamp
 	var resultFacts ChainAggregatedFacts
 	err = sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
-		// discount all new inputs from total coins/blockstakes
-		for _, input := range inputs {
-			if input.Type == OutputTypeBlockStake {
-				facts.TotalBlockStakes = facts.TotalBlockStakes.Sub(input.Value)
-			} else {
-				facts.TotalCoins = facts.TotalCoins.Sub(input.Value)
-			}
-		}
 		// count all new outputs, and if locked also add them to the total locked assets
 		for _, output := range outputs {
 			isLocked = output.UnlockReferencePoint > 0 && !output.UnlockReferencePoint.Overreached(height, timestamp)
@@ -594,6 +588,18 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Sub(output.Value)
 			} else {
 				facts.TotalLockedCoins = facts.TotalLockedCoins.Sub(output.Value)
+			}
+		}
+		// discount all new inputs from total coins/blockstakes
+		//
+		// this needs to be done at the end, as we work on a block-level,
+		// and thus we might go in the red in case we would try to subtract first,
+		// something that does work when you work on transaction level.
+		for _, input := range inputs {
+			if input.Type == OutputTypeBlockStake {
+				facts.TotalBlockStakes = facts.TotalBlockStakes.Sub(input.Value)
+			} else {
+				facts.TotalCoins = facts.TotalCoins.Sub(input.Value)
 			}
 		}
 		// update estimated active block stakes
@@ -678,12 +684,6 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 	wallet.Transactions = append(wallet.Transactions, uhUpdate.Transactions()...)
 
 	// update coin information
-	for _, ci := range uhUpdate.coinInputs {
-		err = wallet.CoinBalance.ApplyInput(ci)
-		if err != nil {
-			return fmt.Errorf("failed to update wallet %s: failed to apply coin input %s: %v", uh.String(), ci.ID.String(), err)
-		}
-	}
 	for _, co := range uhUpdate.coinOutputs {
 		err = wallet.CoinBalance.ApplyOutput(height, timestamp, co)
 		if err != nil {
@@ -699,14 +699,17 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 			return fmt.Errorf("failed to update wallet %s: failed to apply unlocked coin output with dataID %d: %v", uh.String(), co.DataID, err)
 		}
 	}
-
-	//  update block stake information
-	for _, bsi := range uhUpdate.blockStakeInputs {
-		err = wallet.BlockStakeBalance.ApplyInput(bsi)
+	// ... apply coin inputs last,
+	// as we might go in the red (temporary) due to working on a block level,
+	// which would result in a panic as the Rivine Currency type does not allow negative values
+	for _, ci := range uhUpdate.coinInputs {
+		err = wallet.CoinBalance.ApplyInput(ci)
 		if err != nil {
-			return fmt.Errorf("failed to update wallet %s: failed to apply block stake input %s: %v", uh.String(), bsi.ID.String(), err)
+			return fmt.Errorf("failed to update wallet %s: failed to apply coin input %s: %v", uh.String(), ci.ID.String(), err)
 		}
 	}
+
+	//  update block stake information
 	for _, bso := range uhUpdate.blockStakeOutputs {
 		err = wallet.BlockStakeBalance.ApplyOutput(height, timestamp, bso)
 		if err != nil {
@@ -720,6 +723,15 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 		err = wallet.BlockStakeBalance.ApplyUnlockedOutput(height, timestamp, &output)
 		if err != nil {
 			return fmt.Errorf("failed to update wallet %s: failed to apply block stake output with dataID %d: %v", uh.String(), bso.DataID, err)
+		}
+	}
+	// ... apply block stake inputs last,
+	// as we might go in the red (temporary) due to working on a block level,
+	// which would result in a panic as the Rivine Currency type does not allow negative values
+	for _, bsi := range uhUpdate.blockStakeInputs {
+		err = wallet.BlockStakeBalance.ApplyInput(bsi)
+		if err != nil {
+			return fmt.Errorf("failed to update wallet %s: failed to apply block stake input %s: %v", uh.String(), bsi.ID.String(), err)
 		}
 	}
 
@@ -935,6 +947,8 @@ func (sdb *StormDB) estimateActiveBS(height types.BlockHeight, timestamp types.T
 }
 
 func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error {
+	sdb.logger.Debugf("revert block %d (time: %d)", blockContext.Height, blockContext.Timestamp)
+
 	sdbInternalData, err := sdb.getInternalData()
 	if err != nil {
 		return err
@@ -1062,6 +1076,10 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 	// get outputs unlocked by timestamp
 	err = sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
 		// re-apply all reverted inputs to total coins/blockstakes
+		//
+		// we'll do this first to ensure that we do not go in the red,
+		// as we work on a block level. This is analog to the updateChainAggregatedFacts
+		// logic used in the applyBlockToAggregatedFacts method
 		for _, input := range inputs {
 			if input.Type == OutputTypeBlockStake {
 				facts.TotalBlockStakes = facts.TotalBlockStakes.Add(input.Value)
@@ -1166,6 +1184,7 @@ func revertBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, tim
 	}
 
 	// revert coin information
+	// ... revert coin inputs first, so we sub after we already added as much as we could
 	for _, ci := range uhUpdate.coinInputs {
 		err = wallet.CoinBalance.RevertInput(ci)
 		if err != nil {
@@ -1191,6 +1210,7 @@ func revertBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, tim
 	}
 
 	// revert block stake information
+	// ... revert block stake inputs first, so we sub after we already added as much as we could
 	for _, bsi := range uhUpdate.blockStakeInputs {
 		err = wallet.BlockStakeBalance.RevertInput(bsi)
 		if err != nil {
