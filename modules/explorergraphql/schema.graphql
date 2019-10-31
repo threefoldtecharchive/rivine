@@ -15,64 +15,212 @@ schema {
 # TODO: add some quick documentation to schema as a test of generated documentation
 
 type QueryRoot {
+  # Query the chain facts, for constant, aggregated and contemporary data.
+  # Constant data allows you to learn more about the network configuration,
+  # aggregated data allows you have a quick overview of the amount of coins
+  # and blocks available (locked or unlocked), and the contemporary data
+  # allows you to know the latest block the chain is on (and thus
+  # also the chain time and height).
   chain: ChainFacts
 
+  # Query an object, which can be a wallet, contract, block, transaction or output.
+  # If no identifier is given the latest block will be returned.
   object(id: ObjectID): Object
 
+  # Query a block by identifier or reference point (height or timestamp).
+  # If no Hash is given, the reference will be used if defined,
+  # otherwise —in case of both arguments missing— the latest block will be
+  # returned.
   block(id: Hash, reference: ReferencePoint): Block
 
+  # Query a transaction by identifier.
+  # For transaction version specific information the desired
+  # types have to be checked using the union-on GraphQL selection in your query.
+  # Please consult the Transaction interface implementations to know
+  # which versions are available and how they are typed in this API.
   transaction(id: Hash!): Transaction
 
+  # Query an output by identifier.
+  # An input can be queried as well by querying the output,
+  # the input data will be available as spenditure data on the returned output.
+  # Please consult the `OutputType` enum to know what Outputs are supported
+  # by this API.
   output(id: Hash!): Output
 
+  # Query a wallet by its address (a more human friendly name for unlockhash).
+  # Please consult the Wallet implementations t oknow
+  # which wallet types are available in this API and how they are typed.
   wallet(unlockhash: UnlockHash!): Wallet
+
+  # Query a contract by its address (a more human friendly name for unlockhash).
+  # Please consult the Contract union type to know what contracts are available
+  # and how they are typed in this API.
   contract(unlockhash: UnlockHash!): Contract
 }
 
+# ObjectID is the generic identifier type for an object.
+# Can be a crypto (blake2b_256) `Hash` (for block-, transaction-, and output identifiers),
+# or an `UnlockHash` (for any kind of wallet or contract).
 scalar ObjectID
+# BlockHeight is implemented as an unsigned 64-bit integer,
+# and represents the height of a block, starting at 0.
 scalar BlockHeight
+# Timestamp is implemented as an unsigned 64-bit integer,
+# and represents the UNIX Epoch Timestamp (in seconds).
 scalar Timestamp
-scalar ReferencePoint # BlockHeight or TimeStamp
+# ReferencePoint is used for places where either a `BlockHeight`
+# or `Timestamp` is used. The reason for this is because input paramters
+# are not allowed to be of a Union type.
+# 
+# NOTE: This type might be removed in the future
+# if we decide it is more UX-friendly to provide different query (input) parameters,
+# for the user to use one of the 2. Especially as looking something up by time
+# requires very different behaviour from looking something up by height.
+scalar ReferencePoint
+# Hash represents a crypto (blake2b_256) `Hash` (a byte array of fixed length 32),
+# and is used as the identifier for blocks, transactions and outputs.
+# Within the context of this API it is always hex-encoded.
 scalar Hash
+# UnlockHash represents an address of a wallet or contract,
+# and can be stored as a fixed array of 32 bytes (the hash part) as well as one byte for the type.
+# Within the context of this API it is always hex-encoded,
+# where the first 2 characters represent the type byte, the next 64 characters represent
+# the hex-encoded hash and the last 12 characters represent the hex-encoded 6-byte checksum.
+# Please consult https://github.com/threefoldtech/rivine/blob/master/doc/transactions/unlockhash.md#textstring-encoding
+# for more information about the full details of the encoding used for this type within the context of this API.
 scalar UnlockHash
+# LockTime serves the same purpose as `ReferencePoint`,
+# but used for different struct types.
+# Please consult the `ReferencePoint` documentation for more information.
+#
+# NOTE: As this is a duplicated type we might as well unify them as a single type.
 scalar LockTime
+# BinaryData is the scalar type used by this API as the go-to
+# binary byte-slice type. It is always hex-encoded within the context of this API.
 scalar BinaryData
+# PublicKey is the go-to type of this API for cryptographic public keys.
+# Within the context of this API it is encoded as a 2 part string, separated by a colon,
+# with the first part identifying the cryptographic algorithm and the second part the hex-encoded
+# public key (currently always 32 bytes, or 64 characters hex-encoded, at the moment).
+# At the moment only one cryptographic (signature) algorithm is supported.
+# This algorithm is ED25119 and identifier as `ed25519`.
+# Please see documentation such as
+# https://github.com/threefoldtech/rivine/blob/master/doc/transactions/transaction.md#json-encoding-of-a-singlesignaturefulfillment
+# for an example of such an encoded public key. Technical details can be found on
+# https://godoc.org/github.com/threefoldtech/rivine/types#PublicKey
 scalar PublicKey
+# Signature is the go-to type of this API for cryptographic signatures.
+# It is hex-encoded and can be seen by implementations of this API as a raw byte slice,
+# its content identified by the algorithm defined in the linked public key.
+# Please consult the documentation in the `PublicKey` type for more information about public keys
+# within the context of this API.
 scalar Signature
+# BigInt represents an unbound integer type.
+# It is decimal (base 10) encoded as a string.
+# Within the context of this API it is used for currency values (coins and block stakes).
 scalar BigInt
+# ByteVersion is a generic type, an unsigned 8-bit integer (equivalent to a single byte),
+# used for any place where we use such Versions.
+# Examples of such versions are `Transaction` and `UnlockCondition` versions.
 scalar ByteVersion
 
 # TODO: replace txn implementations by Transaction interface once possible
 #                   ... Same goes for AtomicSwapContract (Contract Union) and Wallets (Wallet Interface)
+
+# Object represents an object that can be looked up by a unique identifier,
+# see ObjectID for more information about the identifier type used for objects.
+# See the used types in this union for more information about the possible objects.
 union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | FreeForAllWallet | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+
+# Contract represents a contract object (also called smart contracts) that can be looked up by a unique identifier,
+# see UnlockHash for more information about the identifier type used for contracts.
+# See the used types in this union for more information about the possible contracts.
 union Contract = AtomicSwapContract
 
+# ChainFacts collects facts about the queried chain.
 type ChainFacts {
+    # Constants collects all constant (static) data known about the chain,
+    # and is provided by the daemon network configuration.
     Constants: ChainConstants!
+    # LastBlock allows you to look up the last block,
+    # saving you a second query, in case you need it, to look up that block,
+    # even if it is just the height or timestamp.
     LastBlock: Block!
+    # Contains all aggregated global data,
+    # updated for this chain for every applied and reverted block.
     Aggregated: ChainAggregatedData
 }
 
+# ChainConstants collect all constant information known about
+# a chain network and exposed via this API.
 type ChainConstants {
+    # The name of the chain that this explorer is connected to.
     Name: String!
+    # The name of the network,
+    # usually one of `"standard"`, `"testnet"`, "`devnet"`.
+    # The name of a network is not restricted to these values however.
     NetworkName: String!
+    # The unit of coins.
+    # For the Threefold Chain this is for example `"TFT"`.
     CoinUnit: String!
+    # The amount of decimals that the coins can be expressed in.
+    # The coin values are always exposed as the lowered unit,
+    # see the `BigInt` type for more information about the encoding
+    # within the context of this API.
+    # 
+    # If for example the CoinPrecision is `2`,
+    # than a currency value of `"104"` is actually `1.04`.
     CoinPecision: Int!
+    # The source code version this daemon is compiled on.
     ChainVersion: String!
+    # The transaction version that clients should use as the default
+    # transaction version.
     DefaultTransactionVersion: ByteVersion!
+    # The gateway Protocol Version used by this daemon's gateway module.
     GatewayProtocolVersion: String!
+    # ConsensusPlugins provide you with the names of all plugins used by
+    # the consensus of this network's daemons and thus allows you to know
+    # what extra features might be available for this network.
     ConsensusPlugins: [String!]
+    # The (Unix Epoch, seconds) timestamp of the first block,
+    # the so called genesis block.
     GenesisTimestamp: Timestamp!
+    # Defines the maximum size a block is allowed to be, in bytes.
     BlockSizeLimitInBytes: Int!
+    # The average block creation time in seconds the consensus algorithm
+    # aims to achieve. It does not mean that it will take exatly this amount of seconds for a
+    # new block to be created, nor it is an upper limit. You will however notice that the average
+    # block creation time of a sufficient amount of sequential blocks does come close
+    # to this average block creation time.
     AverageBlockCreationTimeInSeconds: Int!
+    # The total amount of block stakes available at the creation of this blockchain.
+    # As blockchains can currently not create new block stakes it is also the final amount of block stakes on the chain.
     GenesisTotalBlockStakes: BigInt!
+    # Defines how many blocks a block stake have to age
+    # prior to being able to use block stakes for creating blocks.
+    # The age is calculated by computing the height when the stakes were
+    # transfered until the current block height.
+    # When transfering stakes to yourself as part of a block creation,
+    # the constant required aging concept (using the amount as defined here) does not apply.
     BlockStakeAging: Int!
+    # The fee that a block creator recieves for the creation of a block.
+    # Can be null in case the chain does not award fees for such creations,
+    # a possibility for private chains where all nodes are owned by one organisation.
     BlockCreatorFee: BigInt
+    # The minimum fee that has to be spent by a wallet in order to make a coin or block stake transfer.
+    # The fee does not apply for block creation transactions.
+    # Can be null in case the network does not require transaction fees.
     MinimumTransactionFee: BigInt
+    # Some networks collect all transaction fees in a single wallet,
+    # if this is the case it will be available as condition in this field, for query purposes.
     TransactionFeeBeneficiary: UnlockCondition
+    # This delay, in block amount, defines how long a miner payout (e.g. block creator or transaction fee)
+    # is locked prior to being spendable.
     PayoutMaturityDelay: BlockHeight!
 }
 
+# The aggregated chain data,
+# updated for every block is that is applied and reverted.
 type ChainAggregatedData {
     TotalCoins: BigInt
     TotalLockedCoins: BigInt
@@ -82,19 +230,40 @@ type ChainAggregatedData {
     EstimatedActiveBlockStakes: BigInt
 }
 
+# The API of the block's data view.
 type Block {
+    # Data for this block,
+    # such as its Identifier, height and timestamp.
     Header: BlockHeader!
+    # Facts for this block such as its difficulty and target used,
+    # but also a snapshot of the aggregated chain data at the
+    # chain state on this block.
+    # 
+    # Queried in a lazy manner, fetching only as much data as
+    # required for the query.
     Facts: BlockFacts
+    # The transactions part of this block.
+    # 
+    # Queried in a lazy manner, fetching only as much data as
+    # required for the query.
     Transactions: [Transaction!]!
 }
 
+# The API of the facts collected for a block.
 type BlockFacts {
+    # The difficulty used, in the consensus algorithm,
+    # for creating this block.
     Difficulty: BigInt
+    # The target hash used, in the consensus algorithm,
+    # for creating this block.
     Target: Hash
 
+    # The aggregated chain data as a snapshot taken,
+    # after this fact's block was applied.
     ChainSnapshot: BlockChainSnapshotFacts
 }
 
+# The API of the chainshots facts collected for a block.
 type BlockChainSnapshotFacts {
     TotalCoins: BigInt
     TotalLockedCoins: BigInt
@@ -103,6 +272,10 @@ type BlockChainSnapshotFacts {
     EstimatedActiveBlockStakes: BigInt
 }
 
+# The API for the block-specific "header" data of a block.
+# Containing information such as the ID, the ID of its parent block,
+# block time and height as well as (miner) payout information.
+# The Parent and Child block can be queried recursively as well.
 type BlockHeader {
     ID: Hash!
     ParentID: Hash
@@ -113,12 +286,17 @@ type BlockHeader {
     Payouts: [BlockPayout!]
 }
 
+# The information about the created block that contains this transaction.
 type TransactionParentInfo {
     ID: Hash!
     ParentID: Hash
     Height: BlockHeight
     Timestamp: Timestamp
+    # The static order (index) of this transaction
+    # as defined by the (parent) block that contains this transaction.
     TransactionOrder: Int
+    # All transactions found in the (parent) block,
+    # excluding this transaction.
     SiblingTransactions: [Transaction!]
 }
 
@@ -130,10 +308,14 @@ interface Transaction {
 
     CoinInputs: [Input!]
     CoinOutputs: [Output!]
+
     FeePayouts: [TransactionFeePayout!]
+
     ArbitraryData: BinaryData
 }
 
+# The standard transaction used for all regular transactions,
+# most commonly used for coin transfers and block creation transactions.
 type StandardTransaction implements Transaction {
     ID: Hash!
     Version: ByteVersion!
@@ -150,6 +332,17 @@ type StandardTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# The transaction used to redefine the Minter condition,
+# defining "who" can mint (= create) new coins,
+# as well as who can redefine the Minter condition once this
+# transaction is applied.
+# 
+# As long as no MintConditionDefinitionTransaction has been created
+# the condition as defined in the network configuration,
+# the so called genesis Mint Condition, is used.
+#
+# The currently active Minter condition (or the one active at a certain height)
+# cannot yet be queried with the GraphQL API.
 type MintConditionDefinitionTransaction implements Transaction {
     ID: Hash!
     Version: ByteVersion!
@@ -157,9 +350,11 @@ type MintConditionDefinitionTransaction implements Transaction {
     ParentBlock: TransactionParentInfo
 
     Nonce: BinaryData!
-    #MintCondition: UnlockCondition
+
+    #MintCondition: UnlockCondition # TODO: investigate if we can/want to expose the original (fulfilled) mint condition
+
     MintFulfillment: UnlockFulfillment!
-    NewMintCondition: UnlockCondition! # TODO: investigate if we can/want to expose the original (fulfilled) mint condition
+    NewMintCondition: UnlockCondition!
 
     CoinInputs: [Input!]
     CoinOutputs: [Output!]
@@ -168,6 +363,11 @@ type MintConditionDefinitionTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# The transaction used to mint tokens,
+# a transaction that can only be done by "who"
+# owns the currently active Minter condition.
+# 
+# See `MintConditionDefinitionTransaction` for more information.
 type MintCoinCreationTransaction implements Transaction {
     ID: Hash!
     Version: ByteVersion!
@@ -175,7 +375,9 @@ type MintCoinCreationTransaction implements Transaction {
     ParentBlock: TransactionParentInfo
 
     Nonce: BinaryData!
+
     #MintCondition: UnlockCondition  # TODO: investigate if we can/want to expose the fulfilled mint condition
+
     MintFulfillment: UnlockFulfillment!
 
     CoinInputs: [Input!]
@@ -185,6 +387,11 @@ type MintCoinCreationTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# A transaction that allows you to burn coins,
+# meaning that the value of the spent coin input(s)
+# are (partly) sent to no one. Or in other words,
+# the combined value sum of the fee payouts and coin outputs
+# will be smaller than the value sum of coin inputs.
 type MintCoinDestructionTransaction implements Transaction {
     ID: Hash!
     Version: ByteVersion!
@@ -198,6 +405,7 @@ type MintCoinDestructionTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# The different types of `Output` possible within the context of this API.
 enum OutputType {
 	COIN
 	BLOCK_STAKE
@@ -205,6 +413,13 @@ enum OutputType {
 	TRANSACTION_FEE
 }
 
+# Specific Output information for an `Output` used as `Input`
+# in a transaction. Within the context of this API
+# is this type only used for Transactions.
+#
+# When looking up an `Output` it is always returned as the `Output`
+# type, optionally containing `ChildInput` in case it was also
+# used as an `Input` in some transaction already.
 type Input {
     ID: Hash!
     Type: OutputType
@@ -215,8 +430,13 @@ type Input {
 }
 
 # TODO: replace txn implementations by Transaction interface once possible
+
+# The different `Object` types that can contain an `Output`.
 union OutputParent = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction
 
+# The API for an output, as queried directly or as a (sub) field of another query.
+# The `ChildInput` can be queried to know when (see the `Parent`) it was spent,
+# as well as who spent it (see the `Fulfillment` of the `ChildInput`).
 type Output {
     ID: Hash!
     Type: OutputType
@@ -229,6 +449,7 @@ type Output {
     Parent: OutputParent!
 }
 
+# The different types of Payouts one can find in a block (header).
 enum BlockPayoutType {
     BLOCK_REWARD
     TRANSACTION_FEE
@@ -244,11 +465,20 @@ type TransactionFeePayout {
     Value: BigInt!
 }
 
+# Each `01` prefixed `UnlockHash` (wallet address) is linked to a `PublicKey`.
+# If it is known, and thus exposed on the chain at some point,
+# it will be stored, and can be queried using the `PublicKey` field.
+# That field will be `null` in case the `PublicKey` is not (yet) known.
 type UnlockHashPublicKeyPair {
     UnlockHash: UnlockHash!
     PublicKey: PublicKey
 }
 
+# An unlock condition is used to define "who"
+# can spent a coin or block stake output.
+#
+# See the different `UnlockCondition` implementations
+# to kow the different conditions that are possible.
 interface UnlockCondition {
     Version: ByteVersion!
     UnlockHash: UnlockHash
@@ -325,11 +555,22 @@ type MultiSignatureFulfillment implements UnlockFulfillment {
     Pairs: [PublicKeySignaturePair!]!
 }
 
+# The balance contains aggregated asset values,
+# and is updated for each block that affect's a wallet's
+# coin or block stake balance.
 type Balance {
     Unlocked: BigInt!
     Locked: BigInt!
 }
 
+# A wallet is identified by an `UnlockHash` and can be sent
+# coins and block stakes to, as well as spent those
+# coins and block stakes received. In practise
+# it is nothing more than a storage of a private/public key pair
+# a public key which can be converted to (and exposed as) an UnlockHash
+# to look up its balance, in the case of a non-full client wallet.
+#
+# See the Wallet implementations for the different wallets that are possible.
 interface Wallet {
     UnlockHash: UnlockHash!
 
@@ -383,6 +624,12 @@ type MultiSignatureWallet implements Wallet {
     RequiredSignatureCount: Int
 }
 
+# A contract used by Rivine chains to start and complete an atomic swap.
+# See https://github.com/threefoldtech/rivine/blob/master/doc/atomicswap/atomicswap.md for more
+# information about atomic swaps.
+#
+# In short it is in generally used to safely swap coins between two different blockchains,
+# without requiring trust in the other party.
 type AtomicSwapContract {
     UnlockHash: UnlockHash!
 
