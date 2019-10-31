@@ -158,10 +158,10 @@ func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusC
 
 			inputs := make(map[types.OutputID]OutputSpenditureData)
 			transactions := make([]Transaction, 0, len(appliedBlock.Transactions))
-			for idx, txn := range appliedBlock.Transactions {
+			for txidx, txn := range appliedBlock.Transactions {
 				transaction := RivineTransactionAsTransaction(
 					block.ID,
-					block.Transactions[idx],
+					block.Transactions[txidx],
 					txn,
 					feePayoutID,
 				)
@@ -170,27 +170,27 @@ func ApplyConsensusChange(db DB, cs modules.ConsensusSet, csc modules.ConsensusC
 				for _, input := range txn.CoinInputs {
 					inputs[types.OutputID(input.ParentID)] = OutputSpenditureData{
 						Fulfillment:              input.Fulfillment,
-						FulfillmentTransactionID: block.Transactions[idx],
+						FulfillmentTransactionID: block.Transactions[txidx],
 					}
 				}
 				for _, input := range txn.BlockStakeInputs {
 					inputs[types.OutputID(input.ParentID)] = OutputSpenditureData{
 						Fulfillment:              input.Fulfillment,
-						FulfillmentTransactionID: block.Transactions[idx],
+						FulfillmentTransactionID: block.Transactions[txidx],
 					}
 				}
 				// add outputs
-				for idx, output := range txn.CoinOutputs {
+				for coidx, output := range txn.CoinOutputs {
 					outputs = append(outputs, RivineCoinOutputAsOutput(
-						block.Transactions[idx],
-						types.CoinOutputID(transaction.CoinOutputs[idx]),
+						block.Transactions[txidx],
+						types.CoinOutputID(transaction.CoinOutputs[coidx]),
 						output,
 					))
 				}
-				for idx, output := range txn.BlockStakeOutputs {
+				for bsidx, output := range txn.BlockStakeOutputs {
 					outputs = append(outputs, RivineBlockStakeOutputAsOutput(
-						block.Transactions[idx],
-						types.BlockStakeOutputID(transaction.BlockStakeOutputs[idx]),
+						block.Transactions[txidx],
+						types.BlockStakeOutputID(transaction.BlockStakeOutputs[bsidx]),
 						output,
 					))
 				}
