@@ -26,9 +26,13 @@ Main Repositories
 - [atomicswap](https://github.com/threefoldtech/atomicswap)
     Ethereum, Stellar and bitcoin light client atomic swap support
 - [rivine-UI](https://github.com/threefoldtech/rivine-UI)
-        Desktop UI for a rivine full node and wallet
+    Desktop UI for a rivine full node and wallet
 - [ERC20 Extension](https://github.com/threefoldtech/rivine-extension-erc20)
-        Extension for a a rivine Ethereum ERC20 token
+    Extension for a a rivine Ethereum ERC20 token
+- [Rivine Typescript](https://github.com/threefoldtech/rivine-ts-types)
+    A Typescript library imlementing Rivine types.
+- [Threefold Electron Wallet](https://github.com/threefoldtech/threefold-wallet-electron)
+    A desktop application that implements light wallets
 
 Usage
 -----
