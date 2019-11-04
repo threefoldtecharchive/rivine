@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
-	"reflect"
 
+	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/asdine/storm"
+	smsp "github.com/asdine/storm/codec/msgpack"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -51,7 +52,7 @@ func (sdb *StormDB) boltUpdate(f func(tx *bolt.Tx) error) error {
 }
 
 func NewStormDB(path string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*StormDB, error) {
-	db, err := storm.Open(filepath.Join(path, "explorer.db"), storm.Codec(rivbinMarshalUnmarshaler{}))
+	db, err := storm.Open(filepath.Join(path, "explorer.db"), storm.Codec(smsp.Codec)) // smps.Codec
 	if err != nil {
 		return nil, err
 	}
@@ -86,35 +87,17 @@ const (
 	nodeBlocksKeyReference = "Reference"
 )
 
-type rivbinMarshalUnmarshaler struct{}
-
-func (rb rivbinMarshalUnmarshaler) Marshal(v interface{}) ([]byte, error) {
-	// do not marshal ptrs, this function is only called on root objects, so should be fine
-	// ... last famous words o.o
-	val := reflect.ValueOf(v)
-	if val.IsValid() && val.Kind() == reflect.Ptr && !val.IsNil() {
-		val = val.Elem()
-	}
-	v = val.Interface()
-	return rivbin.Marshal(v)
-}
-func (rb rivbinMarshalUnmarshaler) Unmarshal(b []byte, v interface{}) error {
-	return rivbin.Unmarshal(b, v)
-}
-func (rb rivbinMarshalUnmarshaler) Name() string {
-	return "rivbin"
-}
-
 // used for block rp -> bID node
 type blockReferencePointIDPair struct {
 	Reference ReferencePoint `storm:"id"`
-	BlockID   types.BlockID
+	BlockID   StormHash
 }
 
 // used for unlockHash -> PublicKey node
 type unlockHashPublicKeyPair struct {
-	UnlockHash types.UnlockHash `storm:"id"`
-	PublicKey  types.PublicKey
+	UnlockHash         StormUnlockHash `storm:"id"`
+	PublicKeyAlgorithm uint8
+	PublicKeyHash      []byte
 }
 
 type stormDBInternalData struct {
@@ -419,14 +402,14 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 	// store block reference point parings
 	err = blockNode.Save(&blockReferencePointIDPair{
 		Reference: ReferencePoint(block.Height) + 1, // require +1, as a storm identifier cannot be 0
-		BlockID:   block.ID,
+		BlockID:   StormHashFromBlockID(block.ID),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to apply block: failed to save block %s's height %d as reference point: %v", block.ID.String(), block.Height, err)
 	}
 	err = blockNode.Save(&blockReferencePointIDPair{
 		Reference: ReferencePoint(block.Timestamp),
-		BlockID:   block.ID,
+		BlockID:   StormHashFromBlockID(block.ID),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to apply block: failed to save block %s's timestamp %d as reference point: %v", block.ID.String(), block.Timestamp, err)
@@ -452,8 +435,9 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 			// store public keys
 			for _, pair := range pairs {
 				err = publicKeysNode.Save(&unlockHashPublicKeyPair{
-					UnlockHash: pair.UnlockHash,
-					PublicKey:  pair.PublicKey,
+					UnlockHash:         StormUnlockHashFromUnlockHash(pair.UnlockHash),
+					PublicKeyAlgorithm: uint8(pair.PublicKey.Algorithm),
+					PublicKeyHash:      pair.PublicKey.Key[:],
 				})
 				if err != nil {
 					return fmt.Errorf("failed to apply block: failed to save block %s's unlock hash %s mapped to public key %s: %v", block.ID.String(), pair.UnlockHash.String(), pair.PublicKey.String(), err)
@@ -493,8 +477,9 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(spenditureData.Fulfillment)
 		for _, pair := range pairs {
 			err = publicKeysNode.Save(&unlockHashPublicKeyPair{
-				UnlockHash: pair.UnlockHash,
-				PublicKey:  pair.PublicKey,
+				UnlockHash:         StormUnlockHashFromUnlockHash(pair.UnlockHash),
+				PublicKeyAlgorithm: uint8(pair.PublicKey.Algorithm),
+				PublicKeyHash:      pair.PublicKey.Key[:],
 			})
 			if err != nil {
 				return fmt.Errorf("failed to apply block: failed to save block %s's unlock hash %s mapped to public key %s: %v", block.ID.String(), pair.UnlockHash.String(), pair.PublicKey.String(), err)
@@ -585,9 +570,9 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 		// discount all unlocked outputs from total locked coins/blockstakes
 		for _, output := range outputsUnlocked {
 			if output.Type == OutputTypeBlockStake {
-				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Sub(output.Value)
+				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Sub(output.Value.AsCurrency())
 			} else {
-				facts.TotalLockedCoins = facts.TotalLockedCoins.Sub(output.Value)
+				facts.TotalLockedCoins = facts.TotalLockedCoins.Sub(output.Value.AsCurrency())
 			}
 		}
 		// discount all new inputs from total coins/blockstakes
@@ -969,14 +954,12 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	// delete block reference point parings
 	err = blockNode.DeleteStruct(&blockReferencePointIDPair{
 		Reference: ReferencePoint(blockContext.Height) + 1, // require +1, as a storm identifier cannot be 0
-		BlockID:   blockContext.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to revert block: failed to delete block %s's height %d by reference point: %v", blockContext.ID.String(), blockContext.Height, err)
 	}
 	err = blockNode.Save(&blockReferencePointIDPair{
 		Reference: ReferencePoint(blockContext.Timestamp),
-		BlockID:   blockContext.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to revert block: failed to delete block %s's timestamp %d by reference point: %v", blockContext.ID.String(), blockContext.Timestamp, err)
@@ -1090,9 +1073,9 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 		// re-apply all locked outputs to total locked coins/blockstakes
 		for _, output := range outputsLocked {
 			if output.Type == OutputTypeBlockStake {
-				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Add(output.Value)
+				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Add(output.Value.AsCurrency())
 			} else {
-				facts.TotalLockedCoins = facts.TotalLockedCoins.Add(output.Value)
+				facts.TotalLockedCoins = facts.TotalLockedCoins.Add(output.Value.AsCurrency())
 			}
 		}
 		// discount all reverted outputs, and if locked also subtract them to the total locked assets
@@ -1418,7 +1401,7 @@ func (sdb *StormDB) GetBlockIDByReferencePoint(rp ReferencePoint) (types.BlockID
 	if err != nil {
 		return types.BlockID{}, mapStormErrorToExplorerDBError(err)
 	}
-	return pair.BlockID, nil
+	return pair.BlockID.AsBlockID(), nil
 }
 
 func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts, error) {
@@ -1431,7 +1414,7 @@ func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts
 	if err != nil {
 		return BlockFacts{}, mapStormErrorToExplorerDBError(err)
 	}
-	facts, err := sdb.GetBlockFacts(pair.BlockID)
+	facts, err := sdb.GetBlockFacts(pair.BlockID.AsBlockID())
 	return facts, mapStormErrorToExplorerDBError(err)
 }
 
@@ -1478,7 +1461,16 @@ func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
 	if err != nil {
 		return types.PublicKey{}, mapStormErrorToExplorerDBError(err)
 	}
-	return pair.PublicKey, nil
+	if types.SignatureAlgoType(pair.PublicKeyAlgorithm) != types.SignatureAlgoEd25519 {
+		return types.PublicKey{}, fmt.Errorf("unexpected read uh-linked public key algorithm %d, only known algorithm is %d", pair.PublicKeyAlgorithm, types.SignatureAlgoEd25519)
+	}
+	if len(pair.PublicKeyHash) != crypto.PublicKeySize {
+		return types.PublicKey{}, fmt.Errorf("unexpected read uh-linked public key size: expected %d, not %d", len(pair.PublicKeyHash), crypto.PublicKeySize)
+	}
+	return types.PublicKey{
+		Algorithm: types.SignatureAlgoType(pair.PublicKeyAlgorithm),
+		Key:       types.ByteSlice(pair.PublicKeyHash),
+	}, nil
 }
 
 // ReadTransaction batches multiple read calls together,

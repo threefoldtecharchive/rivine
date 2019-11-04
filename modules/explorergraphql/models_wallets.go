@@ -104,6 +104,12 @@ func (wallet *FreeForAllWallet) walletData(ctx context.Context) (*baseWalletData
 }
 
 func (wallet *FreeForAllWallet) _walletDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			wallet.dataErr = fmt.Errorf("failed to fetch free-for-all wallet %s data from DB: %v", wallet.uh.String(), e)
+		}
+	}()
+
 	data, err := wallet.db.GetFreeForAllWallet(wallet.uh)
 	if err != nil {
 		if err != explorerdb.ErrNotFound {
@@ -167,6 +173,12 @@ func (wallet *SingleSignatureWallet) walletData(ctx context.Context) (*singleSig
 }
 
 func (wallet *SingleSignatureWallet) _walletDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			wallet.dataErr = fmt.Errorf("failed to fetch single signature wallet %s data from DB: %v", wallet.uh.String(), e)
+		}
+	}()
+
 	data, err := wallet.db.GetSingleSignatureWallet(wallet.uh)
 	if err != nil {
 		if err != explorerdb.ErrNotFound {
@@ -258,6 +270,12 @@ func (wallet *MultiSignatureWallet) walletData(ctx context.Context) (*multiSigna
 }
 
 func (wallet *MultiSignatureWallet) _walletDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			wallet.dataErr = fmt.Errorf("failed to fetch multi signature wallet %s data from DB: %v", wallet.uh.String(), e)
+		}
+	}()
+
 	data, err := wallet.db.GetMultiSignatureWallet(wallet.uh)
 	if err != nil {
 		if err != explorerdb.ErrNotFound {

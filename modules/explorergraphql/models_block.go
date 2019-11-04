@@ -46,6 +46,12 @@ func (block *Block) blockData(ctx context.Context) (*blockData, error) {
 }
 
 func (block *Block) _blockDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			block.dataErr = fmt.Errorf("failed to fetch block %s data from DB: %v", block.id.String(), e)
+		}
+	}()
+
 	data, err := block.db.GetBlock(block.id)
 	if err != nil {
 		block.dataErr = fmt.Errorf("failed to fetch block %s data from DB: %v", block.id.String(), err)

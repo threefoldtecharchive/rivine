@@ -69,6 +69,12 @@ func (output *Output) outputData(ctx context.Context) (*outputData, error) {
 }
 
 func (output *Output) _outputDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			output.dataErr = fmt.Errorf("failed to fetch output %s data from DB: %v", output.id.String(), e)
+		}
+	}()
+
 	data, err := output.db.GetOutput(output.id)
 	if err != nil {
 		output.dataErr = fmt.Errorf("failed to fetch output %s data from DB: %v", output.id.String(), err)
@@ -191,6 +197,12 @@ func (input *Input) inputData(ctx context.Context) (*inputData, error) {
 }
 
 func (input *Input) _inputDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			input.dataErr = fmt.Errorf("failed to fetch output %s (used as input) data from DB: %v", input.id.String(), e)
+		}
+	}()
+
 	data, err := input.db.GetOutput(input.id)
 	if err != nil {
 		input.dataErr = fmt.Errorf("failed to fetch output %s data (used as input) from DB: %v", input.id.String(), err)
@@ -199,7 +211,7 @@ func (input *Input) _inputDataOnce() {
 
 	// restructure all fetched data
 	if data.SpenditureData == nil {
-		input.dataErr = fmt.Errorf("failed to convert output %s data (used as input): spenditure data of output %s is not defined and can as such not be used as a GQL input", input.id.String())
+		input.dataErr = fmt.Errorf("failed to convert output %s data (used as input): spenditure data of output is not defined and can as such not be used as a GQL input", input.id.String())
 		return
 	}
 	if input.parent == nil {

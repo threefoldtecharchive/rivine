@@ -1,0 +1,58 @@
+Loading...
+Binding API Address and serving the API...
+Setting up root HTTP API handler...
+Loading gateway (0/7)...
+Loading consensus set (1/7)...
+Loading transaction pool (2/7)...
+Loading wallet (3/7)...
+Loading block creator (4/7)...
+Loading explorer (5/7)...
+Loading graphql explorer (6/7)...
+Finished loading in 0.38579813 seconds
+Rescanning consensus set...
+
+Done!
+goroutine 25 [running]:
+runtime/debug.Stack(0x1049597, 0x0, 0xc000197720)
+	/usr/local/go/src/runtime/debug/stack.go:24 +0x9d
+runtime/debug.PrintStack()
+	/usr/local/go/src/runtime/debug/stack.go:16 +0x22
+github.com/threefoldtech/rivine/build.Critical(0xc0001978a0, 0x2, 0x2)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/build/critical.go:15 +0xaa
+github.com/threefoldtech/rivine/modules/explorergraphql.(*Explorer).ProcessConsensusChange(0xc000456000, 0x845372ac67d25532, 0xb9c98a5cd3b166f6, 0x62bcbdb0d56f6f62, 0x1efdea0275373969, 0x0, 0x0, 0x0, 0xc0000f6e00, 0x1, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/explorergraphql/explorer.go:95 +0x11b
+github.com/threefoldtech/rivine/modules/consensus.(*ConsensusSet).readlockUpdateSubscribers(0xc00039e000, 0x0, 0x0, 0x0, 0xc000312080, 0x1, 0x1)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/consensus/subscribe.go:87 +0x18d
+github.com/threefoldtech/rivine/modules/consensus.(*ConsensusSet).managedAcceptBlock(0xc00039e000, 0xcb9dffb28bea2a42, 0x5b3682660477fab, 0x584e02db60425775, 0xf937e56170954cc5, 0x5dc17116, 0x0, 0x0, 0x0, 0xc000292280, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/consensus/accept.go:306 +0x240
+github.com/threefoldtech/rivine/modules/consensus.(*ConsensusSet).AcceptBlock(0xc00039e000, 0xcb9dffb28bea2a42, 0x5b3682660477fab, 0x584e02db60425775, 0xf937e56170954cc5, 0x5dc17116, 0x0, 0x0, 0x0, 0xc000292280, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/consensus/accept.go:325 +0xe3
+github.com/threefoldtech/rivine/modules/blockcreator.(*BlockCreator).submitBlock(0xc000422000, 0xcb9dffb28bea2a42, 0x5b3682660477fab, 0x584e02db60425775, 0xf937e56170954cc5, 0x5dc17116, 0x0, 0x0, 0x0, 0xc000292280, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/blockcreator/blockmanager.go:16 +0xee
+github.com/threefoldtech/rivine/modules/blockcreator.(*BlockCreator).SolveBlocks(0xc000422000)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/blockcreator/proofofblockstake.go:49 +0x27d
+created by github.com/threefoldtech/rivine/modules/blockcreator.New
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/blockcreator/blockcreator.go:142 +0x5bb
+Critical error: Explorer.ProcessConsensusChange failed failed to apply block: failed to save aggregated chain facts at block af08a01279a24552d4a6dd4a8bd9f8d44454f8b418a269bcd268907c7110a703 (height: 1): failed to get outputs unlocked by height 1 or timestamp 1572958486: unknown recognised condition type 3
+Please submit a bug report here: https://github.com/threefoldtech/rivine/issues
+panic: Critical error: Explorer.ProcessConsensusChange failed failed to apply block: failed to save aggregated chain facts at block af08a01279a24552d4a6dd4a8bd9f8d44454f8b418a269bcd268907c7110a703 (height: 1): failed to get outputs unlocked by height 1 or timestamp 1572958486: unknown recognised condition type 3
+Please submit a bug report here: https://github.com/threefoldtech/rivine/issues
+
+
+goroutine 25 [running]:
+github.com/threefoldtech/rivine/build.Critical(0xc0001978a0, 0x2, 0x2)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/build/critical.go:17 +0x136
+github.com/threefoldtech/rivine/modules/explorergraphql.(*Explorer).ProcessConsensusChange(0xc000456000, 0x845372ac67d25532, 0xb9c98a5cd3b166f6, 0x62bcbdb0d56f6f62, 0x1efdea0275373969, 0x0, 0x0, 0x0, 0xc0000f6e00, 0x1, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/explorergraphql/explorer.go:95 +0x11b
+github.com/threefoldtech/rivine/modules/consensus.(*ConsensusSet).readlockUpdateSubscribers(0xc00039e000, 0x0, 0x0, 0x0, 0xc000312080, 0x1, 0x1)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/consensus/subscribe.go:87 +0x18d
+github.com/threefoldtech/rivine/modules/consensus.(*ConsensusSet).managedAcceptBlock(0xc00039e000, 0xcb9dffb28bea2a42, 0x5b3682660477fab, 0x584e02db60425775, 0xf937e56170954cc5, 0x5dc17116, 0x0, 0x0, 0x0, 0xc000292280, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/consensus/accept.go:306 +0x240
+github.com/threefoldtech/rivine/modules/consensus.(*ConsensusSet).AcceptBlock(0xc00039e000, 0xcb9dffb28bea2a42, 0x5b3682660477fab, 0x584e02db60425775, 0xf937e56170954cc5, 0x5dc17116, 0x0, 0x0, 0x0, 0xc000292280, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/consensus/accept.go:325 +0xe3
+github.com/threefoldtech/rivine/modules/blockcreator.(*BlockCreator).submitBlock(0xc000422000, 0xcb9dffb28bea2a42, 0x5b3682660477fab, 0x584e02db60425775, 0xf937e56170954cc5, 0x5dc17116, 0x0, 0x0, 0x0, 0xc000292280, ...)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/blockcreator/blockmanager.go:16 +0xee
+github.com/threefoldtech/rivine/modules/blockcreator.(*BlockCreator).SolveBlocks(0xc000422000)
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/blockcreator/proofofblockstake.go:49 +0x27d
+created by github.com/threefoldtech/rivine/modules/blockcreator.New
+	/Users/glendc/go/src/github.com/threefoldtech/rivine/modules/blockcreator/blockcreator.go:142 +0x5bb

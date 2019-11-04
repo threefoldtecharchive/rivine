@@ -98,6 +98,12 @@ func (bt *BaseTransaction) ResolveData() {
 }
 
 func (bt *BaseTransaction) _resolveDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			bt.DataErr = fmt.Errorf("failed to fetch txn %s data from DB: %v", bt.TransactionID.String(), e)
+		}
+	}()
+
 	txn, err := bt.DB.GetTransaction(bt.TransactionID)
 	if err != nil {
 		bt.DataErr = err

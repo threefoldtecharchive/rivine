@@ -10,5 +10,3 @@ require (
 	github.com/vmihailenco/msgpack v4.0.1+incompatible
 	go.etcd.io/bbolt v1.3.0
 )
-
-go 1.13

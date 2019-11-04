@@ -7,91 +7,127 @@ import (
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/q"
 
-	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
 )
 
 // TODO: link DataID instead of ObjectID
 
+// Bucket models
+type (
+	StormChainContext struct {
+		ConsensusChangeID StormHash
+		Height            types.BlockHeight
+		Timestamp         types.Timestamp
+		BlockID           StormHash
+	}
+
+	StormBlockFactsContext struct {
+		Target    StormHash
+		Timestamp types.Timestamp
+	}
+
+	StormChainAggregatedFacts struct {
+		TotalCoins       StormBigInt
+		TotalLockedCoins StormBigInt
+
+		TotalBlockStakes           StormBigInt
+		TotalLockedBlockStakes     StormBigInt
+		EstimatedActiveBlockStakes StormBigInt
+
+		LastBlocks []StormBlockFactsContext
+	}
+)
+
+// Node Models
 type (
 	StormDataID uint64
 
 	StormObject struct {
-		ObjectID      ObjectID    `storm:"id"`
-		ObjectType    ObjectType  `storm:"index"`
-		ObjectVersion ByteVersion `storm:"index"`
-		DataID        StormDataID `storm:"unique"`
+		ObjectID      ObjectID    `storm:"id", msgpack:"id"`
+		ObjectType    ObjectType  `storm:"index", msgpack:"ot"`
+		ObjectVersion ByteVersion `storm:"index", msgpack:"ov"`
+		DataID        StormDataID `storm:"unique", msgpack:"did"`
 	}
 
 	StormBlock struct {
-		DataID StormDataID `storm:"id"`
+		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		ParentID  types.BlockID
-		Height    types.BlockHeight
-		Timestamp types.Timestamp
-		Payouts   []types.OutputID
+		ParentID  StormHash         `msgpack:"pid"`
+		Height    types.BlockHeight `msgpack:"hg"`
+		Timestamp types.Timestamp   `msgpack:"ts"`
+		Payouts   []StormHash       `msgpack:"pas"`
 
-		Transactions []types.TransactionID
+		Transactions []StormHash `msgpack:"txs"`
 	}
 
 	StormBlockFacts struct {
-		DataID StormDataID `storm:"id"`
+		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		Target     types.Target     `storm:"index"`
-		Difficulty types.Difficulty `storm:"index"`
+		Target     StormHash   `storm:"index", msgpack:"bt"`
+		Difficulty StormBigInt `storm:"index", msgpack:"bd"`
 
-		AggregatedTotalCoins                 types.Currency `storm:"index"`
-		AggregatedTotalLockedCoins           types.Currency `storm:"index"`
-		AggregatedTotalBlockStakes           types.Currency `storm:"index"`
-		AggregatedTotalLockedBlockStakes     types.Currency `storm:"index"`
-		AggregatedEstimatedActiveBlockStakes types.Currency `storm:"index"`
+		AggregatedTotalCoins                 StormBigInt `msgpack:"acou"`
+		AggregatedTotalLockedCoins           StormBigInt `msgpack:"acol"`
+		AggregatedTotalBlockStakes           StormBigInt `msgpack:"absu"`
+		AggregatedTotalLockedBlockStakes     StormBigInt `msgpack:"absl"`
+		AggregatedEstimatedActiveBlockStakes StormBigInt `msgpack:"aeabs"`
+	}
+
+	StormTransactionFeePayoutInfo struct {
+		PayoutID StormHash     `msgpack:"paid"`
+		Values   []StormBigInt `msgpack:"vls"`
 	}
 
 	StormTransaction struct {
-		DataID StormDataID `storm:"id"`
+		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		ParentBlock types.BlockID
-		Version     types.TransactionVersion `storm:"index"`
+		ParentBlock StormHash   `msgpack:"pb"`
+		Version     ByteVersion `storm:"index", msgpack:"txv"`
 
-		CoinInputs  []types.OutputID
-		CoinOutputs []types.OutputID
+		CoinInputs  []StormHash `msgpack:"cis"`
+		CoinOutputs []StormHash `msgpack:"cos"`
 
-		BlockStakeInputs  []types.OutputID
-		BlockStakeOutputs []types.OutputID
+		BlockStakeInputs  []StormHash `msgpack:"bsis"`
+		BlockStakeOutputs []StormHash `msgpack:"bsos"`
 
-		FeePayout TransactionFeePayoutInfo
+		FeePayout StormTransactionFeePayoutInfo `msgpack:"fp"`
 
-		ArbitraryData        []byte
-		EncodedExtensionData []byte
+		ArbitraryData        []byte `msgpack:"ad"`
+		EncodedExtensionData []byte `msgpack:"eed"`
+	}
+
+	StormOutputSpenditureData struct {
+		Fulfillment              StormUnlockFulfillment `msgpack:"ff"`
+		FulfillmentTransactionID StormHash              `msgpack:"fftid"`
 	}
 
 	StormOutput struct {
-		DataID StormDataID `storm:"id"`
+		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		ParentID crypto.Hash
+		ParentID StormHash `msgpack:"pid"`
 
-		Type                 OutputType `storm:"index"`
-		Value                types.Currency
-		Condition            types.UnlockConditionProxy
-		UnlockReferencePoint ReferencePoint `storm:"index"`
+		Type                 OutputType           `storm:"index", msgpack:"t"`
+		Value                StormBigInt          `msgpack:"v"`
+		Condition            StormUnlockCondition `msgpack:"c"`
+		UnlockReferencePoint ReferencePoint       `storm:"index", msgpack:"urp"`
 
-		SpenditureData *OutputSpenditureData `storm:"index"`
+		SpenditureData *StormOutputSpenditureData `storm:"index", msgpack:"sd"`
 	}
 
 	StormBaseWalletData struct {
-		DataID StormDataID `storm:"id"`
+		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		CoinOutputs       []types.OutputID
-		BlockStakeOutputs []types.OutputID
-		Blocks            []types.BlockID
-		Transactions      []types.TransactionID
+		CoinOutputs       []StormHash `msgpack:"cos"`
+		BlockStakeOutputs []StormHash `msgpack:"bos"`
+		Blocks            []StormHash `msgpack:"bls"`
+		Transactions      []StormHash `msgpack:"txs"`
 
-		CoinsUnlocked types.Currency `storm:"index"`
-		CoinsLocked   types.Currency `storm:"index"`
+		CoinsUnlocked StormBigInt `storm:"index", msgpack:"cou"`
+		CoinsLocked   StormBigInt `storm:"index", msgpack:"col"`
 
-		BlockStakesUnlocked types.Currency `storm:"index"`
-		BlockStakesLocked   types.Currency `storm:"index"`
+		BlockStakesUnlocked StormBigInt `storm:"index", msgpack:"bsou"`
+		BlockStakesLocked   StormBigInt `storm:"index", msgpack:"bsol"`
 	}
 
 	StormFreeForAllWalletData struct {
@@ -101,52 +137,57 @@ type (
 	StormSingleSignatureWalletData struct {
 		StormBaseWalletData `storm:"inline"`
 
-		MultiSignatureWallets []types.UnlockHash
+		MultiSignatureWallets []StormUnlockHash `msgpack:"msw"`
 	}
 
 	StormMultiSignatureWalletData struct {
 		StormBaseWalletData `storm:"inline"`
 
-		Owners                []types.UnlockHash
-		RequiredSgnatureCount int
+		Owners                 []StormUnlockHash `msgpack:"ow"`
+		RequiredSignatureCount int               `msgpack:"rsc"`
+	}
+
+	StormAtomicSwapContractSpenditureData struct {
+		ContractFulfillment StormAtomicSwapFulfillment `msgpack:"coff"`
+		CoinOutput          StormHash                  `msgpack:"co"`
 	}
 
 	StormAtomicSwapContract struct {
-		DataID StormDataID `storm:"id"`
+		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		ContractValue     types.Currency
-		ContractCondition types.AtomicSwapCondition
-		Transactions      []types.TransactionID
-		CoinInput         types.CoinOutputID
+		ContractValue     StormBigInt              `msgpack:"v"`
+		ContractCondition StormAtomicSwapCondition `msgpack:"c"`
+		Transactions      []StormHash              `msgpack:"txs"`
+		CoinInput         StormHash                `msgpack:"ci"`
 
-		SpenditureData *AtomicSwapContractSpenditureData `storm:"index"`
+		SpenditureData *StormAtomicSwapContractSpenditureData `storm:"index", msgpack:"sd"`
 	}
 )
 
 func (sblock *StormBlock) AsBlock(blockID types.BlockID) Block {
 	return Block{
 		ID:        blockID,
-		ParentID:  sblock.ParentID,
+		ParentID:  sblock.ParentID.AsBlockID(),
 		Height:    sblock.Height,
 		Timestamp: sblock.Timestamp,
-		Payouts:   sblock.Payouts,
+		Payouts:   StormHashSliceAsOutputIDSlice(sblock.Payouts),
 
-		Transactions: sblock.Transactions,
+		Transactions: StormHashSliceAsTransactionIDSlice(sblock.Transactions),
 	}
 }
 
 func (sbfacts *StormBlockFacts) AsBlockFacts() BlockFacts {
 	return BlockFacts{
 		Constants: BlockFactsConstants{
-			Target:     sbfacts.Target,
-			Difficulty: sbfacts.Difficulty,
+			Target:     sbfacts.Target.AsTarget(),
+			Difficulty: sbfacts.Difficulty.AsDifficulty(),
 		},
 		Aggregated: BlockFactsAggregated{
-			TotalCoins:                 sbfacts.AggregatedTotalCoins,
-			TotalLockedCoins:           sbfacts.AggregatedTotalLockedCoins,
-			TotalBlockStakes:           sbfacts.AggregatedTotalBlockStakes,
-			TotalLockedBlockStakes:     sbfacts.AggregatedTotalLockedBlockStakes,
-			EstimatedActiveBlockStakes: sbfacts.AggregatedEstimatedActiveBlockStakes,
+			TotalCoins:                 sbfacts.AggregatedTotalCoins.AsCurrency(),
+			TotalLockedCoins:           sbfacts.AggregatedTotalLockedCoins.AsCurrency(),
+			TotalBlockStakes:           sbfacts.AggregatedTotalBlockStakes.AsCurrency(),
+			TotalLockedBlockStakes:     sbfacts.AggregatedTotalLockedBlockStakes.AsCurrency(),
+			EstimatedActiveBlockStakes: sbfacts.AggregatedEstimatedActiveBlockStakes.AsCurrency(),
 		},
 	}
 }
@@ -155,16 +196,19 @@ func (stxn *StormTransaction) AsTransaction(txnID types.TransactionID) Transacti
 	return Transaction{
 		ID: txnID,
 
-		ParentBlock: stxn.ParentBlock,
-		Version:     stxn.Version,
+		ParentBlock: stxn.ParentBlock.AsBlockID(),
+		Version:     types.TransactionVersion(stxn.Version),
 
-		CoinInputs:  stxn.CoinInputs,
-		CoinOutputs: stxn.CoinOutputs,
+		CoinInputs:  StormHashSliceAsOutputIDSlice(stxn.CoinInputs),
+		CoinOutputs: StormHashSliceAsOutputIDSlice(stxn.CoinOutputs),
 
-		BlockStakeInputs:  stxn.BlockStakeInputs,
-		BlockStakeOutputs: stxn.BlockStakeOutputs,
+		BlockStakeInputs:  StormHashSliceAsOutputIDSlice(stxn.BlockStakeInputs),
+		BlockStakeOutputs: StormHashSliceAsOutputIDSlice(stxn.BlockStakeOutputs),
 
-		FeePayout: stxn.FeePayout,
+		FeePayout: TransactionFeePayoutInfo{
+			PayoutID: stxn.FeePayout.PayoutID.AsOutputID(),
+			Values:   StormBigIntSliceAsCurrencies(stxn.FeePayout.Values),
+		},
 
 		ArbitraryData:        stxn.ArbitraryData,
 		EncodedExtensionData: stxn.EncodedExtensionData,
@@ -172,32 +216,38 @@ func (stxn *StormTransaction) AsTransaction(txnID types.TransactionID) Transacti
 }
 
 func (sout *StormOutput) AsOutput(outputID types.OutputID) Output {
-	return Output{
+	out := Output{
 		ID:       outputID,
-		ParentID: sout.ParentID,
+		ParentID: sout.ParentID.AsCryptoHash(),
 
 		Type:                 sout.Type,
-		Value:                sout.Value,
-		Condition:            sout.Condition,
+		Value:                sout.Value.AsCurrency(),
+		Condition:            sout.Condition.AsUnlockConditionProxy(),
 		UnlockReferencePoint: sout.UnlockReferencePoint,
-		SpenditureData:       sout.SpenditureData,
 	}
+	if sout.SpenditureData != nil {
+		out.SpenditureData = &OutputSpenditureData{
+			Fulfillment:              sout.SpenditureData.Fulfillment.AsUnlockFulfillmentProxy(),
+			FulfillmentTransactionID: sout.SpenditureData.FulfillmentTransactionID.AsTransactionID(),
+		}
+	}
+	return out
 }
 
 func walletDataAsSDB(dataID StormDataID, wallet *WalletData) *StormBaseWalletData {
 	return &StormBaseWalletData{
 		DataID: dataID,
 
-		CoinOutputs:       wallet.CoinOutputs,
-		BlockStakeOutputs: wallet.BlockStakeOutputs,
-		Blocks:            wallet.Blocks,
-		Transactions:      wallet.Transactions,
+		CoinOutputs:       OutputIDSliceAsStormHashSlice(wallet.CoinOutputs),
+		BlockStakeOutputs: OutputIDSliceAsStormHashSlice(wallet.BlockStakeOutputs),
+		Blocks:            BlockIDSliceAsStormHashSlice(wallet.Blocks),
+		Transactions:      TransactionIDSliceAsStormHashSlice(wallet.Transactions),
 
-		CoinsUnlocked: wallet.CoinBalance.Unlocked,
-		CoinsLocked:   wallet.CoinBalance.Locked,
+		CoinsUnlocked: StormBigIntFromCurrency(wallet.CoinBalance.Unlocked),
+		CoinsLocked:   StormBigIntFromCurrency(wallet.CoinBalance.Locked),
 
-		BlockStakesUnlocked: wallet.BlockStakeBalance.Unlocked,
-		BlockStakesLocked:   wallet.BlockStakeBalance.Locked,
+		BlockStakesUnlocked: StormBigIntFromCurrency(wallet.BlockStakeBalance.Unlocked),
+		BlockStakesLocked:   StormBigIntFromCurrency(wallet.BlockStakeBalance.Locked),
 	}
 }
 
@@ -205,18 +255,18 @@ func (swallet *StormBaseWalletData) AsWalletData(uh types.UnlockHash) WalletData
 	return WalletData{
 		UnlockHash: uh,
 
-		CoinOutputs:       swallet.CoinOutputs,
-		BlockStakeOutputs: swallet.BlockStakeOutputs,
-		Blocks:            swallet.Blocks,
-		Transactions:      swallet.Transactions,
+		CoinOutputs:       StormHashSliceAsOutputIDSlice(swallet.CoinOutputs),
+		BlockStakeOutputs: StormHashSliceAsOutputIDSlice(swallet.BlockStakeOutputs),
+		Blocks:            StormHashSliceAsBlockIDSlice(swallet.Blocks),
+		Transactions:      StormHashSliceAsTransactionIDSlice(swallet.Transactions),
 
 		CoinBalance: Balance{
-			Unlocked: swallet.CoinsUnlocked,
-			Locked:   swallet.CoinsLocked,
+			Unlocked: swallet.CoinsUnlocked.AsCurrency(),
+			Locked:   swallet.CoinsLocked.AsCurrency(),
 		},
 		BlockStakeBalance: Balance{
-			Unlocked: swallet.BlockStakesUnlocked,
-			Locked:   swallet.BlockStakesLocked,
+			Unlocked: swallet.BlockStakesUnlocked.AsCurrency(),
+			Locked:   swallet.BlockStakesLocked.AsCurrency(),
 		},
 	}
 }
@@ -241,7 +291,7 @@ func (swallet *StormFreeForAllWalletData) UnmarshalRivine(r io.Reader) error {
 func (swallet *StormSingleSignatureWalletData) AsSingleSignatureWallet(uh types.UnlockHash) SingleSignatureWalletData {
 	return SingleSignatureWalletData{
 		WalletData:            swallet.AsWalletData(uh),
-		MultiSignatureWallets: swallet.MultiSignatureWallets,
+		MultiSignatureWallets: StormUnlockHashSliceAsUnlockHashSlice(swallet.MultiSignatureWallets),
 	}
 }
 
@@ -262,8 +312,8 @@ func (swallet *StormSingleSignatureWalletData) UnmarshalRivine(r io.Reader) erro
 func (swallet *StormMultiSignatureWalletData) AsMultiSignatureWallet(uh types.UnlockHash) MultiSignatureWalletData {
 	return MultiSignatureWalletData{
 		WalletData:            swallet.AsWalletData(uh),
-		Owners:                swallet.Owners,
-		RequiredSgnatureCount: swallet.RequiredSgnatureCount,
+		Owners:                StormUnlockHashSliceAsUnlockHashSlice(swallet.Owners),
+		RequiredSgnatureCount: swallet.RequiredSignatureCount,
 	}
 }
 
@@ -273,25 +323,30 @@ func (swallet *StormMultiSignatureWalletData) AsMultiSignatureWallet(uh types.Un
 // but it does, that is what matters.
 func (swallet StormMultiSignatureWalletData) MarshalRivine(w io.Writer) error {
 	return rivbin.NewEncoder(w).EncodeAll(
-		swallet.StormBaseWalletData, swallet.Owners, swallet.RequiredSgnatureCount)
+		swallet.StormBaseWalletData, swallet.Owners, swallet.RequiredSignatureCount)
 }
 
 func (swallet *StormMultiSignatureWalletData) UnmarshalRivine(r io.Reader) error {
 	return rivbin.NewDecoder(r).DecodeAll(
-		&swallet.StormBaseWalletData, &swallet.Owners, &swallet.RequiredSgnatureCount)
+		&swallet.StormBaseWalletData, &swallet.Owners, &swallet.RequiredSignatureCount)
 }
 
 func (scontract *StormAtomicSwapContract) AsAtomicSwapContract(uh types.UnlockHash) AtomicSwapContract {
-	return AtomicSwapContract{
+	asc := AtomicSwapContract{
 		UnlockHash: uh,
 
-		ContractValue:     scontract.ContractValue,
-		ContractCondition: scontract.ContractCondition,
-		Transactions:      scontract.Transactions,
-		CoinInput:         scontract.CoinInput,
-
-		SpenditureData: scontract.SpenditureData,
+		ContractValue:     scontract.ContractValue.AsCurrency(),
+		ContractCondition: scontract.ContractCondition.AsAtomicSwapCondition(),
+		Transactions:      StormHashSliceAsTransactionIDSlice(scontract.Transactions),
+		CoinInput:         scontract.CoinInput.AsCoinOutputID(),
 	}
+	if scontract.SpenditureData != nil {
+		asc.SpenditureData = &AtomicSwapContractSpenditureData{
+			ContractFulfillment: scontract.SpenditureData.ContractFulfillment.AsAtomicSwapFulfillment(),
+			CoinOutput:          scontract.SpenditureData.CoinOutput.AsCoinOutputID(),
+		}
+	}
+	return asc
 }
 
 const (
@@ -390,12 +445,12 @@ func (son *stormObjectNode) SaveBlockWithFacts(block *Block, facts *BlockFacts) 
 	err = son.node.Save(&StormBlock{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
-		ParentID:  block.ParentID,
+		ParentID:  StormHashFromBlockID(block.ParentID),
 		Height:    block.Height,
 		Timestamp: block.Timestamp,
-		Payouts:   block.Payouts,
+		Payouts:   OutputIDSliceAsStormHashSlice(block.Payouts),
 
-		Transactions: block.Transactions,
+		Transactions: TransactionIDSliceAsStormHashSlice(block.Transactions),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to save block %s by (object) data ID %d: %v", block.ID.String(), obj.DataID, err)
@@ -403,14 +458,14 @@ func (son *stormObjectNode) SaveBlockWithFacts(block *Block, facts *BlockFacts) 
 	err = son.node.Save(&StormBlockFacts{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
-		Target:     facts.Constants.Target,
-		Difficulty: facts.Constants.Difficulty,
+		Target:     StormHashFromTarget(facts.Constants.Target),
+		Difficulty: StormBigIntFromDifficulty(facts.Constants.Difficulty),
 
-		AggregatedTotalCoins:                 facts.Aggregated.TotalCoins,
-		AggregatedTotalLockedCoins:           facts.Aggregated.TotalLockedCoins,
-		AggregatedTotalBlockStakes:           facts.Aggregated.TotalBlockStakes,
-		AggregatedTotalLockedBlockStakes:     facts.Aggregated.TotalLockedBlockStakes,
-		AggregatedEstimatedActiveBlockStakes: facts.Aggregated.EstimatedActiveBlockStakes,
+		AggregatedTotalCoins:                 StormBigIntFromCurrency(facts.Aggregated.TotalCoins),
+		AggregatedTotalLockedCoins:           StormBigIntFromCurrency(facts.Aggregated.TotalLockedCoins),
+		AggregatedTotalBlockStakes:           StormBigIntFromCurrency(facts.Aggregated.TotalBlockStakes),
+		AggregatedTotalLockedBlockStakes:     StormBigIntFromCurrency(facts.Aggregated.TotalLockedBlockStakes),
+		AggregatedEstimatedActiveBlockStakes: StormBigIntFromCurrency(facts.Aggregated.EstimatedActiveBlockStakes),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to save facts for block %s by (object) data ID %d: %v", block.ID.String(), obj.DataID, err)
@@ -432,16 +487,19 @@ func (son *stormObjectNode) SaveTransaction(txn *Transaction) error {
 	err = son.node.Save(&StormTransaction{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
-		ParentBlock: txn.ParentBlock,
-		Version:     txn.Version,
+		ParentBlock: StormHashFromBlockID(txn.ParentBlock),
+		Version:     ByteVersion(txn.Version),
 
-		CoinInputs:  txn.CoinInputs,
-		CoinOutputs: txn.CoinOutputs,
+		CoinInputs:  OutputIDSliceAsStormHashSlice(txn.CoinInputs),
+		CoinOutputs: OutputIDSliceAsStormHashSlice(txn.CoinOutputs),
 
-		BlockStakeInputs:  txn.BlockStakeInputs,
-		BlockStakeOutputs: txn.BlockStakeOutputs,
+		BlockStakeInputs:  OutputIDSliceAsStormHashSlice(txn.BlockStakeInputs),
+		BlockStakeOutputs: OutputIDSliceAsStormHashSlice(txn.BlockStakeOutputs),
 
-		FeePayout: txn.FeePayout,
+		FeePayout: StormTransactionFeePayoutInfo{
+			PayoutID: StormHashFromOutputID(txn.FeePayout.PayoutID),
+			Values:   CurrencySliceAsStormBigIntSlice(txn.FeePayout.Values),
+		},
 
 		ArbitraryData:        txn.ArbitraryData,
 		EncodedExtensionData: txn.EncodedExtensionData,
@@ -463,18 +521,23 @@ func (son *stormObjectNode) SaveOutput(output *Output) error {
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for output %s: %v", output.ID.String(), err)
 	}
-	err = son.node.Save(&StormOutput{
+	sout := StormOutput{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
-		ParentID: output.ParentID,
+		ParentID: StormHashFromHash(output.ParentID),
 
 		Type:                 output.Type,
-		Value:                output.Value,
-		Condition:            output.Condition,
+		Value:                StormBigIntFromCurrency(output.Value),
+		Condition:            StormUnlockConditionFromUnlockCondition(output.Condition),
 		UnlockReferencePoint: output.UnlockReferencePoint,
-
-		SpenditureData: output.SpenditureData,
-	})
+	}
+	if output.SpenditureData != nil {
+		sout.SpenditureData = &StormOutputSpenditureData{
+			Fulfillment:              StormUnlockFulfillmentFromUnlockFulfillment(output.SpenditureData.Fulfillment),
+			FulfillmentTransactionID: StormHashFromTransactionID(output.SpenditureData.FulfillmentTransactionID),
+		}
+	}
+	err = son.node.Save(&sout)
 	if err != nil {
 		return fmt.Errorf("failed to save output %s by (object) data ID %d: %v", output.ID.String(), obj.DataID, err)
 	}
@@ -517,7 +580,7 @@ func (son *stormObjectNode) SaveSingleSignatureWallet(wallet *SingleSignatureWal
 	err = son.node.Save(&StormSingleSignatureWalletData{
 		// DataID was automatically incremented in previous save call
 		StormBaseWalletData:   *walletDataAsSDB(obj.DataID, &wallet.WalletData),
-		MultiSignatureWallets: wallet.MultiSignatureWallets,
+		MultiSignatureWallets: UnlockHashSliceAsStormUnlockHashSlice(wallet.MultiSignatureWallets),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to save wallet %s by (object) data ID %d: %v", wallet.UnlockHash.String(), obj.DataID, err)
@@ -538,9 +601,9 @@ func (son *stormObjectNode) SaveMultiSignatureWallet(wallet *MultiSignatureWalle
 	}
 	err = son.node.Save(&StormMultiSignatureWalletData{
 		// DataID was automatically incremented in previous save call
-		StormBaseWalletData:   *walletDataAsSDB(obj.DataID, &wallet.WalletData),
-		Owners:                wallet.Owners,
-		RequiredSgnatureCount: wallet.RequiredSgnatureCount,
+		StormBaseWalletData:    *walletDataAsSDB(obj.DataID, &wallet.WalletData),
+		Owners:                 UnlockHashSliceAsStormUnlockHashSlice(wallet.Owners),
+		RequiredSignatureCount: wallet.RequiredSgnatureCount,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to save wallet %s by (object) data ID %d: %v", wallet.UnlockHash.String(), obj.DataID, err)
@@ -559,16 +622,21 @@ func (son *stormObjectNode) SaveAtomicSwapContract(contract *AtomicSwapContract)
 	if err != nil {
 		return fmt.Errorf("failed to save object type info for contract %s: %v", contract.UnlockHash.String(), err)
 	}
-	err = son.node.Save(&StormAtomicSwapContract{
+	scontract := StormAtomicSwapContract{
 		DataID: obj.DataID, // automatically incremented in previous save call
 
-		ContractValue:     contract.ContractValue,
-		ContractCondition: contract.ContractCondition,
-		Transactions:      contract.Transactions,
-		CoinInput:         contract.CoinInput,
-
-		SpenditureData: contract.SpenditureData,
-	})
+		ContractValue:     StormBigIntFromCurrency(contract.ContractValue),
+		ContractCondition: StormAtomicSwapConditionFromAtomicSwapCondition(contract.ContractCondition),
+		Transactions:      TransactionIDSliceAsStormHashSlice(contract.Transactions),
+		CoinInput:         StormHashFromCoinOutputID(contract.CoinInput),
+	}
+	if contract.SpenditureData != nil {
+		scontract.SpenditureData = &StormAtomicSwapContractSpenditureData{
+			ContractFulfillment: StormAtomicSwapFulfillmentFromAtomicSwapFulfillment(contract.SpenditureData.ContractFulfillment),
+			CoinOutput:          StormHashFromCoinOutputID(contract.SpenditureData.CoinOutput),
+		}
+	}
+	err = son.node.Save(&scontract)
 	if err != nil {
 		return fmt.Errorf("failed to save contract %s by (object) data ID %d: %v", contract.UnlockHash.String(), obj.DataID, err)
 	}
@@ -818,7 +886,14 @@ func (son *stormObjectNode) UpdateOutputSpenditureData(outputID types.OutputID, 
 	if err != nil {
 		return Output{}, err
 	}
-	output.SpenditureData = spenditureData
+	if spenditureData == nil {
+		output.SpenditureData = nil
+	} else {
+		output.SpenditureData = &StormOutputSpenditureData{
+			Fulfillment:              StormUnlockFulfillmentFromUnlockFulfillment(spenditureData.Fulfillment),
+			FulfillmentTransactionID: StormHashFromTransactionID(spenditureData.FulfillmentTransactionID),
+		}
+	}
 	err = son.node.Update(&output)
 	if err != nil {
 		return Output{}, err

@@ -87,12 +87,13 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:f7499626626215283473733b7428e3b26457a92cf9dbb1518262fbc4f7523423"
+  digest = "1:15e73447582bf3fcc69c90eea50469daff2668e1a9270a66b7d4b14adabc3aba"
   name = "github.com/asdine/storm"
   packages = [
     ".",
     "codec",
     "codec/json",
+    "codec/msgpack",
     "index",
     "internal",
     "q",
@@ -160,6 +161,14 @@
   pruneopts = "UT"
   revision = "5ccd90ef52e1e632236f7326478d4faa74f99438"
   version = "v0.2.3"
+
+[[projects]]
+  digest = "1:573ca21d3669500ff845bdebee890eb7fc7f0f50c59f2132f2a0c6b03d85086a"
+  name = "github.com/golang/protobuf"
+  packages = ["proto"]
+  pruneopts = "UT"
+  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
+  version = "v1.3.2"
 
 [[projects]]
   digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
@@ -442,6 +451,29 @@
   version = "v1.1.2"
 
 [[projects]]
+  digest = "1:bdbeee77ecd82dc2e9bdc6deab3739fb968d953f8660b5577c74585a119db40c"
+  name = "github.com/vmihailenco/msgpack"
+  packages = [
+    ".",
+    "codes",
+  ]
+  pruneopts = "UT"
+  revision = "cd92a145e6d2ce09e792f838dc0b669b680aea29"
+  version = "v4.1.1"
+
+[[projects]]
+  digest = "1:6ed13021ce04904b5d9fe9e0e442b630f21f09bbcbe31d315c056e9d56dc486c"
+  name = "github.com/vmihailenco/tagparser"
+  packages = [
+    ".",
+    "internal",
+    "internal/parser",
+  ]
+  pruneopts = "UT"
+  revision = "30ae5c3178272fa372e1e9c17e68f181e0ebe285"
+  version = "v0.1.0"
+
+[[projects]]
   branch = "master"
   digest = "1:e7b091967bad5c6d958dae84215f073654e66c742fb8473c0c97ed9b18b9af09"
   name = "gitlab.com/NebulousLabs/fastrand"
@@ -489,9 +521,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:94002ae1eb37d085f9aca990b3246b0cf6f0d114b5c0924aedd8eaf2a912143f"
+  digest = "1:782acaf5c8fdbc4df11fea2bc43cdec74e6fa069df93d3cae9676a5f75f467f7"
   name = "golang.org/x/net"
   packages = [
+    "context",
     "html",
     "html/atom",
     "html/charset",
@@ -539,6 +572,26 @@
   version = "v0.3.2"
 
 [[projects]]
+  digest = "1:f4d6f1de81abede35943b5f9d8106c9a4579d3ea5a19d0991be3055e3383254b"
+  name = "google.golang.org/appengine"
+  packages = [
+    ".",
+    "datastore",
+    "datastore/internal/cloudkey",
+    "datastore/internal/cloudpb",
+    "internal",
+    "internal/app_identity",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/modules",
+    "internal/remote_api",
+  ]
+  pruneopts = "UT"
+  revision = "971852bfffca25b069c31162ae8f247a3dba083b"
+  version = "v1.6.5"
+
+[[projects]]
   digest = "1:3a8ecdedfd4149826ed0146acd8b8b1d5f7493e2cd642ee6c902234f6e6434fd"
   name = "gopkg.in/go-playground/validator.v9"
   packages = ["."]
@@ -568,6 +621,8 @@
     "github.com/NebulousLabs/go-upnp",
     "github.com/NebulousLabs/merkletree",
     "github.com/asdine/storm",
+    "github.com/asdine/storm/codec/msgpack",
+    "github.com/asdine/storm/q",
     "github.com/bgentry/speakeasy",
     "github.com/gobwas/glob",
     "github.com/julienschmidt/httprouter",
@@ -586,6 +641,7 @@
     "github.com/tyler-smith/go-bip39",
     "github.com/vektah/gqlparser",
     "github.com/vektah/gqlparser/ast",
+    "github.com/vmihailenco/msgpack",
     "go.etcd.io/bbolt",
     "golang.org/x/crypto/blake2b",
     "golang.org/x/crypto/ed25519",

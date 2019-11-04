@@ -50,6 +50,12 @@ func (contract *AtomicSwapContract) contractData(ctx context.Context) (*atomicSw
 }
 
 func (contract *AtomicSwapContract) _contractDataOnce() {
+	defer func() {
+		if e := recover(); e != nil {
+			contract.dataErr = fmt.Errorf("failed to fetch atomic swap contract %s data from DB: %v", contract.uh.String(), e)
+		}
+	}()
+
 	dbContract, err := contract.db.GetAtomicSwapContract(contract.uh)
 	if err != nil {
 		if err != explorerdb.ErrNotFound {
