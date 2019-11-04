@@ -372,6 +372,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:21621b05b583193bc61a66652ec488d8757fd5945b2e358310efc2382d308faf"
+  name = "gitlab.com/NebulousLabs/entropy-mnemonics"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "7532f67e35008b0f36bbebb20d5a6ee8f14a22f5"
+
+[[projects]]
+  branch = "master"
   digest = "1:e7b091967bad5c6d958dae84215f073654e66c742fb8473c0c97ed9b18b9af09"
   name = "gitlab.com/NebulousLabs/fastrand"
   packages = ["."]
@@ -432,7 +440,7 @@
   revision = "543471e840be449c53d44b32c7adf1261ad67e37"
 
 [[projects]]
-  digest = "1:8a0baffd5559acaa560f854d7d525c02f4fec2d4f8a214398556fb661a10f6e0"
+  digest = "1:7570a3e4daa14b7627089e77ad8c714f5f36b4cf1b7dfd8510df7d6935dc42a0"
   name = "golang.org/x/text"
   packages = [
     "encoding",
@@ -449,11 +457,14 @@
     "internal/language",
     "internal/language/compact",
     "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
     "internal/utf8internal",
     "language",
     "runes",
     "transform",
     "unicode/cldr",
+    "unicode/norm",
   ]
   pruneopts = "UT"
   revision = "342b2e1fbaa52c93f31447ad2c6abc048c63e475"
@@ -501,6 +512,7 @@
     "github.com/stellar/go/protocols/horizon",
     "github.com/stellar/go/txnbuild",
     "github.com/tyler-smith/go-bip39",
+    "gitlab.com/NebulousLabs/entropy-mnemonics",
     "golang.org/x/crypto/blake2b",
     "golang.org/x/crypto/ed25519",
     "golang.org/x/crypto/twofish",
