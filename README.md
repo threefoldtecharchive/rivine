@@ -27,33 +27,6 @@ Main Repositories
     Ethereum and bitcoin light client atomic swap support
 - [rivine-UI](https://github.com/threefoldtech/rivine-UI)
         Desktop UI for a rivine full node and wallet
-        
-Releases
---------
-
-- 1.1.5 kanban
-    - Full Electrum protocol 
-    - Zero-Db support for the storage
-    - Change  explorer storage
-
-- 1.1.4
-    - Freeflow token
-    - better container support:
-        - delegated staking
-
-- 1.1.3
-    - Ethereum erc20 tokens and bridge
-    - Rework deployment templates
-    - Electrum module with support for address notifications
-  
-- 1.1.2 (<https://github.com/orgs/threefoldtech/projects/1>):
-    - digitalme (3Bot) support (<https://github.com/threefoldtech/home/issues/42>);
-    - testnet faucet (<https://github.com/threefoldtech/home/issues/36>);
-    - Extensions: minting and authorized addresses
-    - better container support:
-        - unencrypted wallets
-    - tool for easier custom chain creation
-
   
 Usage
 -----
