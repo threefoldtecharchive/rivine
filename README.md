@@ -27,7 +27,9 @@ Main Repositories
     Ethereum, Stellar and bitcoin light client atomic swap support
 - [rivine-UI](https://github.com/threefoldtech/rivine-UI)
         Desktop UI for a rivine full node and wallet
-  
+- [ERC20 Extension](https://github.com/threefoldtech/rivine-extension-erc20)
+        Extension for a a rivine Ethereum ERC20 token
+
 Usage
 -----
 
