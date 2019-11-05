@@ -110,9 +110,14 @@ type (
 		Type                 OutputType           `storm:"index", msgpack:"t"`
 		Value                StormBigInt          `msgpack:"v"`
 		Condition            StormUnlockCondition `msgpack:"c"`
-		UnlockReferencePoint ReferencePoint       `storm:"index", msgpack:"urp"`
+		UnlockReferencePoint ReferencePoint       `storm:"index", msgpack:"urp"` // required for reverting outputs
 
 		SpenditureData *StormOutputSpenditureData `storm:"index", msgpack:"sd"`
+	}
+
+	StormLockedOutput struct {
+		DataID               StormDataID    `storm:"id", msgpack:"id"`
+		UnlockReferencePoint ReferencePoint `storm:"index", msgpack:"urp"`
 	}
 
 	StormBaseWalletData struct {
@@ -354,7 +359,8 @@ const (
 	nodeObjectKeyDataID     = "DataID"
 	nodeObjectKeyUnlockHash = "UnlockHash"
 
-	nodeObjectOutputKeySpenditureData = "SpenditureData"
+	nodeObjectOutputKeySpenditureData       = "SpenditureData"
+	nodeObjectOutputKeyUnlockReferencePoint = "UnlockReferencePoint"
 )
 
 type (
@@ -370,8 +376,6 @@ type (
 		GetSingleSignatureWallet(types.UnlockHash) (SingleSignatureWalletData, error)
 		GetMultiSignatureWallet(types.UnlockHash) (MultiSignatureWalletData, error)
 		GetAtomicSwapContract(types.UnlockHash) (AtomicSwapContract, error)
-
-		GetStormOutputsbyUnlockReferencePoint(types.BlockHeight, types.Timestamp, types.Timestamp) ([]StormOutput, error)
 	}
 
 	stormObjectNodeReaderWriter interface {
@@ -381,17 +385,19 @@ type (
 
 		SaveBlockWithFacts(*Block, *BlockFacts) error
 		SaveTransaction(*Transaction) error
-		SaveOutput(*Output) error
+		SaveOutput(*Output, types.BlockHeight, types.Timestamp) error
 		SaveFreeForAllWallet(*FreeForAllWalletData) error
 		SaveSingleSignatureWallet(*SingleSignatureWalletData) error
 		SaveMultiSignatureWallet(*MultiSignatureWalletData) error
 		SaveAtomicSwapContract(*AtomicSwapContract) error
 
 		UpdateOutputSpenditureData(types.OutputID, *OutputSpenditureData) (Output, error)
+		UnlockLockedOutputs(types.BlockHeight, types.Timestamp, types.Timestamp) ([]StormOutput, error)
+		RelockLockedOutputs(types.BlockHeight, types.Timestamp, types.Timestamp) ([]StormOutput, error)
 
 		DeleteBlock(types.BlockID) (Block, error)
 		DeleteTransaction(types.TransactionID) (Transaction, error)
-		DeleteOutput(types.OutputID) (Output, error)
+		DeleteOutput(types.OutputID, types.BlockHeight, types.Timestamp) (Output, error)
 		DeleteFreeForAllWallet(types.UnlockHash) error
 		DeleteSingleSignatureWallet(types.UnlockHash) error
 		DeleteMultiSignatureWallet(types.UnlockHash) error
@@ -510,7 +516,7 @@ func (son *stormObjectNode) SaveTransaction(txn *Transaction) error {
 	return nil
 }
 
-func (son *stormObjectNode) SaveOutput(output *Output) error {
+func (son *stormObjectNode) SaveOutput(output *Output, height types.BlockHeight, timestamp types.Timestamp) error {
 	obj := StormObject{
 		ObjectID:      ObjectID(output.ID[:]),
 		ObjectType:    ObjectTypeOutput,
@@ -540,6 +546,15 @@ func (son *stormObjectNode) SaveOutput(output *Output) error {
 	err = son.node.Save(&sout)
 	if err != nil {
 		return fmt.Errorf("failed to save output %s by (object) data ID %d: %v", output.ID.String(), obj.DataID, err)
+	}
+	if !output.UnlockReferencePoint.Reached(height, timestamp) {
+		err = son.node.Save(&StormLockedOutput{
+			DataID:               obj.DataID, // automatically incremented in previous save call
+			UnlockReferencePoint: output.UnlockReferencePoint,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to save output %s by (object) data ID %d as locked: %v", output.ID.String(), obj.DataID, err)
+		}
 	}
 	return nil
 }
@@ -865,16 +880,6 @@ func (son *stormObjectNode) getAtomicSwapContractByDataID(uh types.UnlockHash, d
 	return scontract.AsAtomicSwapContract(uh), nil
 }
 
-func (son *stormObjectNode) GetStormOutputsbyUnlockReferencePoint(height types.BlockHeight, minTimestamp, maxInclusiveTimestamp types.Timestamp) (outputs []StormOutput, err error) {
-	err = son.node.Select(q.Or(
-		q.Eq("UnlockReferencePoint", ReferencePoint(height)),
-		q.And(
-			q.Gt("UnlockReferencePoint", ReferencePoint(minTimestamp)),
-			q.Lte("UnlockReferencePoint", ReferencePoint(maxInclusiveTimestamp)),
-		))).Find(&outputs)
-	return
-}
-
 func (son *stormObjectNode) UpdateOutputSpenditureData(outputID types.OutputID, spenditureData *OutputSpenditureData) (Output, error) {
 	var object StormObject
 	err := son.node.One(nodeObjectKeyObjectID, ObjectID(outputID[:]), &object)
@@ -901,6 +906,68 @@ func (son *stormObjectNode) UpdateOutputSpenditureData(outputID types.OutputID, 
 	return output.AsOutput(outputID), nil
 }
 
+func (son *stormObjectNode) UnlockLockedOutputs(height types.BlockHeight, minTimestamp, maxInclusiveTimestamp types.Timestamp) ([]StormOutput, error) {
+	// fetch all unlocked outputs
+	var lockedOutputs []StormLockedOutput
+	err := son.node.Select(q.Or(
+		q.Eq(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(height)),
+		q.And(
+			q.Gt(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(minTimestamp)),
+			q.Lte(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(maxInclusiveTimestamp)),
+		))).Find(&lockedOutputs)
+	if err != nil {
+		return nil, err
+	}
+	if len(lockedOutputs) == 0 {
+		return nil, nil // nothing to do
+	}
+	// gather the data identifiers of the locked outputs
+	dataIdentifiers := make([]StormDataID, 0, len(lockedOutputs))
+	for _, lo := range lockedOutputs {
+		dataIdentifiers = append(dataIdentifiers, lo.DataID)
+		// delete unlocked output as well
+		err = son.node.DeleteStruct(&lo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete unlocked (previously) locked output by data ID %d: %v", lo.DataID, err)
+		}
+	}
+	// fetch all unlocked storm outputs, so callee is aware of their details
+	var stormOutputs []StormOutput
+	err = son.node.Select(q.In(nodeObjectKeyDataID, dataIdentifiers)).Find(&stormOutputs)
+	return stormOutputs, err
+}
+
+func (son *stormObjectNode) RelockLockedOutputs(height types.BlockHeight, minTimestamp, maxInclusiveTimestamp types.Timestamp) ([]StormOutput, error) {
+	// fetch all unlocked outputs
+	var unlockedOutputs []StormOutput
+	err := son.node.Select(q.Or(
+		q.Eq(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(height)),
+		q.And(
+			q.Gt(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(minTimestamp)),
+			q.Lte(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(maxInclusiveTimestamp)),
+		))).Find(&unlockedOutputs)
+	if err != nil {
+		return nil, err
+	}
+	if len(unlockedOutputs) == 0 {
+		return nil, nil // nothing to do
+	}
+	// gather the data identifiers of the locked outputs
+	dataIdentifiers := make([]StormDataID, 0, len(unlockedOutputs))
+	for _, uo := range unlockedOutputs {
+		dataIdentifiers = append(dataIdentifiers, uo.DataID)
+		// revert unlocked output as well (locking it again)
+		err = son.node.Save(&StormLockedOutput{
+			DataID:               uo.DataID, // automatically incremented in previous save call
+			UnlockReferencePoint: uo.UnlockReferencePoint,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to save output by (object) data ID %d as locked: %v", uo.DataID, err)
+		}
+	}
+	return unlockedOutputs, err
+}
+
 func (son *stormObjectNode) DeleteBlock(blockID types.BlockID) (Block, error) {
 	var block StormBlock
 	err := son.deleteObject(ObjectID(blockID[:]), &block)
@@ -919,11 +986,15 @@ func (son *stormObjectNode) DeleteTransaction(txnID types.TransactionID) (Transa
 	return txn.AsTransaction(txnID), nil
 }
 
-func (son *stormObjectNode) DeleteOutput(outputID types.OutputID) (Output, error) {
+func (son *stormObjectNode) DeleteOutput(outputID types.OutputID, height types.BlockHeight, timestamp types.Timestamp) (Output, error) {
 	var output StormOutput
 	err := son.deleteObject(ObjectID(outputID[:]), &output)
 	if err != nil {
 		return Output{}, err
+	}
+	if !output.UnlockReferencePoint.Reached(height, timestamp) {
+		// TODO: log error??
+		son.deleteObject(ObjectID(outputID[:]), new(StormLockedOutput))
 	}
 	return output.AsOutput(outputID), nil
 }

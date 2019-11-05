@@ -453,7 +453,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 	var output *Output
 	for idx := range outputs {
 		output = &outputs[idx]
-		err = node.SaveOutput(output)
+		err = node.SaveOutput(output, block.Height, block.Timestamp)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to apply block: failed to save output %s (#%d) of parent %s: %v",
@@ -539,7 +539,7 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 		if err != nil {
 			return ChainAggregatedFacts{}, nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
 		}
-		outputsUnlocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, previousBlock.Timestamp, timestamp)
+		outputsUnlocked, err = objectNode.UnlockLockedOutputs(height, previousBlock.Timestamp, timestamp)
 		if err != nil {
 			if err == storm.ErrNotFound {
 				// ignore not found
@@ -987,7 +987,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	// delete outputs
 	outputSlice := make([]*Output, 0, len(outputs))
 	for _, outputID := range outputs {
-		output, err := node.DeleteOutput(outputID)
+		output, err := node.DeleteOutput(outputID, blockContext.Height, blockContext.Timestamp)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to revert block: failed to delete unspent output %s of block %s by ID: %v",
@@ -1046,7 +1046,7 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 		if err != nil {
 			return nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
 		}
-		outputsLocked, err = objectNode.GetStormOutputsbyUnlockReferencePoint(height, previousBlock.Timestamp, timestamp)
+		outputsLocked, err = objectNode.RelockLockedOutputs(height, previousBlock.Timestamp, timestamp)
 		if err != nil {
 			if err == storm.ErrNotFound {
 				// ignore not found
