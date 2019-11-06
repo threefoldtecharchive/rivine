@@ -970,6 +970,12 @@ func (son *stormObjectNode) unlockLockedOutputsByHeight(height types.BlockHeight
 }
 
 func (son *stormObjectNode) unlockLockedOutputsByTimeRange(minTimestamp, maxInclusiveTimestamp types.Timestamp) ([]StormOutput, error) {
+	if maxInclusiveTimestamp <= minTimestamp {
+		// NOTE: this is only possible due to the fact that in a hacky way
+		// rivine allows this to facilitate the POBS algorithm as well
+		// as block creators with skewed clocks.
+		return nil, nil // nothing to do
+	}
 	buckets := GetTimestampBucketIdentifiersForTimestampRange(minTimestamp, maxInclusiveTimestamp)
 	bucketCollections := make([]StormLockedOutputsByBucketTimestamp, len(buckets))
 	var err error
@@ -1055,13 +1061,25 @@ func (son *stormObjectNode) unlockLockedOutputsByTimeRange(minTimestamp, maxIncl
 
 func (son *stormObjectNode) RelockLockedOutputs(height types.BlockHeight, minTimestamp, maxInclusiveTimestamp types.Timestamp) ([]StormOutput, error) {
 	// fetch all unlocked outputs
-	var relockedOutputs []StormOutput
-	err := son.node.Select(q.Or(
-		q.Eq(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(height)),
-		q.And(
-			q.Gt(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(minTimestamp)),
-			q.Lte(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(maxInclusiveTimestamp)),
-		))).Find(&relockedOutputs)
+	var (
+		err             error
+		relockTimeBased bool
+		relockedOutputs []StormOutput
+	)
+	if maxInclusiveTimestamp <= minTimestamp {
+		// NOTE: this is only possible due to the fact that in a hacky way
+		// rivine allows this to facilitate the POBS algorithm as well
+		// as block creators with skewed clocks.
+		err = son.node.Select(q.Eq(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(height))).Find(&relockedOutputs)
+	} else {
+		relockTimeBased = true
+		err = son.node.Select(q.Or(
+			q.Eq(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(height)),
+			q.And(
+				q.Gt(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(minTimestamp)),
+				q.Lte(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(maxInclusiveTimestamp)),
+			))).Find(&relockedOutputs)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1087,31 +1105,38 @@ func (son *stormObjectNode) RelockLockedOutputs(height types.BlockHeight, minTim
 		heightCollection.DataIDs = append(heightCollection.DataIDs, dataID)
 		return nil
 	}
-	buckets := GetTimestampBucketIdentifiersForTimestampRange(minTimestamp, maxInclusiveTimestamp)
-	timeBucketCollections := make(map[StormTimeBucketID]*StormLockedOutputsByBucketTimestamp, len(buckets)) // multiple can be possible by timestamp (unless the chain is sick it shouldn't be more then 2)
-	relockByTimestamp := func(dataID StormDataID, ts types.Timestamp) error {
-		bucketID, bucketOffset := GetTimestampBucketAndOffset(ts)
-		timeCollection, ok := timeBucketCollections[bucketID]
-		if !ok {
-			timeCollection = new(StormLockedOutputsByBucketTimestamp)
-			err := son.node.One(nodeObjectOutputKeyBucketID, bucketID, timeCollection)
-			if err != nil {
-				return err
+	var (
+		buckets               []StormTimeBucketID
+		relockByTimestamp     func(dataID StormDataID, ts types.Timestamp) error
+		timeBucketCollections map[StormTimeBucketID]*StormLockedOutputsByBucketTimestamp
+	)
+	if relockTimeBased {
+		buckets = GetTimestampBucketIdentifiersForTimestampRange(minTimestamp, maxInclusiveTimestamp)
+		timeBucketCollections = make(map[StormTimeBucketID]*StormLockedOutputsByBucketTimestamp, len(buckets)) // multiple can be possible by timestamp (unless the chain is sick it shouldn't be more then 2)
+		relockByTimestamp = func(dataID StormDataID, ts types.Timestamp) error {
+			bucketID, bucketOffset := GetTimestampBucketAndOffset(ts)
+			timeCollection, ok := timeBucketCollections[bucketID]
+			if !ok {
+				timeCollection = new(StormLockedOutputsByBucketTimestamp)
+				err := son.node.One(nodeObjectOutputKeyBucketID, bucketID, timeCollection)
+				if err != nil {
+					return err
+				}
+				timeBucketCollections[bucketID] = timeCollection
 			}
-			timeBucketCollections[bucketID] = timeCollection
-		}
-		for _, knownPair := range timeCollection.Pairs {
-			if knownPair.DataID == dataID {
-				return fmt.Errorf(
-					"output with data id %d is already referenced in the locked output (by timestamp %d, bucket %d) collection",
-					dataID, ts, bucketID)
+			for _, knownPair := range timeCollection.Pairs {
+				if knownPair.DataID == dataID {
+					return fmt.Errorf(
+						"output with data id %d is already referenced in the locked output (by timestamp %d, bucket %d) collection",
+						dataID, ts, bucketID)
+				}
 			}
+			timeCollection.Pairs = append(timeCollection.Pairs, StormDataIDTimestampPair{
+				DataID: dataID,
+				Offset: bucketOffset,
+			})
+			return nil
 		}
-		timeCollection.Pairs = append(timeCollection.Pairs, StormDataIDTimestampPair{
-			DataID: dataID,
-			Offset: bucketOffset,
-		})
-		return nil
 	}
 	// go through each unlocked output and store a lockd by reference once again
 	for _, uo := range relockedOutputs {
