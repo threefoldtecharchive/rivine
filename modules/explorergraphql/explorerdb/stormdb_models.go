@@ -1013,6 +1013,7 @@ func (son *stormObjectNode) unlockLockedOutputsByTimeRange(minTimestamp, maxIncl
 					"failed to delete (by range) collection for time-based bucket %d: %v",
 					bucketCollection.BucketID, err)
 			}
+			continue // work is done for this collection
 		}
 		// otherwise we have to go through the list and manually delete those that fall within range,
 		// and only delete the bucket if it is empty
