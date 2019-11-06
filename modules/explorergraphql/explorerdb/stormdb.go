@@ -14,6 +14,8 @@ import (
 	"github.com/asdine/storm"
 	smsp "github.com/asdine/storm/codec/msgpack"
 	bolt "go.etcd.io/bbolt"
+
+	mp "github.com/vmihailenco/msgpack"
 )
 
 const (
@@ -89,19 +91,19 @@ const (
 
 // used for block rp -> bID node
 type blockReferencePointIDPair struct {
-	Reference ReferencePoint `storm:"id"`
-	BlockID   StormHash
+	Reference ReferencePoint `storm:"id", msgpack:"rp"`
+	BlockID   StormHash      `msgpack:"bid"`
 }
 
 // used for unlockHash -> PublicKey node
 type unlockHashPublicKeyPair struct {
-	UnlockHash         StormUnlockHash `storm:"id"`
-	PublicKeyAlgorithm uint8
-	PublicKeyHash      []byte
+	UnlockHash         StormUnlockHash `storm:"id", msgpack:"uh"`
+	PublicKeyAlgorithm uint8           `msgpack:"pa"`
+	PublicKeyHash      []byte          `msgpack:"pk"`
 }
 
 type stormDBInternalData struct {
-	LastDataID StormDataID
+	LastDataID StormDataID `msgpack:"ldid"`
 }
 
 // used for intermediate collections of updates to a specific unlock hash
@@ -243,7 +245,7 @@ func (uhuc *unlockHashUpdateCollection) RegisterTransaction(uh types.UnlockHash,
 // TODO: where we use manual bolt calls, re-use existing bolt.Tx, once we do start using those somehow
 
 func (sdb *StormDB) saveInternalData(internalData stormDBInternalData) error {
-	b, err := rivbin.Marshal(internalData)
+	b, err := mp.Marshal(internalData)
 	if err != nil {
 		return fmt.Errorf(
 			"failed to marshal internal stormDB data %v: %v", internalData, err)
@@ -276,7 +278,7 @@ func (sdb *StormDB) getInternalData() (stormDBInternalData, error) {
 		}, nil
 	}
 	var internalData stormDBInternalData
-	err = rivbin.Unmarshal(internalDataBytes, &internalData)
+	err = mp.Unmarshal(internalDataBytes, &internalData)
 	if err != nil {
 		return stormDBInternalData{}, fmt.Errorf(
 			"failed to unmarshal internal stormDB data %x: %v", internalDataBytes, err)
@@ -392,7 +394,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		return err
 	}
 
-	node := newStormObjectNodeReaderWriter(sdb, sdbInternalData.LastDataID)
+	node := newStormObjectNodeReaderWriter(sdb, sdbInternalData.LastDataID, sdb.logger)
 	blockNode := sdb.rootNode(nodeNameBlocks)
 	publicKeysNode := sdb.rootNode(nodeNamePublicKeys)
 
@@ -939,7 +941,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		return err
 	}
 
-	node := newStormObjectNodeReaderWriter(sdb, sdbInternalData.LastDataID)
+	node := newStormObjectNodeReaderWriter(sdb, sdbInternalData.LastDataID, sdb.logger)
 	blockNode := sdb.rootNode(nodeNameBlocks)
 
 	// used to update wallets and contracts
@@ -1359,25 +1361,25 @@ func mapStormErrorToExplorerDBError(err error) error {
 }
 
 func (sdb *StormDB) GetObject(id ObjectID) (Object, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	obj, err := node.GetObject(id)
 	return obj, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetObjectInfo(id ObjectID) (ObjectInfo, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	objInfo, err := node.GetObjectInfo(id)
 	return objInfo, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	block, err := node.GetBlock(id)
 	return block, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetBlockFacts(id types.BlockID) (BlockFacts, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	facts, err := node.GetBlockFacts(id)
 	return facts, mapStormErrorToExplorerDBError(err)
 }
@@ -1419,37 +1421,37 @@ func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts
 }
 
 func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	txn, err := node.GetTransaction(id)
 	return txn, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	output, err := node.GetOutput(id)
 	return output, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetFreeForAllWallet(uh types.UnlockHash) (FreeForAllWalletData, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	wallet, err := node.GetFreeForAllWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetSingleSignatureWallet(uh types.UnlockHash) (SingleSignatureWalletData, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	wallet, err := node.GetSingleSignatureWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	wallet, err := node.GetMultiSignatureWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
-	node := newStormObjectNodeReader(sdb)
+	node := newStormObjectNodeReader(sdb, sdb.logger)
 	contract, err := node.GetAtomicSwapContract(uh)
 	return contract, mapStormErrorToExplorerDBError(err)
 }

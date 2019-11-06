@@ -2,42 +2,15 @@ package explorerdb
 
 import (
 	"fmt"
-	"io"
 
 	"github.com/asdine/storm"
 	"github.com/asdine/storm/q"
 
-	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
+	"github.com/threefoldtech/rivine/persist"
 	"github.com/threefoldtech/rivine/types"
 )
 
 // TODO: link DataID instead of ObjectID
-
-// Bucket models
-type (
-	StormChainContext struct {
-		ConsensusChangeID StormHash
-		Height            types.BlockHeight
-		Timestamp         types.Timestamp
-		BlockID           StormHash
-	}
-
-	StormBlockFactsContext struct {
-		Target    StormHash
-		Timestamp types.Timestamp
-	}
-
-	StormChainAggregatedFacts struct {
-		TotalCoins       StormBigInt
-		TotalLockedCoins StormBigInt
-
-		TotalBlockStakes           StormBigInt
-		TotalLockedBlockStakes     StormBigInt
-		EstimatedActiveBlockStakes StormBigInt
-
-		LastBlocks []StormBlockFactsContext
-	}
-)
 
 // Node Models
 type (
@@ -115,9 +88,18 @@ type (
 		SpenditureData *StormOutputSpenditureData `storm:"index", msgpack:"sd"`
 	}
 
-	StormLockedOutput struct {
-		DataID               StormDataID    `storm:"id", msgpack:"id"`
-		UnlockReferencePoint ReferencePoint `storm:"index", msgpack:"urp"`
+	StormLockedOutputsByHeight struct {
+		Height  types.BlockHeight `storm:"id", msgpack:"h"`
+		DataIDs []StormDataID     `msgpack:"ids"`
+	}
+
+	StormDataIDTimestampPair struct {
+		DataID StormDataID           `msgpack:"id"`
+		Offset StormTimeBucketOffset `msgpack:"o,omitempty"`
+	}
+	StormLockedOutputsByBucketTimestamp struct {
+		BucketID StormTimeBucketID          `storm:"id", msgpack:"t"`
+		Pairs    []StormDataIDTimestampPair `msgpack:"p"`
 	}
 
 	StormBaseWalletData struct {
@@ -168,6 +150,52 @@ type (
 		SpenditureData *StormAtomicSwapContractSpenditureData `storm:"index", msgpack:"sd"`
 	}
 )
+
+type (
+	StormTimeBucketID     uint64
+	StormTimeBucketOffset uint8
+)
+
+const (
+	// needs to fit in an uint8,
+	// and want to leave some room for possible extension flags in future
+	tsBasedBucketRange = 240
+)
+
+func GetTimestampBucketAndOffset(ts types.Timestamp) (StormTimeBucketID, StormTimeBucketOffset) {
+	return StormTimeBucketID(ts / tsBasedBucketRange), StormTimeBucketOffset(ts % tsBasedBucketRange)
+}
+
+func GetTimestampBucketIdentifiersForTimestampRange(startExclusive, endInclusive types.Timestamp) (buckets []StormTimeBucketID) {
+	if startExclusive >= endInclusive {
+		panic(fmt.Sprintf(
+			"invalid startExclusive %d or endInclusive %d values for getting time-based buckets for locked outputs",
+			startExclusive, endInclusive))
+	}
+
+	dur := uint64(endInclusive - startExclusive)
+
+	bucket, bucketOffset := GetTimestampBucketAndOffset(startExclusive + 1)
+	buckets = append(buckets, bucket)
+	interval := uint64(tsBasedBucketRange - bucketOffset)
+
+	for dur > interval {
+		dur -= interval
+		bucket++
+		buckets = append(buckets, bucket)
+		interval = tsBasedBucketRange
+	}
+
+	return
+}
+
+func GetStormDataIDTimestampPairsForDataIDTimestampPair(dataID StormDataID, ts types.Timestamp) (StormTimeBucketID, StormDataIDTimestampPair) {
+	bucket, bucketOffset := GetTimestampBucketAndOffset(ts)
+	return bucket, StormDataIDTimestampPair{
+		DataID: dataID,
+		Offset: bucketOffset,
+	}
+}
 
 func (sblock *StormBlock) AsBlock(blockID types.BlockID) Block {
 	return Block{
@@ -282,36 +310,11 @@ func (swallet *StormFreeForAllWalletData) AsFreeForAllWallet(uh types.UnlockHash
 	}
 }
 
-// Required to write these functions ourselves,
-// as Rivine Encoding ignores anonymous fields (embedded fields are anonymous).
-// Not sure why Rivine Encoding (inspired by Sia Encoding) choose to ignore this,
-// but it does, that is what matters.
-func (swallet StormFreeForAllWalletData) MarshalRivine(w io.Writer) error {
-	return rivbin.NewEncoder(w).Encode(swallet.StormBaseWalletData)
-}
-func (swallet *StormFreeForAllWalletData) UnmarshalRivine(r io.Reader) error {
-	return rivbin.NewDecoder(r).Decode(&swallet.StormBaseWalletData)
-}
-
 func (swallet *StormSingleSignatureWalletData) AsSingleSignatureWallet(uh types.UnlockHash) SingleSignatureWalletData {
 	return SingleSignatureWalletData{
 		WalletData:            swallet.AsWalletData(uh),
 		MultiSignatureWallets: StormUnlockHashSliceAsUnlockHashSlice(swallet.MultiSignatureWallets),
 	}
-}
-
-// Required to write these functions ourselves,
-// as Rivine Encoding ignores anonymous fields (embedded fields are anonymous).
-// Not sure why Rivine Encoding (inspired by Sia Encoding) choose to ignore this,
-// but it does, that is what matters.
-func (swallet StormSingleSignatureWalletData) MarshalRivine(w io.Writer) error {
-	return rivbin.NewEncoder(w).EncodeAll(
-		swallet.StormBaseWalletData, swallet.MultiSignatureWallets)
-}
-
-func (swallet *StormSingleSignatureWalletData) UnmarshalRivine(r io.Reader) error {
-	return rivbin.NewDecoder(r).DecodeAll(
-		&swallet.StormBaseWalletData, &swallet.MultiSignatureWallets)
 }
 
 func (swallet *StormMultiSignatureWalletData) AsMultiSignatureWallet(uh types.UnlockHash) MultiSignatureWalletData {
@@ -320,20 +323,6 @@ func (swallet *StormMultiSignatureWalletData) AsMultiSignatureWallet(uh types.Un
 		Owners:                StormUnlockHashSliceAsUnlockHashSlice(swallet.Owners),
 		RequiredSgnatureCount: swallet.RequiredSignatureCount,
 	}
-}
-
-// Required to write these functions ourselves,
-// as Rivine Encoding ignores anonymous fields (embedded fields are anonymous).
-// Not sure why Rivine Encoding (inspired by Sia Encoding) choose to ignore this,
-// but it does, that is what matters.
-func (swallet StormMultiSignatureWalletData) MarshalRivine(w io.Writer) error {
-	return rivbin.NewEncoder(w).EncodeAll(
-		swallet.StormBaseWalletData, swallet.Owners, swallet.RequiredSignatureCount)
-}
-
-func (swallet *StormMultiSignatureWalletData) UnmarshalRivine(r io.Reader) error {
-	return rivbin.NewDecoder(r).DecodeAll(
-		&swallet.StormBaseWalletData, &swallet.Owners, &swallet.RequiredSignatureCount)
 }
 
 func (scontract *StormAtomicSwapContract) AsAtomicSwapContract(uh types.UnlockHash) AtomicSwapContract {
@@ -361,6 +350,8 @@ const (
 
 	nodeObjectOutputKeySpenditureData       = "SpenditureData"
 	nodeObjectOutputKeyUnlockReferencePoint = "UnlockReferencePoint"
+	nodeObjectOutputKeyHeight               = "Height"
+	nodeObjectOutputKeyBucketID             = "BucketID"
 )
 
 type (
@@ -412,18 +403,22 @@ const (
 type stormObjectNode struct {
 	node       storm.Node
 	lastDataID StormDataID
+	logger     *persist.Logger
 }
 
-func newStormObjectNodeReader(db *StormDB) stormObjectNodeReader {
+func newStormObjectNodeReader(db *StormDB, logger *persist.Logger) stormObjectNodeReader {
 	return &stormObjectNode{
-		node: db.rootNode(nodeNameObjects),
+		node:       db.rootNode(nodeNameObjects),
+		lastDataID: 0, // not given, nor needed
+		logger:     logger,
 	}
 }
 
-func newStormObjectNodeReaderWriter(db *StormDB, lastDataID StormDataID) stormObjectNodeReaderWriter {
+func newStormObjectNodeReaderWriter(db *StormDB, lastDataID StormDataID, logger *persist.Logger) stormObjectNodeReaderWriter {
 	return &stormObjectNode{
 		node:       db.rootNode(nodeNameObjects),
 		lastDataID: lastDataID,
+		logger:     logger,
 	}
 }
 
@@ -548,12 +543,50 @@ func (son *stormObjectNode) SaveOutput(output *Output, height types.BlockHeight,
 		return fmt.Errorf("failed to save output %s by (object) data ID %d: %v", output.ID.String(), obj.DataID, err)
 	}
 	if !output.UnlockReferencePoint.Reached(height, timestamp) {
-		err = son.node.Save(&StormLockedOutput{
-			DataID:               obj.DataID, // automatically incremented in previous save call
-			UnlockReferencePoint: output.UnlockReferencePoint,
-		})
+		err = son.saveLockedOutput(obj.DataID, output)
 		if err != nil {
 			return fmt.Errorf("failed to save output %s by (object) data ID %d as locked: %v", output.ID.String(), obj.DataID, err)
+		}
+	}
+	return nil
+}
+
+func (son *stormObjectNode) saveLockedOutput(dataID StormDataID, output *Output) error {
+	var err error
+	if output.UnlockReferencePoint.IsBlockHeight() {
+		height := types.BlockHeight(output.UnlockReferencePoint)
+		var lockedOutputs StormLockedOutputsByHeight
+		err = son.node.One(nodeObjectOutputKeyHeight, height, &lockedOutputs)
+		if err != nil {
+			if err != storm.ErrNotFound {
+				return fmt.Errorf("failed to get locked outputs (by height: %d) collection: %v", height, err)
+			}
+			lockedOutputs.Height = height
+			lockedOutputs.DataIDs = []StormDataID{dataID}
+		} else {
+			lockedOutputs.DataIDs = append(lockedOutputs.DataIDs, dataID)
+		}
+		err = son.node.Save(&lockedOutputs)
+		if err != nil {
+			return fmt.Errorf("by height %d: %v", height, err)
+		}
+	} else { // by timestamp
+		blockTime := types.Timestamp(output.UnlockReferencePoint)
+		bucketID, pair := GetStormDataIDTimestampPairsForDataIDTimestampPair(dataID, blockTime)
+		var lockedOutputs StormLockedOutputsByBucketTimestamp
+		err = son.node.One(nodeObjectOutputKeyBucketID, bucketID, &lockedOutputs)
+		if err != nil {
+			if err != storm.ErrNotFound {
+				return fmt.Errorf("failed to get locked outputs (by time %d, bucket %d) collection: %v", blockTime, bucketID, err)
+			}
+			lockedOutputs.BucketID = bucketID
+			lockedOutputs.Pairs = []StormDataIDTimestampPair{pair}
+		} else {
+			lockedOutputs.Pairs = append(lockedOutputs.Pairs, pair)
+		}
+		err = son.node.Save(&lockedOutputs)
+		if err != nil {
+			return fmt.Errorf("by time %d (bucket %d): %v", blockTime, bucketID, err)
 		}
 	}
 	return nil
@@ -907,65 +940,206 @@ func (son *stormObjectNode) UpdateOutputSpenditureData(outputID types.OutputID, 
 }
 
 func (son *stormObjectNode) UnlockLockedOutputs(height types.BlockHeight, minTimestamp, maxInclusiveTimestamp types.Timestamp) ([]StormOutput, error) {
-	// fetch all unlocked outputs
-	var lockedOutputs []StormLockedOutput
-	err := son.node.Select(q.Or(
-		q.Eq(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(height)),
-		q.And(
-			q.Gt(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(minTimestamp)),
-			q.Lte(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(maxInclusiveTimestamp)),
-		))).Find(&lockedOutputs)
+	// fetch all unlocked locked outputs by height first
+	unlockedOutputs, err := son.unlockLockedOutputsByHeight(height)
 	if err != nil {
 		return nil, err
 	}
-	if len(lockedOutputs) == 0 {
-		return nil, nil // nothing to do
+	// fetch all unlocked locked outputs by time secondly and merge
+	unlockedOutputsByTime, err := son.unlockLockedOutputsByTimeRange(minTimestamp, maxInclusiveTimestamp)
+	return append(unlockedOutputs, unlockedOutputsByTime...), err
+}
+
+func (son *stormObjectNode) unlockLockedOutputsByHeight(height types.BlockHeight) ([]StormOutput, error) {
+	var lockedOutputs StormLockedOutputsByHeight
+	err := son.deleteByID(nodeObjectOutputKeyHeight, height, &lockedOutputs)
+	if err != nil {
+		if err == storm.ErrNotFound {
+			return nil, nil // no error
+		}
+		return nil, fmt.Errorf("failed to get locked outputs (by height: %d) collection (and delete it): %v", height, err)
 	}
-	// gather the data identifiers of the locked outputs
-	dataIdentifiers := make([]StormDataID, 0, len(lockedOutputs))
-	for _, lo := range lockedOutputs {
-		dataIdentifiers = append(dataIdentifiers, lo.DataID)
-		// delete unlocked output as well
-		err = son.node.DeleteStruct(&lo)
+	stormOutputs := make([]StormOutput, len(lockedOutputs.DataIDs))
+	for idx, dataID := range lockedOutputs.DataIDs {
+		err = son.node.One(nodeObjectKeyDataID, dataID, &stormOutputs[idx])
 		if err != nil {
-			return nil, fmt.Errorf("failed to delete unlocked (previously) locked output by data ID %d: %v", lo.DataID, err)
+			return nil, fmt.Errorf("failed to get locked (by height: %d) output #%d (data id: %d): %v", height, idx+1, dataID, err)
 		}
 	}
-	// fetch all unlocked storm outputs, so callee is aware of their details
+	return stormOutputs, nil
+}
+
+func (son *stormObjectNode) unlockLockedOutputsByTimeRange(minTimestamp, maxInclusiveTimestamp types.Timestamp) ([]StormOutput, error) {
+	buckets := GetTimestampBucketIdentifiersForTimestampRange(minTimestamp, maxInclusiveTimestamp)
+	bucketCollections := make([]StormLockedOutputsByBucketTimestamp, len(buckets))
+	var err error
+	// fetch all collections
+	for idx, bucketID := range buckets {
+		err = son.node.One(nodeObjectOutputKeyBucketID, bucketID, &bucketCollections[idx])
+		if err != nil {
+			if err != storm.ErrNotFound {
+				return nil, fmt.Errorf("failed to fetch existing locked output collection for time-based bucket %d: %v", bucketID, err)
+			}
+			bucketCollections[idx].BucketID = bucketID
+		}
+	}
+
+	// first data ID's are collected, afterwards this list
+	// will be populated with the full data, if nothing goes wrong in between
 	var stormOutputs []StormOutput
-	err = son.node.Select(q.In(nodeObjectKeyDataID, dataIdentifiers)).Find(&stormOutputs)
-	return stormOutputs, err
+
+	// clear all outputs within range from the buckets, and delete the empty ones
+	for _, bucketCollection := range bucketCollections {
+		if len(bucketCollection.Pairs) == 0 {
+			continue // ignore, can be assumed that bucket wasn't found (as we keep no empty buckets)
+		}
+		// if the entire bucket falls within the maxInclusive range we can simply delete it
+		bucketTimestamp := types.Timestamp(bucketCollection.BucketID) * tsBasedBucketRange
+		if bucketTimestamp <= maxInclusiveTimestamp {
+			for _, pair := range bucketCollection.Pairs {
+				stormOutputs = append(stormOutputs, StormOutput{
+					DataID: pair.DataID,
+				}) // keep track for later, so we can fetch it at the end
+			}
+			err = son.node.DeleteStruct(&bucketCollection)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to delete (by range) collection for time-based bucket %d: %v",
+					bucketCollection.BucketID, err)
+			}
+		}
+		// otherwise we have to go through the list and manually delete those that fall within range,
+		// and only delete the bucket if it is empty
+		pairs := make([]StormDataIDTimestampPair, 0, len(bucketCollection.Pairs))
+		for _, pair := range bucketCollection.Pairs {
+			outputTimestamp := bucketTimestamp + types.Timestamp(pair.Offset)
+			if outputTimestamp > minTimestamp && outputTimestamp <= maxInclusiveTimestamp {
+				pairs = append(pairs, pair)
+			} else {
+				stormOutputs = append(stormOutputs, StormOutput{
+					DataID: pair.DataID,
+				}) // keep track for later, so we can fetch it at the end
+			}
+		}
+		bucketCollection.Pairs = pairs
+		if len(bucketCollection.Pairs) == 0 {
+			err = son.node.DeleteStruct(&bucketCollection)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to delete (by iteration) collection for time-based bucket %d: %v",
+					bucketCollection.BucketID, err)
+			}
+		} else {
+			err = son.node.Save(bucketCollection)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to save (after iteration update) collection for time-based bucket %d: %v",
+					bucketCollection.BucketID, err)
+			}
+		}
+	}
+
+	// collect all gathered outputs
+	for idx := range stormOutputs {
+		err = son.node.One(nodeObjectKeyDataID, stormOutputs[idx].DataID, &stormOutputs[idx])
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to fetch existing relocked (by time ]%d,%d]) output %d: %v",
+				minTimestamp, maxInclusiveTimestamp, stormOutputs[idx].DataID, err)
+		}
+	}
+
+	// all good, return the unlocked outputs
+	return stormOutputs, nil
 }
 
 func (son *stormObjectNode) RelockLockedOutputs(height types.BlockHeight, minTimestamp, maxInclusiveTimestamp types.Timestamp) ([]StormOutput, error) {
 	// fetch all unlocked outputs
-	var unlockedOutputs []StormOutput
+	var relockedOutputs []StormOutput
 	err := son.node.Select(q.Or(
 		q.Eq(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(height)),
 		q.And(
 			q.Gt(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(minTimestamp)),
 			q.Lte(nodeObjectOutputKeyUnlockReferencePoint, ReferencePoint(maxInclusiveTimestamp)),
-		))).Find(&unlockedOutputs)
+		))).Find(&relockedOutputs)
 	if err != nil {
 		return nil, err
 	}
-	if len(unlockedOutputs) == 0 {
+	if len(relockedOutputs) == 0 {
 		return nil, nil // nothing to do
 	}
-	// gather the data identifiers of the locked outputs
-	dataIdentifiers := make([]StormDataID, 0, len(unlockedOutputs))
-	for _, uo := range unlockedOutputs {
-		dataIdentifiers = append(dataIdentifiers, uo.DataID)
-		// revert unlocked output as well (locking it again)
-		err = son.node.Save(&StormLockedOutput{
-			DataID:               uo.DataID, // automatically incremented in previous save call
-			UnlockReferencePoint: uo.UnlockReferencePoint,
+
+	// cache the fetched collections, so we don't have to fetch for no reason
+	var heightCollection *StormLockedOutputsByHeight // only one can be possible by height
+	relockByHeight := func(dataID StormDataID) error {
+		if heightCollection == nil {
+			heightCollection = new(StormLockedOutputsByHeight)
+			err := son.node.One(nodeObjectOutputKeyHeight, height, heightCollection)
+			if err != nil {
+				return err
+			}
+		}
+		for _, knownDataID := range heightCollection.DataIDs {
+			if knownDataID == dataID {
+				return fmt.Errorf("output with data id %d is already referenced in the locked output (by height %d) collection", dataID, height)
+			}
+		}
+		heightCollection.DataIDs = append(heightCollection.DataIDs, dataID)
+		return nil
+	}
+	buckets := GetTimestampBucketIdentifiersForTimestampRange(minTimestamp, maxInclusiveTimestamp)
+	timeBucketCollections := make(map[StormTimeBucketID]*StormLockedOutputsByBucketTimestamp, len(buckets)) // multiple can be possible by timestamp (unless the chain is sick it shouldn't be more then 2)
+	relockByTimestamp := func(dataID StormDataID, ts types.Timestamp) error {
+		bucketID, bucketOffset := GetTimestampBucketAndOffset(ts)
+		timeCollection, ok := timeBucketCollections[bucketID]
+		if !ok {
+			timeCollection = new(StormLockedOutputsByBucketTimestamp)
+			err := son.node.One(nodeObjectOutputKeyBucketID, bucketID, timeCollection)
+			if err != nil {
+				return err
+			}
+			timeBucketCollections[bucketID] = timeCollection
+		}
+		for _, knownPair := range timeCollection.Pairs {
+			if knownPair.DataID == dataID {
+				return fmt.Errorf(
+					"output with data id %d is already referenced in the locked output (by timestamp %d, bucket %d) collection",
+					dataID, ts, bucketID)
+			}
+		}
+		timeCollection.Pairs = append(timeCollection.Pairs, StormDataIDTimestampPair{
+			DataID: dataID,
+			Offset: bucketOffset,
 		})
+		return nil
+	}
+	// go through each unlocked output and store a lockd by reference once again
+	for _, uo := range relockedOutputs {
+		if uo.UnlockReferencePoint.IsBlockHeight() {
+			err = relockByHeight(uo.DataID)
+		} else { // by timestamp
+			err = relockByTimestamp(uo.DataID, types.Timestamp(uo.UnlockReferencePoint))
+		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to save output by (object) data ID %d as locked: %v", uo.DataID, err)
+			return nil, err
 		}
 	}
-	return unlockedOutputs, err
+	// save all cached collections
+	if heightCollection != nil {
+		err = son.node.Save(heightCollection)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save updated height (%d) collection: %v", height, err)
+		}
+	}
+	for bucketID, timeCollection := range timeBucketCollections {
+		err = son.node.Save(timeCollection)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save updated time-based bucket (%d) collection: %v", bucketID, err)
+		}
+	}
+
+	// return all relocked outputs
+	return relockedOutputs, err
 }
 
 func (son *stormObjectNode) DeleteBlock(blockID types.BlockID) (Block, error) {
@@ -993,10 +1167,67 @@ func (son *stormObjectNode) DeleteOutput(outputID types.OutputID, height types.B
 		return Output{}, err
 	}
 	if !output.UnlockReferencePoint.Reached(height, timestamp) {
-		// TODO: log error??
-		son.deleteObject(ObjectID(outputID[:]), new(StormLockedOutput))
+		delErr := son.unreferenceLockedOutput(output.DataID, output.UnlockReferencePoint)
+		if delErr != nil {
+			son.logger.Printf(
+				"[ERR] failed to unreference locked output %s (dataID %d, ref. point: %d) as part of delete process: %v",
+				outputID.String(), output.DataID, output.UnlockReferencePoint, delErr)
+		}
 	}
 	return output.AsOutput(outputID), nil
+}
+
+func (son *stormObjectNode) unreferenceLockedOutput(dataID StormDataID, refPoint ReferencePoint) error {
+	if refPoint.IsBlockHeight() {
+		// by height
+		height := types.BlockHeight(refPoint)
+		var lockedOutputs StormLockedOutputsByHeight
+		err := son.node.One(nodeObjectOutputKeyHeight, height, &lockedOutputs)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to find output by data ID %d in found locked outputs by height %d collection: %v",
+				dataID, height, err)
+		}
+		for idx, potDataID := range lockedOutputs.DataIDs {
+			if dataID == potDataID {
+				lockedOutputs.DataIDs = append(lockedOutputs.DataIDs[:idx-1], lockedOutputs.DataIDs[idx:]...)
+				if len(lockedOutputs.DataIDs) != 0 {
+					// save remaining identifiers
+					return son.node.Save(&lockedOutputs)
+				}
+				// delete empty collection
+				return son.node.DeleteStruct(&lockedOutputs)
+			}
+		}
+		return fmt.Errorf(
+			"failed to find output by data ID %d in found locked outputs by height %d collection, did find: %v",
+			dataID, height, lockedOutputs.DataIDs)
+	}
+
+	// by timestamp
+	timestamp := types.Timestamp(refPoint)
+	bucketID, _ := GetTimestampBucketAndOffset(timestamp)
+	var lockedOutputs StormLockedOutputsByBucketTimestamp
+	err := son.node.One(nodeObjectOutputKeyHeight, bucketID, &lockedOutputs)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to find output by data ID %d in found locked outputs by timestamp %d collection: %v",
+			dataID, timestamp, err)
+	}
+	for idx, pair := range lockedOutputs.Pairs {
+		if dataID == pair.DataID {
+			lockedOutputs.Pairs = append(lockedOutputs.Pairs[:idx-1], lockedOutputs.Pairs[idx:]...)
+			if len(lockedOutputs.Pairs) != 0 {
+				// save remaining pairs
+				return son.node.Save(&lockedOutputs)
+			}
+			// delete empty collection
+			return son.node.DeleteStruct(&lockedOutputs)
+		}
+	}
+	return fmt.Errorf(
+		"failed to find output by data ID %d in found locked outputs by timestamp %d collection, did find: %v",
+		dataID, timestamp, lockedOutputs.Pairs)
 }
 
 func (son *stormObjectNode) DeleteFreeForAllWallet(uh types.UnlockHash) error {
