@@ -96,6 +96,15 @@ func (e *Explorer) ProcessConsensusChange(cc modules.ConsensusChange) {
 	}
 }
 
+// InitialProcessConsensusChanges is similar to ProcessConsensusChange,
+// but used only for the initial syncing
+func (e *Explorer) InitialProcessConsensusChanges(ch <-chan modules.ConsensusChange) {
+	err := explorerdb.ApplyConsensusChangeWithChannel(e.db, e.cs, ch, &e.chainConstants)
+	if err != nil {
+		build.Critical("Explorer.ProcessConsensusChange failed", err)
+	}
+}
+
 // Close closes the explorer.
 func (e *Explorer) Close() error {
 	e.cs.Unsubscribe(e)

@@ -3,9 +3,8 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
-
-	"github.com/rivine/bbolt"
 )
 
 // computeConsensusChange computes the consensus change from the change entry
@@ -131,17 +130,40 @@ func (cs *ConsensusSet) initializeSubscribe(subscriber modules.ConsensusSetSubsc
 		}
 
 		// Send all remaining consensus changes to the subscriber.
-		for exists {
-			select {
-			case <-cancel:
-				return errors.New("aborting initializeSubscribe")
-			default:
-				cc, err := cs.computeConsensusChange(tx, entry)
-				if err != nil {
-					return err
+		if v2Subscriber, ok := subscriber.(modules.ConsensusSetSubscriberV2); ok {
+			// temporary code to see if it helps us with speeding up the initial syncing process,
+			// might be good enough until we merge explorer and consensus,
+			// but perhaps we want to keep it (be it modified) after that as well.
+			ch := make(chan modules.ConsensusChange, 64) // TODO: do not hardcode, and reason about what would be a good default
+			defer close(ch)
+			// on a different go routine allow the subscriber to sync
+			go v2Subscriber.InitialProcessConsensusChanges(ch)
+			for exists {
+				select {
+				case <-cancel:
+					return errors.New("aborting initializeSubscribe")
+				default:
+					cc, err := cs.computeConsensusChange(tx, entry)
+					if err != nil {
+						return err
+					}
+					ch <- cc
+					entry, exists = entry.NextEntry(tx)
 				}
-				subscriber.ProcessConsensusChange(cc)
-				entry, exists = entry.NextEntry(tx)
+			}
+		} else {
+			for exists {
+				select {
+				case <-cancel:
+					return errors.New("aborting initializeSubscribe")
+				default:
+					cc, err := cs.computeConsensusChange(tx, entry)
+					if err != nil {
+						return err
+					}
+					subscriber.ProcessConsensusChange(cc)
+					entry, exists = entry.NextEntry(tx)
+				}
 			}
 		}
 		return nil

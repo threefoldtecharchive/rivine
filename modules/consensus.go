@@ -75,6 +75,17 @@ type (
 		ProcessConsensusChange(ConsensusChange)
 	}
 
+	// A ConsensusSetSubscriberV2 is a temporary interface as a test,
+	// to see if this would work. Do not use it yet yourself, as its
+	// API or usage is not set in stone and the usage of this API
+	// might in your code being broken once we change this.
+	ConsensusSetSubscriberV2 interface {
+		ConsensusSetSubscriber
+
+		// TOOD: support ctx
+		InitialProcessConsensusChanges(<-chan ConsensusChange)
+	}
+
 	// A ConsensusSetPlugin is an object that receives updates to the consensus set
 	// every time there is a change in consensus. The difference with a ConsensusSetSubscriber
 	// is that it stores its data within the database of the consensus set.

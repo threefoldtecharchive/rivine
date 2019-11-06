@@ -1036,7 +1036,7 @@ func (son *stormObjectNode) unlockLockedOutputsByTimeRange(minTimestamp, maxIncl
 					bucketCollection.BucketID, err)
 			}
 		} else {
-			err = son.node.Save(bucketCollection)
+			err = son.node.Save(&bucketCollection)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"failed to save (after iteration update) collection for time-based bucket %d: %v",
