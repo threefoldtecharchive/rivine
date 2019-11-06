@@ -2,6 +2,7 @@ package explorerdb
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -29,7 +30,7 @@ type StormDB struct {
 	chainCts *types.ChainConstants
 
 	// optional
-	boltTx *bolt.Tx
+	boltTx *phoenixBoltTx
 }
 
 var (
@@ -38,21 +39,21 @@ var (
 
 func (sdb *StormDB) rootNode(name string) storm.Node {
 	if sdb.boltTx != nil {
-		return sdb.db.WithTransaction(sdb.boltTx).From(name)
+		return sdb.db.WithTransaction(sdb.boltTx.Tx).From(name)
 	}
 	return sdb.db.From(name)
 }
 
 func (sdb *StormDB) boltView(f func(tx *bolt.Tx) error) error {
 	if sdb.boltTx != nil {
-		return f(sdb.boltTx)
+		return f(sdb.boltTx.Tx)
 	}
 	return sdb.db.Bolt.View(f)
 }
 
 func (sdb *StormDB) boltUpdate(f func(tx *bolt.Tx) error) error {
 	if sdb.boltTx != nil {
-		return f(sdb.boltTx)
+		return f(sdb.boltTx.Tx)
 	}
 	return sdb.db.Bolt.Update(f)
 }
@@ -1450,8 +1451,14 @@ func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
 	}, nil
 }
 
-func (sdb *StormDB) Commit() error {
-	return sdb.db.Commit()
+func (sdb *StormDB) Commit(final bool) error {
+	if sdb.boltTx == nil {
+		return fmt.Errorf("commit can only be done within a transaction")
+	}
+	if final {
+		return sdb.boltTx.Commit()
+	}
+	return sdb.boltTx.CommitAndContinue()
 }
 
 // ReadTransaction batches multiple read calls together,
@@ -1463,7 +1470,11 @@ func (sdb *StormDB) ReadTransaction(f func(RTxn) error) error {
 			logger:   sdb.logger,
 			bcInfo:   sdb.bcInfo,
 			chainCts: sdb.chainCts,
-			boltTx:   tx,
+			boltTx: &phoenixBoltTx{
+				Tx:       tx,
+				Writable: false,
+				DB:       sdb.db.Bolt,
+			},
 		}
 		return f(sdbCopy)
 	})
@@ -1471,19 +1482,98 @@ func (sdb *StormDB) ReadTransaction(f func(RTxn) error) error {
 
 // ReadWriteTransaction batches multiple read-write calls together,
 // to keep the disk I/O to a minimum
-func (sdb *StormDB) ReadWriteTransaction(f func(RWTxn) error) error {
-	return sdb.boltUpdate(func(tx *bolt.Tx) error {
-		sdbCopy := &StormDB{
-			db:       sdb.db,
-			logger:   sdb.logger,
-			bcInfo:   sdb.bcInfo,
-			chainCts: sdb.chainCts,
-			boltTx:   tx,
+func (sdb *StormDB) ReadWriteTransaction(f func(RWTxn) error) (err error) {
+	tx, err := sdb.db.Bolt.Begin(true)
+	if err != nil {
+		return
+	}
+	ptx := &phoenixBoltTx{
+		Tx:       tx,
+		Writable: true,
+		DB:       sdb.db.Bolt,
+	}
+
+	// Make sure the transaction rolls back in the event of a panic.
+	defer func() {
+		if e := recover(); e != nil {
+			if err != nil {
+				err = fmt.Errorf("error occured (%v) as well as panic: %v", err, e)
+			} else {
+				err = fmt.Errorf("panic occured during ReadWriteTransaction call: %v", e)
+			}
+			sdb.logger.Printf("[ERR] %v", err)
+			rbErr := ptx.Rollback()
+			if rbErr != nil {
+				sdb.logger.Printf("[ERR] failed to rollback after panic in ReadWriteTransaction call: %v", rbErr)
+			}
 		}
-		return f(sdbCopy)
-	})
+	}()
+
+	sdbCopy := &StormDB{
+		db:       sdb.db,
+		logger:   sdb.logger,
+		bcInfo:   sdb.bcInfo,
+		chainCts: sdb.chainCts,
+		boltTx:   ptx,
+	}
+
+	// do not mark the tx as managed,
+	// so the callee can commit in between if desired
+
+	// If an error is returned from the function then rollback and return error.
+	err = f(sdbCopy)
+	if err != nil {
+		rbErr := ptx.Rollback()
+		if rbErr != nil {
+			sdb.logger.Printf("[ERR] failed to rollback after error during callback function given with ReadWriteTransaction call: %v", rbErr)
+		}
+		return err
+	}
+
+	if ptx.Closed() {
+		return nil // nothing to do anymore
+	}
+	return ptx.Commit()
 }
 
 func (sdb *StormDB) Close() error {
 	return sdb.db.Close()
+}
+
+type phoenixBoltTx struct {
+	*bolt.Tx
+	Writable bool
+	DB       *bolt.DB
+
+	closed bool
+}
+
+func (phoenix *phoenixBoltTx) Closed() bool {
+	return phoenix.closed
+}
+
+func (phoenix *phoenixBoltTx) Commit() error {
+	if phoenix.Closed() {
+		return errors.New("phoenix bolt Tx already closed")
+	}
+	err := phoenix.Tx.Commit()
+	if err != nil {
+		return err
+	}
+	phoenix.closed = true
+	return nil
+}
+
+func (phoenix *phoenixBoltTx) CommitAndContinue() error {
+	err := phoenix.Commit()
+	if err != nil {
+		return err
+	}
+	tx, err := phoenix.DB.Begin(phoenix.Writable)
+	if err != nil {
+		return err
+	}
+	phoenix.Tx = tx
+	phoenix.closed = false
+	return nil
 }

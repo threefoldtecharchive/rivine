@@ -66,7 +66,8 @@ type RWTxn interface {
 
 	// commit the work done from Memory to Disk,
 	// only required in case you are doing a big amount of calls within a single transaction.
-	Commit() error
+	// If you want to continue using this transaction, you'll have to set final to true
+	Commit(final bool) error
 }
 
 // TODO: handle also chain-specific stuff, such as chains that do not have block rewards
@@ -89,7 +90,7 @@ func ApplyConsensusChangeWithChannel(db DB, cs modules.ConsensusSet, ch <-chan m
 			blockCount -= len(csc.RevertedBlocks)
 			blockCount += len(csc.AppliedBlocks)
 			if blockCount >= minBlocksPerCommit {
-				err = db.Commit()
+				err = db.Commit(false)
 				if err != nil {
 					return fmt.Errorf("failed to commit last (net) %d blocks: %v", blockCount, err)
 				}
