@@ -32,6 +32,10 @@ type StormDB struct {
 	boltTx *bolt.Tx
 }
 
+var (
+	_ DB = (*StormDB)(nil)
+)
+
 func (sdb *StormDB) rootNode(name string) storm.Node {
 	if sdb.boltTx != nil {
 		return sdb.db.WithTransaction(sdb.boltTx).From(name)
@@ -87,12 +91,13 @@ const (
 	nodePublicKeysKeyUnlockHash = "UnlockHash"
 
 	nodeBlocksKeyReference = "Reference"
+	nodeBlocksKeyHeight    = "Height"
 )
 
-// used for block rp -> bID node
-type blockReferencePointIDPair struct {
-	Reference ReferencePoint `storm:"id", msgpack:"rp"`
-	BlockID   StormHash      `msgpack:"bid"`
+// used for block height -> bID node
+type blockHeightIDPair struct {
+	Height  types.BlockHeight `storm:"id", msgpack:"h"`
+	BlockID StormHash         `msgpack:"bid"`
 }
 
 // used for unlockHash -> PublicKey node
@@ -402,19 +407,12 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 	uhUpdateCollection := newUnlockHashUpdateCollection(block.ID, block.Height, block.Timestamp)
 
 	// store block reference point parings
-	err = blockNode.Save(&blockReferencePointIDPair{
-		Reference: ReferencePoint(block.Height) + 1, // require +1, as a storm identifier cannot be 0
-		BlockID:   StormHashFromBlockID(block.ID),
+	err = blockNode.Save(&blockHeightIDPair{
+		Height:  block.Height + 1, // require +1, as a storm identifier cannot be 0
+		BlockID: StormHashFromBlockID(block.ID),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to apply block: failed to save block %s's height %d as reference point: %v", block.ID.String(), block.Height, err)
-	}
-	err = blockNode.Save(&blockReferencePointIDPair{
-		Reference: ReferencePoint(block.Timestamp),
-		BlockID:   StormHashFromBlockID(block.ID),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to apply block: failed to save block %s's timestamp %d as reference point: %v", block.ID.String(), block.Timestamp, err)
 	}
 	// store transactions
 	for idx, tx := range txs {
@@ -537,7 +535,7 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 	// get outputs unlocked by height and timestamp
 	if height != 0 { // do not do it for block 0, as it will return all outputs that do not have a lock
 		// get previous block
-		previousBlock, err := sdb.GetBlockByReferencePoint(ReferencePoint(height - 1))
+		previousBlock, err := sdb.GetBlockAt(height - 1)
 		if err != nil {
 			return ChainAggregatedFacts{}, nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
 		}
@@ -935,7 +933,6 @@ func (sdb *StormDB) estimateActiveBS(height types.BlockHeight, timestamp types.T
 
 func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error {
 	sdb.logger.Debugf("revert block %d (time: %d)", blockContext.Height, blockContext.Timestamp)
-
 	sdbInternalData, err := sdb.getInternalData()
 	if err != nil {
 		return err
@@ -954,17 +951,11 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		return fmt.Errorf("failed to revert block: failed to delete block %s by ID: %v", blockContext.ID.String(), err)
 	}
 	// delete block reference point parings
-	err = blockNode.DeleteStruct(&blockReferencePointIDPair{
-		Reference: ReferencePoint(blockContext.Height) + 1, // require +1, as a storm identifier cannot be 0
+	err = blockNode.DeleteStruct(&blockHeightIDPair{
+		Height: blockContext.Height + 1, // require +1, as a storm identifier cannot be 0
 	})
 	if err != nil {
 		return fmt.Errorf("failed to revert block: failed to delete block %s's height %d by reference point: %v", blockContext.ID.String(), blockContext.Height, err)
-	}
-	err = blockNode.Save(&blockReferencePointIDPair{
-		Reference: ReferencePoint(blockContext.Timestamp),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to revert block: failed to delete block %s's timestamp %d by reference point: %v", blockContext.ID.String(), blockContext.Timestamp, err)
 	}
 	// delete transactions
 	for idx, txnID := range txs {
@@ -1044,7 +1035,7 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 	// get outputs unlocked by height and timestamp
 	if height != 0 { // do not do it for block 0, as it will return all outputs that do not have a lock
 		// get previous block
-		previousBlock, err := sdb.GetBlockByReferencePoint(ReferencePoint(height - 1))
+		previousBlock, err := sdb.GetBlockAt(height - 1)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
 		}
@@ -1378,14 +1369,8 @@ func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
 	return block, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetBlockFacts(id types.BlockID) (BlockFacts, error) {
-	node := newStormObjectNodeReader(sdb, sdb.logger)
-	facts, err := node.GetBlockFacts(id)
-	return facts, mapStormErrorToExplorerDBError(err)
-}
-
-func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
-	blockID, err := sdb.GetBlockIDByReferencePoint(rp)
+func (sdb *StormDB) GetBlockAt(height types.BlockHeight) (Block, error) {
+	blockID, err := sdb.GetBlockIDAt(height)
 	if err != nil {
 		return Block{}, mapStormErrorToExplorerDBError(err)
 	}
@@ -1393,31 +1378,21 @@ func (sdb *StormDB) GetBlockByReferencePoint(rp ReferencePoint) (Block, error) {
 	return block, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetBlockIDByReferencePoint(rp ReferencePoint) (types.BlockID, error) {
+func (sdb *StormDB) GetBlockFacts(id types.BlockID) (BlockFacts, error) {
+	node := newStormObjectNodeReader(sdb, sdb.logger)
+	facts, err := node.GetBlockFacts(id)
+	return facts, mapStormErrorToExplorerDBError(err)
+}
+
+func (sdb *StormDB) GetBlockIDAt(height types.BlockHeight) (types.BlockID, error) {
 	node := sdb.rootNode(nodeNameBlocks)
-	var pair blockReferencePointIDPair
-	if rp.IsBlockHeight() {
-		rp++
-	}
-	err := node.One(nodeBlocksKeyReference, rp, &pair)
+	var pair blockHeightIDPair
+	height++ // stored on higher than it is (see Apply/SaveBlock)
+	err := node.One(nodeBlocksKeyHeight, height, &pair)
 	if err != nil {
 		return types.BlockID{}, mapStormErrorToExplorerDBError(err)
 	}
 	return pair.BlockID.AsBlockID(), nil
-}
-
-func (sdb *StormDB) GetBlockFactsByReferencePoint(rp ReferencePoint) (BlockFacts, error) {
-	node := sdb.rootNode(nodeNameBlocks)
-	var pair blockReferencePointIDPair
-	if rp.IsBlockHeight() {
-		rp++
-	}
-	err := node.One(nodeBlocksKeyReference, rp, &pair)
-	if err != nil {
-		return BlockFacts{}, mapStormErrorToExplorerDBError(err)
-	}
-	facts, err := sdb.GetBlockFacts(pair.BlockID.AsBlockID())
-	return facts, mapStormErrorToExplorerDBError(err)
 }
 
 func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {

@@ -1215,7 +1215,7 @@ func (son *stormObjectNode) unreferenceLockedOutput(dataID StormDataID, refPoint
 		}
 		for idx, potDataID := range lockedOutputs.DataIDs {
 			if dataID == potDataID {
-				lockedOutputs.DataIDs = append(lockedOutputs.DataIDs[:idx-1], lockedOutputs.DataIDs[idx:]...)
+				lockedOutputs.DataIDs = append(lockedOutputs.DataIDs[:idx], lockedOutputs.DataIDs[idx+1:]...)
 				if len(lockedOutputs.DataIDs) != 0 {
 					// save remaining identifiers
 					return son.node.Save(&lockedOutputs)
@@ -1241,7 +1241,7 @@ func (son *stormObjectNode) unreferenceLockedOutput(dataID StormDataID, refPoint
 	}
 	for idx, pair := range lockedOutputs.Pairs {
 		if dataID == pair.DataID {
-			lockedOutputs.Pairs = append(lockedOutputs.Pairs[:idx-1], lockedOutputs.Pairs[idx:]...)
+			lockedOutputs.Pairs = append(lockedOutputs.Pairs[:idx], lockedOutputs.Pairs[idx+1:]...)
 			if len(lockedOutputs.Pairs) != 0 {
 				// save remaining pairs
 				return son.node.Save(&lockedOutputs)

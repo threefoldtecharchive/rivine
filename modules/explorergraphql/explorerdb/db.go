@@ -42,9 +42,8 @@ type RTxn interface {
 
 	GetBlock(types.BlockID) (Block, error)
 	GetBlockFacts(types.BlockID) (BlockFacts, error)
-	GetBlockByReferencePoint(ReferencePoint) (Block, error)
-	GetBlockIDByReferencePoint(ReferencePoint) (types.BlockID, error)
-	GetBlockFactsByReferencePoint(ReferencePoint) (BlockFacts, error)
+	GetBlockAt(types.BlockHeight) (Block, error)
+	GetBlockIDAt(types.BlockHeight) (types.BlockID, error)
 	GetTransaction(types.TransactionID) (Transaction, error)
 	GetOutput(types.OutputID) (Output, error)
 

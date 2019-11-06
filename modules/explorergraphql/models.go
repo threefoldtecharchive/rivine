@@ -16,39 +16,15 @@ import (
 // Custom Scalar Types
 
 type (
-	ReferencePoint uint64
-	LockTime       uint64
-	ObjectID       []byte
-	BinaryData     []byte
-	Signature      []byte
-	ByteVersion    byte
-	BigInt         struct {
+	LockTime    uint64
+	ObjectID    []byte
+	BinaryData  []byte
+	Signature   []byte
+	ByteVersion byte
+	BigInt      struct {
 		*big.Int
 	}
 )
-
-func (rp ReferencePoint) IsTimestamp() bool {
-	return rp >= types.LockTimeMinTimestampValue
-}
-
-func (rp ReferencePoint) IsBlockHeight() bool {
-	return rp < types.LockTimeMinTimestampValue
-}
-
-// MarshalGQL implements the graphql.Marshaler interface
-func (rp ReferencePoint) MarshalGQL(w io.Writer) {
-	io.WriteString(w, strconv.FormatUint(uint64(rp), 10))
-}
-
-// UnmarshalGQL implements the graphql.Unmarshaler interface
-func (rp *ReferencePoint) UnmarshalGQL(v interface{}) error {
-	x, err := unmarshalUint64(v)
-	if err != nil {
-		return err
-	}
-	*rp = ReferencePoint(x)
-	return nil
-}
 
 // MarshalGQL implements the graphql.Marshaler interface
 func (lt LockTime) MarshalGQL(w io.Writer) {

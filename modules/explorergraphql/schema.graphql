@@ -32,12 +32,17 @@ type QueryRoot {
   object(id: ObjectID): Object
 
   """
-  Query a block by identifier or reference point (height or timestamp).
-  If no Hash is given, the reference will be used if defined,
-  otherwise —in case of both arguments missing— the latest block will be
+  Query a block by identifier.
+  If no Hash is given, the latest block will be
   returned.
   """
-  block(id: Hash, reference: ReferencePoint): Block
+  block(id: Hash): Block
+
+  """
+  Query a block by block height.
+  If no height is given, the latest block will be returned.
+  """
+  blockAt(height: BlockHeight): Block
 
   """
   Query a transaction by identifier.
@@ -89,17 +94,6 @@ and represents the UNIX Epoch Timestamp (in seconds).
 """
 scalar Timestamp
 """
-ReferencePoint is used for places where either a `BlockHeight`
-or `Timestamp` is used. The reason for this is because input paramters
-are not allowed to be of a Union type.
-
-NOTE: This type might be removed in the future
-if we decide it is more UX-friendly to provide different query (input) parameters,
-for the user to use one of the 2. Especially as looking something up by time
-requires very different behaviour from looking something up by height.
-"""
-scalar ReferencePoint
-"""
 Hash represents a crypto (blake2b_256) `Hash` (a byte array of fixed length 32),
 and is used as the identifier for blocks, transactions and outputs.
 Within the context of this API it is always hex-encoded.
@@ -116,11 +110,8 @@ for more information about the full details of the encoding used for this type w
 """
 scalar UnlockHash
 """
-LockTime serves the same purpose as `ReferencePoint`,
-but used for different struct types.
-Please consult the `ReferencePoint` documentation for more information.
-
-NOTE: As this is a duplicated type we might as well unify them as a single type.
+LockTime is perhaps an unfortunate name and is is used for places where either a `BlockHeight`
+or `Timestamp` is used. It is named like this for historic reasons, as a block height can also be seen as some kind of time unit.
 """
 scalar LockTime
 """

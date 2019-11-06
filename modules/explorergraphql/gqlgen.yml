@@ -70,8 +70,6 @@ models:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.BlockHeight
   Timestamp:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.Timestamp
-  ReferencePoint:
-    model: github.com/threefoldtech/rivine/modules/explorergraphql.ReferencePoint
   Hash:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.Hash
   UnlockHash:

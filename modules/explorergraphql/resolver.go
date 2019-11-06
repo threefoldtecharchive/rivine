@@ -52,8 +52,8 @@ func (r *blockHeaderResolver) Child(ctx context.Context, obj *BlockHeader) (*Blo
 	if obj.BlockHeight == nil {
 		return nil, errors.New("internal error: block height not defined for block header")
 	}
-	height := ReferencePoint((*obj.BlockHeight) + 1)
-	block, err := blockByReferencePoint(ctx, r.db, &height)
+	height := (*obj.BlockHeight) + 1
+	block, err := getBlockAt(ctx, r.db, &height)
 	if err != nil {
 		if err == explorerdb.ErrNotFound {
 			return nil, nil // this is acceptable, as it might be the latest block
@@ -142,7 +142,7 @@ func rivConstantsAsGQL(cs modules.ConsensusSet, chainConstants *types.ChainConst
 func (r *queryRootResolver) Object(ctx context.Context, id *ObjectID) (Object, error) {
 	if id == nil {
 		// default to latest block if no ID is given, the only thing that makes sense
-		return r.Block(ctx, nil, nil)
+		return r.BlockAt(ctx, nil)
 	}
 	objID := explorerdb.ObjectID(*id)
 	dbObjectInfo, err := r.db.GetObjectInfo(objID)
@@ -206,27 +206,30 @@ func (r *queryRootResolver) Output(ctx context.Context, id crypto.Hash) (*Output
 	outputID := types.OutputID(id)
 	return NewOutput(outputID, nil, nil, r.db), nil
 }
-func (r *queryRootResolver) Block(ctx context.Context, id *crypto.Hash, reference *ReferencePoint) (*Block, error) {
+func (r *queryRootResolver) Block(ctx context.Context, id *crypto.Hash) (*Block, error) {
 	if id == nil {
-		return blockByReferencePoint(ctx, r.db, reference)
+		return getBlockAt(ctx, r.db, nil)
 	}
 	blockID := types.BlockID(*id)
 	return NewBlock(blockID, r.db), nil
 }
-func blockByReferencePoint(ctx context.Context, db explorerdb.DB, reference *ReferencePoint) (*Block, error) {
-	if reference == nil {
+func (r *queryRootResolver) BlockAt(ctx context.Context, height *types.BlockHeight) (*Block, error) {
+	return getBlockAt(ctx, r.db, height)
+}
+func getBlockAt(ctx context.Context, db explorerdb.DB, height *types.BlockHeight) (*Block, error) {
+	if height == nil {
 		// default to latest block
 		chainCtx, err := db.GetChainContext()
 		if err != nil {
 			return nil, err
 		}
-		r := ReferencePoint(chainCtx.Height)
-		if r > 0 {
-			r-- // chainCtx.Height defines the amount of blocks (in other words, the height of the chain), not the height of latest
+		chahei := chainCtx.Height
+		if chahei > 0 {
+			chahei-- // chainCtx.Height defines the amount of blocks (in other words, the height of the chain), not the height of latest
 		}
-		reference = &r
+		height = &chahei
 	}
-	blockID, err := db.GetBlockIDByReferencePoint(explorerdb.ReferencePoint(*reference))
+	blockID, err := db.GetBlockIDAt(*height)
 	if err != nil {
 		return nil, err
 	}
