@@ -63,11 +63,19 @@ type RWTxn interface {
 	ApplyBlock(block Block, blockFacts BlockFactsConstants, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error
 	// TODO: should we also revert public key (from UH) mapping? (TODO 4)
 	RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error
+
+	// commit the work done from Memory to Disk,
+	// only required in case you are doing a big amount of calls within a single transaction.
+	Commit() error
 }
 
 // TODO: handle also chain-specific stuff, such as chains that do not have block rewards
 
 func ApplyConsensusChangeWithChannel(db DB, cs modules.ConsensusSet, ch <-chan modules.ConsensusChange, chainCts *types.ChainConstants) error {
+	const (
+		minBlocksPerCommit = 1000
+	)
+	var blockCount = 0
 	return db.ReadWriteTransaction(func(db RWTxn) error {
 		var err error
 		for csc := range ch {
@@ -77,6 +85,15 @@ func ApplyConsensusChangeWithChannel(db DB, cs modules.ConsensusSet, ch <-chan m
 			err = applyConsensusChangeForRWTxn(db, cs, csc, chainCts)
 			if err != nil {
 				return err
+			}
+			blockCount -= len(csc.RevertedBlocks)
+			blockCount += len(csc.AppliedBlocks)
+			if blockCount >= minBlocksPerCommit {
+				err = db.Commit()
+				if err != nil {
+					return fmt.Errorf("failed to commit last (net) %d blocks: %v", blockCount, err)
+				}
+				blockCount = 0
 			}
 		}
 		return nil

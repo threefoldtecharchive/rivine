@@ -1450,6 +1450,10 @@ func (sdb *StormDB) GetPublicKey(uh types.UnlockHash) (types.PublicKey, error) {
 	}, nil
 }
 
+func (sdb *StormDB) Commit() error {
+	return sdb.db.Commit()
+}
+
 // ReadTransaction batches multiple read calls together,
 // to keep the disk I/O to a minimum
 func (sdb *StormDB) ReadTransaction(f func(RTxn) error) error {
