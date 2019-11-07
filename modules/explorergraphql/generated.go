@@ -252,7 +252,7 @@ type ComplexityRoot struct {
 
 	QueryRoot struct {
 		Block       func(childComplexity int, id *crypto.Hash) int
-		BlockAt     func(childComplexity int, height *types.BlockHeight) int
+		BlockAt     func(childComplexity int, position *int) int
 		Chain       func(childComplexity int) int
 		Contract    func(childComplexity int, unlockhash types.UnlockHash) int
 		Object      func(childComplexity int, id *ObjectID) int
@@ -327,7 +327,7 @@ type QueryRootResolver interface {
 	Chain(ctx context.Context) (*ChainFacts, error)
 	Object(ctx context.Context, id *ObjectID) (Object, error)
 	Block(ctx context.Context, id *crypto.Hash) (*Block, error)
-	BlockAt(ctx context.Context, height *types.BlockHeight) (*Block, error)
+	BlockAt(ctx context.Context, position *int) (*Block, error)
 	Transaction(ctx context.Context, id crypto.Hash) (Transaction, error)
 	Output(ctx context.Context, id crypto.Hash) (*Output, error)
 	Wallet(ctx context.Context, unlockhash types.UnlockHash) (Wallet, error)
@@ -1287,7 +1287,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.QueryRoot.BlockAt(childComplexity, args["height"].(*types.BlockHeight)), true
+		return e.complexity.QueryRoot.BlockAt(childComplexity, args["position"].(*int)), true
 
 	case "QueryRoot.chain":
 		if e.complexity.QueryRoot.Chain == nil {
@@ -1677,10 +1677,13 @@ type QueryRoot {
   block(id: Hash): Block
 
   """
-  Query a block by block height.
-  If no height is given, the latest block will be returned.
+  Query a block by position.
+  If no position is given, the latest block will be returned.
+  Use a negative position to choose a block starting from the latest block,
+  for example -2 for the 2nd last block, and -1 for the last block.
+  The genesis block is at position 0 and the numbering goes upwards from there.
   """
-  blockAt(height: BlockHeight): Block
+  blockAt(position: Int): Block
 
   """
   Query a transaction by identifier.
@@ -2437,14 +2440,14 @@ func (ec *executionContext) field_QueryRoot___type_args(ctx context.Context, raw
 func (ec *executionContext) field_QueryRoot_blockAt_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *types.BlockHeight
-	if tmp, ok := rawArgs["height"]; ok {
-		arg0, err = ec.unmarshalOBlockHeight2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐBlockHeight(ctx, tmp)
+	var arg0 *int
+	if tmp, ok := rawArgs["position"]; ok {
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["height"] = arg0
+	args["position"] = arg0
 	return args, nil
 }
 
@@ -7340,7 +7343,7 @@ func (ec *executionContext) _QueryRoot_blockAt(ctx context.Context, field graphq
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.QueryRoot().BlockAt(rctx, args["height"].(*types.BlockHeight))
+		return ec.resolvers.QueryRoot().BlockAt(rctx, args["position"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

@@ -52,7 +52,7 @@ func (r *blockHeaderResolver) Child(ctx context.Context, obj *BlockHeader) (*Blo
 	if obj.BlockHeight == nil {
 		return nil, errors.New("internal error: block height not defined for block header")
 	}
-	height := (*obj.BlockHeight) + 1
+	height := int((*obj.BlockHeight) + 1)
 	block, err := getBlockAt(ctx, r.db, &height)
 	if err != nil {
 		if err == explorerdb.ErrNotFound {
@@ -213,23 +213,32 @@ func (r *queryRootResolver) Block(ctx context.Context, id *crypto.Hash) (*Block,
 	blockID := types.BlockID(*id)
 	return NewBlock(blockID, r.db), nil
 }
-func (r *queryRootResolver) BlockAt(ctx context.Context, height *types.BlockHeight) (*Block, error) {
-	return getBlockAt(ctx, r.db, height)
+func (r *queryRootResolver) BlockAt(ctx context.Context, position *int) (*Block, error) {
+	return getBlockAt(ctx, r.db, position)
 }
-func getBlockAt(ctx context.Context, db explorerdb.DB, height *types.BlockHeight) (*Block, error) {
-	if height == nil {
+func getBlockAt(ctx context.Context, db explorerdb.DB, position *int) (*Block, error) {
+	if position == nil || (*position) < 0 {
 		// default to latest block
 		chainCtx, err := db.GetChainContext()
 		if err != nil {
 			return nil, err
 		}
-		chahei := chainCtx.Height
+		chahei := int(chainCtx.Height)
 		if chahei > 0 {
 			chahei-- // chainCtx.Height defines the amount of blocks (in other words, the height of the chain), not the height of latest
 		}
-		height = &chahei
+		if position == nil {
+			position = &chahei
+		} else {
+			*position += chahei
+			if *position < 0 {
+				return nil, nil // block not found
+			}
+
+		}
 	}
-	blockID, err := db.GetBlockIDAt(*height)
+	height := types.BlockHeight(*position)
+	blockID, err := db.GetBlockIDAt(height)
 	if err != nil {
 		return nil, err
 	}

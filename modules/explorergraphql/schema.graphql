@@ -39,10 +39,13 @@ type QueryRoot {
   block(id: Hash): Block
 
   """
-  Query a block by block height.
-  If no height is given, the latest block will be returned.
+  Query a block by position.
+  If no position is given, the latest block will be returned.
+  Use a negative position to choose a block starting from the latest block,
+  for example -2 for the 2nd last block, and -1 for the last block.
+  The genesis block is at position 0 and the numbering goes upwards from there.
   """
-  blockAt(height: BlockHeight): Block
+  blockAt(position: Int): Block
 
   """
   Query a transaction by identifier.
