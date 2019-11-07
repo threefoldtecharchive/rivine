@@ -14,6 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
 	"github.com/threefoldtech/rivine/types"
 	"github.com/vektah/gqlparser"
 	"github.com/vektah/gqlparser/ast"
@@ -106,7 +107,7 @@ type ComplexityRoot struct {
 		ID          func(childComplexity int) int
 		Parent      func(childComplexity int) int
 		ParentID    func(childComplexity int) int
-		Payouts     func(childComplexity int) int
+		Payouts     func(childComplexity int, typeArg *BlockPayoutType) int
 	}
 
 	BlockPayout struct {
@@ -253,12 +254,18 @@ type ComplexityRoot struct {
 	QueryRoot struct {
 		Block       func(childComplexity int, id *crypto.Hash) int
 		BlockAt     func(childComplexity int, position *int) int
+		Blocks      func(childComplexity int, filter *BlocksFilter) int
 		Chain       func(childComplexity int) int
 		Contract    func(childComplexity int, unlockhash types.UnlockHash) int
 		Object      func(childComplexity int, id *ObjectID) int
 		Output      func(childComplexity int, id crypto.Hash) int
 		Transaction func(childComplexity int, id crypto.Hash) int
 		Wallet      func(childComplexity int, unlockhash types.UnlockHash) int
+	}
+
+	ResponseBlocks struct {
+		Blocks     func(childComplexity int) int
+		NextCursor func(childComplexity int) int
 	}
 
 	SingleSignatureFulfillment struct {
@@ -318,6 +325,8 @@ type ComplexityRoot struct {
 
 type BlockHeaderResolver interface {
 	Child(ctx context.Context, obj *BlockHeader) (*Block, error)
+
+	Payouts(ctx context.Context, obj *BlockHeader, typeArg *BlockPayoutType) ([]*BlockPayout, error)
 }
 type ChainFactsResolver interface {
 	LastBlock(ctx context.Context, obj *ChainFacts) (*Block, error)
@@ -328,6 +337,7 @@ type QueryRootResolver interface {
 	Object(ctx context.Context, id *ObjectID) (Object, error)
 	Block(ctx context.Context, id *crypto.Hash) (*Block, error)
 	BlockAt(ctx context.Context, position *int) (*Block, error)
+	Blocks(ctx context.Context, filter *BlocksFilter) (*ResponseBlocks, error)
 	Transaction(ctx context.Context, id crypto.Hash) (Transaction, error)
 	Output(ctx context.Context, id crypto.Hash) (*Output, error)
 	Wallet(ctx context.Context, unlockhash types.UnlockHash) (Wallet, error)
@@ -612,7 +622,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.BlockHeader.Payouts(childComplexity), true
+		args, err := ec.field_BlockHeader_Payouts_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.BlockHeader.Payouts(childComplexity, args["type"].(*BlockPayoutType)), true
 
 	case "BlockPayout.Output":
 		if e.complexity.BlockPayout.Output == nil {
@@ -1289,6 +1304,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.QueryRoot.BlockAt(childComplexity, args["position"].(*int)), true
 
+	case "QueryRoot.blocks":
+		if e.complexity.QueryRoot.Blocks == nil {
+			break
+		}
+
+		args, err := ec.field_QueryRoot_blocks_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.QueryRoot.Blocks(childComplexity, args["filter"].(*BlocksFilter)), true
+
 	case "QueryRoot.chain":
 		if e.complexity.QueryRoot.Chain == nil {
 			break
@@ -1355,6 +1382,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.QueryRoot.Wallet(childComplexity, args["unlockhash"].(types.UnlockHash)), true
+
+	case "ResponseBlocks.Blocks":
+		if e.complexity.ResponseBlocks.Blocks == nil {
+			break
+		}
+
+		return e.complexity.ResponseBlocks.Blocks(childComplexity), true
+
+	case "ResponseBlocks.NextCursor":
+		if e.complexity.ResponseBlocks.NextCursor == nil {
+			break
+		}
+
+		return e.complexity.ResponseBlocks.NextCursor(childComplexity), true
 
 	case "SingleSignatureFulfillment.ParentCondition":
 		if e.complexity.SingleSignatureFulfillment.ParentCondition == nil {
@@ -1644,13 +1685,14 @@ var parsedSchema = gqlparser.MustLoadSchema(
 
 # TODO: what other things should provide unconfirmed updates????
 
+# TODO: even if we have pagination support, a user might still be able to ask too much data,
+#    by requesting an unreasonable level of recursive nesting. We should limit this also somehow...
+
 # TODO: How to query transactions based on properties
 # TODO: How to query wallets based on properties
 
 # TODO: support providing arguments to certain field resolvers,
 #    ... for example: allowing only the first item of a list to be retuned (e.g. payout)
-
-# TODO: add some quick documentation to schema as a test of generated documentation
 
 type QueryRoot {
   """
@@ -1684,6 +1726,16 @@ type QueryRoot {
   The genesis block is at position 0 and the numbering goes upwards from there.
   """
   blockAt(position: Int): Block
+
+  """
+  Query multiple blocks, optionally giving a filter.
+  If no filter is given the first blocks at the start are given.
+  This query uses pagination and will have a server-defined upper limit
+  of items to return maximum. In case more items can be returned,
+  follow-up call(s) have to be made, using the returned Cursor
+  as a FilterSinceCursor.
+  """
+  blocks(filter: BlocksFilter): ResponseBlocks
 
   """
   Query a transaction by identifier.
@@ -1726,7 +1778,7 @@ or an ` + "`" + `UnlockHash` + "`" + ` (for any kind of wallet or contract).
 scalar ObjectID
 """
 BlockHeight is implemented as an unsigned 64-bit integer,
-and represents the height of a block, starting at 0.
+and represents the height of a block, stargting at 0.
 """
 scalar BlockHeight
 """
@@ -1951,6 +2003,89 @@ type ChainAggregatedData {
 }
 
 """
+An inclusive range of block positions, with one or two points to be defined.
+A range with no fields defined is equal to a nil range.
+"""
+input BlockPositionRange {
+    Start: Int
+    End: Int
+}
+
+"""
+A poor man's input Union, allowing you to filter on block positions,
+by defining what the upper- or lower limit is.
+Or the inclusive range of blocks including and between (one or) two positions.
+If no fields are given it is seen as a nil operator. No more then one field can be defined.
+
+This really should be a Union, this is however not (yet) supported by the official GraphQL
+specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+"""
+input BlockPositionOperators {
+    Before: Int
+    After: Int
+    Between: BlockPositionRange
+}
+
+"""
+An inclusive range of timestamps, with one or two points to be defined.
+A range with no fields defined is equal to a nil range.
+"""
+input TimestampRange {
+    Start: Timestamp
+    End: Timestamp
+}
+
+"""
+A poor man's input Union, allowing you to filter on timestamps,
+by defining what the upper- or lower limit is.
+Or the inclusive range of blocks including and between (one or) two timestamps.
+If no fields are given it is seen as a nil operator. No more then one field can be defined.
+
+This really should be a Union, this is however not (yet) supported by the official GraphQL
+specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+"""
+input TimestampOperators {
+    Before: Timestamp
+    After: Timestamp
+    Between: TimestampRange
+}
+
+"""
+A hex-encoded MsgPack-based cursor,
+allowing to continue a query from where
+you started.
+"""
+scalar Cursor
+
+"""
+All possible filters that can be used to query for a list of blocks.
+Multiple filters can be combined. It is also valid that none are given.
+"""
+input BlocksFilter {
+    Height: BlockPositionOperators
+    Timestamp: TimestampOperators
+    Limit: Int
+    """
+    A cursor that allows the blocks query to pick up from a state previously left off.
+    When this cursor is defined, you should not define any filter except optionally the Limit filter.
+    If you do choose to specify other limits, an error will be returned.
+    """
+    Cursor: Cursor
+}
+
+"""
+Response type for the blocks query.
+"""
+type ResponseBlocks {
+    Blocks: [Block!]
+    """
+    In case all items could not be returned within a single call,
+    this cursor can be used for a follow-up blocks query call.
+    """
+    NextCursor: Cursor
+}
+
+"""
 The API of the block's data view.
 """
 type Block {
@@ -2023,7 +2158,7 @@ type BlockHeader {
     Child: Block
     BlockTime: Timestamp
     BlockHeight: BlockHeight
-    Payouts: [BlockPayout!]
+    Payouts(type: BlockPayoutType): [BlockPayout!]
 }
 
 """
@@ -2423,6 +2558,20 @@ type AtomicSwapContract {
 
 // region    ***************************** args.gotpl *****************************
 
+func (ec *executionContext) field_BlockHeader_Payouts_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *BlockPayoutType
+	if tmp, ok := rawArgs["type"]; ok {
+		arg0, err = ec.unmarshalOBlockPayoutType2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPayoutType(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["type"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_QueryRoot___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -2462,6 +2611,20 @@ func (ec *executionContext) field_QueryRoot_block_args(ctx context.Context, rawA
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_QueryRoot_blocks_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *BlocksFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		arg0, err = ec.unmarshalOBlocksFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlocksFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
 	return args, nil
 }
 
@@ -3859,13 +4022,20 @@ func (ec *executionContext) _BlockHeader_Payouts(ctx context.Context, field grap
 		Object:   "BlockHeader",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_BlockHeader_Payouts_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Payouts, nil
+		return ec.resolvers.BlockHeader().Payouts(rctx, obj, args["type"].(*BlockPayoutType))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7358,6 +7528,47 @@ func (ec *executionContext) _QueryRoot_blockAt(ctx context.Context, field graphq
 	return ec.marshalOBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _QueryRoot_blocks(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "QueryRoot",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_QueryRoot_blocks_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.QueryRoot().Blocks(rctx, args["filter"].(*BlocksFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*ResponseBlocks)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOResponseBlocks2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐResponseBlocks(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _QueryRoot_transaction(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -7595,6 +7806,74 @@ func (ec *executionContext) _QueryRoot___schema(ctx context.Context, field graph
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋvendorᚋgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ResponseBlocks_Blocks(ctx context.Context, field graphql.CollectedField, obj *ResponseBlocks) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ResponseBlocks",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Blocks, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*Block)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBlock2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _ResponseBlocks_NextCursor(ctx context.Context, field graphql.CollectedField, obj *ResponseBlocks) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "ResponseBlocks",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.NextCursor, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*explorerdb.Cursor)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureFulfillment_Version(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureFulfillment) (ret graphql.Marshaler) {
@@ -9903,6 +10182,150 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputBlockPositionOperators(ctx context.Context, obj interface{}) (BlockPositionOperators, error) {
+	var it BlockPositionOperators
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "Before":
+			var err error
+			it.Before, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "After":
+			var err error
+			it.After, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Between":
+			var err error
+			it.Between, err = ec.unmarshalOBlockPositionRange2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionRange(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputBlockPositionRange(ctx context.Context, obj interface{}) (BlockPositionRange, error) {
+	var it BlockPositionRange
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "Start":
+			var err error
+			it.Start, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "End":
+			var err error
+			it.End, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputBlocksFilter(ctx context.Context, obj interface{}) (BlocksFilter, error) {
+	var it BlocksFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "Height":
+			var err error
+			it.Height, err = ec.unmarshalOBlockPositionOperators2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionOperators(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Timestamp":
+			var err error
+			it.Timestamp, err = ec.unmarshalOTimestampOperators2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampOperators(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Limit":
+			var err error
+			it.Limit, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Cursor":
+			var err error
+			it.Cursor, err = ec.unmarshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTimestampOperators(ctx context.Context, obj interface{}) (TimestampOperators, error) {
+	var it TimestampOperators
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "Before":
+			var err error
+			it.Before, err = ec.unmarshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "After":
+			var err error
+			it.After, err = ec.unmarshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Between":
+			var err error
+			it.Between, err = ec.unmarshalOTimestampRange2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampRange(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTimestampRange(ctx context.Context, obj interface{}) (TimestampRange, error) {
+	var it TimestampRange
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "Start":
+			var err error
+			it.Start, err = ec.unmarshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "End":
+			var err error
+			it.End, err = ec.unmarshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -10431,7 +10854,16 @@ func (ec *executionContext) _BlockHeader(ctx context.Context, sel ast.SelectionS
 		case "BlockHeight":
 			out.Values[i] = ec._BlockHeader_BlockHeight(ctx, field, obj)
 		case "Payouts":
-			out.Values[i] = ec._BlockHeader_Payouts(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._BlockHeader_Payouts(ctx, field, obj)
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -11685,6 +12117,17 @@ func (ec *executionContext) _QueryRoot(ctx context.Context, sel ast.SelectionSet
 				res = ec._QueryRoot_blockAt(ctx, field)
 				return res
 			})
+		case "blocks":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QueryRoot_blocks(ctx, field)
+				return res
+			})
 		case "transaction":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -11733,6 +12176,32 @@ func (ec *executionContext) _QueryRoot(ctx context.Context, sel ast.SelectionSet
 			out.Values[i] = ec._QueryRoot___type(ctx, field)
 		case "__schema":
 			out.Values[i] = ec._QueryRoot___schema(ctx, field)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var responseBlocksImplementors = []string{"ResponseBlocks"}
+
+func (ec *executionContext) _ResponseBlocks(ctx context.Context, sel ast.SelectionSet, obj *ResponseBlocks) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, responseBlocksImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ResponseBlocks")
+		case "Blocks":
+			out.Values[i] = ec._ResponseBlocks_Blocks(ctx, field, obj)
+		case "NextCursor":
+			out.Values[i] = ec._ResponseBlocks_NextCursor(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13357,6 +13826,46 @@ func (ec *executionContext) marshalOBlock2githubᚗcomᚋthreefoldtechᚋrivine�
 	return ec._Block(ctx, sel, &v)
 }
 
+func (ec *executionContext) marshalOBlock2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx context.Context, sel ast.SelectionSet, v []*Block) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		rctx := &graphql.ResolverContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithResolverContext(ctx, rctx)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) marshalOBlock2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx context.Context, sel ast.SelectionSet, v *Block) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -13484,6 +13993,42 @@ func (ec *executionContext) marshalOBlockPayoutType2ᚖgithubᚗcomᚋthreefoldt
 	return v
 }
 
+func (ec *executionContext) unmarshalOBlockPositionOperators2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionOperators(ctx context.Context, v interface{}) (BlockPositionOperators, error) {
+	return ec.unmarshalInputBlockPositionOperators(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOBlockPositionOperators2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionOperators(ctx context.Context, v interface{}) (*BlockPositionOperators, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOBlockPositionOperators2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionOperators(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) unmarshalOBlockPositionRange2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionRange(ctx context.Context, v interface{}) (BlockPositionRange, error) {
+	return ec.unmarshalInputBlockPositionRange(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOBlockPositionRange2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionRange(ctx context.Context, v interface{}) (*BlockPositionRange, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOBlockPositionRange2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlockPositionRange(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) unmarshalOBlocksFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlocksFilter(ctx context.Context, v interface{}) (BlocksFilter, error) {
+	return ec.unmarshalInputBlocksFilter(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOBlocksFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlocksFilter(ctx context.Context, v interface{}) (*BlocksFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOBlocksFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlocksFilter(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	return graphql.UnmarshalBoolean(v)
 }
@@ -13534,6 +14079,30 @@ func (ec *executionContext) marshalOContract2githubᚗcomᚋthreefoldtechᚋrivi
 		return graphql.Null
 	}
 	return ec._Contract(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOCursor2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, v interface{}) (explorerdb.Cursor, error) {
+	var res explorerdb.Cursor
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalOCursor2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, sel ast.SelectionSet, v explorerdb.Cursor) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, v interface{}) (*explorerdb.Cursor, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOCursor2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, sel ast.SelectionSet, v *explorerdb.Cursor) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOHash2githubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx context.Context, v interface{}) (crypto.Hash, error) {
@@ -13802,6 +14371,17 @@ func (ec *executionContext) marshalOPublicKey2ᚖgithubᚗcomᚋthreefoldtechᚋ
 	return ec.marshalOPublicKey2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐPublicKey(ctx, sel, *v)
 }
 
+func (ec *executionContext) marshalOResponseBlocks2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐResponseBlocks(ctx context.Context, sel ast.SelectionSet, v ResponseBlocks) graphql.Marshaler {
+	return ec._ResponseBlocks(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalOResponseBlocks2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐResponseBlocks(ctx context.Context, sel ast.SelectionSet, v *ResponseBlocks) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._ResponseBlocks(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
 	return graphql.UnmarshalString(v)
 }
@@ -13878,6 +14458,30 @@ func (ec *executionContext) marshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋ
 		return graphql.Null
 	}
 	return ec.marshalOTimestamp2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOTimestampOperators2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampOperators(ctx context.Context, v interface{}) (TimestampOperators, error) {
+	return ec.unmarshalInputTimestampOperators(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOTimestampOperators2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampOperators(ctx context.Context, v interface{}) (*TimestampOperators, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOTimestampOperators2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampOperators(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) unmarshalOTimestampRange2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampRange(ctx context.Context, v interface{}) (TimestampRange, error) {
+	return ec.unmarshalInputTimestampRange(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOTimestampRange2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampRange(ctx context.Context, v interface{}) (*TimestampRange, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOTimestampRange2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTimestampRange(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) marshalOTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx context.Context, sel ast.SelectionSet, v Transaction) graphql.Marshaler {

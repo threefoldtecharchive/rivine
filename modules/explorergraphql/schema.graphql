@@ -6,13 +6,14 @@ schema {
 
 # TODO: what other things should provide unconfirmed updates????
 
+# TODO: even if we have pagination support, a user might still be able to ask too much data,
+#    by requesting an unreasonable level of recursive nesting. We should limit this also somehow...
+
 # TODO: How to query transactions based on properties
 # TODO: How to query wallets based on properties
 
 # TODO: support providing arguments to certain field resolvers,
 #    ... for example: allowing only the first item of a list to be retuned (e.g. payout)
-
-# TODO: add some quick documentation to schema as a test of generated documentation
 
 type QueryRoot {
   """
@@ -46,6 +47,16 @@ type QueryRoot {
   The genesis block is at position 0 and the numbering goes upwards from there.
   """
   blockAt(position: Int): Block
+
+  """
+  Query multiple blocks, optionally giving a filter.
+  If no filter is given the first blocks at the start are given.
+  This query uses pagination and will have a server-defined upper limit
+  of items to return maximum. In case more items can be returned,
+  follow-up call(s) have to be made, using the returned Cursor
+  as a FilterSinceCursor.
+  """
+  blocks(filter: BlocksFilter): ResponseBlocks
 
   """
   Query a transaction by identifier.
@@ -88,7 +99,7 @@ or an `UnlockHash` (for any kind of wallet or contract).
 scalar ObjectID
 """
 BlockHeight is implemented as an unsigned 64-bit integer,
-and represents the height of a block, starting at 0.
+and represents the height of a block, stargting at 0.
 """
 scalar BlockHeight
 """
@@ -313,6 +324,89 @@ type ChainAggregatedData {
 }
 
 """
+An inclusive range of block positions, with one or two points to be defined.
+A range with no fields defined is equal to a nil range.
+"""
+input BlockPositionRange {
+    Start: Int
+    End: Int
+}
+
+"""
+A poor man's input Union, allowing you to filter on block positions,
+by defining what the upper- or lower limit is.
+Or the inclusive range of blocks including and between (one or) two positions.
+If no fields are given it is seen as a nil operator. No more then one field can be defined.
+
+This really should be a Union, this is however not (yet) supported by the official GraphQL
+specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+"""
+input BlockPositionOperators {
+    Before: Int
+    After: Int
+    Between: BlockPositionRange
+}
+
+"""
+An inclusive range of timestamps, with one or two points to be defined.
+A range with no fields defined is equal to a nil range.
+"""
+input TimestampRange {
+    Start: Timestamp
+    End: Timestamp
+}
+
+"""
+A poor man's input Union, allowing you to filter on timestamps,
+by defining what the upper- or lower limit is.
+Or the inclusive range of blocks including and between (one or) two timestamps.
+If no fields are given it is seen as a nil operator. No more then one field can be defined.
+
+This really should be a Union, this is however not (yet) supported by the official GraphQL
+specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+"""
+input TimestampOperators {
+    Before: Timestamp
+    After: Timestamp
+    Between: TimestampRange
+}
+
+"""
+A hex-encoded MsgPack-based cursor,
+allowing to continue a query from where
+you started.
+"""
+scalar Cursor
+
+"""
+All possible filters that can be used to query for a list of blocks.
+Multiple filters can be combined. It is also valid that none are given.
+"""
+input BlocksFilter {
+    Height: BlockPositionOperators
+    Timestamp: TimestampOperators
+    Limit: Int
+    """
+    A cursor that allows the blocks query to pick up from a state previously left off.
+    When this cursor is defined, you should not define any filter except optionally the Limit filter.
+    If you do choose to specify other limits, an error will be returned.
+    """
+    Cursor: Cursor
+}
+
+"""
+Response type for the blocks query.
+"""
+type ResponseBlocks {
+    Blocks: [Block!]
+    """
+    In case all items could not be returned within a single call,
+    this cursor can be used for a follow-up blocks query call.
+    """
+    NextCursor: Cursor
+}
+
+"""
 The API of the block's data view.
 """
 type Block {
@@ -385,7 +479,7 @@ type BlockHeader {
     Child: Block
     BlockTime: Timestamp
     BlockHeight: BlockHeight
-    Payouts: [BlockPayout!]
+    Payouts(type: BlockPayoutType): [BlockPayout!]
 }
 
 """

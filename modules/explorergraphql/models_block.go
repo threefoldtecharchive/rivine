@@ -40,6 +40,14 @@ func NewBlock(id types.BlockID, db explorerdb.DB) *Block {
 	}
 }
 
+func NewBlockFromDB(block *explorerdb.Block, db explorerdb.DB) (*Block, error) {
+	apiBlock := NewBlock(block.ID, db)
+	apiBlock.onceData.Do(func() {
+		apiBlock._blockDataOnceFromData(block)
+	})
+	return apiBlock, apiBlock.dataErr
+}
+
 func (block *Block) blockData(ctx context.Context) (*blockData, error) {
 	block.onceData.Do(block._blockDataOnce)
 	return block.data, block.dataErr
@@ -57,6 +65,16 @@ func (block *Block) _blockDataOnce() {
 		block.dataErr = fmt.Errorf("failed to fetch block %s data from DB: %v", block.id.String(), err)
 		return
 	}
+
+	block._blockDataOnceFromData(&data)
+}
+
+func (block *Block) _blockDataOnceFromData(data *explorerdb.Block) {
+	defer func() {
+		if e := recover(); e != nil {
+			block.dataErr = fmt.Errorf("failed to fetch block %s data from DB: %v", block.id.String(), e)
+		}
+	}()
 
 	// restructure all fetched data...
 

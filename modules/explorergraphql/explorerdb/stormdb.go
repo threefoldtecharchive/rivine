@@ -14,6 +14,7 @@ import (
 
 	"github.com/asdine/storm"
 	smsp "github.com/asdine/storm/codec/msgpack"
+	"github.com/asdine/storm/q"
 	bolt "go.etcd.io/bbolt"
 
 	mp "github.com/vmihailenco/msgpack"
@@ -1406,6 +1407,144 @@ func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	output, err := node.GetOutput(id)
 	return output, mapStormErrorToExplorerDBError(err)
+}
+
+const (
+	StormDBDefaultLimitBlocks = 10
+	StormDBUpperLimitBlocks   = 100
+)
+
+func (sdb *StormDB) GetBlocks(limit *int, filter *BlocksFilter, cursor *Cursor) ([]Block, *Cursor, error) {
+	var ilimit int
+	if limit == nil {
+		ilimit = StormDBDefaultLimitBlocks
+	} else {
+		ilimit = *limit
+		if ilimit <= 0 {
+			return nil, nil, nil
+		}
+		if ilimit > StormDBUpperLimitBlocks {
+			ilimit = StormDBUpperLimitBlocks
+		}
+	}
+	node := newStormObjectNodeReader(sdb, sdb.logger)
+	blocks, cursor, err := node.GetBlocks(ilimit, filter, cursor)
+	return blocks, cursor, mapStormErrorToExplorerDBError(err)
+}
+
+func (sdb *StormDB) GetBlockIdentifiers(limit *int, filter *BlockIdentifiersFilter, cursor *Cursor) ([]types.BlockID, *Cursor, error) {
+	var ilimit int
+	if limit == nil {
+		ilimit = StormDBDefaultLimitBlocks
+	} else {
+		ilimit = *limit
+		if ilimit <= 0 {
+			return nil, nil, nil
+		}
+		if ilimit > StormDBUpperLimitBlocks {
+			ilimit = StormDBUpperLimitBlocks
+		}
+	}
+
+	node := sdb.rootNode(nodeNameBlocks)
+
+	// unpack cursor (from a previous GetBlocks) query if defined
+	if cursor != nil {
+		var cursorFilter BlockIdentifiersFilterCursor
+		err := cursor.UnpackValue(&cursorFilter)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to unpack cursor")
+		}
+		if filter != nil && filter.BlockHeight != nil {
+			return nil, nil, errors.New("a filter and a cursor cannot be used together")
+		}
+		filter = cursorFilter.AsBlockIdentifiersFilter()
+	}
+	// define the StormDB Query Matchers based on the used BlocksFilter,
+	// unrelated to the fact that it might be defined/enforced by a cursor from a previous call
+	var matchers []q.Matcher
+	if filter != nil {
+		switch filter.BlockHeight.(type) {
+		case nil:
+			// nothing to do
+		default:
+			begin, end := filter.BlockHeight.BlockHeightEndpoints()
+			if begin != nil {
+				matchers = append(matchers, q.Gte(nodeObjectBlockFieldHeight, *begin+1))
+			}
+			if end != nil {
+				matchers = append(matchers, q.Lte(nodeObjectBlockFieldHeight, *end+1))
+			}
+		}
+	}
+	// look up all blocks, optionally using matchers, but defintely with a limit
+	// we allow one more than the limit, such that we can define a cursor if needed,
+	// based on the used filter and the extra result (defining the next one to start from)
+	var pairs []blockHeightIDPair
+	err := node.Select(matchers...).Limit(ilimit + 1).Find(&pairs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	blockIdentifiers := make([]types.BlockID, 0, len(pairs))
+	for _, pair := range pairs {
+		blockIdentifiers = append(blockIdentifiers, pair.BlockID.AsBlockID())
+	}
+
+	if len(pairs) <= ilimit {
+		// if blocks were found, but not more than the defined limit,
+		// we can simply return without the need for a new cursor
+		return blockIdentifiers, nil, nil
+	}
+	// create the next filter, such that we can turn it into a cursor,
+	// and return it with the found blocks (minus the last block, as that one was only used to define the next cursor)
+	var nextFilter BlockIdentifiersFilterCursor
+	if filter != nil {
+		// ... define block height filter, if applicable
+		switch bhf := filter.BlockHeight.(type) {
+		case *BlockHeightFilterRange:
+			if bhf != nil {
+				h := pairs[len(pairs)-1].Height - 1
+				nextFilter.BlockHeight = &BlockHeightFilterRange{
+					Begin: &h,
+					End:   bhf.End,
+				}
+			}
+		case nil:
+			h := pairs[len(pairs)-1].Height - 1
+			nextFilter.BlockHeight = &BlockHeightFilterRange{
+				Begin: &h,
+				End:   nil,
+			}
+		case BlockHeightFilterAfter:
+			h := pairs[len(pairs)-1].Height - 1
+			nextFilter.BlockHeight = &BlockHeightFilterRange{
+				Begin: &h,
+				End:   nil,
+			}
+		case BlockHeightFilterBefore:
+			bh := types.BlockHeight(bhf)
+			h := pairs[len(pairs)-1].Height - 1
+			nextFilter.BlockHeight = &BlockHeightFilterRange{
+				Begin: &h,
+				End:   &bh,
+			}
+		}
+	} else {
+		h := pairs[len(pairs)-1].Height - 1
+		nextFilter.BlockHeight = &BlockHeightFilterRange{
+			Begin: &h,
+			End:   nil,
+		}
+	}
+	// ... create the filter cursor
+	nextCursor, err := NewCursor(nextFilter)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create cursor from composed next filter: %v", err)
+	}
+	// all good, return the limited results, as well as
+	// the cursor that can be used by the callee to continue this query where it left off
+	return blockIdentifiers[:ilimit], &nextCursor, nil
 }
 
 func (sdb *StormDB) GetFreeForAllWallet(uh types.UnlockHash) (FreeForAllWalletData, error) {

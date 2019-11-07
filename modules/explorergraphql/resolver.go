@@ -23,6 +23,8 @@ import (
 //     which subscribes to the transaction pool, and thus knows
 //     at any point what data can be used in case the wrapped DB returns ErrNotFound
 
+// TODO: differentiate between user and internal DB errors!!!
+
 type Resolver struct {
 	db             explorerdb.DB
 	cs             modules.ConsensusSet
@@ -61,6 +63,29 @@ func (r *blockHeaderResolver) Child(ctx context.Context, obj *BlockHeader) (*Blo
 		return nil, err
 	}
 	return block, nil
+}
+
+func (r *blockHeaderResolver) Payouts(ctx context.Context, obj *BlockHeader, typeArg *BlockPayoutType) ([]*BlockPayout, error) {
+	// NOTE: this resolver is not lazy,
+	// and is a resolver that does not save any DB calls at the moment.
+	// It merely prevents from data being returned that the user did not request,
+	// yet the work is fully done on our side none the less.
+	// If we could prevent the unused server-side work that might be even better,
+	// but this API-level filtering is a start at least...
+	if typeArg == nil {
+		return obj.Payouts, nil
+	}
+	var payouts []*BlockPayout
+	for _, payout := range obj.Payouts {
+		pt, err := payout.Type(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if pt != nil && *pt == *typeArg {
+			payouts = append(payouts, payout)
+		}
+	}
+	return payouts, nil
 }
 
 type chainFactsResolver struct{ *Resolver }
@@ -198,14 +223,17 @@ func (r *queryRootResolver) Object(ctx context.Context, id *ObjectID) (Object, e
 		return nil, fmt.Errorf("internal server error: unsupported object type %d (object version %d)", dbObjectInfo.Type, dbObjectInfo.Version)
 	}
 }
+
 func (r *queryRootResolver) Transaction(ctx context.Context, id crypto.Hash) (Transaction, error) {
 	transactionID := types.TransactionID(id)
 	return NewTransaction(transactionID, nil, r.db)
 }
+
 func (r *queryRootResolver) Output(ctx context.Context, id crypto.Hash) (*Output, error) {
 	outputID := types.OutputID(id)
 	return NewOutput(outputID, nil, nil, r.db), nil
 }
+
 func (r *queryRootResolver) Block(ctx context.Context, id *crypto.Hash) (*Block, error) {
 	if id == nil {
 		return getBlockAt(ctx, r.db, nil)
@@ -243,6 +271,179 @@ func getBlockAt(ctx context.Context, db explorerdb.DB, position *int) (*Block, e
 		return nil, err
 	}
 	return NewBlock(blockID, db), nil
+}
+
+// TODO: [FATAL] fix cursor: seems to be not supper correct in paging (seems to be something wrong with our height check)
+//       need to slow debug on paper what i'm doing with these heights, probably a stupid mistake
+func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*ResponseBlocks, error) {
+	if filter == nil {
+		return r.lazyBlocks(ctx, nil, nil, nil)
+	}
+	var blocksFilter *explorerdb.BlocksFilter
+	bhFilter, err := blockHeightsFilterFromGQL(filter.Height, r.db)
+	if err != nil {
+		return nil, err
+	}
+	tsFilter, err := timestampFilterFromGQL(filter.Timestamp, r.db)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: [FATAL] fix cursor for time filter, seems to be broken [FATAL]
+	// TODO: should we not check if a lazy call is possible, despite it being cursor-based
+	if tsFilter == nil && filter.Cursor == nil {
+		return r.lazyBlocks(ctx, filter.Limit, &explorerdb.BlockIdentifiersFilter{
+			BlockHeight: bhFilter,
+		}, filter.Cursor)
+	}
+	if bhFilter != nil || tsFilter != nil {
+		blocksFilter = &explorerdb.BlocksFilter{
+			BlockHeight: bhFilter,
+			Timestamp:   tsFilter,
+		}
+	}
+	blocks, nextCursor, err := r.db.GetBlocks(filter.Limit, blocksFilter, filter.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	apiBlocks := make([]*Block, 0, len(blocks))
+	for idx := range blocks {
+		apiBlock, err := NewBlockFromDB(&blocks[idx], r.db)
+		if err != nil {
+			return nil, err
+		}
+		apiBlocks = append(apiBlocks, apiBlock)
+	}
+	return &ResponseBlocks{
+		Blocks:     apiBlocks,
+		NextCursor: nextCursor,
+	}, nil
+}
+func (r *queryRootResolver) lazyBlocks(ctx context.Context, limit *int, filter *explorerdb.BlockIdentifiersFilter, cursor *explorerdb.Cursor) (*ResponseBlocks, error) {
+	blockIdentifiers, nextCursor, err := r.db.GetBlockIdentifiers(limit, filter, cursor)
+	if err != nil {
+		return nil, err
+	}
+	apiBlocks := make([]*Block, 0, len(blockIdentifiers))
+	for _, blockID := range blockIdentifiers {
+		apiBlock := NewBlock(blockID, r.db)
+		apiBlocks = append(apiBlocks, apiBlock)
+	}
+	return &ResponseBlocks{
+		Blocks:     apiBlocks,
+		NextCursor: nextCursor,
+	}, nil
+}
+
+func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.DB) (explorerdb.BlockHeightFilter, error) {
+	if operators == nil {
+		return nil, nil
+	}
+	if operators.Before != nil {
+		if operators.After != nil || operators.Between != nil {
+			return nil, errors.New("After and Between BlockHeigt filters cannot be defined if Before filter is defined")
+		}
+		position := *operators.Before
+		if position < 0 {
+			chainCtx, err := db.GetChainContext()
+			if err != nil {
+				return nil, err
+			}
+			position += int(chainCtx.Height)
+			if position < 0 {
+				return nil, errors.New("out of range before block height position given")
+			}
+		}
+		return explorerdb.BlockHeightFilterBefore(position), nil
+	}
+	if operators.After != nil {
+		// we know before is nil due to previous check
+		if operators.Between != nil {
+			return nil, errors.New("Between BlockHeigt filters cannot be defined if Before or After filter is defined")
+		}
+		position := *operators.After
+		if position < 0 {
+			chainCtx, err := db.GetChainContext()
+			if err != nil {
+				return nil, err
+			}
+			position += int(chainCtx.Height)
+			if position < 0 {
+				return nil, errors.New("out of range before block height position given")
+			}
+		}
+		return explorerdb.BlockHeightFilterAfter(position), nil
+	}
+	if operators.Between != nil && (operators.Between.Start != nil || operators.Between.End != nil) {
+		// we know the other 2 are nil due to the previous checks
+		begin, end := operators.Between.Start, operators.Between.End
+		var (
+			chainCtx     explorerdb.ChainContext
+			hBegin, hEnd *types.BlockHeight
+		)
+		if begin != nil {
+			if *begin < 0 {
+				var err error
+				chainCtx, err = db.GetChainContext()
+				if err != nil {
+					return nil, err
+				}
+				*begin += int(chainCtx.Height)
+				if *begin < 0 {
+					return nil, errors.New("out of range before block height begin position given")
+				}
+			}
+			height := types.BlockHeight(*begin)
+			hBegin = &height
+		}
+		if end != nil {
+			if *end < 0 {
+				if chainCtx.Timestamp == 0 { // if chain ctx is not fetched yet
+					var err error
+					chainCtx, err = db.GetChainContext()
+					if err != nil {
+						return nil, err
+					}
+				}
+				*end += int(chainCtx.Height)
+				if *end < 0 {
+					return nil, errors.New("out of range before block height end position given")
+				}
+			}
+			height := types.BlockHeight(*end)
+			hEnd = &height
+		}
+		return explorerdb.NewBlockHeightFilterRange(hBegin, hEnd), nil
+	}
+	// use no filter, useless, but same as a nil filter explicitly
+	return nil, nil
+}
+
+func timestampFilterFromGQL(operators *TimestampOperators, db explorerdb.DB) (explorerdb.TimestampFilter, error) {
+	if operators == nil {
+		return nil, nil
+	}
+	if operators.Before != nil {
+		if operators.After != nil || operators.Between != nil {
+			return nil, errors.New("After and Between Timestamp filters cannot be defined if Before filter is defined")
+		}
+		return explorerdb.TimestampFilterBefore(*operators.Before), nil
+	}
+	if operators.After != nil {
+		// we know before is nil due to previous check
+		if operators.Between != nil {
+			return nil, errors.New("Between Timestamp filters cannot be defined if Before or After filter is defined")
+		}
+		return explorerdb.TimestampFilterBefore(*operators.After), nil
+	}
+	if operators.Between != nil && (operators.Between.Start != nil || operators.Between.End != nil) {
+		// we know the other 2 are nil due to the previous checks
+		return explorerdb.NewTimestampFilterRange(
+			operators.Between.Start,
+			operators.Between.End,
+		), nil
+	}
+	// use no filter, useless, but same as a nil filter explicitly
+	return nil, nil
 }
 
 func (r *queryRootResolver) Wallet(ctx context.Context, unlockhash types.UnlockHash) (Wallet, error) {

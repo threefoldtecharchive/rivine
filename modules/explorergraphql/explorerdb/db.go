@@ -1,7 +1,9 @@
 package explorerdb
 
 import (
+	"errors"
 	"fmt"
+	"math"
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/crypto"
@@ -47,6 +49,9 @@ type RTxn interface {
 	GetTransaction(types.TransactionID) (Transaction, error)
 	GetOutput(types.OutputID) (Output, error)
 
+	GetBlocks(limit *int, filter *BlocksFilter, cursor *Cursor) ([]Block, *Cursor, error)
+	GetBlockIdentifiers(limit *int, filter *BlockIdentifiersFilter, cursor *Cursor) ([]types.BlockID, *Cursor, error)
+
 	GetFreeForAllWallet(types.UnlockHash) (FreeForAllWalletData, error)
 	GetSingleSignatureWallet(types.UnlockHash) (SingleSignatureWalletData, error)
 	GetMultiSignatureWallet(types.UnlockHash) (MultiSignatureWalletData, error)
@@ -69,6 +74,171 @@ type RWTxn interface {
 	// If you want to continue using this transaction, you'll have to set final to true
 	Commit(final bool) error
 }
+
+type (
+	TimestampFilter interface {
+		TimestampEndpoints() (begin, end *types.Timestamp)
+	}
+	TimestampFilterRange struct { // the only TimesTamp filter that should ever be MsgPack encoded/decoded
+		Begin *types.Timestamp `msgpack:"b"`
+		End   *types.Timestamp `msgpack:"e"`
+	}
+	TimestampFilterBefore types.Timestamp
+	TimestampFilterAfter  types.Timestamp
+
+	BlockHeightFilter interface {
+		BlockHeightEndpoints() (begin, end *types.BlockHeight)
+	}
+	BlockHeightFilterRange struct { // the only BlockHeight filter that should ever be MsgPack encoded/decoded
+		Begin *types.BlockHeight `msgpack:"b"`
+		End   *types.BlockHeight `msgpack:"e"`
+	}
+	BlockHeightFilterBefore types.BlockHeight
+	BlockHeightFilterAfter  types.BlockHeight
+
+	BlocksFilter struct {
+		BlockHeight BlockHeightFilter
+		Timestamp   TimestampFilter
+	}
+	// Used for Cursor encoding/decoding (MsgPack) purposes,
+	// simplifying the BlocksFilter union typing.
+	BlocksFilterCursor struct {
+		BlockHeight *BlockHeightFilterRange `msgpack:"h"`
+		Timestamp   *TimestampFilterRange   `msgpack:"t"`
+	}
+
+	BlockIdentifiersFilter struct {
+		BlockHeight BlockHeightFilter
+	}
+	// Used for Cursor encoding/decoding (MsgPack) purposes,
+	// simplifying the BlockIdentifiersFilter union typing.
+	BlockIdentifiersFilterCursor struct {
+		BlockHeight *BlockHeightFilterRange `msgpack:"h"`
+	}
+)
+
+func (cur *BlocksFilterCursor) AsBlocksFilter() *BlocksFilter {
+	return &BlocksFilter{
+		BlockHeight: cur.BlockHeight,
+		Timestamp:   cur.Timestamp,
+	}
+}
+
+func (cur *BlockIdentifiersFilterCursor) AsBlockIdentifiersFilter() *BlockIdentifiersFilter {
+	return &BlockIdentifiersFilter{
+		BlockHeight: cur.BlockHeight,
+	}
+}
+
+func NewTimestampFilterRange(begin, end *types.Timestamp) *TimestampFilterRange {
+	if begin == nil && end == nil {
+		return nil
+	}
+	return &TimestampFilterRange{
+		Begin: begin,
+		End:   end,
+	}
+}
+func NewTimestampFilter(begin, end *types.Timestamp) TimestampFilter {
+	return NewTimestampFilterRange(begin, end)
+}
+
+func (tsr *TimestampFilterRange) TimestampEndpoints() (begin, end *types.Timestamp) {
+	if tsr == nil {
+		return nil, nil
+	}
+	return tsr.Begin, tsr.End
+}
+
+func (tsb TimestampFilterBefore) TimestampEndpoints() (begin, end *types.Timestamp) {
+	ts := types.Timestamp(tsb)
+	if ts > 0 {
+		ts--
+	}
+	return nil, &ts
+}
+func (tsb TimestampFilterBefore) MarshalMsgpack() ([]byte, error) {
+	return nil, errors.New("BUG: TimestampFilterBefore does not support MsgPack encoding, TimestampFilterRange should be used instead")
+}
+func (tsb *TimestampFilterBefore) UnmarshalMsgpack([]byte) error {
+	return errors.New("BUG: TimestampFilterBefore does not support MsgPack decoding, TimestampFilterRange should be used instead")
+}
+
+func (tsa TimestampFilterAfter) TimestampEndpoints() (begin, end *types.Timestamp) {
+	ts := types.Timestamp(tsa)
+	if ts < math.MaxUint64 {
+		ts++
+	}
+	return &ts, nil
+}
+func (tsa TimestampFilterAfter) MarshalMsgpack() ([]byte, error) {
+	return nil, errors.New("BUG: TimestampFilterAfter does not support MsgPack encoding, TimestampFilterRange should be used instead")
+}
+func (tsa *TimestampFilterAfter) UnmarshalMsgpack([]byte) error {
+	return errors.New("BUG: TimestampFilterAfter does not support MsgPack decoding, TimestampFilterRange should be used instead")
+}
+
+var (
+	_ TimestampFilter = (*TimestampFilterRange)(nil)
+	_ TimestampFilter = TimestampFilterBefore(0)
+	_ TimestampFilter = TimestampFilterAfter(0)
+)
+
+func NewBlockHeightFilterRange(begin, end *types.BlockHeight) *BlockHeightFilterRange {
+	if begin == nil && end == nil {
+		return nil
+	}
+	return &BlockHeightFilterRange{
+		Begin: begin,
+		End:   end,
+	}
+}
+
+func NewBlockHeightFilter(begin, end *types.BlockHeight) BlockHeightFilter {
+	return NewBlockHeightFilterRange(begin, end)
+}
+
+func (bhr *BlockHeightFilterRange) BlockHeightEndpoints() (begin, end *types.BlockHeight) {
+	if bhr == nil {
+		return nil, nil
+	}
+	return bhr.Begin, bhr.End
+}
+
+func (bhb BlockHeightFilterBefore) BlockHeightEndpoints() (begin, end *types.BlockHeight) {
+
+	bh := types.BlockHeight(bhb)
+	if bh > 0 {
+		bh--
+	}
+	return nil, &bh
+}
+func (bhb BlockHeightFilterBefore) MarshalMsgpack() ([]byte, error) {
+	return nil, errors.New("BUG: BlockHeightFilterBefore does not support MsgPack encoding, BlockHeightFilterRange should be used instead")
+}
+func (bhb *BlockHeightFilterBefore) BlockHeightFilterBefore([]byte) error {
+	return errors.New("BUG: TimestampFilterBefore does not support MsgPack decoding, BlockHeightFilterRange should be used instead")
+}
+
+func (bha BlockHeightFilterAfter) BlockHeightEndpoints() (begin, end *types.BlockHeight) {
+	bh := types.BlockHeight(bha)
+	if bh < math.MaxUint64 {
+		bh++
+	}
+	return &bh, nil
+}
+func (bha BlockHeightFilterAfter) MarshalMsgpack() ([]byte, error) {
+	return nil, errors.New("BUG: BlockHeightFilterAfter does not support MsgPack encoding, BlockHeightFilterRange should be used instead")
+}
+func (bha *BlockHeightFilterAfter) BlockHeightFilterAfter([]byte) error {
+	return errors.New("BUG: BlockHeightFilterAfter does not support MsgPack decoding, BlockHeightFilterRange should be used instead")
+}
+
+var (
+	_ TimestampFilter = (*TimestampFilterRange)(nil)
+	_ TimestampFilter = TimestampFilterBefore(0)
+	_ TimestampFilter = TimestampFilterAfter(0)
+)
 
 // TODO: handle also chain-specific stuff, such as chains that do not have block rewards
 

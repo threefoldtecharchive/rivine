@@ -29,6 +29,7 @@
     * [NilCondition](#nilcondition)
     * [Output](#output)
     * [PublicKeySignaturePair](#publickeysignaturepair)
+    * [ResponseBlocks](#responseblocks)
     * [SingleSignatureFulfillment](#singlesignaturefulfillment)
     * [SingleSignatureWallet](#singlesignaturewallet)
     * [StandardTransaction](#standardtransaction)
@@ -36,6 +37,12 @@
     * [TransactionParentInfo](#transactionparentinfo)
     * [UnlockHashCondition](#unlockhashcondition)
     * [UnlockHashPublicKeyPair](#unlockhashpublickeypair)
+  * [Inputs](#inputs)
+    * [BlockPositionOperators](#blockpositionoperators)
+    * [BlockPositionRange](#blockpositionrange)
+    * [BlocksFilter](#blocksfilter)
+    * [TimestampOperators](#timestampoperators)
+    * [TimestampRange](#timestamprange)
   * [Enums](#enums)
     * [BlockPayoutType](#blockpayouttype)
     * [LockType](#locktype)
@@ -46,6 +53,7 @@
     * [BlockHeight](#blockheight)
     * [Boolean](#boolean)
     * [ByteVersion](#byteversion)
+    * [Cursor](#cursor)
     * [Hash](#hash)
     * [Int](#int)
     * [LockTime](#locktime)
@@ -135,6 +143,25 @@ The genesis block is at position 0 and the numbering goes upwards from there.
 <tr>
 <td colspan="2" align="right" valign="top">position</td>
 <td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>blocks</strong></td>
+<td valign="top"><a href="#responseblocks">ResponseBlocks</a></td>
+<td>
+
+Query multiple blocks, optionally giving a filter.
+If no filter is given the first blocks at the start are given.
+This query uses pagination and will have a server-defined upper limit
+of items to return maximum. In case more items can be returned,
+follow-up call(s) have to be made, using the returned Cursor
+as a FilterSinceCursor.
+
+</td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">filter</td>
+<td valign="top"><a href="#blocksfilter">BlocksFilter</a></td>
 <td></td>
 </tr>
 <tr>
@@ -568,6 +595,11 @@ The Parent and Child block can be queried recursively as well.
 <tr>
 <td colspan="2" valign="top"><strong>Payouts</strong></td>
 <td valign="top">[<a href="#blockpayout">BlockPayout</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">type</td>
+<td valign="top"><a href="#blockpayouttype">BlockPayoutType</a></td>
 <td></td>
 </tr>
 </tbody>
@@ -1435,6 +1467,38 @@ as well as who spent it (see the `Fulfillment` of the `ChildInput`).
 </tbody>
 </table>
 
+### ResponseBlocks
+
+Response type for the blocks query.
+
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>Blocks</strong></td>
+<td valign="top">[<a href="#block">Block</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>NextCursor</strong></td>
+<td valign="top"><a href="#cursor">Cursor</a></td>
+<td>
+
+In case all items could not be returned within a single call,
+this cursor can be used for a follow-up blocks query call.
+
+</td>
+</tr>
+</tbody>
+</table>
+
 ### SingleSignatureFulfillment
 
 <table>
@@ -1725,6 +1789,179 @@ That field will be `null` in case the `PublicKey` is not (yet) known.
 </tbody>
 </table>
 
+## Inputs
+
+### BlockPositionOperators
+
+A poor man's input Union, allowing you to filter on block positions,
+by defining what the upper- or lower limit is.
+Or the inclusive range of blocks including and between (one or) two positions.
+If no fields are given it is seen as a nil operator. No more then one field can be defined.
+
+This really should be a Union, this is however not (yet) supported by the official GraphQL
+specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>Before</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>After</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Between</strong></td>
+<td valign="top"><a href="#blockpositionrange">BlockPositionRange</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+### BlockPositionRange
+
+An inclusive range of block positions, with one or two points to be defined.
+A range with no fields defined is equal to a nil range.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>Start</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>End</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+### BlocksFilter
+
+All possible filters that can be used to query for a list of blocks.
+Multiple filters can be combined. It is also valid that none are given.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>Height</strong></td>
+<td valign="top"><a href="#blockpositionoperators">BlockPositionOperators</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Timestamp</strong></td>
+<td valign="top"><a href="#timestampoperators">TimestampOperators</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Limit</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Cursor</strong></td>
+<td valign="top"><a href="#cursor">Cursor</a></td>
+<td>
+
+A cursor that allows the blocks query to pick up from a state previously left off.
+When this cursor is defined, you should not define any filter except optionally the Limit filter.
+If you do choose to specify other limits, an error will be returned.
+
+</td>
+</tr>
+</tbody>
+</table>
+
+### TimestampOperators
+
+A poor man's input Union, allowing you to filter on timestamps,
+by defining what the upper- or lower limit is.
+Or the inclusive range of blocks including and between (one or) two timestamps.
+If no fields are given it is seen as a nil operator. No more then one field can be defined.
+
+This really should be a Union, this is however not (yet) supported by the official GraphQL
+specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>Before</strong></td>
+<td valign="top"><a href="#timestamp">Timestamp</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>After</strong></td>
+<td valign="top"><a href="#timestamp">Timestamp</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Between</strong></td>
+<td valign="top"><a href="#timestamprange">TimestampRange</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+### TimestampRange
+
+An inclusive range of timestamps, with one or two points to be defined.
+A range with no fields defined is equal to a nil range.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>Start</strong></td>
+<td valign="top"><a href="#timestamp">Timestamp</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>End</strong></td>
+<td valign="top"><a href="#timestamp">Timestamp</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
 ## Enums
 
 ### BlockPayoutType
@@ -1812,7 +2049,7 @@ binary byte-slice type. It is always hex-encoded within the context of this API.
 ### BlockHeight
 
 BlockHeight is implemented as an unsigned 64-bit integer,
-and represents the height of a block, starting at 0.
+and represents the height of a block, stargting at 0.
 
 ### Boolean
 
@@ -1823,6 +2060,12 @@ The `Boolean` scalar type represents `true` or `false`.
 ByteVersion is a generic type, an unsigned 8-bit integer (equivalent to a single byte),
 used for any place where we use such Versions.
 Examples of such versions are `Transaction` and `UnlockCondition` versions.
+
+### Cursor
+
+A hex-encoded MsgPack-based cursor,
+allowing to continue a query from where
+you started.
 
 ### Hash
 

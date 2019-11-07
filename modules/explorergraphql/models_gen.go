@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -118,6 +119,38 @@ type BlockHeader struct {
 	BlockTime   *types.Timestamp   `json:"BlockTime"`
 	BlockHeight *types.BlockHeight `json:"BlockHeight"`
 	Payouts     []*BlockPayout     `json:"Payouts"`
+}
+
+// A poor man's input Union, allowing you to filter on block positions,
+// by defining what the upper- or lower limit is.
+// Or the inclusive range of blocks including and between (one or) two positions.
+// If no fields are given it is seen as a nil operator. No more then one field can be defined.
+//
+// This really should be a Union, this is however not (yet) supported by the official GraphQL
+// specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+type BlockPositionOperators struct {
+	Before  *int                `json:"Before"`
+	After   *int                `json:"After"`
+	Between *BlockPositionRange `json:"Between"`
+}
+
+// An inclusive range of block positions, with one or two points to be defined.
+// A range with no fields defined is equal to a nil range.
+type BlockPositionRange struct {
+	Start *int `json:"Start"`
+	End   *int `json:"End"`
+}
+
+// All possible filters that can be used to query for a list of blocks.
+// Multiple filters can be combined. It is also valid that none are given.
+type BlocksFilter struct {
+	Height    *BlockPositionOperators `json:"Height"`
+	Timestamp *TimestampOperators     `json:"Timestamp"`
+	Limit     *int                    `json:"Limit"`
+	// A cursor that allows the blocks query to pick up from a state previously left off.
+	// When this cursor is defined, you should not define any filter except optionally the Limit filter.
+	// If you do choose to specify other limits, an error will be returned.
+	Cursor *explorerdb.Cursor `json:"Cursor"`
 }
 
 // The aggregated chain data,
@@ -251,6 +284,14 @@ type PublicKeySignaturePair struct {
 	Signature Signature       `json:"Signature"`
 }
 
+// Response type for the blocks query.
+type ResponseBlocks struct {
+	Blocks []*Block `json:"Blocks"`
+	// In case all items could not be returned within a single call,
+	// this cursor can be used for a follow-up blocks query call.
+	NextCursor *explorerdb.Cursor `json:"NextCursor"`
+}
+
 type SingleSignatureFulfillment struct {
 	Version         ByteVersion     `json:"Version"`
 	ParentCondition UnlockCondition `json:"ParentCondition"`
@@ -259,6 +300,26 @@ type SingleSignatureFulfillment struct {
 }
 
 func (SingleSignatureFulfillment) IsUnlockFulfillment() {}
+
+// A poor man's input Union, allowing you to filter on timestamps,
+// by defining what the upper- or lower limit is.
+// Or the inclusive range of blocks including and between (one or) two timestamps.
+// If no fields are given it is seen as a nil operator. No more then one field can be defined.
+//
+// This really should be a Union, this is however not (yet) supported by the official GraphQL
+// specification. We probably will have to break this API later, as there is an active RFC working on supporting use cases like this.
+type TimestampOperators struct {
+	Before  *types.Timestamp `json:"Before"`
+	After   *types.Timestamp `json:"After"`
+	Between *TimestampRange  `json:"Between"`
+}
+
+// An inclusive range of timestamps, with one or two points to be defined.
+// A range with no fields defined is equal to a nil range.
+type TimestampRange struct {
+	Start *types.Timestamp `json:"Start"`
+	End   *types.Timestamp `json:"End"`
+}
 
 type TransactionFeePayout struct {
 	BlockPayout *BlockPayout `json:"BlockPayout"`

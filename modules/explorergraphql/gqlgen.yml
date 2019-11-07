@@ -22,6 +22,8 @@ models:
         resolver: true
   BlockHeader:
     fields:
+      Payouts:
+        resolver: true
       Child:
         resolver: true
   UnlockHashPublicKeyPair:
@@ -86,3 +88,5 @@ models:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.BigInt
   ByteVersion:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.ByteVersion
+  Cursor:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb.Cursor

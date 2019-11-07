@@ -1,6 +1,7 @@
 package explorerdb
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/asdine/storm"
@@ -209,6 +210,14 @@ func (sblock *StormBlock) AsBlock(blockID types.BlockID) Block {
 	}
 }
 
+func StormBlockSliceAsBlockSlice(sblocks []StormBlock, blockIdentifiers []types.BlockID) (blocks []Block) {
+	blocks = make([]Block, 0, len(sblocks))
+	for idx, block := range sblocks {
+		blocks = append(blocks, block.AsBlock(blockIdentifiers[idx]))
+	}
+	return
+}
+
 func (sbfacts *StormBlockFacts) AsBlockFacts() BlockFacts {
 	return BlockFacts{
 		Constants: BlockFactsConstants{
@@ -352,6 +361,9 @@ const (
 	nodeObjectOutputKeyUnlockReferencePoint = "UnlockReferencePoint"
 	nodeObjectOutputKeyHeight               = "Height"
 	nodeObjectOutputKeyBucketID             = "BucketID"
+
+	nodeObjectBlockFieldHeight    = "Height"
+	nodeObjectBlockFieldTimestamp = "Timestamp"
 )
 
 type (
@@ -367,6 +379,8 @@ type (
 		GetSingleSignatureWallet(types.UnlockHash) (SingleSignatureWalletData, error)
 		GetMultiSignatureWallet(types.UnlockHash) (MultiSignatureWalletData, error)
 		GetAtomicSwapContract(types.UnlockHash) (AtomicSwapContract, error)
+
+		GetBlocks(int, *BlocksFilter, *Cursor) ([]Block, *Cursor, error)
 	}
 
 	stormObjectNodeReaderWriter interface {
@@ -911,6 +925,146 @@ func (son *stormObjectNode) getAtomicSwapContractByDataID(uh types.UnlockHash, d
 		return AtomicSwapContract{}, err
 	}
 	return scontract.AsAtomicSwapContract(uh), nil
+}
+
+func (son *stormObjectNode) GetBlocks(limit int, filter *BlocksFilter, cursor *Cursor) ([]Block, *Cursor, error) {
+	// unpack cursor (from a previous GetBlocks) query if defined
+	if cursor != nil {
+		var cursorFilter BlocksFilterCursor
+		err := cursor.UnpackValue(&cursorFilter)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to unpack cursor")
+		}
+		if filter != nil && (filter.BlockHeight != nil || filter.Timestamp != nil) {
+			return nil, nil, errors.New("a filter and a cursor cannot be used together")
+		}
+		filter = cursorFilter.AsBlocksFilter()
+	}
+	// define the StormDB Query Matchers based on the used BlocksFilter,
+	// unrelated to the fact that it might be defined/enforced by a cursor from a previous call
+	var matchers []q.Matcher
+	if filter != nil {
+		switch filter.BlockHeight.(type) {
+		case nil:
+		default:
+			begin, end := filter.BlockHeight.BlockHeightEndpoints()
+			if begin != nil {
+				matchers = append(matchers, q.Gte(nodeObjectBlockFieldHeight, *begin+1))
+			}
+			if end != nil {
+				matchers = append(matchers, q.Lte(nodeObjectBlockFieldHeight, *end+1))
+			}
+		}
+		switch filter.Timestamp.(type) {
+		case nil:
+		default:
+			begin, end := filter.Timestamp.TimestampEndpoints()
+			if begin != nil {
+				matchers = append(matchers, q.Gte(nodeObjectBlockFieldTimestamp, *begin))
+			}
+			if end != nil {
+				matchers = append(matchers, q.Lte(nodeObjectBlockFieldTimestamp, *end))
+			}
+		}
+	}
+	// look up all blocks, optionally using matchers, but defintely with a limit
+	// we allow one more than the limit, such that we can define a cursor if needed,
+	// based on the used filter and the extra result (defining the next one to start from)
+	var blocks []StormBlock
+	err := son.node.Select(matchers...).Limit(limit + 1).Find(&blocks)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(blocks) <= limit {
+		// if blocks were found, but not more than the defined limit,
+		// we can simply return without the need for a new cursor
+		apiBlocks, err := son.stormBlockSliceAsBlockSlice(blocks)
+		if err != nil {
+			return nil, nil, err
+		}
+		return apiBlocks, nil, nil
+	}
+	// create the next filter, such that we can turn it into a cursor,
+	// and return it with the found blocks (minus the last block, as that one was only used to define the next cursor)
+	var nextFilter BlocksFilterCursor
+	// ... define block height filter, if applicable
+	switch bhf := filter.BlockHeight.(type) {
+	case *BlockHeightFilterRange:
+		if bhf != nil {
+			h := blocks[len(blocks)-1].Height - 1
+			nextFilter.BlockHeight = &BlockHeightFilterRange{
+				Begin: &h,
+				End:   bhf.End,
+			}
+		}
+	case nil:
+		h := blocks[len(blocks)-1].Height - 1
+		nextFilter.BlockHeight = &BlockHeightFilterRange{
+			Begin: &h,
+			End:   nil,
+		}
+	case BlockHeightFilterAfter:
+		h := blocks[len(blocks)-1].Height - 1
+		nextFilter.BlockHeight = &BlockHeightFilterRange{
+			Begin: &h,
+			End:   nil,
+		}
+	case BlockHeightFilterBefore:
+		h := blocks[len(blocks)-1].Height - 1
+		bh := types.BlockHeight(bhf)
+		nextFilter.BlockHeight = &BlockHeightFilterRange{
+			Begin: &h,
+			End:   &bh,
+		}
+	}
+	// ... timestamp filter can be taken as-is
+	if filter.Timestamp != nil {
+		begin, end := filter.Timestamp.TimestampEndpoints()
+		nextFilter.Timestamp = NewTimestampFilterRange(begin, end)
+	}
+	// ... create the filter cursor
+	nextCursor, err := NewCursor(nextFilter)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create cursor from composed next filter: %v", err)
+	}
+	// all good, return the limited results, as well as
+	// the cursor that can be used by the callee to continue this query where it left off
+	apiBlocks, err := son.stormBlockSliceAsBlockSlice(blocks[:limit])
+	if err != nil {
+		return nil, nil, err
+	}
+	return apiBlocks, &nextCursor, nil
+
+}
+
+func (son *stormObjectNode) stormBlockSliceAsBlockSlice(sblocks []StormBlock) ([]Block, error) {
+	// TODO: check if we should do this in a cheaper way
+	dataIdentifiers := make([]StormDataID, 0, len(sblocks))
+	for _, sblock := range sblocks {
+		dataIdentifiers = append(dataIdentifiers, sblock.DataID)
+	}
+	var objects []StormObject
+	err := son.node.Select(q.In(nodeObjectKeyDataID, dataIdentifiers)).Find(&objects)
+	if err != nil {
+		return nil, err
+	}
+	dataKeyObjectIDMapping := make(map[StormDataID]types.BlockID, len(objects))
+	for _, obj := range objects {
+		h, err := obj.ObjectID.AsHash()
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert objectID from (block) object with dataID %d: %v", obj.DataID, err)
+		}
+		dataKeyObjectIDMapping[obj.DataID] = types.BlockID(h)
+	}
+	blockIdentifiers := make([]types.BlockID, 0, len(sblocks))
+	for _, sblock := range sblocks {
+		blockID, ok := dataKeyObjectIDMapping[sblock.DataID]
+		if !ok {
+			return nil, fmt.Errorf("failed to find ID for (block) object with dataID %d", sblock.DataID)
+		}
+		blockIdentifiers = append(blockIdentifiers, blockID)
+	}
+	return StormBlockSliceAsBlockSlice(sblocks, blockIdentifiers), nil
 }
 
 func (son *stormObjectNode) UpdateOutputSpenditureData(outputID types.OutputID, spenditureData *OutputSpenditureData) (Output, error) {
