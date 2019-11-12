@@ -1,7 +1,6 @@
 package explorerdb
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/asdine/storm"
@@ -67,7 +66,7 @@ type (
 
 		FeePayout StormTransactionFeePayoutInfo `msgpack:"fp"`
 
-		ArbitraryData        []byte `msgpack:"ad"`
+		ArbitraryData        []byte `storm:"index", msgpack:"ad"`
 		EncodedExtensionData []byte `msgpack:"eed"`
 	}
 
@@ -930,15 +929,24 @@ func (son *stormObjectNode) getAtomicSwapContractByDataID(uh types.UnlockHash, d
 func (son *stormObjectNode) GetBlocks(limit int, filter *BlocksFilter, cursor *Cursor) ([]Block, *Cursor, error) {
 	// unpack cursor (from a previous GetBlocks) query if defined
 	if cursor != nil {
-		var cursorFilter BlocksFilter
+		var cursorFilter types.BlockHeight
 		err := cursor.UnpackValue(&cursorFilter)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to unpack cursor")
 		}
-		if filter != nil && (filter.BlockHeight != nil || filter.Timestamp != nil) {
-			return nil, nil, errors.New("a filter and a cursor cannot be used together")
+		if filter == nil {
+			filter = &BlocksFilter{
+				BlockHeight: NewBlockHeightFilterRange(&cursorFilter, nil),
+				Timestamp:   nil, // not used by cursor
+			}
+		} else if filter.BlockHeight == nil {
+			filter.BlockHeight = NewBlockHeightFilterRange(&cursorFilter, nil)
+		} else {
+			filter.BlockHeight.Begin = &cursorFilter
+			if filter.BlockHeight.End != nil && *filter.BlockHeight.End < *filter.BlockHeight.Begin {
+				return nil, nil, nil // nothing to do
+			}
 		}
-		filter = &cursorFilter
 	}
 	// define the StormDB Query Matchers based on the used BlocksFilter,
 	// unrelated to the fact that it might be defined/enforced by a cursor from a previous call
@@ -980,18 +988,7 @@ func (son *stormObjectNode) GetBlocks(limit int, filter *BlocksFilter, cursor *C
 	}
 	// create the next filter, such that we can turn it into a cursor,
 	// and return it with the found blocks (minus the last block, as that one was only used to define the next cursor)
-	nextFilter := BlocksFilter{
-		BlockHeight: &BlockHeightFilterRange{
-			Begin: &blocks[len(blocks)-1].Height,
-		},
-	}
-	if filter != nil {
-		if filter.BlockHeight != nil && filter.BlockHeight.End != nil {
-			nextFilter.BlockHeight.End = filter.BlockHeight.End
-		}
-		nextFilter.Timestamp = filter.Timestamp
-	}
-	// ... create the filter cursor
+	nextFilter := blocks[len(blocks)-1].Height
 	nextCursor, err := NewCursor(nextFilter)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create cursor from composed next filter: %v", err)

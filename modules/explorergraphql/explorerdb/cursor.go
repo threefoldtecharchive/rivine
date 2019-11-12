@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/99designs/gqlgen/graphql"
-	mp "github.com/vmihailenco/msgpack"
 )
 
 // Cursor is the hex-encoding distribution format
@@ -21,7 +20,7 @@ type Cursor struct {
 // NewCursor creates a cursor from a MsgPack-encodable value.
 // See `Cursor` for more information.
 func NewCursor(value interface{}) (Cursor, error) {
-	b, err := mp.Marshal(value)
+	b, err := msgpackMarshal(value)
 	if err != nil {
 		return Cursor{}, fmt.Errorf("failed to create a new cursor: failed to MsgPack encode the given value: %v", err)
 	}
@@ -31,7 +30,7 @@ func NewCursor(value interface{}) (Cursor, error) {
 // UnpackValue allows you to MsgPack-decode the cursor as
 // an in-memory MsgPack-decodable value.
 func (c Cursor) UnpackValue(value interface{}) error {
-	return mp.Unmarshal(c.data, value)
+	return msgpackUnmarshal(c.data, value)
 }
 
 // String formats the MsgPack-encoded cursor as a hex-encoded string.

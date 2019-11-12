@@ -74,18 +74,18 @@ type RWTxn interface {
 
 type (
 	TimestampFilterRange struct {
-		Begin *types.Timestamp `msgpack:"b,omitempty"`
-		End   *types.Timestamp `msgpack:"e,omitempty"`
+		Begin *types.Timestamp
+		End   *types.Timestamp
 	}
 
 	BlockHeightFilterRange struct {
-		Begin *types.BlockHeight `msgpack:"b,omitempty"`
-		End   *types.BlockHeight `msgpack:"e,omitempty"`
+		Begin *types.BlockHeight
+		End   *types.BlockHeight
 	}
 
 	BlocksFilter struct {
-		BlockHeight *BlockHeightFilterRange `msgpack:"bh,omitempty"`
-		Timestamp   *TimestampFilterRange   `msgpack:"ts,omitempty"`
+		BlockHeight *BlockHeightFilterRange
+		Timestamp   *TimestampFilterRange `msgpack:"ts,omitempty"`
 	}
 )
 

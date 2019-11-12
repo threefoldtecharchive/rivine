@@ -401,8 +401,8 @@ input BlocksFilter {
     Limit: Int
     """
     A cursor that allows the blocks query to pick up from a state previously left off.
-    When this cursor is defined, you should not define any filter except optionally the Limit filter.
-    If you do choose to specify other limits, an error will be returned.
+    When this cursor is defined, you should define the same filters as used last time,
+    even though this is not enforced. The Limit filter is an exception to this.
     """
     Cursor: Cursor
 }
