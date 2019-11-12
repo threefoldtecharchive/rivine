@@ -38,11 +38,14 @@
     * [UnlockHashCondition](#unlockhashcondition)
     * [UnlockHashPublicKeyPair](#unlockhashpublickeypair)
   * [Inputs](#inputs)
+    * [BigIntFilter](#bigintfilter)
+    * [BinaryDataFilter](#binarydatafilter)
     * [BlockPositionOperators](#blockpositionoperators)
     * [BlockPositionRange](#blockpositionrange)
     * [BlocksFilter](#blocksfilter)
     * [TimestampOperators](#timestampoperators)
     * [TimestampRange](#timestamprange)
+    * [TransactionsFilter](#transactionsfilter)
   * [Enums](#enums)
     * [BlockPayoutType](#blockpayouttype)
     * [LockType](#locktype)
@@ -443,7 +446,7 @@ required for the query.
 </tr>
 <tr>
 <td colspan="2" valign="top"><strong>Transactions</strong></td>
-<td valign="top">[<a href="#transaction">Transaction</a>!]!</td>
+<td valign="top">[<a href="#transaction">Transaction</a>!]</td>
 <td>
 
 The transactions part of this block.
@@ -452,6 +455,11 @@ Queried in a lazy manner, fetching only as much data as
 required for the query.
 
 </td>
+</tr>
+<tr>
+<td colspan="2" align="right" valign="top">filter</td>
+<td valign="top"><a href="#transactionsfilter">TransactionsFilter</a></td>
+<td></td>
 </tr>
 </tbody>
 </table>
@@ -1791,6 +1799,93 @@ That field will be `null` in case the `PublicKey` is not (yet) known.
 
 ## Inputs
 
+### BigIntFilter
+
+Filter based on a big integer based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>LessThan</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>LessThanOrEqualTo</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>EqualTo</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>GreaterThanOrEqualTo</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>GreaterThan</strong></td>
+<td valign="top"><a href="#bigint">BigInt</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+### BinaryDataFilter
+
+Filter based on binary data based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>StartsWith</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Contains</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>EndsWith</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>EqualTo</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
 ### BlockPositionOperators
 
 A poor man's input Union, allowing you to filter on block positions,
@@ -1860,19 +1955,6 @@ A range with no fields defined is equal to a nil range.
 All possible filters that can be used to query for a list of blocks.
 Multiple filters can be combined. It is also valid that none are given.
 
-NOTE that Height and Timestamp should be part of a sub union-field, such that
-the user either defines height and/or timestamp, or a cursor, or none.
-It is nonsensical (and also returns an error at the moment) to use height and/or timestamp
-as well as a cursor (given the cursor embeds this information and more).
-
-Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
-is accepted and implemented by the implementations (including the one used by us),
-we could use it for our input union here.
-
-Question: do we really want the cursor to contain all filter information.
-For example for a blocks, it would be enough to keep track of the last height,
-and overwrite it within our height filter.
-
 <table>
 <thead>
 <tr>
@@ -1903,8 +1985,8 @@ and overwrite it within our height filter.
 <td>
 
 A cursor that allows the blocks query to pick up from a state previously left off.
-When this cursor is defined, you should not define any filter except optionally the Limit filter.
-If you do choose to specify other limits, an error will be returned.
+When this cursor is defined, you should define the same filters as used last time,
+even though this is not enforced. The Limit filter is an exception to this.
 
 </td>
 </tr>
@@ -1970,6 +2052,43 @@ A range with no fields defined is equal to a nil range.
 <tr>
 <td colspan="2" valign="top"><strong>End</strong></td>
 <td valign="top"><a href="#timestamp">Timestamp</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+### TransactionsFilter
+
+All possible filters that can be used to query for a list of transactions.
+Multiple filters can be combined. It is also valid that none are given.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>Versions</strong></td>
+<td valign="top">[<a href="#byteversion">ByteVersion</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>ArbitraryData</strong></td>
+<td valign="top"><a href="#binarydatafilter">BinaryDataFilter</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>CoinInputValue</strong></td>
+<td valign="top"><a href="#bigintfilter">BigIntFilter</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>CoinOutputValue</strong></td>
+<td valign="top"><a href="#bigintfilter">BigIntFilter</a></td>
 <td></td>
 </tr>
 </tbody>

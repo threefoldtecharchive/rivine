@@ -135,12 +135,13 @@ func (block *Block) Facts(ctx context.Context) (*BlockFacts, error) {
 	return dbBlockFactsAsGQL(&dbBlockFacts), nil
 }
 
-func (block *Block) Transactions(ctx context.Context) ([]Transaction, error) {
+func (block *Block) Transactions(ctx context.Context, filter *TransactionsFilter) ([]Transaction, error) {
 	data, err := block.blockData(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return data.Transactions, nil
+	// return filtered transactions (a nil filter is handled cleanly as well in the function)
+	return FilterTransactions(ctx, data.Transactions, filter)
 }
 
 func dbBlockFactsAsGQL(dbBlockFacts *explorerdb.BlockFacts) *BlockFacts {

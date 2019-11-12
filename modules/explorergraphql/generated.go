@@ -83,7 +83,7 @@ type ComplexityRoot struct {
 	Block struct {
 		Facts        func(childComplexity int) int
 		Header       func(childComplexity int) int
-		Transactions func(childComplexity int) int
+		Transactions func(childComplexity int, filter *TransactionsFilter) int
 	}
 
 	BlockChainSnapshotFacts struct {
@@ -517,7 +517,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Block.Transactions(childComplexity), true
+		args, err := ec.field_Block_Transactions_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Block.Transactions(childComplexity, args["filter"].(*TransactionsFilter)), true
 
 	case "BlockChainSnapshotFacts.EstimatedActiveBlockStakes":
 		if e.complexity.BlockChainSnapshotFacts.EstimatedActiveBlockStakes == nil {
@@ -2060,19 +2065,6 @@ scalar Cursor
 """
 All possible filters that can be used to query for a list of blocks.
 Multiple filters can be combined. It is also valid that none are given.
-
-NOTE that Height and Timestamp should be part of a sub union-field, such that
-the user either defines height and/or timestamp, or a cursor, or none.
-It is nonsensical (and also returns an error at the moment) to use height and/or timestamp
-as well as a cursor (given the cursor embeds this information and more).
-
-Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
-is accepted and implemented by the implementations (including the one used by us),
-we could use it for our input union here.
-
-Question: do we really want the cursor to contain all filter information.
-For example for a blocks, it would be enough to keep track of the last height,
-and overwrite it within our height filter.
 """
 input BlocksFilter {
     Height: BlockPositionOperators
@@ -2080,8 +2072,8 @@ input BlocksFilter {
     Limit: Int
     """
     A cursor that allows the blocks query to pick up from a state previously left off.
-    When this cursor is defined, you should not define any filter except optionally the Limit filter.
-    If you do choose to specify other limits, an error will be returned.
+    When this cursor is defined, you should define the same filters as used last time,
+    even though this is not enforced. The Limit filter is an exception to this.
     """
     Cursor: Cursor
 }
@@ -2096,6 +2088,48 @@ type ResponseBlocks {
     this cursor can be used for a follow-up blocks query call.
     """
     NextCursor: Cursor
+}
+
+"""
+Filter based on binary data based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+"""
+input BinaryDataFilter {
+    StartsWith: BinaryData
+    Contains: BinaryData
+    EndsWith: BinaryData
+    EqualTo: BinaryData
+}
+
+"""
+Filter based on a big integer based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+"""
+input BigIntFilter {
+    LessThan: BigInt
+    LessThanOrEqualTo: BigInt
+    EqualTo: BigInt
+    GreaterThanOrEqualTo: BigInt
+    GreaterThan: BigInt
+}
+
+"""
+All possible filters that can be used to query for a list of transactions.
+Multiple filters can be combined. It is also valid that none are given.
+"""
+input TransactionsFilter {
+    Versions: [ByteVersion!]
+    ArbitraryData: BinaryDataFilter
+    CoinInputValue: BigIntFilter
+    CoinOutputValue: BigIntFilter
 }
 
 """
@@ -2122,7 +2156,7 @@ type Block {
     Queried in a lazy manner, fetching only as much data as
     required for the query.
     """
-    Transactions: [Transaction!]!
+    Transactions(filter: TransactionsFilter): [Transaction!]
 }
 
 """
@@ -2582,6 +2616,20 @@ func (ec *executionContext) field_BlockHeader_Payouts_args(ctx context.Context, 
 		}
 	}
 	args["type"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Block_Transactions_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *TransactionsFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		arg0, err = ec.unmarshalOTransactionsFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionsFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
 	return args, nil
 }
 
@@ -3522,25 +3570,29 @@ func (ec *executionContext) _Block_Transactions(ctx context.Context, field graph
 		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Block_Transactions_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Transactions(ctx)
+		return obj.Transactions(ctx, args["filter"].(*TransactionsFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !ec.HasError(rctx) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.([]Transaction)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalNTransaction2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
+	return ec.marshalOTransaction2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _BlockChainSnapshotFacts_TotalCoins(ctx context.Context, field graphql.CollectedField, obj *BlockChainSnapshotFacts) (ret graphql.Marshaler) {
@@ -10195,6 +10247,84 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
+func (ec *executionContext) unmarshalInputBigIntFilter(ctx context.Context, obj interface{}) (BigIntFilter, error) {
+	var it BigIntFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "LessThan":
+			var err error
+			it.LessThan, err = ec.unmarshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "LessThanOrEqualTo":
+			var err error
+			it.LessThanOrEqualTo, err = ec.unmarshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "EqualTo":
+			var err error
+			it.EqualTo, err = ec.unmarshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "GreaterThanOrEqualTo":
+			var err error
+			it.GreaterThanOrEqualTo, err = ec.unmarshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "GreaterThan":
+			var err error
+			it.GreaterThan, err = ec.unmarshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigInt(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputBinaryDataFilter(ctx context.Context, obj interface{}) (BinaryDataFilter, error) {
+	var it BinaryDataFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "StartsWith":
+			var err error
+			it.StartsWith, err = ec.unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "Contains":
+			var err error
+			it.Contains, err = ec.unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "EndsWith":
+			var err error
+			it.EndsWith, err = ec.unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "EqualTo":
+			var err error
+			it.EqualTo, err = ec.unmarshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputBlockPositionOperators(ctx context.Context, obj interface{}) (BlockPositionOperators, error) {
 	var it BlockPositionOperators
 	var asMap = obj.(map[string]interface{})
@@ -10330,6 +10460,42 @@ func (ec *executionContext) unmarshalInputTimestampRange(ctx context.Context, ob
 		case "End":
 			var err error
 			it.End, err = ec.unmarshalOTimestamp2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐTimestamp(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputTransactionsFilter(ctx context.Context, obj interface{}) (TransactionsFilter, error) {
+	var it TransactionsFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "Versions":
+			var err error
+			it.Versions, err = ec.unmarshalOByteVersion2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "ArbitraryData":
+			var err error
+			it.ArbitraryData, err = ec.unmarshalOBinaryDataFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryDataFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "CoinInputValue":
+			var err error
+			it.CoinInputValue, err = ec.unmarshalOBigIntFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigIntFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "CoinOutputValue":
+			var err error
+			it.CoinOutputValue, err = ec.unmarshalOBigIntFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigIntFilter(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10755,9 +10921,6 @@ func (ec *executionContext) _Block(ctx context.Context, sel ast.SelectionSet, ob
 					}
 				}()
 				res = ec._Block_Transactions(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
 				return res
 			})
 		default:
@@ -13403,43 +13566,6 @@ func (ec *executionContext) marshalNTransaction2githubᚗcomᚋthreefoldtechᚋr
 	return ec._Transaction(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNTransaction2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx context.Context, sel ast.SelectionSet, v []Transaction) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		rctx := &graphql.ResolverContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithResolverContext(ctx, rctx)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNTransaction2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransaction(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
-}
-
 func (ec *executionContext) marshalNTransactionFeePayout2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx context.Context, sel ast.SelectionSet, v TransactionFeePayout) graphql.Marshaler {
 	return ec._TransactionFeePayout(ctx, sel, &v)
 }
@@ -13811,6 +13937,18 @@ func (ec *executionContext) marshalOBigInt2ᚖgithubᚗcomᚋthreefoldtechᚋriv
 	return v
 }
 
+func (ec *executionContext) unmarshalOBigIntFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigIntFilter(ctx context.Context, v interface{}) (BigIntFilter, error) {
+	return ec.unmarshalInputBigIntFilter(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOBigIntFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigIntFilter(ctx context.Context, v interface{}) (*BigIntFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOBigIntFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBigIntFilter(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) unmarshalOBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx context.Context, v interface{}) (BinaryData, error) {
 	var res BinaryData
 	return res, res.UnmarshalGQL(v)
@@ -13833,6 +13971,18 @@ func (ec *executionContext) marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtech�
 		return graphql.Null
 	}
 	return v
+}
+
+func (ec *executionContext) unmarshalOBinaryDataFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryDataFilter(ctx context.Context, v interface{}) (BinaryDataFilter, error) {
+	return ec.unmarshalInputBinaryDataFilter(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOBinaryDataFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryDataFilter(ctx context.Context, v interface{}) (*BinaryDataFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOBinaryDataFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryDataFilter(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) marshalOBlock2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBlock(ctx context.Context, sel ast.SelectionSet, v Block) graphql.Marshaler {
@@ -14063,6 +14213,38 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return ec.marshalOBoolean2bool(ctx, sel, *v)
+}
+
+func (ec *executionContext) unmarshalOByteVersion2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx context.Context, v interface{}) ([]ByteVersion, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]ByteVersion, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOByteVersion2ᚕgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx context.Context, sel ast.SelectionSet, v []ByteVersion) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNByteVersion2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) marshalOChainAggregatedData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐChainAggregatedData(ctx context.Context, sel ast.SelectionSet, v ChainAggregatedData) graphql.Marshaler {
@@ -14593,6 +14775,18 @@ func (ec *executionContext) marshalOTransactionParentInfo2ᚖgithubᚗcomᚋthre
 		return graphql.Null
 	}
 	return ec._TransactionParentInfo(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOTransactionsFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionsFilter(ctx context.Context, v interface{}) (TransactionsFilter, error) {
+	return ec.unmarshalInputTransactionsFilter(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOTransactionsFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionsFilter(ctx context.Context, v interface{}) (*TransactionsFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOTransactionsFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionsFilter(ctx, v)
+	return &res, err
 }
 
 func (ec *executionContext) marshalOUnlockCondition2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockCondition(ctx context.Context, sel ast.SelectionSet, v UnlockCondition) graphql.Marshaler {

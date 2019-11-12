@@ -381,20 +381,9 @@ scalar Cursor
 """
 All possible filters that can be used to query for a list of blocks.
 Multiple filters can be combined. It is also valid that none are given.
-
-NOTE that Height and Timestamp should be part of a sub union-field, such that
-the user either defines height and/or timestamp, or a cursor, or none.
-It is nonsensical (and also returns an error at the moment) to use height and/or timestamp
-as well as a cursor (given the cursor embeds this information and more).
-
-Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
-is accepted and implemented by the implementations (including the one used by us),
-we could use it for our input union here.
-
-Question: do we really want the cursor to contain all filter information.
-For example for a blocks, it would be enough to keep track of the last height,
-and overwrite it within our height filter.
 """
+# TODO: add transactionLengthFilter,
+# using an int filter that works like a BigIntFilter
 input BlocksFilter {
     Height: BlockPositionOperators
     Timestamp: TimestampOperators
@@ -417,6 +406,48 @@ type ResponseBlocks {
     this cursor can be used for a follow-up blocks query call.
     """
     NextCursor: Cursor
+}
+
+"""
+Filter based on binary data based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+"""
+input BinaryDataFilter {
+    StartsWith: BinaryData
+    Contains: BinaryData
+    EndsWith: BinaryData
+    EqualTo: BinaryData
+}
+
+"""
+Filter based on a big integer based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+"""
+input BigIntFilter {
+    LessThan: BigInt
+    LessThanOrEqualTo: BigInt
+    EqualTo: BigInt
+    GreaterThanOrEqualTo: BigInt
+    GreaterThan: BigInt
+}
+
+"""
+All possible filters that can be used to query for a list of transactions.
+Multiple filters can be combined. It is also valid that none are given.
+"""
+input TransactionsFilter {
+    Versions: [ByteVersion!]
+    ArbitraryData: BinaryDataFilter
+    CoinInputValue: BigIntFilter
+    CoinOutputValue: BigIntFilter
 }
 
 """
@@ -443,7 +474,7 @@ type Block {
     Queried in a lazy manner, fetching only as much data as
     required for the query.
     """
-    Transactions: [Transaction!]!
+    Transactions(filter: TransactionsFilter): [Transaction!]
 }
 
 """

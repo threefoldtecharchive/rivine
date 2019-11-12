@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/threefoldtech/rivine/crypto"
@@ -255,7 +256,7 @@ func (info *TransactionParentInfo) Timestamp(ctx context.Context) (*types.Timest
 	return header.BlockTime, nil
 }
 func (info *TransactionParentInfo) TransactionOrder(ctx context.Context) (*int, error) {
-	transactions, err := info.parentBlock.Transactions(ctx)
+	transactions, err := info.parentBlock.Transactions(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +277,7 @@ func (info *TransactionParentInfo) SiblingTransactions(ctx context.Context) ([]T
 	if err != nil {
 		return nil, err
 	}
-	transactions, err := info.parentBlock.Transactions(ctx)
+	transactions, err := info.parentBlock.Transactions(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -455,4 +456,142 @@ func NewMintCoinDestructionTransaction(txid types.TransactionID, version types.T
 			// data will be resolved in a lazy manner
 		},
 	}
+}
+
+func FilterTransactions(ctx context.Context, txns []Transaction, filter *TransactionsFilter) ([]Transaction, error) {
+	if filter == nil {
+		return txns, nil // nothing to filter
+	}
+
+	filterOut := make([]bool, len(txns))
+
+	// filter on versions if defined
+	if vl := len(filter.Versions); vl > 0 {
+		vm := make(map[ByteVersion]struct{}, vl)
+		for _, v := range filter.Versions {
+			vm[v] = struct{}{}
+		}
+		var (
+			ok  bool
+			err error
+			bv  *ByteVersion
+		)
+		for idx, txn := range txns {
+			bv, err = txn.Version(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get version of txn %d: %v", idx+1, err)
+			}
+			if bv == nil {
+				filterOut[idx] = true
+			} else if _, ok = vm[*bv]; ok {
+				filterOut[idx] = true
+			}
+		}
+	}
+
+	// filter on arbitrary data if defined
+	if filter.ArbitraryData != nil {
+		filterArbitraryData, err := filterFunctionForBinaryDataFilter(filter.ArbitraryData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process arbitrary data filter: %v", err)
+		}
+
+		if filterArbitraryData != nil {
+			var bd *BinaryData
+			for idx, txn := range txns {
+				bd, err = txn.ArbitraryData(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get arbitrary data of txn %d: %v", idx+1, err)
+				}
+				var b []byte
+				if bd != nil {
+					b = (*bd)[:]
+				}
+				if !filterArbitraryData(b) {
+					filterOut[idx] = true
+				}
+			}
+		}
+	}
+
+	// filter on (total) coin input value if defined
+	if filter.CoinInputValue != nil {
+		filterFunc, err := filterFunctionForBigIntFilter(filter.CoinInputValue)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process coin input value filter: %v", err)
+		}
+
+		if filterFunc != nil {
+			var (
+				cis   []*Input
+				cidx  int
+				ci    *Input
+				value *BigInt
+			)
+			for idx, txn := range txns {
+				cis, err = txn.CoinInputs(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get coin inputs of txn %d: %v", idx+1, err)
+				}
+				// aggregate total input value
+				totalInputValue := BigInt{Int: new(big.Int)}
+				for cidx, ci = range cis {
+					value, err = ci.Value(ctx)
+					if err != nil {
+						return nil, fmt.Errorf("failed to get value of coin input %d of txn %d: %v", cidx+1, idx+1, err)
+					}
+					totalInputValue.Add(totalInputValue.Int, value.Int)
+				}
+				// filter txn based on input value
+				if !filterFunc(totalInputValue) {
+					filterOut[idx] = true
+				}
+			}
+		}
+	}
+
+	// filter on (total) coin output value if defined
+	if filter.CoinOutputValue != nil {
+		filterFunc, err := filterFunctionForBigIntFilter(filter.CoinOutputValue)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process coin output value filter: %v", err)
+		}
+
+		if filterFunc != nil {
+			var (
+				cos   []*Output
+				cidx  int
+				co    *Output
+				value *BigInt
+			)
+			for idx, txn := range txns {
+				cos, err = txn.CoinOutputs(ctx)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get coin outputs of txn %d: %v", idx+1, err)
+				}
+				// aggregate total output value
+				totalOutputValue := BigInt{Int: new(big.Int)}
+				for cidx, co = range cos {
+					value, err = co.Value(ctx)
+					if err != nil {
+						return nil, fmt.Errorf("failed to get value of coin output %d of txn %d: %v", cidx+1, idx+1, err)
+					}
+					totalOutputValue.Add(totalOutputValue.Int, value.Int)
+				}
+				// filter txn based on output value
+				if !filterFunc(totalOutputValue) {
+					filterOut[idx] = true
+				}
+			}
+		}
+	}
+
+	// assemble new transaction list, and return it
+	var filteredTxns []Transaction
+	for idx, txn := range txns {
+		if !filterOut[idx] { // if not filtered out, keep it
+			filteredTxns = append(filteredTxns, txn)
+		}
+	}
+	return filteredTxns, nil
 }
