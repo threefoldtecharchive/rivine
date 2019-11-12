@@ -148,7 +148,6 @@ type Gateway struct {
 	peerTG siasync.ThreadGroup
 
 	// Utilities.
-	ctx        context.Context
 	log        *persist.Logger
 	mu         sync.RWMutex
 	persistDir string
@@ -217,12 +216,6 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 		chainCts:       chainCts,
 		genesisBlockID: chainCts.GenesisBlockID(),
 	}
-	//Create the cancellable context
-	ctx, cancelFunc := context.WithCancel(context.Background())
-	g.ctx = ctx
-	g.threads.OnStop(func() {
-		cancelFunc()
-	})
 	// Set Unique GatewayID
 	fastrand.Read(g.id[:])
 
@@ -351,7 +344,11 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 
 	// Spawn threads to take care of port forwarding and hostname discovery.
 	go g.threadedForwardPort(g.port)
-	go g.threadedLearnHostname(g.ctx)
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	g.threads.OnStop(func() {
+		cancelFunc()
+	})
+	go g.threadedLearnHostname(ctx)
 
 	return g, nil
 }
