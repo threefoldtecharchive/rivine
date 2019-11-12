@@ -6,6 +6,7 @@
 package gateway
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -147,6 +148,7 @@ type Gateway struct {
 	peerTG siasync.ThreadGroup
 
 	// Utilities.
+	ctx        context.Context
 	log        *persist.Logger
 	mu         sync.RWMutex
 	persistDir string
@@ -200,6 +202,7 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	}
 
 	g := &Gateway{
+
 		concurrentRPCPerPeer: concurrentRPCPerPeer,
 
 		handlers: make(map[rpcID]modules.RPCFunc),
@@ -214,7 +217,12 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 		chainCts:       chainCts,
 		genesisBlockID: chainCts.GenesisBlockID(),
 	}
-
+	//Create the cancellable context
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	g.ctx = ctx
+	g.threads.OnStop(func() {
+		cancelFunc()
+	})
 	// Set Unique GatewayID
 	fastrand.Read(g.id[:])
 
@@ -343,7 +351,7 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 
 	// Spawn threads to take care of port forwarding and hostname discovery.
 	go g.threadedForwardPort(g.port)
-	go g.threadedLearnHostname()
+	go g.threadedLearnHostname(g.ctx)
 
 	return g, nil
 }

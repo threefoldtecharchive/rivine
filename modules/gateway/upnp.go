@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"context"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -42,7 +43,7 @@ func myExternalIP() (string, error) {
 }
 
 // threadedLearnHostname discovers the external IP of the Gateway regularly.
-func (g *Gateway) threadedLearnHostname() {
+func (g *Gateway) threadedLearnHostname(ctx context.Context) {
 	if err := g.threads.Add(); err != nil {
 		return
 	}
@@ -56,12 +57,27 @@ func (g *Gateway) threadedLearnHostname() {
 		// try UPnP first, then fallback to myexternalip.com and peer-to-peer
 		// discovery.
 		var host string
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		d, err := upnp.Discover()
 		if err == nil {
 			host, err = d.ExternalIP()
 		}
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
 		if !build.DEBUG && err != nil {
 			host, err = myExternalIP()
+		}
+		select {
+		case <-ctx.Done():
+			return
+		default:
 		}
 		if err != nil {
 			host, err = g.managedIPFromPeers()
