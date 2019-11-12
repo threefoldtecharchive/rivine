@@ -930,7 +930,7 @@ func (son *stormObjectNode) getAtomicSwapContractByDataID(uh types.UnlockHash, d
 func (son *stormObjectNode) GetBlocks(limit int, filter *BlocksFilter, cursor *Cursor) ([]Block, *Cursor, error) {
 	// unpack cursor (from a previous GetBlocks) query if defined
 	if cursor != nil {
-		var cursorFilter BlocksFilterCursor
+		var cursorFilter BlocksFilter
 		err := cursor.UnpackValue(&cursorFilter)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to unpack cursor")
@@ -938,32 +938,26 @@ func (son *stormObjectNode) GetBlocks(limit int, filter *BlocksFilter, cursor *C
 		if filter != nil && (filter.BlockHeight != nil || filter.Timestamp != nil) {
 			return nil, nil, errors.New("a filter and a cursor cannot be used together")
 		}
-		filter = cursorFilter.AsBlocksFilter()
+		filter = &cursorFilter
 	}
 	// define the StormDB Query Matchers based on the used BlocksFilter,
 	// unrelated to the fact that it might be defined/enforced by a cursor from a previous call
 	var matchers []q.Matcher
 	if filter != nil {
-		switch filter.BlockHeight.(type) {
-		case nil:
-		default:
-			begin, end := filter.BlockHeight.BlockHeightEndpoints()
-			if begin != nil {
-				matchers = append(matchers, q.Gte(nodeObjectBlockFieldHeight, *begin+1))
+		if filter.BlockHeight != nil {
+			if filter.BlockHeight.Begin != nil {
+				matchers = append(matchers, q.Gte(nodeObjectBlockFieldHeight, *filter.BlockHeight.Begin))
 			}
-			if end != nil {
-				matchers = append(matchers, q.Lte(nodeObjectBlockFieldHeight, *end+1))
+			if filter.BlockHeight.End != nil {
+				matchers = append(matchers, q.Lte(nodeObjectBlockFieldHeight, *filter.BlockHeight.End))
 			}
 		}
-		switch filter.Timestamp.(type) {
-		case nil:
-		default:
-			begin, end := filter.Timestamp.TimestampEndpoints()
-			if begin != nil {
-				matchers = append(matchers, q.Gte(nodeObjectBlockFieldTimestamp, *begin))
+		if filter.Timestamp != nil {
+			if filter.Timestamp.Begin != nil {
+				matchers = append(matchers, q.Gte(nodeObjectBlockFieldTimestamp, *filter.Timestamp.Begin))
 			}
-			if end != nil {
-				matchers = append(matchers, q.Lte(nodeObjectBlockFieldTimestamp, *end))
+			if filter.Timestamp.End != nil {
+				matchers = append(matchers, q.Lte(nodeObjectBlockFieldTimestamp, *filter.Timestamp.End))
 			}
 		}
 	}
@@ -986,41 +980,16 @@ func (son *stormObjectNode) GetBlocks(limit int, filter *BlocksFilter, cursor *C
 	}
 	// create the next filter, such that we can turn it into a cursor,
 	// and return it with the found blocks (minus the last block, as that one was only used to define the next cursor)
-	var nextFilter BlocksFilterCursor
-	// ... define block height filter, if applicable
-	switch bhf := filter.BlockHeight.(type) {
-	case *BlockHeightFilterRange:
-		if bhf != nil {
-			h := blocks[len(blocks)-1].Height - 1
-			nextFilter.BlockHeight = &BlockHeightFilterRange{
-				Begin: &h,
-				End:   bhf.End,
-			}
-		}
-	case nil:
-		h := blocks[len(blocks)-1].Height - 1
-		nextFilter.BlockHeight = &BlockHeightFilterRange{
-			Begin: &h,
-			End:   nil,
-		}
-	case BlockHeightFilterAfter:
-		h := blocks[len(blocks)-1].Height - 1
-		nextFilter.BlockHeight = &BlockHeightFilterRange{
-			Begin: &h,
-			End:   nil,
-		}
-	case BlockHeightFilterBefore:
-		h := blocks[len(blocks)-1].Height - 1
-		bh := types.BlockHeight(bhf)
-		nextFilter.BlockHeight = &BlockHeightFilterRange{
-			Begin: &h,
-			End:   &bh,
-		}
+	nextFilter := BlocksFilter{
+		BlockHeight: &BlockHeightFilterRange{
+			Begin: &blocks[len(blocks)-1].Height,
+		},
 	}
-	// ... timestamp filter can be taken as-is
-	if filter.Timestamp != nil {
-		begin, end := filter.Timestamp.TimestampEndpoints()
-		nextFilter.Timestamp = NewTimestampFilterRange(begin, end)
+	if filter != nil {
+		if filter.BlockHeight != nil && filter.BlockHeight.End != nil {
+			nextFilter.BlockHeight.End = filter.BlockHeight.End
+		}
+		nextFilter.Timestamp = filter.Timestamp
 	}
 	// ... create the filter cursor
 	nextCursor, err := NewCursor(nextFilter)

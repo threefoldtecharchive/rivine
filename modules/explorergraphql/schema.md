@@ -1860,6 +1860,19 @@ A range with no fields defined is equal to a nil range.
 All possible filters that can be used to query for a list of blocks.
 Multiple filters can be combined. It is also valid that none are given.
 
+NOTE that Height and Timestamp should be part of a sub union-field, such that
+the user either defines height and/or timestamp, or a cursor, or none.
+It is nonsensical (and also returns an error at the moment) to use height and/or timestamp
+as well as a cursor (given the cursor embeds this information and more).
+
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it for our input union here.
+
+Question: do we really want the cursor to contain all filter information.
+For example for a blocks, it would be enough to keep track of the last height,
+and overwrite it within our height filter.
+
 <table>
 <thead>
 <tr>

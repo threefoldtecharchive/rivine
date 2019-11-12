@@ -276,32 +276,38 @@ func getBlockAt(ctx context.Context, db explorerdb.DB, position *int) (*Block, e
 // TODO: [FATAL] fix cursor: seems to be not supper correct in paging (seems to be something wrong with our height check)
 //       need to slow debug on paper what i'm doing with these heights, probably a stupid mistake
 func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*ResponseBlocks, error) {
-	if filter == nil {
-		return r.lazyBlocks(ctx, nil, nil, nil)
-	}
-	var blocksFilter *explorerdb.BlocksFilter
-	bhFilter, err := blockHeightsFilterFromGQL(filter.Height, r.db)
-	if err != nil {
-		return nil, err
-	}
-	tsFilter, err := timestampFilterFromGQL(filter.Timestamp, r.db)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: [FATAL] fix cursor for time filter, seems to be broken [FATAL]
-	// TODO: should we not check if a lazy call is possible, despite it being cursor-based
-	if tsFilter == nil && filter.Cursor == nil {
-		return r.lazyBlocks(ctx, filter.Limit, &explorerdb.BlockIdentifiersFilter{
-			BlockHeight: bhFilter,
-		}, filter.Cursor)
-	}
-	if bhFilter != nil || tsFilter != nil {
-		blocksFilter = &explorerdb.BlocksFilter{
-			BlockHeight: bhFilter,
-			Timestamp:   tsFilter,
+	var (
+		err          error
+		blocksFilter *explorerdb.BlocksFilter
+		bhFilter     *explorerdb.BlockHeightFilterRange
+		tsFilter     *explorerdb.TimestampFilterRange
+		limit        *int
+		cursor       *explorerdb.Cursor
+	)
+	if filter != nil {
+		var possibleToFetch bool
+		bhFilter, possibleToFetch, err = blockHeightsFilterFromGQL(filter.Height, r.db)
+		if err != nil {
+			return nil, err
 		}
+		if !possibleToFetch {
+			return new(ResponseBlocks), nil // return early, as there is nothing to fetch
+		}
+		tsFilter, err = timestampFilterFromGQL(filter.Timestamp, r.db)
+		if err != nil {
+			return nil, err
+		}
+		if bhFilter != nil || tsFilter != nil {
+			blocksFilter = &explorerdb.BlocksFilter{
+				BlockHeight: bhFilter,
+				Timestamp:   tsFilter,
+			}
+		}
+		limit = filter.Limit
+		cursor = filter.Cursor
 	}
-	blocks, nextCursor, err := r.db.GetBlocks(filter.Limit, blocksFilter, filter.Cursor)
+
+	blocks, nextCursor, err := r.db.GetBlocks(limit, blocksFilter, cursor)
 	if err != nil {
 		return nil, err
 	}
@@ -318,60 +324,50 @@ func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*
 		NextCursor: nextCursor,
 	}, nil
 }
-func (r *queryRootResolver) lazyBlocks(ctx context.Context, limit *int, filter *explorerdb.BlockIdentifiersFilter, cursor *explorerdb.Cursor) (*ResponseBlocks, error) {
-	blockIdentifiers, nextCursor, err := r.db.GetBlockIdentifiers(limit, filter, cursor)
-	if err != nil {
-		return nil, err
-	}
-	apiBlocks := make([]*Block, 0, len(blockIdentifiers))
-	for _, blockID := range blockIdentifiers {
-		apiBlock := NewBlock(blockID, r.db)
-		apiBlocks = append(apiBlocks, apiBlock)
-	}
-	return &ResponseBlocks{
-		Blocks:     apiBlocks,
-		NextCursor: nextCursor,
-	}, nil
-}
 
-func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.DB) (explorerdb.BlockHeightFilter, error) {
+func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.DB) (*explorerdb.BlockHeightFilterRange, bool, error) {
 	if operators == nil {
-		return nil, nil
+		return nil, true, nil
 	}
 	if operators.Before != nil {
 		if operators.After != nil || operators.Between != nil {
-			return nil, errors.New("After and Between BlockHeigt filters cannot be defined if Before filter is defined")
+			return nil, false, errors.New("After and Between BlockHeigt filters cannot be defined if Before filter is defined")
 		}
 		position := *operators.Before
 		if position < 0 {
 			chainCtx, err := db.GetChainContext()
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			position += int(chainCtx.Height)
 			if position < 0 {
-				return nil, errors.New("out of range before block height position given")
+				return nil, false, errors.New("out of range before block height position given")
 			}
 		}
-		return explorerdb.BlockHeightFilterBefore(position), nil
+		if position == 0 {
+			return nil, false, nil // no blocks to fetch
+		}
+		endHeight := types.BlockHeight(position - 1) // "before" filter is exclusive
+		return explorerdb.NewBlockHeightFilterRange(nil, &endHeight), true, nil
 	}
 	if operators.After != nil {
 		// we know before is nil due to previous check
 		if operators.Between != nil {
-			return nil, errors.New("Between BlockHeigt filters cannot be defined if Before or After filter is defined")
+			return nil, false, errors.New("Between BlockHeigt filters cannot be defined if Before or After filter is defined")
 		}
 		position := *operators.After
 		if position < 0 {
 			chainCtx, err := db.GetChainContext()
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			position += int(chainCtx.Height)
 			if position < 0 {
-				return nil, errors.New("out of range before block height position given")
+				return nil, false, errors.New("out of range before block height position given")
 			}
 		}
-		return explorerdb.BlockHeightFilterAfter(position), nil
+		beginHeight := types.BlockHeight(position + 1) // "after" filter is exclusive
+		return explorerdb.NewBlockHeightFilterRange(&beginHeight, nil), true, nil
 	}
 	if operators.Between != nil && (operators.Between.Start != nil || operators.Between.End != nil) {
 		// we know the other 2 are nil due to the previous checks
@@ -385,11 +381,11 @@ func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.
 				var err error
 				chainCtx, err = db.GetChainContext()
 				if err != nil {
-					return nil, err
+					return nil, false, err
 				}
 				*begin += int(chainCtx.Height)
 				if *begin < 0 {
-					return nil, errors.New("out of range before block height begin position given")
+					return nil, false, errors.New("out of range before block height begin position given")
 				}
 			}
 			height := types.BlockHeight(*begin)
@@ -401,24 +397,24 @@ func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.
 					var err error
 					chainCtx, err = db.GetChainContext()
 					if err != nil {
-						return nil, err
+						return nil, false, err
 					}
 				}
 				*end += int(chainCtx.Height)
 				if *end < 0 {
-					return nil, errors.New("out of range before block height end position given")
+					return nil, false, errors.New("out of range before block height end position given")
 				}
 			}
 			height := types.BlockHeight(*end)
 			hEnd = &height
 		}
-		return explorerdb.NewBlockHeightFilterRange(hBegin, hEnd), nil
+		return explorerdb.NewBlockHeightFilterRange(hBegin, hEnd), true, nil
 	}
 	// use no filter, useless, but same as a nil filter explicitly
-	return nil, nil
+	return nil, false, nil
 }
 
-func timestampFilterFromGQL(operators *TimestampOperators, db explorerdb.DB) (explorerdb.TimestampFilter, error) {
+func timestampFilterFromGQL(operators *TimestampOperators, db explorerdb.DB) (*explorerdb.TimestampFilterRange, error) {
 	if operators == nil {
 		return nil, nil
 	}
@@ -426,14 +422,19 @@ func timestampFilterFromGQL(operators *TimestampOperators, db explorerdb.DB) (ex
 		if operators.After != nil || operators.Between != nil {
 			return nil, errors.New("After and Between Timestamp filters cannot be defined if Before filter is defined")
 		}
-		return explorerdb.TimestampFilterBefore(*operators.Before), nil
+		ts := *operators.Before
+		if ts > 0 {
+			ts-- // "before" filter is exclusive
+		}
+		return explorerdb.NewTimestampFilterRange(nil, &ts), nil
 	}
 	if operators.After != nil {
 		// we know before is nil due to previous check
 		if operators.Between != nil {
 			return nil, errors.New("Between Timestamp filters cannot be defined if Before or After filter is defined")
 		}
-		return explorerdb.TimestampFilterBefore(*operators.After), nil
+		ts := *operators.After + 1 // "after" filter is exclusive
+		return explorerdb.NewTimestampFilterRange(&ts, nil), nil
 	}
 	if operators.Between != nil && (operators.Between.Start != nil || operators.Between.End != nil) {
 		// we know the other 2 are nil due to the previous checks

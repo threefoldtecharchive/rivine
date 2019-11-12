@@ -292,7 +292,10 @@ func unmarshalByteSlice(v interface{}) ([]byte, error) {
 	case string:
 		return hex.DecodeString(v)
 	case []byte:
-		return v, nil
+		length := len(v)
+		b := make([]byte, length)
+		_, err := hex.Decode(b[:], v[:])
+		return b, err
 	default:
 		return nil, fmt.Errorf("%T is not a []byte", v)
 	}
