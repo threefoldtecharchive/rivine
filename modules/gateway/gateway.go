@@ -6,6 +6,7 @@
 package gateway
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -200,6 +201,7 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	}
 
 	g := &Gateway{
+
 		concurrentRPCPerPeer: concurrentRPCPerPeer,
 
 		handlers: make(map[rpcID]modules.RPCFunc),
@@ -214,7 +216,6 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 		chainCts:       chainCts,
 		genesisBlockID: chainCts.GenesisBlockID(),
 	}
-
 	// Set Unique GatewayID
 	fastrand.Read(g.id[:])
 
@@ -343,7 +344,11 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 
 	// Spawn threads to take care of port forwarding and hostname discovery.
 	go g.threadedForwardPort(g.port)
-	go g.threadedLearnHostname()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	g.threads.OnStop(func() {
+		cancelFunc()
+	})
+	go g.threadedLearnHostname(ctx)
 
 	return g, nil
 }
