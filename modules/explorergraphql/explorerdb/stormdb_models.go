@@ -968,6 +968,9 @@ func (son *stormObjectNode) GetBlocks(limit int, filter *BlocksFilter, cursor *C
 				matchers = append(matchers, q.Lte(nodeObjectBlockFieldTimestamp, *filter.Timestamp.End))
 			}
 		}
+		if filter.TransactionLength != nil {
+			matchers = append(matchers, newTransactionIDLengthMatcher(filter.TransactionLength))
+		}
 	}
 	// look up all blocks, optionally using matchers, but defintely with a limit
 	// we allow one more than the limit, such that we can define a cursor if needed,

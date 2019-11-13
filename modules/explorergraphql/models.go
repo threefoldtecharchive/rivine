@@ -126,16 +126,44 @@ func (bi BigInt) MarshalGQL(w io.Writer) {
 
 // UnmarshalGQL implements the graphql.Unmarshaler interface
 func (bi *BigInt) UnmarshalGQL(v interface{}) error {
-	s, err := graphql.UnmarshalString(v)
-	if err != nil {
-		return err
+	switch v := v.(type) {
+	case string:
+		s, err := graphql.UnmarshalString(v)
+		if err != nil {
+			return err
+		}
+		bi.Int = new(big.Int)
+		_, ok := bi.SetString(s, 10)
+		if !ok {
+			return fmt.Errorf("failed to convert %v (as str: '%s') to *big.Int", v, s)
+		}
+		return nil
+	case uint:
+		bi.fromInt64(int64(v))
+		return nil
+	case uint64:
+		bi.fromInt64(int64(v))
+		return nil
+	case int64:
+		bi.fromInt64(v)
+		return nil
+	case int:
+		bi.fromInt64(int64(v))
+		return nil
+	case json.Number:
+		x, err := v.Int64()
+		if err != nil {
+			return err
+		}
+		bi.fromInt64(x)
+		return nil
+	default:
+		return fmt.Errorf("%T is not a valid BigInt", v)
 	}
-	bi.Int = new(big.Int)
-	_, ok := bi.SetString(s, 10)
-	if !ok {
-		return fmt.Errorf("failed to convert %v (as str: '%s') to *big.Int", v, s)
-	}
-	return nil
+}
+
+func (bi *BigInt) fromInt64(x int64) {
+	bi.Int = big.NewInt(x)
 }
 
 // custom third-party (Rivine) scalar types

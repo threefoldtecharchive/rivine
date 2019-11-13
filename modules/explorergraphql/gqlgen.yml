@@ -13,6 +13,7 @@ resolver:
   filename: resolver_new.go
   type: Resolver
 autobind: []
+
 models:
   ChainFacts:
     fields:
@@ -65,6 +66,10 @@ models:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.MintCoinCreationTransaction
   MintCoinDestructionTransaction:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.MintCoinDestructionTransaction
+  AuthAddressUpdateTransaction:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.AuthAddressUpdateTransaction
+  AuthConditionUpdateTransaction:
+    model: github.com/threefoldtech/rivine/modules/explorergraphql.AuthConditionUpdateTransaction
 
   ObjectID:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.ObjectID

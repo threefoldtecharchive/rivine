@@ -33,10 +33,10 @@ blockchain:
       coinDestruction:
         version: 130
     authcoin:
-      addressUpdate:
-        version: 177
       conditionUpdate:
         version: 176
+      addressUpdate:
+        version: 177
   networks:
     devnet:
       networkType: 3

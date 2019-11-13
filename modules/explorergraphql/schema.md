@@ -8,6 +8,8 @@
     * [AtomicSwapCondition](#atomicswapcondition)
     * [AtomicSwapContract](#atomicswapcontract)
     * [AtomicSwapFulfillment](#atomicswapfulfillment)
+    * [AuthAddressUpdateTransaction](#authaddressupdatetransaction)
+    * [AuthConditionUpdateTransaction](#authconditionupdatetransaction)
     * [Balance](#balance)
     * [Block](#block)
     * [BlockChainSnapshotFacts](#blockchainsnapshotfacts)
@@ -43,6 +45,7 @@
     * [BlockPositionOperators](#blockpositionoperators)
     * [BlockPositionRange](#blockpositionrange)
     * [BlocksFilter](#blocksfilter)
+    * [IntFilter](#intfilter)
     * [TimestampOperators](#timestampoperators)
     * [TimestampRange](#timestamprange)
     * [TransactionsFilter](#transactionsfilter)
@@ -371,6 +374,147 @@ without requiring trust in the other party.
 </tr>
 <tr>
 <td colspan="2" valign="top"><strong>Secret</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+### AuthAddressUpdateTransaction
+
+A transaction that allows the auth power to update
+the authentication of an address.
+
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>ID</strong></td>
+<td valign="top"><a href="#hash">Hash</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Version</strong></td>
+<td valign="top"><a href="#byteversion">ByteVersion</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>ParentBlock</strong></td>
+<td valign="top"><a href="#transactionparentinfo">TransactionParentInfo</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>CoinInputs</strong></td>
+<td valign="top">[<a href="#input">Input</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>CoinOutputs</strong></td>
+<td valign="top">[<a href="#output">Output</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Nonce</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>AuthAddresses</strong></td>
+<td valign="top">[<a href="#unlockhashpublickeypair">UnlockHashPublicKeyPair</a>]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>DeauthAddresses</strong></td>
+<td valign="top">[<a href="#unlockhashpublickeypair">UnlockHashPublicKeyPair</a>]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>AuthFulfillment</strong></td>
+<td valign="top"><a href="#unlockfulfillment">UnlockFulfillment</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>FeePayouts</strong></td>
+<td valign="top">[<a href="#transactionfeepayout">TransactionFeePayout</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>ArbitraryData</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+
+### AuthConditionUpdateTransaction
+
+A transaction that allows the auth power to update
+the condiiton, defining who is the auth power.
+
+<table>
+<thead>
+<tr>
+<th align="left">Field</th>
+<th align="right">Argument</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>ID</strong></td>
+<td valign="top"><a href="#hash">Hash</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Version</strong></td>
+<td valign="top"><a href="#byteversion">ByteVersion</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>ParentBlock</strong></td>
+<td valign="top"><a href="#transactionparentinfo">TransactionParentInfo</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>CoinInputs</strong></td>
+<td valign="top">[<a href="#input">Input</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>CoinOutputs</strong></td>
+<td valign="top">[<a href="#output">Output</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>Nonce</strong></td>
+<td valign="top"><a href="#binarydata">BinaryData</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>AuthFulfillment</strong></td>
+<td valign="top"><a href="#unlockfulfillment">UnlockFulfillment</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>NewAuthCondition</strong></td>
+<td valign="top"><a href="#unlockcondition">UnlockCondition</a>!</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>FeePayouts</strong></td>
+<td valign="top">[<a href="#transactionfeepayout">TransactionFeePayout</a>!]</td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>ArbitraryData</strong></td>
 <td valign="top"><a href="#binarydata">BinaryData</a></td>
 <td></td>
 </tr>
@@ -1734,6 +1878,11 @@ excluding this transaction.
 
 </td>
 </tr>
+<tr>
+<td colspan="2" align="right" valign="top">filter</td>
+<td valign="top"><a href="#transactionsfilter">TransactionsFilter</a></td>
+<td></td>
+</tr>
 </tbody>
 </table>
 
@@ -1975,6 +2124,11 @@ Multiple filters can be combined. It is also valid that none are given.
 <td></td>
 </tr>
 <tr>
+<td colspan="2" valign="top"><strong>TransactionLength</strong></td>
+<td valign="top"><a href="#intfilter">IntFilter</a></td>
+<td></td>
+</tr>
+<tr>
 <td colspan="2" valign="top"><strong>Limit</strong></td>
 <td valign="top"><a href="#int">Int</a></td>
 <td></td>
@@ -1989,6 +2143,52 @@ When this cursor is defined, you should define the same filters as used last tim
 even though this is not enforced. The Limit filter is an exception to this.
 
 </td>
+</tr>
+</tbody>
+</table>
+
+### IntFilter
+
+Filter based on an integer based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+
+<table>
+<thead>
+<tr>
+<th colspan="2" align="left">Field</th>
+<th align="left">Type</th>
+<th align="left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="2" valign="top"><strong>LessThan</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>LessThanOrEqualTo</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>EqualTo</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>GreaterThanOrEqualTo</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
+</tr>
+<tr>
+<td colspan="2" valign="top"><strong>GreaterThan</strong></td>
+<td valign="top"><a href="#int">Int</a></td>
+<td></td>
 </tr>
 </tbody>
 </table>

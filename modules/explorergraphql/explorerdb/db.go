@@ -83,9 +83,15 @@ type (
 		End   *types.BlockHeight
 	}
 
+	IntFilterRange struct {
+		Min *int
+		Max *int
+	}
+
 	BlocksFilter struct {
-		BlockHeight *BlockHeightFilterRange
-		Timestamp   *TimestampFilterRange `msgpack:"ts,omitempty"`
+		BlockHeight       *BlockHeightFilterRange
+		Timestamp         *TimestampFilterRange
+		TransactionLength *IntFilterRange
 	}
 )
 
@@ -106,6 +112,16 @@ func NewBlockHeightFilterRange(begin, end *types.BlockHeight) *BlockHeightFilter
 	return &BlockHeightFilterRange{
 		Begin: begin,
 		End:   end,
+	}
+}
+
+func NewIntFilterRange(min, max *int) *IntFilterRange {
+	if min == nil && max == nil {
+		return nil
+	}
+	return &IntFilterRange{
+		Min: min,
+		Max: max,
 	}
 }
 

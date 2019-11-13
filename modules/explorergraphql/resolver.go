@@ -277,12 +277,13 @@ func getBlockAt(ctx context.Context, db explorerdb.DB, position *int) (*Block, e
 //       need to slow debug on paper what i'm doing with these heights, probably a stupid mistake
 func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*ResponseBlocks, error) {
 	var (
-		err          error
-		blocksFilter *explorerdb.BlocksFilter
-		bhFilter     *explorerdb.BlockHeightFilterRange
-		tsFilter     *explorerdb.TimestampFilterRange
-		limit        *int
-		cursor       *explorerdb.Cursor
+		err            error
+		blocksFilter   *explorerdb.BlocksFilter
+		bhFilter       *explorerdb.BlockHeightFilterRange
+		tsFilter       *explorerdb.TimestampFilterRange
+		txLengthFilter *explorerdb.IntFilterRange
+		limit          *int
+		cursor         *explorerdb.Cursor
 	)
 	if filter != nil {
 		var possibleToFetch bool
@@ -293,14 +294,19 @@ func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*
 		if !possibleToFetch {
 			return new(ResponseBlocks), nil // return early, as there is nothing to fetch
 		}
-		tsFilter, err = timestampFilterFromGQL(filter.Timestamp, r.db)
+		tsFilter, err = timestampFilterFromGQL(filter.Timestamp)
 		if err != nil {
 			return nil, err
 		}
-		if bhFilter != nil || tsFilter != nil {
+		txLengthFilter, err = intFilterFromGQL(filter.TransactionLength)
+		if err != nil {
+			return nil, err
+		}
+		if bhFilter != nil || tsFilter != nil || txLengthFilter != nil {
 			blocksFilter = &explorerdb.BlocksFilter{
-				BlockHeight: bhFilter,
-				Timestamp:   tsFilter,
+				BlockHeight:       bhFilter,
+				Timestamp:         tsFilter,
+				TransactionLength: txLengthFilter,
 			}
 		}
 		limit = filter.Limit
@@ -414,7 +420,7 @@ func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.
 	return nil, false, nil
 }
 
-func timestampFilterFromGQL(operators *TimestampOperators, db explorerdb.DB) (*explorerdb.TimestampFilterRange, error) {
+func timestampFilterFromGQL(operators *TimestampOperators) (*explorerdb.TimestampFilterRange, error) {
 	if operators == nil {
 		return nil, nil
 	}
@@ -445,6 +451,46 @@ func timestampFilterFromGQL(operators *TimestampOperators, db explorerdb.DB) (*e
 	}
 	// use no filter, useless, but same as a nil filter explicitly
 	return nil, nil
+}
+
+func intFilterFromGQL(intFilter *IntFilter) (*explorerdb.IntFilterRange, error) {
+	// define min-max range
+	var (
+		min, max *int
+	)
+	if intFilter.LessThan != nil {
+		if intFilter.LessThanOrEqualTo != nil || intFilter.EqualTo != nil || intFilter.GreaterThanOrEqualTo != nil || intFilter.GreaterThan != nil {
+			return nil, errors.New("big int filter can only use one option, multiple cannot be combined")
+		}
+		max = intFilter.LessThan
+		*max--
+	} else if intFilter.LessThanOrEqualTo != nil {
+		// LessThan is already confirmed by previous check to be nil
+		if intFilter.EqualTo != nil || intFilter.GreaterThanOrEqualTo != nil || intFilter.GreaterThan != nil {
+			return nil, errors.New("big int filter can only use one option, multiple cannot be combined")
+		}
+		max = intFilter.LessThanOrEqualTo
+	} else if intFilter.EqualTo != nil {
+		// LessThan and LessThanOrEqualTo are already confirmed by previous check to be nil
+		if intFilter.GreaterThanOrEqualTo != nil || intFilter.GreaterThan != nil {
+			return nil, errors.New("big int filter can only use one option, multiple cannot be combined")
+		}
+		min = intFilter.EqualTo
+		max = intFilter.EqualTo
+	} else if intFilter.GreaterThanOrEqualTo != nil {
+		// LessThan, LessThanOrEqualTo and EqualTo are already confirmed by previous check to be nil
+		if intFilter.GreaterThan != nil {
+			return nil, errors.New("big int filter can only use one option, multiple cannot be combined")
+		}
+		min = intFilter.GreaterThanOrEqualTo
+	} else if intFilter.GreaterThan != nil {
+		// all others are already confirmed by previous check to be nil
+		min = intFilter.GreaterThan
+		*min++
+	}
+
+	// return filter function based on min/max range
+	return explorerdb.NewIntFilterRange(min, max), nil
 }
 
 func (r *queryRootResolver) Wallet(ctx context.Context, unlockhash types.UnlockHash) (Wallet, error) {

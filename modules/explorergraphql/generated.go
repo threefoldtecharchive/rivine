@@ -75,6 +75,33 @@ type ComplexityRoot struct {
 		Version         func(childComplexity int) int
 	}
 
+	AuthAddressUpdateTransaction struct {
+		ArbitraryData   func(childComplexity int) int
+		AuthAddresses   func(childComplexity int) int
+		AuthFulfillment func(childComplexity int) int
+		CoinInputs      func(childComplexity int) int
+		CoinOutputs     func(childComplexity int) int
+		DeauthAddresses func(childComplexity int) int
+		FeePayouts      func(childComplexity int) int
+		ID              func(childComplexity int) int
+		Nonce           func(childComplexity int) int
+		ParentBlock     func(childComplexity int) int
+		Version         func(childComplexity int) int
+	}
+
+	AuthConditionUpdateTransaction struct {
+		ArbitraryData    func(childComplexity int) int
+		AuthFulfillment  func(childComplexity int) int
+		CoinInputs       func(childComplexity int) int
+		CoinOutputs      func(childComplexity int) int
+		FeePayouts       func(childComplexity int) int
+		ID               func(childComplexity int) int
+		NewAuthCondition func(childComplexity int) int
+		Nonce            func(childComplexity int) int
+		ParentBlock      func(childComplexity int) int
+		Version          func(childComplexity int) int
+	}
+
 	Balance struct {
 		Locked   func(childComplexity int) int
 		Unlocked func(childComplexity int) int
@@ -306,7 +333,7 @@ type ComplexityRoot struct {
 		Height              func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		ParentID            func(childComplexity int) int
-		SiblingTransactions func(childComplexity int) int
+		SiblingTransactions func(childComplexity int, filter *TransactionsFilter) int
 		Timestamp           func(childComplexity int) int
 		TransactionOrder    func(childComplexity int) int
 	}
@@ -483,6 +510,153 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AtomicSwapFulfillment.Version(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.ArbitraryData":
+		if e.complexity.AuthAddressUpdateTransaction.ArbitraryData == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.ArbitraryData(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.AuthAddresses":
+		if e.complexity.AuthAddressUpdateTransaction.AuthAddresses == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.AuthAddresses(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.AuthFulfillment":
+		if e.complexity.AuthAddressUpdateTransaction.AuthFulfillment == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.AuthFulfillment(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.CoinInputs":
+		if e.complexity.AuthAddressUpdateTransaction.CoinInputs == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.CoinInputs(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.CoinOutputs":
+		if e.complexity.AuthAddressUpdateTransaction.CoinOutputs == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.CoinOutputs(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.DeauthAddresses":
+		if e.complexity.AuthAddressUpdateTransaction.DeauthAddresses == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.DeauthAddresses(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.FeePayouts":
+		if e.complexity.AuthAddressUpdateTransaction.FeePayouts == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.FeePayouts(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.ID":
+		if e.complexity.AuthAddressUpdateTransaction.ID == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.ID(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.Nonce":
+		if e.complexity.AuthAddressUpdateTransaction.Nonce == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.Nonce(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.ParentBlock":
+		if e.complexity.AuthAddressUpdateTransaction.ParentBlock == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.ParentBlock(childComplexity), true
+
+	case "AuthAddressUpdateTransaction.Version":
+		if e.complexity.AuthAddressUpdateTransaction.Version == nil {
+			break
+		}
+
+		return e.complexity.AuthAddressUpdateTransaction.Version(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.ArbitraryData":
+		if e.complexity.AuthConditionUpdateTransaction.ArbitraryData == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.ArbitraryData(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.AuthFulfillment":
+		if e.complexity.AuthConditionUpdateTransaction.AuthFulfillment == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.AuthFulfillment(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.CoinInputs":
+		if e.complexity.AuthConditionUpdateTransaction.CoinInputs == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.CoinInputs(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.CoinOutputs":
+		if e.complexity.AuthConditionUpdateTransaction.CoinOutputs == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.CoinOutputs(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.FeePayouts":
+		if e.complexity.AuthConditionUpdateTransaction.FeePayouts == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.FeePayouts(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.ID":
+		if e.complexity.AuthConditionUpdateTransaction.ID == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.ID(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.NewAuthCondition":
+		if e.complexity.AuthConditionUpdateTransaction.NewAuthCondition == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.NewAuthCondition(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.Nonce":
+		if e.complexity.AuthConditionUpdateTransaction.Nonce == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.Nonce(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.ParentBlock":
+		if e.complexity.AuthConditionUpdateTransaction.ParentBlock == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.ParentBlock(childComplexity), true
+
+	case "AuthConditionUpdateTransaction.Version":
+		if e.complexity.AuthConditionUpdateTransaction.Version == nil {
+			break
+		}
+
+		return e.complexity.AuthConditionUpdateTransaction.Version(childComplexity), true
 
 	case "Balance.Locked":
 		if e.complexity.Balance.Locked == nil {
@@ -1582,7 +1756,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.TransactionParentInfo.SiblingTransactions(childComplexity), true
+		args, err := ec.field_TransactionParentInfo_SiblingTransactions_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.TransactionParentInfo.SiblingTransactions(childComplexity, args["filter"].(*TransactionsFilter)), true
 
 	case "TransactionParentInfo.Timestamp":
 		if e.complexity.TransactionParentInfo.Timestamp == nil {
@@ -1859,7 +2038,7 @@ Object represents an object that can be looked up by a unique identifier,
 see ObjectID for more information about the identifier type used for objects.
 See the used types in this union for more information about the possible objects.
 """
-union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | FreeForAllWallet | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | AuthAddressUpdateTransaction | AuthConditionUpdateTransaction | Output | FreeForAllWallet | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 
 """
 Contract represents a contract object (also called smart contracts) that can be looked up by a unique identifier,
@@ -2056,6 +2235,22 @@ input TimestampOperators {
 }
 
 """
+Filter based on an integer based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+"""
+input IntFilter {
+    LessThan: Int
+    LessThanOrEqualTo: Int
+    EqualTo: Int
+    GreaterThanOrEqualTo: Int
+    GreaterThan: Int
+}
+
+"""
 A hex-encoded MsgPack-based cursor,
 allowing to continue a query from where
 you started.
@@ -2066,9 +2261,12 @@ scalar Cursor
 All possible filters that can be used to query for a list of blocks.
 Multiple filters can be combined. It is also valid that none are given.
 """
+# TODO: add transactionLengthFilter,
+# using an int filter that works like a BigIntFilter
 input BlocksFilter {
     Height: BlockPositionOperators
     Timestamp: TimestampOperators
+    TransactionLength: IntFilter
     Limit: Int
     """
     A cursor that allows the blocks query to pick up from a state previously left off.
@@ -2225,7 +2423,7 @@ type TransactionParentInfo {
     All transactions found in the (parent) block,
     excluding this transaction.
     """
-    SiblingTransactions: [Transaction!]
+    SiblingTransactions(filter: TransactionsFilter): [Transaction!]
 }
 
 interface Transaction {
@@ -2262,6 +2460,7 @@ type StandardTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# TODO: add this using an extension-added appoach
 """
 The transaction used to redefine the Minter condition,
 defining "who" can mint (= create) new coins,
@@ -2295,6 +2494,7 @@ type MintConditionDefinitionTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# TODO: add this using an extension-added appoach
 """
 The transaction used to mint tokens,
 a transaction that can only be done by "who"
@@ -2321,6 +2521,7 @@ type MintCoinCreationTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# TODO: add this using an extension-added appoach
 """
 A transaction that allows you to burn coins,
 meaning that the value of the spent coin input(s)
@@ -2338,6 +2539,55 @@ type MintCoinDestructionTransaction implements Transaction {
     CoinOutputs: [Output!]
 
     FeePayouts: [TransactionFeePayout!]
+    ArbitraryData: BinaryData
+}
+
+# TODO: add this using an extension-added appoach
+"""
+A transaction that allows the auth power to update
+the authentication of an address.
+"""
+type AuthAddressUpdateTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    ParentBlock: TransactionParentInfo
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    Nonce: BinaryData!
+    AuthAddresses: [UnlockHashPublicKeyPair]
+    DeauthAddresses: [UnlockHashPublicKeyPair]
+
+    AuthFulfillment: UnlockFulfillment!
+
+    FeePayouts: [TransactionFeePayout!]
+
+    ArbitraryData: BinaryData
+}
+
+# TODO: add this using an extension-added appoach
+"""
+A transaction that allows the auth power to update
+the condiiton, defining who is the auth power.
+"""
+type AuthConditionUpdateTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    ParentBlock: TransactionParentInfo
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    Nonce: BinaryData!
+
+    AuthFulfillment: UnlockFulfillment!
+    NewAuthCondition: UnlockCondition!
+
+    FeePayouts: [TransactionFeePayout!]
+
     ArbitraryData: BinaryData
 }
 
@@ -2756,6 +3006,20 @@ func (ec *executionContext) field_QueryRoot_wallet_args(ctx context.Context, raw
 		}
 	}
 	args["unlockhash"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_TransactionParentInfo_SiblingTransactions_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *TransactionsFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		arg0, err = ec.unmarshalOTransactionsFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionsFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
 	return args, nil
 }
 
@@ -3395,6 +3659,747 @@ func (ec *executionContext) _AtomicSwapFulfillment_Secret(ctx context.Context, f
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.Secret, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*BinaryData)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_ID(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*crypto.Hash)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_Version(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Version(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ByteVersion)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNByteVersion2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_ParentBlock(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentBlock(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*TransactionParentInfo)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOTransactionParentInfo2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionParentInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_CoinInputs(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoinInputs(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*Input)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOInput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_CoinOutputs(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoinOutputs(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*Output)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_Nonce(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nonce(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(BinaryData)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_AuthAddresses(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AuthAddresses(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*UnlockHashPublicKeyPair)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOUnlockHashPublicKeyPair2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockHashPublicKeyPair(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_DeauthAddresses(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DeauthAddresses(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*UnlockHashPublicKeyPair)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOUnlockHashPublicKeyPair2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockHashPublicKeyPair(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_AuthFulfillment(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AuthFulfillment(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(UnlockFulfillment)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUnlockFulfillment2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockFulfillment(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_FeePayouts(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeePayouts(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*TransactionFeePayout)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOTransactionFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction_ArbitraryData(ctx context.Context, field graphql.CollectedField, obj *AuthAddressUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthAddressUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ArbitraryData(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*BinaryData)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOBinaryData2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_ID(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*crypto.Hash)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNHash2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋcryptoᚐHash(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_Version(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Version(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*ByteVersion)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNByteVersion2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐByteVersion(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_ParentBlock(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentBlock(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*TransactionParentInfo)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOTransactionParentInfo2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionParentInfo(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_CoinInputs(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoinInputs(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*Input)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOInput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐInput(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_CoinOutputs(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CoinOutputs(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*Output)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_Nonce(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Nonce(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(BinaryData)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNBinaryData2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐBinaryData(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_AuthFulfillment(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AuthFulfillment(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(UnlockFulfillment)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUnlockFulfillment2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockFulfillment(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_NewAuthCondition(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.NewAuthCondition(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !ec.HasError(rctx) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(UnlockCondition)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalNUnlockCondition2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockCondition(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_FeePayouts(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.FeePayouts(ctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*TransactionFeePayout)
+	rctx.Result = res
+	ctx = ec.Tracer.StartFieldChildExecution(ctx)
+	return ec.marshalOTransactionFeePayout2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐTransactionFeePayout(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction_ArbitraryData(ctx context.Context, field graphql.CollectedField, obj *AuthConditionUpdateTransaction) (ret graphql.Marshaler) {
+	ctx = ec.Tracer.StartFieldExecution(ctx, field)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+		ec.Tracer.EndFieldExecution(ctx)
+	}()
+	rctx := &graphql.ResolverContext{
+		Object:   "AuthConditionUpdateTransaction",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+	ctx = graphql.WithResolverContext(ctx, rctx)
+	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ArbitraryData(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8899,10 +9904,17 @@ func (ec *executionContext) _TransactionParentInfo_SiblingTransactions(ctx conte
 		IsMethod: true,
 	}
 	ctx = graphql.WithResolverContext(ctx, rctx)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_TransactionParentInfo_SiblingTransactions_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	rctx.Args = args
 	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SiblingTransactions(ctx)
+		return obj.SiblingTransactions(ctx, args["filter"].(*TransactionsFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -10397,6 +11409,12 @@ func (ec *executionContext) unmarshalInputBlocksFilter(ctx context.Context, obj 
 			if err != nil {
 				return it, err
 			}
+		case "TransactionLength":
+			var err error
+			it.TransactionLength, err = ec.unmarshalOIntFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐIntFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "Limit":
 			var err error
 			it.Limit, err = ec.unmarshalOInt2ᚖint(ctx, v)
@@ -10406,6 +11424,48 @@ func (ec *executionContext) unmarshalInputBlocksFilter(ctx context.Context, obj 
 		case "Cursor":
 			var err error
 			it.Cursor, err = ec.unmarshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputIntFilter(ctx context.Context, obj interface{}) (IntFilter, error) {
+	var it IntFilter
+	var asMap = obj.(map[string]interface{})
+
+	for k, v := range asMap {
+		switch k {
+		case "LessThan":
+			var err error
+			it.LessThan, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "LessThanOrEqualTo":
+			var err error
+			it.LessThanOrEqualTo, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "EqualTo":
+			var err error
+			it.EqualTo, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "GreaterThanOrEqualTo":
+			var err error
+			it.GreaterThanOrEqualTo, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "GreaterThan":
+			var err error
+			it.GreaterThan, err = ec.unmarshalOInt2ᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10534,6 +11594,10 @@ func (ec *executionContext) _Object(ctx context.Context, sel ast.SelectionSet, o
 		return ec._MintCoinCreationTransaction(ctx, sel, obj)
 	case *MintCoinDestructionTransaction:
 		return ec._MintCoinDestructionTransaction(ctx, sel, obj)
+	case *AuthAddressUpdateTransaction:
+		return ec._AuthAddressUpdateTransaction(ctx, sel, obj)
+	case *AuthConditionUpdateTransaction:
+		return ec._AuthConditionUpdateTransaction(ctx, sel, obj)
 	case *Output:
 		return ec._Output(ctx, sel, obj)
 	case *FreeForAllWallet:
@@ -10580,6 +11644,10 @@ func (ec *executionContext) _Transaction(ctx context.Context, sel ast.SelectionS
 		return ec._MintCoinCreationTransaction(ctx, sel, obj)
 	case *MintCoinDestructionTransaction:
 		return ec._MintCoinDestructionTransaction(ctx, sel, obj)
+	case *AuthAddressUpdateTransaction:
+		return ec._AuthAddressUpdateTransaction(ctx, sel, obj)
+	case *AuthConditionUpdateTransaction:
+		return ec._AuthConditionUpdateTransaction(ctx, sel, obj)
 	default:
 		panic(fmt.Errorf("unexpected type %T", obj))
 	}
@@ -10833,6 +11901,308 @@ func (ec *executionContext) _AtomicSwapFulfillment(ctx context.Context, sel ast.
 			}
 		case "Secret":
 			out.Values[i] = ec._AtomicSwapFulfillment_Secret(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var authAddressUpdateTransactionImplementors = []string{"AuthAddressUpdateTransaction", "Object", "Transaction"}
+
+func (ec *executionContext) _AuthAddressUpdateTransaction(ctx context.Context, sel ast.SelectionSet, obj *AuthAddressUpdateTransaction) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, authAddressUpdateTransactionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AuthAddressUpdateTransaction")
+		case "ID":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_ID(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "Version":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_Version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "ParentBlock":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_ParentBlock(ctx, field, obj)
+				return res
+			})
+		case "CoinInputs":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_CoinInputs(ctx, field, obj)
+				return res
+			})
+		case "CoinOutputs":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_CoinOutputs(ctx, field, obj)
+				return res
+			})
+		case "Nonce":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_Nonce(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "AuthAddresses":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_AuthAddresses(ctx, field, obj)
+				return res
+			})
+		case "DeauthAddresses":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_DeauthAddresses(ctx, field, obj)
+				return res
+			})
+		case "AuthFulfillment":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_AuthFulfillment(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "FeePayouts":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_FeePayouts(ctx, field, obj)
+				return res
+			})
+		case "ArbitraryData":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthAddressUpdateTransaction_ArbitraryData(ctx, field, obj)
+				return res
+			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var authConditionUpdateTransactionImplementors = []string{"AuthConditionUpdateTransaction", "Object", "Transaction"}
+
+func (ec *executionContext) _AuthConditionUpdateTransaction(ctx context.Context, sel ast.SelectionSet, obj *AuthConditionUpdateTransaction) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.RequestContext, sel, authConditionUpdateTransactionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AuthConditionUpdateTransaction")
+		case "ID":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_ID(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "Version":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_Version(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "ParentBlock":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_ParentBlock(ctx, field, obj)
+				return res
+			})
+		case "CoinInputs":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_CoinInputs(ctx, field, obj)
+				return res
+			})
+		case "CoinOutputs":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_CoinOutputs(ctx, field, obj)
+				return res
+			})
+		case "Nonce":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_Nonce(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "AuthFulfillment":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_AuthFulfillment(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "NewAuthCondition":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_NewAuthCondition(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "FeePayouts":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_FeePayouts(ctx, field, obj)
+				return res
+			})
+		case "ArbitraryData":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AuthConditionUpdateTransaction_ArbitraryData(ctx, field, obj)
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -14397,6 +15767,18 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return ec.marshalOInt2int(ctx, sel, *v)
 }
 
+func (ec *executionContext) unmarshalOIntFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐIntFilter(ctx context.Context, v interface{}) (IntFilter, error) {
+	return ec.unmarshalInputIntFilter(ctx, v)
+}
+
+func (ec *executionContext) unmarshalOIntFilter2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐIntFilter(ctx context.Context, v interface{}) (*IntFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOIntFilter2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐIntFilter(ctx, v)
+	return &res, err
+}
+
 func (ec *executionContext) marshalOMultiSignatureWallet2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐMultiSignatureWallet(ctx context.Context, sel ast.SelectionSet, v []*MultiSignatureWallet) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -14850,7 +16232,7 @@ func (ec *executionContext) marshalOUnlockHashPublicKeyPair2ᚕᚖgithubᚗcom�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNUnlockHashPublicKeyPair2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockHashPublicKeyPair(ctx, sel, v[i])
+			ret[i] = ec.marshalOUnlockHashPublicKeyPair2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐUnlockHashPublicKeyPair(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

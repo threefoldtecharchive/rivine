@@ -171,9 +171,10 @@ type BlockPositionRange struct {
 // All possible filters that can be used to query for a list of blocks.
 // Multiple filters can be combined. It is also valid that none are given.
 type BlocksFilter struct {
-	Height    *BlockPositionOperators `json:"Height"`
-	Timestamp *TimestampOperators     `json:"Timestamp"`
-	Limit     *int                    `json:"Limit"`
+	Height            *BlockPositionOperators `json:"Height"`
+	Timestamp         *TimestampOperators     `json:"Timestamp"`
+	TransactionLength *IntFilter              `json:"TransactionLength"`
+	Limit             *int                    `json:"Limit"`
 	// A cursor that allows the blocks query to pick up from a state previously left off.
 	// When this cursor is defined, you should define the same filters as used last time,
 	// even though this is not enforced. The Limit filter is an exception to this.
@@ -270,6 +271,20 @@ type ChainFacts struct {
 	// Contains all aggregated global data,
 	// updated for this chain for every applied and reverted block.
 	Aggregated *ChainAggregatedData `json:"Aggregated"`
+}
+
+// Filter based on an integer based on one of these options.
+//
+// NOTE that these options should really be a Union, not an input composition type.
+// Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+// is accepted and implemented by the implementations (including the one used by us),
+// we could use it here.
+type IntFilter struct {
+	LessThan             *int `json:"LessThan"`
+	LessThanOrEqualTo    *int `json:"LessThanOrEqualTo"`
+	EqualTo              *int `json:"EqualTo"`
+	GreaterThanOrEqualTo *int `json:"GreaterThanOrEqualTo"`
+	GreaterThan          *int `json:"GreaterThan"`
 }
 
 type LockTimeCondition struct {

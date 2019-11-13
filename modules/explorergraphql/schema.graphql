@@ -175,7 +175,7 @@ Object represents an object that can be looked up by a unique identifier,
 see ObjectID for more information about the identifier type used for objects.
 See the used types in this union for more information about the possible objects.
 """
-union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | Output | FreeForAllWallet | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
+union Object = Block | StandardTransaction | MintConditionDefinitionTransaction | MintCoinCreationTransaction | MintCoinDestructionTransaction | AuthAddressUpdateTransaction | AuthConditionUpdateTransaction | Output | FreeForAllWallet | SingleSignatureWallet | MultiSignatureWallet | AtomicSwapContract
 
 """
 Contract represents a contract object (also called smart contracts) that can be looked up by a unique identifier,
@@ -372,6 +372,22 @@ input TimestampOperators {
 }
 
 """
+Filter based on an integer based on one of these options.
+
+NOTE that these options should really be a Union, not an input composition type.
+Once the RFC https://github.com/graphql/graphql-spec/blob/master/rfcs/InputUnion.md
+is accepted and implemented by the implementations (including the one used by us),
+we could use it here.
+"""
+input IntFilter {
+    LessThan: Int
+    LessThanOrEqualTo: Int
+    EqualTo: Int
+    GreaterThanOrEqualTo: Int
+    GreaterThan: Int
+}
+
+"""
 A hex-encoded MsgPack-based cursor,
 allowing to continue a query from where
 you started.
@@ -387,6 +403,7 @@ Multiple filters can be combined. It is also valid that none are given.
 input BlocksFilter {
     Height: BlockPositionOperators
     Timestamp: TimestampOperators
+    TransactionLength: IntFilter
     Limit: Int
     """
     A cursor that allows the blocks query to pick up from a state previously left off.
@@ -543,7 +560,7 @@ type TransactionParentInfo {
     All transactions found in the (parent) block,
     excluding this transaction.
     """
-    SiblingTransactions: [Transaction!]
+    SiblingTransactions(filter: TransactionsFilter): [Transaction!]
 }
 
 interface Transaction {
@@ -580,6 +597,7 @@ type StandardTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# TODO: add this using an extension-added appoach
 """
 The transaction used to redefine the Minter condition,
 defining "who" can mint (= create) new coins,
@@ -613,6 +631,7 @@ type MintConditionDefinitionTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# TODO: add this using an extension-added appoach
 """
 The transaction used to mint tokens,
 a transaction that can only be done by "who"
@@ -639,6 +658,7 @@ type MintCoinCreationTransaction implements Transaction {
     ArbitraryData: BinaryData
 }
 
+# TODO: add this using an extension-added appoach
 """
 A transaction that allows you to burn coins,
 meaning that the value of the spent coin input(s)
@@ -656,6 +676,55 @@ type MintCoinDestructionTransaction implements Transaction {
     CoinOutputs: [Output!]
 
     FeePayouts: [TransactionFeePayout!]
+    ArbitraryData: BinaryData
+}
+
+# TODO: add this using an extension-added appoach
+"""
+A transaction that allows the auth power to update
+the authentication of an address.
+"""
+type AuthAddressUpdateTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    ParentBlock: TransactionParentInfo
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    Nonce: BinaryData!
+    AuthAddresses: [UnlockHashPublicKeyPair]
+    DeauthAddresses: [UnlockHashPublicKeyPair]
+
+    AuthFulfillment: UnlockFulfillment!
+
+    FeePayouts: [TransactionFeePayout!]
+
+    ArbitraryData: BinaryData
+}
+
+# TODO: add this using an extension-added appoach
+"""
+A transaction that allows the auth power to update
+the condiiton, defining who is the auth power.
+"""
+type AuthConditionUpdateTransaction implements Transaction {
+    ID: Hash!
+    Version: ByteVersion!
+
+    ParentBlock: TransactionParentInfo
+
+    CoinInputs: [Input!]
+    CoinOutputs: [Output!]
+
+    Nonce: BinaryData!
+
+    AuthFulfillment: UnlockFulfillment!
+    NewAuthCondition: UnlockCondition!
+
+    FeePayouts: [TransactionFeePayout!]
+
     ArbitraryData: BinaryData
 }
 
