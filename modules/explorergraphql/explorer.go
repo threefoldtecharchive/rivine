@@ -78,7 +78,7 @@ func (e *Explorer) SetHTTPHandlers(router *httprouter.Router, endpoint string) {
 		cs:             e.cs,
 		chainConstants: e.chainConstants,
 		blockchainInfo: e.blockChainInfo,
-	}}))
+	}}), handler.IntrospectionEnabled(true), handler.ComplexityLimit(500)) // TODO: figure out a good Complexity Limit
 	router.Handle("POST", endpoint+"/query", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		queryHandler(w, r)
 	})
