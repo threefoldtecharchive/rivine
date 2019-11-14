@@ -178,9 +178,7 @@ type ComplexityRoot struct {
 
 	FreeForAllWallet struct {
 		BlockStakeBalance func(childComplexity int) int
-		BlockStakeOutputs func(childComplexity int) int
 		CoinBalance       func(childComplexity int) int
-		CoinOutputs       func(childComplexity int) int
 		UnlockHash        func(childComplexity int) int
 	}
 
@@ -251,9 +249,7 @@ type ComplexityRoot struct {
 
 	MultiSignatureWallet struct {
 		BlockStakeBalance      func(childComplexity int) int
-		BlockStakeOutputs      func(childComplexity int) int
 		CoinBalance            func(childComplexity int) int
-		CoinOutputs            func(childComplexity int) int
 		Owners                 func(childComplexity int) int
 		RequiredSignatureCount func(childComplexity int) int
 		UnlockHash             func(childComplexity int) int
@@ -305,9 +301,7 @@ type ComplexityRoot struct {
 
 	SingleSignatureWallet struct {
 		BlockStakeBalance     func(childComplexity int) int
-		BlockStakeOutputs     func(childComplexity int) int
 		CoinBalance           func(childComplexity int) int
-		CoinOutputs           func(childComplexity int) int
 		MultiSignatureWallets func(childComplexity int) int
 		PublicKey             func(childComplexity int) int
 		UnlockHash            func(childComplexity int) int
@@ -1005,26 +999,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.FreeForAllWallet.BlockStakeBalance(childComplexity), true
 
-	case "FreeForAllWallet.BlockStakeOutputs":
-		if e.complexity.FreeForAllWallet.BlockStakeOutputs == nil {
-			break
-		}
-
-		return e.complexity.FreeForAllWallet.BlockStakeOutputs(childComplexity), true
-
 	case "FreeForAllWallet.CoinBalance":
 		if e.complexity.FreeForAllWallet.CoinBalance == nil {
 			break
 		}
 
 		return e.complexity.FreeForAllWallet.CoinBalance(childComplexity), true
-
-	case "FreeForAllWallet.CoinOutputs":
-		if e.complexity.FreeForAllWallet.CoinOutputs == nil {
-			break
-		}
-
-		return e.complexity.FreeForAllWallet.CoinOutputs(childComplexity), true
 
 	case "FreeForAllWallet.UnlockHash":
 		if e.complexity.FreeForAllWallet.UnlockHash == nil {
@@ -1348,26 +1328,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.MultiSignatureWallet.BlockStakeBalance(childComplexity), true
 
-	case "MultiSignatureWallet.BlockStakeOutputs":
-		if e.complexity.MultiSignatureWallet.BlockStakeOutputs == nil {
-			break
-		}
-
-		return e.complexity.MultiSignatureWallet.BlockStakeOutputs(childComplexity), true
-
 	case "MultiSignatureWallet.CoinBalance":
 		if e.complexity.MultiSignatureWallet.CoinBalance == nil {
 			break
 		}
 
 		return e.complexity.MultiSignatureWallet.CoinBalance(childComplexity), true
-
-	case "MultiSignatureWallet.CoinOutputs":
-		if e.complexity.MultiSignatureWallet.CoinOutputs == nil {
-			break
-		}
-
-		return e.complexity.MultiSignatureWallet.CoinOutputs(childComplexity), true
 
 	case "MultiSignatureWallet.Owners":
 		if e.complexity.MultiSignatureWallet.Owners == nil {
@@ -1619,26 +1585,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SingleSignatureWallet.BlockStakeBalance(childComplexity), true
 
-	case "SingleSignatureWallet.BlockStakeOutputs":
-		if e.complexity.SingleSignatureWallet.BlockStakeOutputs == nil {
-			break
-		}
-
-		return e.complexity.SingleSignatureWallet.BlockStakeOutputs(childComplexity), true
-
 	case "SingleSignatureWallet.CoinBalance":
 		if e.complexity.SingleSignatureWallet.CoinBalance == nil {
 			break
 		}
 
 		return e.complexity.SingleSignatureWallet.CoinBalance(childComplexity), true
-
-	case "SingleSignatureWallet.CoinOutputs":
-		if e.complexity.SingleSignatureWallet.CoinOutputs == nil {
-			break
-		}
-
-		return e.complexity.SingleSignatureWallet.CoinOutputs(childComplexity), true
 
 	case "SingleSignatureWallet.MultiSignatureWallets":
 		if e.complexity.SingleSignatureWallet.MultiSignatureWallets == nil {
@@ -2795,8 +2747,10 @@ interface Wallet {
 
     # TODO: support inputs and outputs in a paginated manner
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
@@ -2805,8 +2759,10 @@ interface Wallet {
 type FreeForAllWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
@@ -2815,8 +2771,10 @@ type FreeForAllWallet implements Wallet {
 type SingleSignatureWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
@@ -2828,8 +2786,10 @@ type SingleSignatureWallet implements Wallet {
 type MultiSignatureWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
@@ -6132,74 +6092,6 @@ func (ec *executionContext) _FreeForAllWallet_UnlockHash(ctx context.Context, fi
 	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _FreeForAllWallet_CoinOutputs(ctx context.Context, field graphql.CollectedField, obj *FreeForAllWallet) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "FreeForAllWallet",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CoinOutputs(ctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*Output)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _FreeForAllWallet_BlockStakeOutputs(ctx context.Context, field graphql.CollectedField, obj *FreeForAllWallet) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "FreeForAllWallet",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.BlockStakeOutputs(ctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*Output)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _FreeForAllWallet_CoinBalance(ctx context.Context, field graphql.CollectedField, obj *FreeForAllWallet) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -7879,74 +7771,6 @@ func (ec *executionContext) _MultiSignatureWallet_UnlockHash(ctx context.Context
 	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _MultiSignatureWallet_CoinOutputs(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWallet) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "MultiSignatureWallet",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CoinOutputs(ctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*Output)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _MultiSignatureWallet_BlockStakeOutputs(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWallet) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "MultiSignatureWallet",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.BlockStakeOutputs(ctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*Output)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _MultiSignatureWallet_CoinBalance(ctx context.Context, field graphql.CollectedField, obj *MultiSignatureWallet) (ret graphql.Marshaler) {
 	ctx = ec.Tracer.StartFieldExecution(ctx, field)
 	defer func() {
@@ -9169,74 +8993,6 @@ func (ec *executionContext) _SingleSignatureWallet_UnlockHash(ctx context.Contex
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalNUnlockHash2githubᚗcomᚋthreefoldtechᚋrivineᚋtypesᚐUnlockHash(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _SingleSignatureWallet_CoinOutputs(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "SingleSignatureWallet",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.CoinOutputs(ctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*Output)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _SingleSignatureWallet_BlockStakeOutputs(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
-	ctx = ec.Tracer.StartFieldExecution(ctx, field)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-		ec.Tracer.EndFieldExecution(ctx)
-	}()
-	rctx := &graphql.ResolverContext{
-		Object:   "SingleSignatureWallet",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-	ctx = graphql.WithResolverContext(ctx, rctx)
-	ctx = ec.Tracer.StartFieldResolverExecution(ctx, rctx)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.BlockStakeOutputs(ctx)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*Output)
-	rctx.Result = res
-	ctx = ec.Tracer.StartFieldChildExecution(ctx)
-	return ec.marshalOOutput2ᚕᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚐOutput(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SingleSignatureWallet_CoinBalance(ctx context.Context, field graphql.CollectedField, obj *SingleSignatureWallet) (ret graphql.Marshaler) {
@@ -12715,28 +12471,6 @@ func (ec *executionContext) _FreeForAllWallet(ctx context.Context, sel ast.Selec
 				}
 				return res
 			})
-		case "CoinOutputs":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FreeForAllWallet_CoinOutputs(ctx, field, obj)
-				return res
-			})
-		case "BlockStakeOutputs":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._FreeForAllWallet_BlockStakeOutputs(ctx, field, obj)
-				return res
-			})
 		case "CoinBalance":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -13403,28 +13137,6 @@ func (ec *executionContext) _MultiSignatureWallet(ctx context.Context, sel ast.S
 				}
 				return res
 			})
-		case "CoinOutputs":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._MultiSignatureWallet_CoinOutputs(ctx, field, obj)
-				return res
-			})
-		case "BlockStakeOutputs":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._MultiSignatureWallet_BlockStakeOutputs(ctx, field, obj)
-				return res
-			})
 		case "CoinBalance":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -13875,28 +13587,6 @@ func (ec *executionContext) _SingleSignatureWallet(ctx context.Context, sel ast.
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
-				return res
-			})
-		case "CoinOutputs":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._SingleSignatureWallet_CoinOutputs(ctx, field, obj)
-				return res
-			})
-		case "BlockStakeOutputs":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._SingleSignatureWallet_BlockStakeOutputs(ctx, field, obj)
 				return res
 			})
 		case "CoinBalance":

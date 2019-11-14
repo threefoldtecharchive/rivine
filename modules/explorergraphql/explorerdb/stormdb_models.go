@@ -105,10 +105,10 @@ type (
 	StormBaseWalletData struct {
 		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		CoinOutputs       []StormHash `msgpack:"cos"`
-		BlockStakeOutputs []StormHash `msgpack:"bos"`
-		Blocks            []StormHash `msgpack:"bls"`
-		Transactions      []StormHash `msgpack:"txs"`
+		// CoinOutputs       []StormHash `msgpack:"cos"`
+		// BlockStakeOutputs []StormHash `msgpack:"bos"`
+		// Blocks            []StormHash `msgpack:"bls"`
+		// Transactions      []StormHash `msgpack:"txs"`
 
 		CoinsUnlocked StormBigInt `storm:"index", msgpack:"cou"`
 		CoinsLocked   StormBigInt `storm:"index", msgpack:"col"`
@@ -279,10 +279,10 @@ func walletDataAsSDB(dataID StormDataID, wallet *WalletData) *StormBaseWalletDat
 	return &StormBaseWalletData{
 		DataID: dataID,
 
-		CoinOutputs:       OutputIDSliceAsStormHashSlice(wallet.CoinOutputs),
-		BlockStakeOutputs: OutputIDSliceAsStormHashSlice(wallet.BlockStakeOutputs),
-		Blocks:            BlockIDSliceAsStormHashSlice(wallet.Blocks),
-		Transactions:      TransactionIDSliceAsStormHashSlice(wallet.Transactions),
+		// CoinOutputs:       OutputIDSliceAsStormHashSlice(wallet.CoinOutputs),
+		// BlockStakeOutputs: OutputIDSliceAsStormHashSlice(wallet.BlockStakeOutputs),
+		// Blocks:            BlockIDSliceAsStormHashSlice(wallet.Blocks),
+		// Transactions:      TransactionIDSliceAsStormHashSlice(wallet.Transactions),
 
 		CoinsUnlocked: StormBigIntFromCurrency(wallet.CoinBalance.Unlocked),
 		CoinsLocked:   StormBigIntFromCurrency(wallet.CoinBalance.Locked),
@@ -296,10 +296,10 @@ func (swallet *StormBaseWalletData) AsWalletData(uh types.UnlockHash) WalletData
 	return WalletData{
 		UnlockHash: uh,
 
-		CoinOutputs:       StormHashSliceAsOutputIDSlice(swallet.CoinOutputs),
-		BlockStakeOutputs: StormHashSliceAsOutputIDSlice(swallet.BlockStakeOutputs),
-		Blocks:            StormHashSliceAsBlockIDSlice(swallet.Blocks),
-		Transactions:      StormHashSliceAsTransactionIDSlice(swallet.Transactions),
+		// CoinOutputs:       StormHashSliceAsOutputIDSlice(swallet.CoinOutputs),
+		// BlockStakeOutputs: StormHashSliceAsOutputIDSlice(swallet.BlockStakeOutputs),
+		// Blocks:            StormHashSliceAsBlockIDSlice(swallet.Blocks),
+		// Transactions:      StormHashSliceAsTransactionIDSlice(swallet.Transactions),
 
 		CoinBalance: Balance{
 			Unlocked: swallet.CoinsUnlocked.AsCurrency(),

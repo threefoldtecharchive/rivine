@@ -115,8 +115,8 @@ type stormDBInternalData struct {
 // used for intermediate collections of updates to a specific unlock hash
 type (
 	unlockHashUpdateCollection struct {
-		updates   map[types.UnlockHash]*unlockHashUpdate
-		block     types.BlockID
+		updates map[types.UnlockHash]*unlockHashUpdate
+		// block     types.BlockID
 		height    types.BlockHeight
 		timestamp types.Timestamp
 	}
@@ -135,10 +135,10 @@ type (
 	}
 )
 
-func newUnlockHashUpdateCollection(block types.BlockID, height types.BlockHeight, timestamp types.Timestamp) *unlockHashUpdateCollection {
+func newUnlockHashUpdateCollection( /*block types.BlockID, */ height types.BlockHeight, timestamp types.Timestamp) *unlockHashUpdateCollection {
 	return &unlockHashUpdateCollection{
-		updates:   make(map[types.UnlockHash]*unlockHashUpdate),
-		block:     block,
+		updates: make(map[types.UnlockHash]*unlockHashUpdate),
+		// block:     block,
 		height:    height,
 		timestamp: timestamp,
 	}
@@ -405,7 +405,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 	publicKeysNode := sdb.rootNode(nodeNamePublicKeys)
 
 	// used to update wallets and contracts
-	uhUpdateCollection := newUnlockHashUpdateCollection(block.ID, block.Height, block.Timestamp)
+	uhUpdateCollection := newUnlockHashUpdateCollection( /*block.ID, */ block.Height, block.Timestamp)
 
 	// store block reference point parings
 	err = blockNode.Save(&blockHeightIDPair{
@@ -609,7 +609,7 @@ func (sdb *StormDB) applyUnlockHashUpdates(node stormObjectNodeReaderWriter, uhU
 		case types.UnlockTypeNil:
 			err = sdb.applyFreeForAllWalletUpdate(
 				node,
-				uhUpdateCollection.block,
+				//uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -619,7 +619,7 @@ func (sdb *StormDB) applyUnlockHashUpdates(node stormObjectNodeReaderWriter, uhU
 		case types.UnlockTypePubKey:
 			err = sdb.applySingleSignatureWalletUpdate(
 				node,
-				uhUpdateCollection.block,
+				//uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -629,7 +629,7 @@ func (sdb *StormDB) applyUnlockHashUpdates(node stormObjectNodeReaderWriter, uhU
 		case types.UnlockTypeMultiSig:
 			err = sdb.applyMultiSignatureWalletUpdate(
 				node,
-				uhUpdateCollection.block,
+				//uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -639,7 +639,7 @@ func (sdb *StormDB) applyUnlockHashUpdates(node stormObjectNodeReaderWriter, uhU
 		case types.UnlockTypeAtomicSwap:
 			err = sdb.applyAtomicSwapContractUpdate(
 				node,
-				uhUpdateCollection.block,
+				//uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -654,7 +654,7 @@ func (sdb *StormDB) applyUnlockHashUpdates(node stormObjectNodeReaderWriter, uhU
 	return nil
 }
 
-func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *WalletData, uhUpdate *unlockHashUpdate) error {
+func applyBaseWalletUpdate( /*blockID types.BlockID, */ height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *WalletData, uhUpdate *unlockHashUpdate) error {
 	// update the wallet
 	if wallet.UnlockHash.Type == types.UnlockTypeNil {
 		// start from a fresh contract, thus register it
@@ -663,11 +663,11 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 
 	var err error
 
-	// update block information
-	wallet.Blocks = append(wallet.Blocks, blockID)
+	// // update block information
+	// wallet.Blocks = append(wallet.Blocks, blockID)
 
-	// update transaction info
-	wallet.Transactions = append(wallet.Transactions, uhUpdate.Transactions()...)
+	// // update transaction info
+	// wallet.Transactions = append(wallet.Transactions, uhUpdate.Transactions()...)
 
 	// update coin information
 	for _, co := range uhUpdate.coinOutputs {
@@ -675,8 +675,8 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 		if err != nil {
 			return fmt.Errorf("failed to update wallet %s: failed to apply coin output %s: %v", uh.String(), co.ID.String(), err)
 		}
-		// only here we need to add coin output ID info, as it is already known for coin inputs because what we do here
-		wallet.CoinOutputs = append(wallet.CoinOutputs, co.ID)
+		// // only here we need to add coin output ID info, as it is already known for coin inputs because what we do here
+		// wallet.CoinOutputs = append(wallet.CoinOutputs, co.ID)
 	}
 	for _, co := range uhUpdate.unlockedCoinOutputs {
 		output := co.AsOutput(types.OutputID{}) // that output ID is unknown here is not important
@@ -701,8 +701,8 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 		if err != nil {
 			return fmt.Errorf("failed to update wallet %s: failed to apply block stake output %s: %v", uh.String(), bso.ID.String(), err)
 		}
-		// only here we need to add block stake output ID info, as it is already known for block stake inputs because what we do here
-		wallet.BlockStakeOutputs = append(wallet.BlockStakeOutputs, bso.ID)
+		// // only here we need to add block stake output ID info, as it is already known for block stake inputs because what we do here
+		// wallet.BlockStakeOutputs = append(wallet.BlockStakeOutputs, bso.ID)
 	}
 	for _, bso := range uhUpdate.unlockedBlockStakeOutputs {
 		output := bso.AsOutput(types.OutputID{}) // that output ID is unknown here is not important
@@ -725,7 +725,7 @@ func applyBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, time
 	return nil
 }
 
-func (sdb *StormDB) applyFreeForAllWalletUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) applyFreeForAllWalletUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	// get the wallet (or start from a fresh one if it is new)
 	wallet, err := node.GetFreeForAllWallet(uh)
 	if err != nil && err != storm.ErrNotFound {
@@ -735,7 +735,7 @@ func (sdb *StormDB) applyFreeForAllWalletUpdate(node stormObjectNodeReaderWriter
 	}
 
 	// apply base update
-	err = applyBaseWalletUpdate(blockID, height, timestamp, uh, &wallet.WalletData, uhUpdate)
+	err = applyBaseWalletUpdate( /*blockID, */ height, timestamp, uh, &wallet.WalletData, uhUpdate)
 	if err != nil {
 		return fmt.Errorf("free-for-all wallet update apply error: %v", err)
 	}
@@ -750,7 +750,7 @@ func (sdb *StormDB) applyFreeForAllWalletUpdate(node stormObjectNodeReaderWriter
 	return nil
 }
 
-func (sdb *StormDB) applySingleSignatureWalletUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) applySingleSignatureWalletUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	// get the wallet (or start from a fresh one if it is new)
 	wallet, err := node.GetSingleSignatureWallet(uh)
 	if err != nil && err != storm.ErrNotFound {
@@ -760,7 +760,7 @@ func (sdb *StormDB) applySingleSignatureWalletUpdate(node stormObjectNodeReaderW
 	}
 
 	// apply base update
-	err = applyBaseWalletUpdate(blockID, height, timestamp, uh, &wallet.WalletData, uhUpdate)
+	err = applyBaseWalletUpdate( /*blockID, */ height, timestamp, uh, &wallet.WalletData, uhUpdate)
 	if err != nil {
 		return fmt.Errorf("single signature wallet update error: %v", err)
 	}
@@ -778,7 +778,7 @@ func (sdb *StormDB) applySingleSignatureWalletUpdate(node stormObjectNodeReaderW
 	return nil
 }
 
-func (sdb *StormDB) applyMultiSignatureWalletUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) applyMultiSignatureWalletUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	// get the wallet (or start from a fresh one if it is new)
 	wallet, err := node.GetMultiSignatureWallet(uh)
 	if err != nil && err != storm.ErrNotFound {
@@ -788,7 +788,7 @@ func (sdb *StormDB) applyMultiSignatureWalletUpdate(node stormObjectNodeReaderWr
 	}
 
 	// apply base update
-	err = applyBaseWalletUpdate(blockID, height, timestamp, uh, &wallet.WalletData, uhUpdate)
+	err = applyBaseWalletUpdate( /*blockID, */ height, timestamp, uh, &wallet.WalletData, uhUpdate)
 	if err != nil {
 		return fmt.Errorf("multi signature wallet update error: %v", err)
 	}
@@ -802,10 +802,10 @@ func (sdb *StormDB) applyMultiSignatureWalletUpdate(node stormObjectNodeReaderWr
 			} else if ct == types.ConditionTypeTimeLock {
 				marCond = cond.Condition.(*types.TimeLockCondition).Condition
 				if marCond.ConditionType() != types.ConditionTypeMultiSignature {
-					return fmt.Errorf("failed to update multi signature wallet %s: unexpected TimeLock-wrapped condition of type %d referenced in block %s", uh.String(), ct, blockID.String())
+					return fmt.Errorf("failed to update multi signature wallet %s: unexpected TimeLock-wrapped condition of type %d referenced in block at height %d and time %d", uh.String(), ct, height, timestamp)
 				}
 			} else {
-				return fmt.Errorf("failed to update multi signature wallet %s: unexpected condition of type %d referenced in block %s", uh.String(), ct, blockID.String())
+				return fmt.Errorf("failed to update multi signature wallet %s: unexpected condition of type %d referenced in block at height %d and time %d", uh.String(), ct, height, timestamp)
 			}
 			mscond := marCond.(types.MultiSignatureConditionOwnerInfoGetter)
 			wallet.RequiredSgnatureCount = int(mscond.GetMinimumSignatureCount())
@@ -843,7 +843,7 @@ func (sdb *StormDB) applyMultiSignatureWalletUpdate(node stormObjectNodeReaderWr
 	return nil
 }
 
-func (sdb *StormDB) applyAtomicSwapContractUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) applyAtomicSwapContractUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	// get the contract (or start from a fresh one if it is new)
 	contract, err := node.GetAtomicSwapContract(uh)
 	if err != nil && err != storm.ErrNotFound {
@@ -944,7 +944,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 
 	// used to update wallets and contracts
 	uhUpdateCollection := newUnlockHashUpdateCollection(
-		blockContext.ID, blockContext.Height, blockContext.Timestamp)
+		/*blockContext.ID, */ blockContext.Height, blockContext.Timestamp)
 
 	// delete block
 	_, err = node.DeleteBlock(blockContext.ID)
@@ -1102,7 +1102,7 @@ func (sdb *StormDB) revertUnlockHashUpdates(node stormObjectNodeReaderWriter, uh
 		case types.UnlockTypeNil:
 			err = sdb.revertFreeForAllWalletUpdate(
 				node,
-				uhUpdateCollection.block,
+				// uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -1112,7 +1112,7 @@ func (sdb *StormDB) revertUnlockHashUpdates(node stormObjectNodeReaderWriter, uh
 		case types.UnlockTypePubKey:
 			err = sdb.revertSingleSignatureWalletUpdate(
 				node,
-				uhUpdateCollection.block,
+				// uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -1122,7 +1122,7 @@ func (sdb *StormDB) revertUnlockHashUpdates(node stormObjectNodeReaderWriter, uh
 		case types.UnlockTypeMultiSig:
 			err = sdb.revertMultiSignatureWalletUpdate(
 				node,
-				uhUpdateCollection.block,
+				// uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -1132,7 +1132,7 @@ func (sdb *StormDB) revertUnlockHashUpdates(node stormObjectNodeReaderWriter, uh
 		case types.UnlockTypeAtomicSwap:
 			err = sdb.revertAtomicSwapContractUpdate(
 				node,
-				uhUpdateCollection.block,
+				// uhUpdateCollection.block,
 				uhUpdateCollection.height,
 				uhUpdateCollection.timestamp,
 				uh, uhUpdate)
@@ -1147,18 +1147,20 @@ func (sdb *StormDB) revertUnlockHashUpdates(node stormObjectNodeReaderWriter, uh
 	return nil
 }
 
-func revertBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *WalletData, uhUpdate *unlockHashUpdate) error {
-	// revert block ID
-	err := wallet.RevertBlock(blockID)
-	if err != nil {
-		return fmt.Errorf("failed to revert block %s from wallet %s: %v", blockID.String(), uh.String(), err)
-	}
+func revertBaseWalletUpdate( /*blockID types.BlockID, */ height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *WalletData, uhUpdate *unlockHashUpdate) error {
+	// // revert block ID
+	// err := wallet.RevertBlock(blockID)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to revert block %s from wallet %s: %v", blockID.String(), uh.String(), err)
+	// }
 
-	// revert transactions
-	err = wallet.RevertTransactions(uhUpdate.Transactions()...)
-	if err != nil {
-		return fmt.Errorf("failed to revert transactions from block %s from wallet %s: %v", blockID.String(), uh.String(), err)
-	}
+	// // revert transactions
+	// err = wallet.RevertTransactions(uhUpdate.Transactions()...)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to revert transactions from block %s from wallet %s: %v", blockID.String(), uh.String(), err)
+	// }
+
+	var err error
 
 	// revert coin information
 	// ... revert coin inputs first, so we sub after we already added as much as we could
@@ -1173,10 +1175,10 @@ func revertBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, tim
 		if err != nil {
 			return fmt.Errorf("failed to revert wallet %s: failed to revert coin output %s: %v", uh.String(), co.ID.String(), err)
 		}
-		err = wallet.RevertCoinOutput(co.ID)
-		if err != nil {
-			return fmt.Errorf("failed to revert wallet %s: %v", uh.String(), err)
-		}
+		// err = wallet.RevertCoinOutput(co.ID)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to revert wallet %s: %v", uh.String(), err)
+		// }
 	}
 	for _, co := range uhUpdate.unlockedCoinOutputs {
 		output := co.AsOutput(types.OutputID{}) // that output ID is unknown here is not important
@@ -1199,10 +1201,10 @@ func revertBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, tim
 		if err != nil {
 			return fmt.Errorf("failed to revert wallet %s: failed to revert block stake output %s: %v", uh.String(), bso.ID.String(), err)
 		}
-		err = wallet.RevertBlockStakeOutput(bso.ID)
-		if err != nil {
-			return fmt.Errorf("failed to revert allet %s: %v", uh.String(), err)
-		}
+		// err = wallet.RevertBlockStakeOutput(bso.ID)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to revert allet %s: %v", uh.String(), err)
+		// }
 	}
 	for _, bso := range uhUpdate.unlockedBlockStakeOutputs {
 		output := bso.AsOutput(types.OutputID{}) // that output ID is unknown here is not important
@@ -1216,17 +1218,17 @@ func revertBaseWalletUpdate(blockID types.BlockID, height types.BlockHeight, tim
 	return nil
 }
 
-func (sdb *StormDB) revertFreeForAllWalletUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) revertFreeForAllWalletUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	// get the wallet (or start from a fresh one if it is new)
 	wallet, err := node.GetFreeForAllWallet(uh)
 	if err != nil && err != storm.ErrNotFound {
 		// return any error other than not found,
 		// with not found errors we simply start with a fresh contract
-		return fmt.Errorf("failed to revert block %s from free-for-all wallet %s: failed to fetch it: %v", blockID.String(), uh.String(), err)
+		return fmt.Errorf("failed to revert block at height %d and time %d from free-for-all wallet %s: failed to fetch it: %v", height, timestamp, uh.String(), err)
 	}
 
 	// revert base update
-	err = revertBaseWalletUpdate(blockID, height, timestamp, uh, &wallet.WalletData, uhUpdate)
+	err = revertBaseWalletUpdate( /*blockID, */ height, timestamp, uh, &wallet.WalletData, uhUpdate)
 	if err != nil {
 		return fmt.Errorf("free-for-all wallet update revert error: %v", err)
 	}
@@ -1241,17 +1243,17 @@ func (sdb *StormDB) revertFreeForAllWalletUpdate(node stormObjectNodeReaderWrite
 	return nil
 }
 
-func (sdb *StormDB) revertSingleSignatureWalletUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) revertSingleSignatureWalletUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	// get the wallet (or start from a fresh one if it is new)
 	wallet, err := node.GetSingleSignatureWallet(uh)
 	if err != nil && err != storm.ErrNotFound {
 		// return any error other than not found,
 		// with not found errors we simply start with a fresh contract
-		return fmt.Errorf("failed to revert block %s from single signature wallet %s: failed to fetch it: %v", blockID.String(), uh.String(), err)
+		return fmt.Errorf("failed to revert block at height %d and time %d from single signature wallet %s: failed to fetch it: %v", height, timestamp, uh.String(), err)
 	}
 
 	// apply base update
-	err = revertBaseWalletUpdate(blockID, height, timestamp, uh, &wallet.WalletData, uhUpdate)
+	err = revertBaseWalletUpdate( /*blockID, */ height, timestamp, uh, &wallet.WalletData, uhUpdate)
 	if err != nil {
 		return fmt.Errorf("single signature wallet update error: %v", err)
 	}
@@ -1270,17 +1272,17 @@ func (sdb *StormDB) revertSingleSignatureWalletUpdate(node stormObjectNodeReader
 	return nil
 }
 
-func (sdb *StormDB) revertMultiSignatureWalletUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) revertMultiSignatureWalletUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	// get the wallet (or start from a fresh one if it is new)
 	wallet, err := node.GetMultiSignatureWallet(uh)
 	if err != nil && err != storm.ErrNotFound {
 		// return any error other than not found,
 		// with not found errors we simply start with a fresh contract
-		return fmt.Errorf("failed to revert block %s from multi signature wallet %s: failed to fetch it: %v", blockID.String(), uh.String(), err)
+		return fmt.Errorf("failed to revert block at height %d and time %d from multi signature wallet %s: failed to fetch it: %v", height, timestamp, uh.String(), err)
 	}
 
 	// apply base update
-	err = revertBaseWalletUpdate(blockID, height, timestamp, uh, &wallet.WalletData, uhUpdate)
+	err = revertBaseWalletUpdate( /*blockID, */ height, timestamp, uh, &wallet.WalletData, uhUpdate)
 	if err != nil {
 		return fmt.Errorf("multi signature wallet update error: %v", err)
 	}
@@ -1299,7 +1301,7 @@ func (sdb *StormDB) revertMultiSignatureWalletUpdate(node stormObjectNodeReaderW
 	return nil
 }
 
-func (sdb *StormDB) revertAtomicSwapContractUpdate(node stormObjectNodeReaderWriter, blockID types.BlockID, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
+func (sdb *StormDB) revertAtomicSwapContractUpdate(node stormObjectNodeReaderWriter /*blockID types.BlockID, */, height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, uhUpdate *unlockHashUpdate) error {
 	if len(uhUpdate.coinOutputs) == 1 {
 		// contract can be deleted, as the coin output (containing the initial definition) is reverted
 		err := node.DeleteAtomicSwapContract(uh)

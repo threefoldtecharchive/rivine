@@ -12,8 +12,8 @@ import (
 
 type (
 	baseWalletData struct {
-		CoinOutputs       []*Output
-		BlockStakeOutputs []*Output
+		// CoinOutputs       []*Output
+		// BlockStakeOutputs []*Output
 
 		CoinBalance       *Balance
 		BlockStakeBalance *Balance
@@ -75,19 +75,19 @@ var (
 
 func newBaseWalletDataFromEDB(data *explorerdb.WalletData, db explorerdb.DB) (wdata *baseWalletData) {
 	wdata = &baseWalletData{
-		CoinOutputs:       make([]*Output, 0, len(data.CoinOutputs)),
-		BlockStakeOutputs: make([]*Output, 0, len(data.BlockStakeOutputs)),
+		// CoinOutputs:       make([]*Output, 0, len(data.CoinOutputs)),
+		// BlockStakeOutputs: make([]*Output, 0, len(data.BlockStakeOutputs)),
 		CoinBalance:       dbBalanceAsGQL(&data.CoinBalance),
 		BlockStakeBalance: dbBalanceAsGQL(&data.BlockStakeBalance),
 	}
-	for _, coid := range data.CoinOutputs {
-		output := NewOutput(coid, nil, nil, db)
-		wdata.CoinOutputs = append(wdata.CoinOutputs, output)
-	}
-	for _, bsoid := range data.BlockStakeOutputs {
-		output := NewOutput(bsoid, nil, nil, db)
-		wdata.BlockStakeOutputs = append(wdata.BlockStakeOutputs, output)
-	}
+	// for _, coid := range data.CoinOutputs {
+	// 	output := NewOutput(coid, nil, nil, db)
+	// 	wdata.CoinOutputs = append(wdata.CoinOutputs, output)
+	// }
+	// for _, bsoid := range data.BlockStakeOutputs {
+	// 	output := NewOutput(bsoid, nil, nil, db)
+	// 	wdata.BlockStakeOutputs = append(wdata.BlockStakeOutputs, output)
+	// }
 	return
 }
 
@@ -132,20 +132,21 @@ func (wallet *FreeForAllWallet) IsWallet() {}
 func (wallet *FreeForAllWallet) UnlockHash(ctx context.Context) (types.UnlockHash, error) {
 	return wallet.uh, nil
 }
-func (wallet *FreeForAllWallet) CoinOutputs(ctx context.Context) ([]*Output, error) {
-	data, err := wallet.walletData(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return data.CoinOutputs, nil
-}
-func (wallet *FreeForAllWallet) BlockStakeOutputs(ctx context.Context) ([]*Output, error) {
-	data, err := wallet.walletData(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return data.BlockStakeOutputs, nil
-}
+
+// func (wallet *FreeForAllWallet) CoinOutputs(ctx context.Context) ([]*Output, error) {
+// 	data, err := wallet.walletData(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return data.CoinOutputs, nil
+// }
+// func (wallet *FreeForAllWallet) BlockStakeOutputs(ctx context.Context) ([]*Output, error) {
+// 	data, err := wallet.walletData(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return data.BlockStakeOutputs, nil
+// }
 func (wallet *FreeForAllWallet) CoinBalance(ctx context.Context) (*Balance, error) {
 	data, err := wallet.walletData(ctx)
 	if err != nil {
@@ -211,20 +212,21 @@ func (wallet *SingleSignatureWallet) IsWallet() {}
 func (wallet *SingleSignatureWallet) UnlockHash(ctx context.Context) (types.UnlockHash, error) {
 	return wallet.uh, nil
 }
-func (wallet *SingleSignatureWallet) CoinOutputs(ctx context.Context) ([]*Output, error) {
-	data, err := wallet.walletData(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return data.CoinOutputs, nil
-}
-func (wallet *SingleSignatureWallet) BlockStakeOutputs(ctx context.Context) ([]*Output, error) {
-	data, err := wallet.walletData(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return data.BlockStakeOutputs, nil
-}
+
+// func (wallet *SingleSignatureWallet) CoinOutputs(ctx context.Context) ([]*Output, error) {
+// 	data, err := wallet.walletData(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return data.CoinOutputs, nil
+// }
+// func (wallet *SingleSignatureWallet) BlockStakeOutputs(ctx context.Context) ([]*Output, error) {
+// 	data, err := wallet.walletData(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return data.BlockStakeOutputs, nil
+// }
 func (wallet *SingleSignatureWallet) CoinBalance(ctx context.Context) (*Balance, error) {
 	data, err := wallet.walletData(ctx)
 	if err != nil {
@@ -310,20 +312,21 @@ func (wallet *MultiSignatureWallet) IsWallet() {}
 func (wallet *MultiSignatureWallet) UnlockHash(ctx context.Context) (types.UnlockHash, error) {
 	return wallet.uh, nil
 }
-func (wallet *MultiSignatureWallet) CoinOutputs(ctx context.Context) ([]*Output, error) {
-	data, err := wallet.walletData(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return data.CoinOutputs, nil
-}
-func (wallet *MultiSignatureWallet) BlockStakeOutputs(ctx context.Context) ([]*Output, error) {
-	data, err := wallet.walletData(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return data.BlockStakeOutputs, nil
-}
+
+// func (wallet *MultiSignatureWallet) CoinOutputs(ctx context.Context) ([]*Output, error) {
+// 	data, err := wallet.walletData(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return data.CoinOutputs, nil
+// }
+// func (wallet *MultiSignatureWallet) BlockStakeOutputs(ctx context.Context) ([]*Output, error) {
+// 	data, err := wallet.walletData(ctx)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return data.BlockStakeOutputs, nil
+// }
 func (wallet *MultiSignatureWallet) CoinBalance(ctx context.Context) (*Balance, error) {
 	data, err := wallet.walletData(ctx)
 	if err != nil {

@@ -1091,16 +1091,6 @@ updated for this chain for every applied and reverted block.
 <td></td>
 </tr>
 <tr>
-<td colspan="2" valign="top"><strong>CoinOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
-<td></td>
-</tr>
-<tr>
-<td colspan="2" valign="top"><strong>BlockStakeOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
-<td></td>
-</tr>
-<tr>
 <td colspan="2" valign="top"><strong>CoinBalance</strong></td>
 <td valign="top"><a href="#balance">Balance</a></td>
 <td></td>
@@ -1488,16 +1478,6 @@ cannot yet be queried with the GraphQL API.
 <td></td>
 </tr>
 <tr>
-<td colspan="2" valign="top"><strong>CoinOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
-<td></td>
-</tr>
-<tr>
-<td colspan="2" valign="top"><strong>BlockStakeOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
-<td></td>
-</tr>
-<tr>
 <td colspan="2" valign="top"><strong>CoinBalance</strong></td>
 <td valign="top"><a href="#balance">Balance</a></td>
 <td></td>
@@ -1706,16 +1686,6 @@ this cursor can be used for a follow-up blocks query call.
 <tr>
 <td colspan="2" valign="top"><strong>UnlockHash</strong></td>
 <td valign="top"><a href="#unlockhash">UnlockHash</a>!</td>
-<td></td>
-</tr>
-<tr>
-<td colspan="2" valign="top"><strong>CoinOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
-<td></td>
-</tr>
-<tr>
-<td colspan="2" valign="top"><strong>BlockStakeOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
 <td></td>
 </tr>
 <tr>
@@ -2599,16 +2569,6 @@ See the Wallet implementations for the different wallets that are possible.
 <tr>
 <td colspan="2" valign="top"><strong>UnlockHash</strong></td>
 <td valign="top"><a href="#unlockhash">UnlockHash</a>!</td>
-<td></td>
-</tr>
-<tr>
-<td colspan="2" valign="top"><strong>CoinOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
-<td></td>
-</tr>
-<tr>
-<td colspan="2" valign="top"><strong>BlockStakeOutputs</strong></td>
-<td valign="top">[<a href="#output">Output</a>!]</td>
 <td></td>
 </tr>
 <tr>

@@ -1,7 +1,6 @@
 package explorerdb
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/threefoldtech/rivine/crypto"
@@ -146,11 +145,11 @@ type (
 	WalletData struct {
 		UnlockHash types.UnlockHash
 
-		CoinOutputs       []types.OutputID
-		BlockStakeOutputs []types.OutputID
+		// CoinOutputs       []types.OutputID
+		// BlockStakeOutputs []types.OutputID
 
-		Blocks       []types.BlockID
-		Transactions []types.TransactionID
+		// Blocks       []types.BlockID
+		// Transactions []types.TransactionID
 
 		CoinBalance       Balance
 		BlockStakeBalance Balance
@@ -331,65 +330,65 @@ func (balance *Balance) RevertUnlockedOutput(height types.BlockHeight, timestamp
 	return nil
 }
 
-func (wallet *WalletData) RevertBlock(blockID types.BlockID) error {
-	blockLength := len(wallet.Blocks)
-	if blockLength == 0 {
-		return fmt.Errorf("failed to revert block %s from wallet %s: no blocks are registered", blockID.String(), wallet.UnlockHash.String())
-	}
-	if bytes.Compare(wallet.Blocks[blockLength-1][:], blockID[:]) != 0 {
-		return fmt.Errorf("failed to revert block %s from free-for-all wallet %s: unexpected last block of %s", blockID.String(), wallet.UnlockHash.String(), wallet.Blocks[blockLength-1].String())
-	}
-	wallet.Blocks = wallet.Blocks[:blockLength-1]
-	return nil
-}
+// func (wallet *WalletData) RevertBlock(blockID types.BlockID) error {
+// 	blockLength := len(wallet.Blocks)
+// 	if blockLength == 0 {
+// 		return fmt.Errorf("failed to revert block %s from wallet %s: no blocks are registered", blockID.String(), wallet.UnlockHash.String())
+// 	}
+// 	if bytes.Compare(wallet.Blocks[blockLength-1][:], blockID[:]) != 0 {
+// 		return fmt.Errorf("failed to revert block %s from free-for-all wallet %s: unexpected last block of %s", blockID.String(), wallet.UnlockHash.String(), wallet.Blocks[blockLength-1].String())
+// 	}
+// 	wallet.Blocks = wallet.Blocks[:blockLength-1]
+// 	return nil
+// }
 
-func (wallet *WalletData) RevertTransactions(txns ...types.TransactionID) error {
-	if len(txns) == 0 {
-		return nil
-	}
-	txnMap := make(map[types.TransactionID]int)
-	for idx, txn := range wallet.Transactions {
-		txnMap[txn] = idx
-	}
-	for _, txn := range txns {
-		delete(txnMap, txn)
-	}
-	wallet.Transactions = make([]types.TransactionID, len(txnMap))
-	for txnID, idx := range txnMap {
-		copy(wallet.Transactions[idx][:], txnID[:])
-	}
-	return nil
-}
+// func (wallet *WalletData) RevertTransactions(txns ...types.TransactionID) error {
+// 	if len(txns) == 0 {
+// 		return nil
+// 	}
+// 	txnMap := make(map[types.TransactionID]int)
+// 	for idx, txn := range wallet.Transactions {
+// 		txnMap[txn] = idx
+// 	}
+// 	for _, txn := range txns {
+// 		delete(txnMap, txn)
+// 	}
+// 	wallet.Transactions = make([]types.TransactionID, len(txnMap))
+// 	for txnID, idx := range txnMap {
+// 		copy(wallet.Transactions[idx][:], txnID[:])
+// 	}
+// 	return nil
+// }
 
-func (wallet *WalletData) RevertCoinOutput(outputID types.OutputID) error {
-	indexToDelete := -1
-	for idx, existingOutputID := range wallet.CoinOutputs {
-		if bytes.Compare(existingOutputID[:], outputID[:]) == 0 {
-			indexToDelete = idx
-			break
-		}
-	}
-	if indexToDelete == -1 {
-		return fmt.Errorf("could not delete coin output %s from outputs of wallet %s: not found", outputID.String(), wallet.UnlockHash.String())
-	}
-	wallet.CoinOutputs = append(wallet.CoinOutputs[:indexToDelete], wallet.CoinOutputs[indexToDelete+1:]...)
-	return nil
-}
+// func (wallet *WalletData) RevertCoinOutput(outputID types.OutputID) error {
+// 	indexToDelete := -1
+// 	for idx, existingOutputID := range wallet.CoinOutputs {
+// 		if bytes.Compare(existingOutputID[:], outputID[:]) == 0 {
+// 			indexToDelete = idx
+// 			break
+// 		}
+// 	}
+// 	if indexToDelete == -1 {
+// 		return fmt.Errorf("could not delete coin output %s from outputs of wallet %s: not found", outputID.String(), wallet.UnlockHash.String())
+// 	}
+// 	wallet.CoinOutputs = append(wallet.CoinOutputs[:indexToDelete], wallet.CoinOutputs[indexToDelete+1:]...)
+// 	return nil
+// }
 
-func (wallet *WalletData) RevertBlockStakeOutput(outputID types.OutputID) error {
-	indexToDelete := -1
-	for idx, existingOutputID := range wallet.BlockStakeOutputs {
-		if bytes.Compare(existingOutputID[:], outputID[:]) == 0 {
-			indexToDelete = idx
-			break
-		}
-	}
-	if indexToDelete == -1 {
-		return fmt.Errorf("could not delete block stake output %s from outputs of wallet %s: not found", outputID.String(), wallet.UnlockHash.String())
-	}
-	wallet.BlockStakeOutputs = append(wallet.BlockStakeOutputs[:indexToDelete], wallet.BlockStakeOutputs[indexToDelete+1:]...)
-	return nil
-}
+// func (wallet *WalletData) RevertBlockStakeOutput(outputID types.OutputID) error {
+// 	indexToDelete := -1
+// 	for idx, existingOutputID := range wallet.BlockStakeOutputs {
+// 		if bytes.Compare(existingOutputID[:], outputID[:]) == 0 {
+// 			indexToDelete = idx
+// 			break
+// 		}
+// 	}
+// 	if indexToDelete == -1 {
+// 		return fmt.Errorf("could not delete block stake output %s from outputs of wallet %s: not found", outputID.String(), wallet.UnlockHash.String())
+// 	}
+// 	wallet.BlockStakeOutputs = append(wallet.BlockStakeOutputs[:indexToDelete], wallet.BlockStakeOutputs[indexToDelete+1:]...)
+// 	return nil
+// }
 
 func (swallet *SingleSignatureWalletData) AddMultiSignatureWallets(uhs ...types.UnlockHash) {
 	uhm := make(map[types.UnlockHash]struct{}, len(swallet.MultiSignatureWallets))

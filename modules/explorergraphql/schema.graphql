@@ -924,8 +924,10 @@ interface Wallet {
 
     # TODO: support inputs and outputs in a paginated manner
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
@@ -934,8 +936,10 @@ interface Wallet {
 type FreeForAllWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
@@ -944,8 +948,10 @@ type FreeForAllWallet implements Wallet {
 type SingleSignatureWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
@@ -957,8 +963,10 @@ type SingleSignatureWallet implements Wallet {
 type MultiSignatureWallet implements Wallet {
     UnlockHash: UnlockHash!
 
-    CoinOutputs: [Output!]
-    BlockStakeOutputs: [Output!]
+    # Note: disabled for now, as we have no efficient way
+    # of referencing them to a wallet at the moment
+    # CoinOutputs: [Output!]
+    # BlockStakeOutputs: [Output!]
 
     CoinBalance: Balance
     BlockStakeBalance: Balance
