@@ -20,7 +20,10 @@ It can take minutes for a trade to complete.
 The atomic swap tools should be able to use thin clients. Rivine currently has no commandline thin client. For bitcoin, we could use [Electrum](https://electrum.org/).
 
 Issues:
-- Commandline Rivine thin client: https://github.com/threefoldtech/rivine/issues/378
+
+- Generic commandline Rivine thin client: https://github.com/threefoldtech/rivine/issues/378
+
+Jumpscale has thin client atomic swap support for Rivine based chains like tfchain.
 
 Thin client support for other currencies are available for Bitcoin and Stellar.
 
