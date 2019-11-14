@@ -18,9 +18,9 @@ type (
 
 	StormObject struct {
 		ObjectID      ObjectID    `storm:"id", msgpack:"id"`
-		ObjectType    ObjectType  `storm:"index", msgpack:"ot"`
-		ObjectVersion ByteVersion `storm:"index", msgpack:"ov"`
-		DataID        StormDataID `storm:"unique", msgpack:"did"`
+		ObjectType    ObjectType  `msgpack:"ot"`                  // could be indexed, but not used so far
+		ObjectVersion ByteVersion `msgpack:"ov"`                  // could be indexed, but not used so far
+		DataID        StormDataID `storm:"unique", msgpack:"did"` // seems expensive to keep, but we'll keep it for now, as it does offer some protection
 	}
 
 	StormBlock struct {
@@ -37,8 +37,8 @@ type (
 	StormBlockFacts struct {
 		DataID StormDataID `storm:"id", msgpack:"id"`
 
-		Target     StormHash   `storm:"index", msgpack:"bt"`
-		Difficulty StormBigInt `storm:"index", msgpack:"bd"`
+		Target     StormHash   `msgpack:"bt"` // could be indexed, but not used so far
+		Difficulty StormBigInt `msgpack:"bd"` // could be indexed, but not used so far
 
 		AggregatedTotalCoins                 StormBigInt `msgpack:"acou"`
 		AggregatedTotalLockedCoins           StormBigInt `msgpack:"acol"`
@@ -56,7 +56,7 @@ type (
 		DataID StormDataID `storm:"id", msgpack:"id"`
 
 		ParentBlock StormHash   `msgpack:"pb"`
-		Version     ByteVersion `storm:"index", msgpack:"txv"`
+		Version     ByteVersion `msgpack:"txv"` // could be indexed, but not used so far, as we do not allow transactions to be fetched from API yet
 
 		CoinInputs  []StormHash `msgpack:"cis"`
 		CoinOutputs []StormHash `msgpack:"cos"`
@@ -66,7 +66,7 @@ type (
 
 		FeePayout StormTransactionFeePayoutInfo `msgpack:"fp"`
 
-		ArbitraryData        []byte `storm:"index", msgpack:"ad"`
+		ArbitraryData        []byte `msgpack:"ad"` // could be indexed, but not used so far, as we do not allow transactions to be fetched from API yet
 		EncodedExtensionData []byte `msgpack:"eed"`
 	}
 
@@ -80,12 +80,12 @@ type (
 
 		ParentID StormHash `msgpack:"pid"`
 
-		Type                 OutputType           `storm:"index", msgpack:"t"`
+		Type                 OutputType           `msgpack:"t"` // could be indexed, but not used so far
 		Value                StormBigInt          `msgpack:"v"`
 		Condition            StormUnlockCondition `msgpack:"c"`
-		UnlockReferencePoint ReferencePoint       `storm:"index", msgpack:"urp"` // required for reverting outputs
+		UnlockReferencePoint ReferencePoint       `storm:"index", msgpack:"urp"` // required for reverting unlocked (that used to be locked) outputs
 
-		SpenditureData *StormOutputSpenditureData `storm:"index", msgpack:"sd"`
+		SpenditureData *StormOutputSpenditureData `msgpack:"sd"` // could be indexed, but does not seem that storm supports this type of index-usage anyhow
 	}
 
 	StormLockedOutputsByHeight struct {
@@ -109,6 +109,12 @@ type (
 		// BlockStakeOutputs []StormHash `msgpack:"bos"`
 		// Blocks            []StormHash `msgpack:"bls"`
 		// Transactions      []StormHash `msgpack:"txs"`
+
+		// TODO:
+		// index these 4 properties once we want to be able
+		// to query multiple wallets at once.
+		// It would for example allow one to query a top 50 of wallets
+		// that have the most unlocked/locked/total coins.
 
 		CoinsUnlocked StormBigInt `storm:"index", msgpack:"cou"`
 		CoinsLocked   StormBigInt `storm:"index", msgpack:"col"`
@@ -147,7 +153,7 @@ type (
 		Transactions      []StormHash              `msgpack:"txs"`
 		CoinInput         StormHash                `msgpack:"ci"`
 
-		SpenditureData *StormAtomicSwapContractSpenditureData `storm:"index", msgpack:"sd"`
+		SpenditureData *StormAtomicSwapContractSpenditureData `msgpack:"sd"` // could be indexed, but does not seem that storm supports this type of index-usage anyhow
 	}
 )
 
