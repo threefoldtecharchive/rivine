@@ -134,13 +134,21 @@ func (bt *BaseTransaction) _resolveDataOnce() {
 		ArbitraryData:     dbByteSliceAsBinaryData(txn.ArbitraryData),
 	}
 	for _, outputID := range txn.CoinInputs {
-		bt.Data.CoinInputs = append(bt.Data.CoinInputs, NewInput(outputID, nil, bt.DB))
+		// Note: somehow we might want to just use the lazy resolver this Txn is,
+		// as the parent transaction, however this is not as easy,
+		// given we would need the Transaction Implementation that wraps the BaseTransaction,
+		// not the BaseTransaction itself... Not as easy with the current implementation
+		bt.Data.CoinInputs = append(bt.Data.CoinInputs, NewInput(outputID, nil, nil, bt.DB))
 	}
 	for _, outputID := range txn.CoinOutputs {
 		bt.Data.CoinOutputs = append(bt.Data.CoinOutputs, NewOutput(outputID, nil, block, bt.DB))
 	}
 	for _, outputID := range txn.BlockStakeInputs {
-		bt.Data.BlockStakeInputs = append(bt.Data.BlockStakeInputs, NewInput(outputID, nil, bt.DB))
+		// Note: somehow we might want to just use the lazy resolver this Txn is,
+		// as the parent transaction, however this is not as easy,
+		// given we would need the Transaction Implementation that wraps the BaseTransaction,
+		// not the BaseTransaction itself... Not as easy with the current implementation
+		bt.Data.BlockStakeInputs = append(bt.Data.BlockStakeInputs, NewInput(outputID, nil, nil, bt.DB))
 	}
 	for _, outputID := range txn.BlockStakeOutputs {
 		bt.Data.BlockStakeOutputs = append(bt.Data.BlockStakeOutputs, NewOutput(outputID, nil, block, bt.DB))

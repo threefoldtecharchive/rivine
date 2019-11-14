@@ -90,7 +90,12 @@ func (output *Output) _outputDataOnce() {
 		ParentID:  data.ParentID,
 	}
 	if output.child == nil && data.SpenditureData != nil {
-		output.child = NewInput(output.id, output, output.db)
+		parentTxn, err := NewTransaction(data.SpenditureData.FulfillmentTransactionID, nil, output.db)
+		if err != nil {
+			output.dataErr = fmt.Errorf("failed to fetch output parent %s data from DB: failed to create spenditure fulfillment txn: %v", data.ParentID.String(), err)
+			return
+		}
+		output.child = NewInput(output.id, output, parentTxn, output.db)
 		// already resolve data, as we already have it anyhow
 		output.child.resolveDataWithOutput(data.SpenditureData.Fulfillment)
 	}
@@ -167,15 +172,17 @@ func (output *Output) Parent(ctx context.Context) (OutputParent, error) {
 
 type (
 	inputData struct {
-		Type        *OutputType
-		Value       *BigInt
-		Fulfillment types.UnlockFulfillmentProxy
+		Type                *OutputType
+		Value               *BigInt
+		Fulfillment         types.UnlockFulfillmentProxy
+		ParentTransactionID types.TransactionID
 	}
 
 	Input struct {
-		id     types.OutputID
-		parent *Output
-		db     explorerdb.DB
+		id        types.OutputID
+		parent    *Output
+		parentTxn Transaction
+		db        explorerdb.DB
 
 		onceData sync.Once
 		data     *inputData
@@ -183,11 +190,12 @@ type (
 	}
 )
 
-func NewInput(id types.OutputID, parent *Output, db explorerdb.DB) *Input {
+func NewInput(id types.OutputID, parent *Output, parentTransaction Transaction, db explorerdb.DB) *Input {
 	return &Input{
-		id:     id,
-		parent: parent,
-		db:     db,
+		id:        id,
+		parent:    parent,
+		parentTxn: parentTransaction,
+		db:        db,
 	}
 }
 
@@ -216,6 +224,13 @@ func (input *Input) _inputDataOnce() {
 	}
 	if input.parent == nil {
 		input.parent = NewOutput(input.id, input, nil, input.db)
+	}
+	if input.parentTxn == nil {
+		input.parentTxn, err = NewTransaction(data.SpenditureData.FulfillmentTransactionID, nil, input.db)
+		if err != nil {
+			input.dataErr = fmt.Errorf("failed to convert output %s data (used as input): spenditure fulfillment txn could not be created: %v", input.id.String(), err)
+			return
+		}
 	}
 	input.data = &inputData{
 		Type:        dbOutputTypeAsGQL(data.Type),
@@ -280,4 +295,15 @@ func (input *Input) ParentOutput(ctx context.Context) (*Output, error) {
 	// a non-nil parent if not given
 
 	return input.parent, nil
+}
+func (input *Input) ParentTransaction(ctx context.Context) (Transaction, error) {
+	_, err := input.inputData(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// data is not used, but the internal function does resolve
+	// a non-nil parent if not given
+
+	return input.parentTxn, nil
 }

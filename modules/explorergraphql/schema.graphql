@@ -754,6 +754,7 @@ type Input {
     Fulfillment: UnlockFulfillment!
 
     ParentOutput: Output
+    ParentTransaction: Transaction
 }
 
 # TODO: replace txn implementations by Transaction interface once possible

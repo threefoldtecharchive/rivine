@@ -1158,6 +1158,11 @@ used as an `Input` in some transaction already.
 <td valign="top"><a href="#output">Output</a></td>
 <td></td>
 </tr>
+<tr>
+<td colspan="2" valign="top"><strong>ParentTransaction</strong></td>
+<td valign="top"><a href="#transaction">Transaction</a></td>
+<td></td>
+</tr>
 </tbody>
 </table>
 
