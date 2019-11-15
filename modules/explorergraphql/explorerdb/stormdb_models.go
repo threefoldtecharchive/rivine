@@ -18,9 +18,9 @@ type (
 
 	StormObject struct {
 		ObjectID      ObjectID    `storm:"id", msgpack:"id"`
-		ObjectType    ObjectType  `msgpack:"ot"`                  // could be indexed, but not used so far
-		ObjectVersion ByteVersion `msgpack:"ov"`                  // could be indexed, but not used so far
-		DataID        StormDataID `storm:"unique", msgpack:"did"` // seems expensive to keep, but we'll keep it for now, as it does offer some protection
+		ObjectType    ObjectType  `msgpack:"ot"`  // could be indexed, but not used so far
+		ObjectVersion ByteVersion `msgpack:"ov"`  // could be indexed, but not used so far
+		DataID        StormDataID `msgpack:"did"` // this seems to be marked as unique, but unique turns out to be very expensive, especially once 250k+ blocks are reached
 	}
 
 	StormBlock struct {
