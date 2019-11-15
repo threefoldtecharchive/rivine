@@ -13,6 +13,6 @@ const (
 
 // Auth Coin Tx Extension Transaction Versions
 const (
-	TransactionVersionAuthAddressUpdate   types.TransactionVersion = 177
-	TransactionVersionAuthConditionUpdate types.TransactionVersion = 176
+	TransactionVersionAuthAddressUpdate   types.TransactionVersion = 176
+	TransactionVersionAuthConditionUpdate types.TransactionVersion = 177
 )

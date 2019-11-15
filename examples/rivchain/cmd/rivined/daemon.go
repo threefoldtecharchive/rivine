@@ -25,7 +25,6 @@ import (
 	"github.com/threefoldtech/rivine/modules/blockcreator"
 	"github.com/threefoldtech/rivine/modules/consensus"
 	"github.com/threefoldtech/rivine/modules/explorer"
-	"github.com/threefoldtech/rivine/modules/explorergraphql"
 	"github.com/threefoldtech/rivine/modules/gateway"
 	"github.com/threefoldtech/rivine/modules/transactionpool"
 	"github.com/threefoldtech/rivine/modules/wallet"
@@ -327,27 +326,6 @@ func runDaemon(cfg ExtendedDaemonConfig, moduleIdentifiers daemon.ModuleIdentifi
 					nil, rivchaintypes.TransactionVersionAuthConditionUpdate,
 					rivchaintypes.TransactionVersionAuthAddressUpdate)
 			}
-		}
-
-		var q *explorergraphql.Explorer
-		if moduleIdentifiers.Contains(daemon.ExplorerGraphQLModule.Identifier()) {
-			printModuleIsLoading("graphql explorer")
-			q, err = explorergraphql.New(cs,
-				filepath.Join(cfg.RootPersistentDir, modules.ExplorerDir, "graphql"),
-				cfg.BlockchainInfo, networkCfg.Constants, cfg.VerboseLogging)
-			if err != nil {
-				servErrs <- err
-				cancel()
-				return
-			}
-			q.SetHTTPHandlers(router, "/explorer/graphql")
-			defer func() {
-				fmt.Println("Closing graphql explorer...")
-				err := q.Close()
-				if err != nil {
-					fmt.Println("Error during graphql explorer shutdown:", err)
-				}
-			}()
 		}
 
 		if cs != nil {

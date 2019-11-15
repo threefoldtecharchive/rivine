@@ -397,9 +397,9 @@ function txVersionName(version) {
 		
 
 		
-		case 177:
-			return "Address Authentication Update";
 		case 176:
+			return "Address Authentication Update";
+		case 177:
 			return "Auth Condition Update";
 		
 

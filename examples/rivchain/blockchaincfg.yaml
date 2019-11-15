@@ -33,9 +33,9 @@ blockchain:
       coinDestruction:
         version: 130
     authcoin:
-      conditionUpdate:
-        version: 176
       addressUpdate:
+        version: 176
+      conditionUpdate:
         version: 177
   networks:
     devnet:

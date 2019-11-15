@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/threefoldtech/rivine/crypto"
+	"github.com/threefoldtech/rivine/extensions/authcointx"
 	"github.com/threefoldtech/rivine/extensions/minting"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
@@ -227,10 +228,13 @@ func (txn *Transaction) GetCommonExtensionData() (TransactionCommonExtensionData
 	const ( // TODO: DO NOT HARDCODE THESE VALUES, SHOULD BE PLUGGED IN BY EXTENSIONS SOMEHOW
 		txnVersionMinterDefinition types.TransactionVersion = 128
 		txnVersionCoinCreation     types.TransactionVersion = 129
+
+		txnVersionAuthUpdateAddress   types.TransactionVersion = 176
+		txnVersionAuthUpdateCondition types.TransactionVersion = 177
 	)
 	switch txn.Version {
 	case txnVersionMinterDefinition:
-		var data minting.MinterDefinitionTransactionExtension
+		var data *minting.MinterDefinitionTransactionExtension
 		err := rivbin.Unmarshal(txn.EncodedExtensionData, &data)
 		if err != nil {
 			return TransactionCommonExtensionData{}, fmt.Errorf("failed to unmarshal minter definition ext. data: %v", err)
@@ -240,13 +244,32 @@ func (txn *Transaction) GetCommonExtensionData() (TransactionCommonExtensionData
 			Conditions:   []types.UnlockConditionProxy{data.MintCondition},
 		}, nil
 	case txnVersionCoinCreation:
-		var data minting.CoinCreationTransactionExtension
+		var data *minting.CoinCreationTransactionExtension
 		err := rivbin.Unmarshal(txn.EncodedExtensionData, &data)
 		if err != nil {
-			return TransactionCommonExtensionData{}, fmt.Errorf("failed to unmarshal minter definition ext. data: %v", err)
+			return TransactionCommonExtensionData{}, fmt.Errorf("failed to unmarshal minter coin creation ext. data: %v", err)
 		}
 		return TransactionCommonExtensionData{
 			Fulfillments: []types.UnlockFulfillmentProxy{data.MintFulfillment},
+		}, nil
+	case txnVersionAuthUpdateAddress:
+		var data *authcointx.AuthAddressUpdateTransactionExtension
+		err := rivbin.Unmarshal(txn.EncodedExtensionData, &data)
+		if err != nil {
+			return TransactionCommonExtensionData{}, fmt.Errorf("failed to unmarshal auth address update ext. data: %v", err)
+		}
+		return TransactionCommonExtensionData{
+			Fulfillments: []types.UnlockFulfillmentProxy{data.AuthFulfillment},
+		}, nil
+	case txnVersionAuthUpdateCondition:
+		var data *authcointx.AuthConditionUpdateTransaction
+		err := rivbin.Unmarshal(txn.EncodedExtensionData, &data)
+		if err != nil {
+			return TransactionCommonExtensionData{}, fmt.Errorf("failed to unmarshal auth condition update ext. data: %v", err)
+		}
+		return TransactionCommonExtensionData{
+			Fulfillments: []types.UnlockFulfillmentProxy{data.AuthFulfillment},
+			Conditions:   []types.UnlockConditionProxy{data.AuthCondition},
 		}, nil
 	default:
 		// no extension data to return

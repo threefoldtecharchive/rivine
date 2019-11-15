@@ -24,11 +24,11 @@ function appendTransactionStatistics(infoBody, explorerTransaction, confirmed) {
 
 		
 		// AuthCoin Transactions
-		case 177: // Address Update Tx
-			appendV177Transaction(infoBody, explorerTransaction, confirmed);
-			break;
-		case 176: // Condition Update Tx
+		case 176: // Address Update Tx
 			appendV176Transaction(infoBody, explorerTransaction, confirmed);
+			break;
+		case 177: // Condition Update Tx
+			appendV177Transaction(infoBody, explorerTransaction, confirmed);
 			break;
 		
 
@@ -688,7 +688,7 @@ function appendV130Transaction(infoBody, explorerTransaction, confirmed) {
 
 // Auth Coin Transactions
 
-function appendV177Transaction(infoBody, explorerTransaction, confirmed) {
+function appendV176Transaction(infoBody, explorerTransaction, confirmed) {
 	var ctx = getBlockchainContext();
 
 	var table = createStatsTable();
@@ -767,7 +767,7 @@ function appendV177Transaction(infoBody, explorerTransaction, confirmed) {
 	}
 }
 
-function appendV176Transaction(infoBody, explorerTransaction, confirmed) {
+function appendV177Transaction(infoBody, explorerTransaction, confirmed) {
 	var ctx = getBlockchainContext();
 
 	var table = createStatsTable();
