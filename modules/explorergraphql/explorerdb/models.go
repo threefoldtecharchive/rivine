@@ -286,25 +286,16 @@ func (output *Output) AsObject() *Object {
 }
 
 func (balance *Balance) ApplyInput(input *Output) error {
-	if input.SpenditureData == nil {
-		return fmt.Errorf("cannot apply output %s as input to balance: nil spenditure data", input.ID.String())
-	}
 	balance.Unlocked = balance.Unlocked.Sub(input.Value)
 	return nil
 }
 
 func (balance *Balance) RevertInput(input *Output) error {
-	if input.SpenditureData == nil {
-		return fmt.Errorf("cannot revert output %s as input to balance: nil spenditure data", input.ID.String())
-	}
 	balance.Unlocked = balance.Unlocked.Add(input.Value)
 	return nil
 }
 
 func (balance *Balance) ApplyOutput(height types.BlockHeight, timestamp types.Timestamp, output *Output) error {
-	if output.SpenditureData != nil {
-		return fmt.Errorf("cannot apply output %s to balance: non-nil spenditure data", output.ID.String())
-	}
 	if output.UnlockReferencePoint.Reached(height, timestamp) {
 		balance.Unlocked = balance.Unlocked.Add(output.Value)
 	} else {
@@ -314,9 +305,6 @@ func (balance *Balance) ApplyOutput(height types.BlockHeight, timestamp types.Ti
 }
 
 func (balance *Balance) RevertOutput(height types.BlockHeight, timestamp types.Timestamp, output *Output) error {
-	if output.SpenditureData != nil {
-		return fmt.Errorf("cannot apply output %s to balance: non-nil spenditure data", output.ID.String())
-	}
 	if output.UnlockReferencePoint.Reached(height, timestamp) {
 		balance.Unlocked = balance.Unlocked.Sub(output.Value)
 	} else {
@@ -326,9 +314,6 @@ func (balance *Balance) RevertOutput(height types.BlockHeight, timestamp types.T
 }
 
 func (balance *Balance) ApplyUnlockedOutput(height types.BlockHeight, timestamp types.Timestamp, output *Output) error {
-	if output.SpenditureData != nil {
-		return fmt.Errorf("cannot apply unlocked output %s to balance: non-nil spenditure data", output.ID.String())
-	}
 	if !output.UnlockReferencePoint.Reached(height, timestamp) {
 		return fmt.Errorf(
 			"cannot apply output %s to balance as unlocked: height %d and time %d did not reach output reference unlock point %d yet",
@@ -340,9 +325,6 @@ func (balance *Balance) ApplyUnlockedOutput(height types.BlockHeight, timestamp 
 }
 
 func (balance *Balance) RevertUnlockedOutput(height types.BlockHeight, timestamp types.Timestamp, output *Output) error {
-	if output.SpenditureData != nil {
-		return fmt.Errorf("cannot revert unlocked output %s to balance: non-nil spenditure data", output.ID.String())
-	}
 	if !output.UnlockReferencePoint.Reached(height, timestamp) {
 		return fmt.Errorf(
 			"cannot revert output %s to balance as unlocked: height %d and time %d did not reach output reference unlock point %d yet",
