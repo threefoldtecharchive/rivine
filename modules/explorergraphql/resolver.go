@@ -454,6 +454,10 @@ func timestampFilterFromGQL(operators *TimestampOperators) (*explorerdb.Timestam
 }
 
 func intFilterFromGQL(intFilter *IntFilter) (*explorerdb.IntFilterRange, error) {
+	if intFilter == nil {
+		return nil, nil // nothing to do
+	}
+
 	// define min-max range
 	var (
 		min, max *int
