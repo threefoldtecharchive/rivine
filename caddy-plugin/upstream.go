@@ -603,7 +603,6 @@ func (u *staticUpstream) healthCheck() {
 	hostMap := make(map[*UpstreamHost]uint64)
 
 	for _, host := range u.Hosts {
-		fmt.Printf("Checking host %v/explorer\n", host.Name)
 		resp, err := http.Get(fmt.Sprintf("%v/explorer", host.Name))
 
 		if err != nil {
@@ -638,11 +637,9 @@ func (u *staticUpstream) healthCheck() {
 
 	for host, height := range hostMap {
 		if height != mostCommonHeight {
-			fmt.Printf("Host %v unhealthy\n", host.Name)
 			atomic.StoreInt32(&host.Unhealthy, 1)
 			host.HealthCheckResult.Store("Failed")
 		} else {
-			fmt.Printf("Host %v healthy\n", host.Name)
 			atomic.StoreInt32(&host.Unhealthy, 0)
 			host.HealthCheckResult.Store("OK")
 		}
