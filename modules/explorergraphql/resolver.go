@@ -8,7 +8,7 @@ import (
 
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -19,14 +19,14 @@ import (
 //            and do not stop the world for one property failure)
 
 // TODO: support transaction pool data in case data was not found yet
-//  >> this should probably be done as a Wrapped explorerdb.DB,
+//  >> this should probably be done as a Wrapped basedb.DB,
 //     which subscribes to the transaction pool, and thus knows
 //     at any point what data can be used in case the wrapped DB returns ErrNotFound
 
 // TODO: differentiate between user and internal DB errors!!!
 
 type Resolver struct {
-	db             explorerdb.DB
+	db             basedb.DB
 	cs             modules.ConsensusSet
 	chainConstants types.ChainConstants
 	blockchainInfo types.BlockchainInfo
@@ -57,7 +57,7 @@ func (r *blockHeaderResolver) Child(ctx context.Context, obj *BlockHeader) (*Blo
 	height := int((*obj.BlockHeight) + 1)
 	block, err := getBlockAt(ctx, r.db, &height)
 	if err != nil {
-		if err == explorerdb.ErrNotFound {
+		if err == basedb.ErrNotFound {
 			return nil, nil // this is acceptable, as it might be the latest block
 		}
 		return nil, err
@@ -102,7 +102,7 @@ func (r *chainFactsResolver) Aggregated(ctx context.Context, obj *ChainFacts) (*
 		return obj.Aggregated, nil // nothing to do anymore
 	}
 	dbChainAggregatedFacts, err := r.db.GetChainAggregatedFacts()
-	if err != nil && err != explorerdb.ErrNotFound {
+	if err != nil && err != basedb.ErrNotFound {
 		return nil, fmt.Errorf("internal DB error while fetching chain aggregated facts: %v", err)
 	}
 	return dbChainAggregatedFactsAsGQL(&dbChainAggregatedFacts)
@@ -169,19 +169,19 @@ func (r *queryRootResolver) Object(ctx context.Context, id *ObjectID) (Object, e
 		// default to latest block if no ID is given, the only thing that makes sense
 		return r.BlockAt(ctx, nil)
 	}
-	objID := explorerdb.ObjectID(*id)
+	objID := basedb.ObjectID(*id)
 	dbObjectInfo, err := r.db.GetObjectInfo(objID)
 	if err != nil {
 		return nil, fmt.Errorf("internal DB error while fetching object %x: %v", objID, err)
 	}
 	switch dbObjectInfo.Type {
-	case explorerdb.ObjectTypeBlock:
+	case basedb.ObjectTypeBlock:
 		h, err := objID.AsHash()
 		if err != nil {
 			return nil, fmt.Errorf("internal server error: failed to convert confirmed object ID as block hash: %v", err)
 		}
 		return NewBlock(types.BlockID(h), r.db), nil
-	case explorerdb.ObjectTypeTransaction:
+	case basedb.ObjectTypeTransaction:
 		h, err := objID.AsHash()
 		if err != nil {
 			return nil, fmt.Errorf("internal server error: failed to convert confirmed object ID as transaction hash: %v", err)
@@ -189,31 +189,31 @@ func (r *queryRootResolver) Object(ctx context.Context, id *ObjectID) (Object, e
 		return NewTransactionWithVersion(
 			types.TransactionID(h), types.TransactionVersion(dbObjectInfo.Version),
 			nil, r.db)
-	case explorerdb.ObjectTypeOutput:
+	case basedb.ObjectTypeOutput:
 		h, err := objID.AsHash()
 		if err != nil {
 			return nil, fmt.Errorf("internal server error: failed to convert confirmed object ID as output hash: %v", err)
 		}
 		return NewOutput(types.OutputID(h), nil, nil, r.db), nil
-	case explorerdb.ObjectTypeFreeForAllWallet:
+	case basedb.ObjectTypeFreeForAllWallet:
 		uh, err := objID.AsUnlockHash()
 		if err != nil {
 			return nil, fmt.Errorf("internal server error: failed to convert confirmed object ID as free-for-all wallet unlock hash: %v", err)
 		}
 		return NewFreeForAllWallet(uh, r.db), nil
-	case explorerdb.ObjectTypeSingleSignatureWallet:
+	case basedb.ObjectTypeSingleSignatureWallet:
 		uh, err := objID.AsUnlockHash()
 		if err != nil {
 			return nil, fmt.Errorf("internal server error: failed to convert confirmed object ID as single signature wallet unlock hash: %v", err)
 		}
 		return NewSingleSignatureWallet(uh, r.db), nil
-	case explorerdb.ObjectTypeMultiSignatureWallet:
+	case basedb.ObjectTypeMultiSignatureWallet:
 		uh, err := objID.AsUnlockHash()
 		if err != nil {
 			return nil, fmt.Errorf("internal server error: failed to convert confirmed object ID as multi signature wallet unlock hash: %v", err)
 		}
 		return NewSingleSignatureWallet(uh, r.db), nil
-	case explorerdb.ObjectTypeAtomicSwapContract:
+	case basedb.ObjectTypeAtomicSwapContract:
 		uh, err := objID.AsUnlockHash()
 		if err != nil {
 			return nil, fmt.Errorf("internal server error: failed to convert confirmed object ID as multi signature wallet unlock hash: %v", err)
@@ -244,7 +244,7 @@ func (r *queryRootResolver) Block(ctx context.Context, id *crypto.Hash) (*Block,
 func (r *queryRootResolver) BlockAt(ctx context.Context, position *int) (*Block, error) {
 	return getBlockAt(ctx, r.db, position)
 }
-func getBlockAt(ctx context.Context, db explorerdb.DB, position *int) (*Block, error) {
+func getBlockAt(ctx context.Context, db basedb.DB, position *int) (*Block, error) {
 	if position == nil || (*position) < 0 {
 		// default to latest block
 		chainCtx, err := db.GetChainContext()
@@ -278,12 +278,12 @@ func getBlockAt(ctx context.Context, db explorerdb.DB, position *int) (*Block, e
 func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*ResponseBlocks, error) {
 	var (
 		err            error
-		blocksFilter   *explorerdb.BlocksFilter
-		bhFilter       *explorerdb.BlockHeightFilterRange
-		tsFilter       *explorerdb.TimestampFilterRange
-		txLengthFilter *explorerdb.IntFilterRange
+		blocksFilter   *basedb.BlocksFilter
+		bhFilter       *basedb.BlockHeightFilterRange
+		tsFilter       *basedb.TimestampFilterRange
+		txLengthFilter *basedb.IntFilterRange
 		limit          *int
-		cursor         *explorerdb.Cursor
+		cursor         *basedb.Cursor
 	)
 	if filter != nil {
 		var possibleToFetch bool
@@ -303,7 +303,7 @@ func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*
 			return nil, err
 		}
 		if bhFilter != nil || tsFilter != nil || txLengthFilter != nil {
-			blocksFilter = &explorerdb.BlocksFilter{
+			blocksFilter = &basedb.BlocksFilter{
 				BlockHeight:       bhFilter,
 				Timestamp:         tsFilter,
 				TransactionLength: txLengthFilter,
@@ -331,7 +331,7 @@ func (r *queryRootResolver) Blocks(ctx context.Context, filter *BlocksFilter) (*
 	}, nil
 }
 
-func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.DB) (*explorerdb.BlockHeightFilterRange, bool, error) {
+func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db basedb.DB) (*basedb.BlockHeightFilterRange, bool, error) {
 	if operators == nil {
 		return nil, true, nil
 	}
@@ -354,7 +354,7 @@ func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.
 			return nil, false, nil // no blocks to fetch
 		}
 		endHeight := types.BlockHeight(position - 1) // "before" filter is exclusive
-		return explorerdb.NewBlockHeightFilterRange(nil, &endHeight), true, nil
+		return basedb.NewBlockHeightFilterRange(nil, &endHeight), true, nil
 	}
 	if operators.After != nil {
 		// we know before is nil due to previous check
@@ -373,13 +373,13 @@ func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.
 			}
 		}
 		beginHeight := types.BlockHeight(position + 1) // "after" filter is exclusive
-		return explorerdb.NewBlockHeightFilterRange(&beginHeight, nil), true, nil
+		return basedb.NewBlockHeightFilterRange(&beginHeight, nil), true, nil
 	}
 	if operators.Between != nil && (operators.Between.Start != nil || operators.Between.End != nil) {
 		// we know the other 2 are nil due to the previous checks
 		begin, end := operators.Between.Start, operators.Between.End
 		var (
-			chainCtx     explorerdb.ChainContext
+			chainCtx     basedb.ChainContext
 			hBegin, hEnd *types.BlockHeight
 		)
 		if begin != nil {
@@ -414,13 +414,13 @@ func blockHeightsFilterFromGQL(operators *BlockPositionOperators, db explorerdb.
 			height := types.BlockHeight(*end)
 			hEnd = &height
 		}
-		return explorerdb.NewBlockHeightFilterRange(hBegin, hEnd), true, nil
+		return basedb.NewBlockHeightFilterRange(hBegin, hEnd), true, nil
 	}
 	// use no filter, useless, but same as a nil filter explicitly
 	return nil, false, nil
 }
 
-func timestampFilterFromGQL(operators *TimestampOperators) (*explorerdb.TimestampFilterRange, error) {
+func timestampFilterFromGQL(operators *TimestampOperators) (*basedb.TimestampFilterRange, error) {
 	if operators == nil {
 		return nil, nil
 	}
@@ -432,7 +432,7 @@ func timestampFilterFromGQL(operators *TimestampOperators) (*explorerdb.Timestam
 		if ts > 0 {
 			ts-- // "before" filter is exclusive
 		}
-		return explorerdb.NewTimestampFilterRange(nil, &ts), nil
+		return basedb.NewTimestampFilterRange(nil, &ts), nil
 	}
 	if operators.After != nil {
 		// we know before is nil due to previous check
@@ -440,11 +440,11 @@ func timestampFilterFromGQL(operators *TimestampOperators) (*explorerdb.Timestam
 			return nil, errors.New("Between Timestamp filters cannot be defined if Before or After filter is defined")
 		}
 		ts := *operators.After + 1 // "after" filter is exclusive
-		return explorerdb.NewTimestampFilterRange(&ts, nil), nil
+		return basedb.NewTimestampFilterRange(&ts, nil), nil
 	}
 	if operators.Between != nil && (operators.Between.Start != nil || operators.Between.End != nil) {
 		// we know the other 2 are nil due to the previous checks
-		return explorerdb.NewTimestampFilterRange(
+		return basedb.NewTimestampFilterRange(
 			operators.Between.Start,
 			operators.Between.End,
 		), nil
@@ -453,7 +453,7 @@ func timestampFilterFromGQL(operators *TimestampOperators) (*explorerdb.Timestam
 	return nil, nil
 }
 
-func intFilterFromGQL(intFilter *IntFilter) (*explorerdb.IntFilterRange, error) {
+func intFilterFromGQL(intFilter *IntFilter) (*basedb.IntFilterRange, error) {
 	if intFilter == nil {
 		return nil, nil // nothing to do
 	}
@@ -494,7 +494,7 @@ func intFilterFromGQL(intFilter *IntFilter) (*explorerdb.IntFilterRange, error) 
 	}
 
 	// return filter function based on min/max range
-	return explorerdb.NewIntFilterRange(min, max), nil
+	return basedb.NewIntFilterRange(min, max), nil
 }
 
 func (r *queryRootResolver) Wallet(ctx context.Context, unlockhash types.UnlockHash) (Wallet, error) {
@@ -518,7 +518,7 @@ type unlockHashConditionResolver struct{ *Resolver }
 func (r *unlockHashConditionResolver) PublicKey(ctx context.Context, obj *UnlockHashCondition) (*types.PublicKey, error) {
 	pk, err := r.db.GetPublicKey(obj.UnlockHash)
 	if err != nil {
-		if err == explorerdb.ErrNotFound {
+		if err == basedb.ErrNotFound {
 			return nil, nil // no error
 		}
 		return nil, err
@@ -531,7 +531,7 @@ type unlockHashPublicKeyPairResolver struct{ *Resolver }
 func (r *unlockHashPublicKeyPairResolver) PublicKey(ctx context.Context, obj *UnlockHashPublicKeyPair) (*types.PublicKey, error) {
 	pk, err := r.db.GetPublicKey(obj.UnlockHash)
 	if err != nil {
-		if err == explorerdb.ErrNotFound {
+		if err == basedb.ErrNotFound {
 			return nil, nil // no error
 		}
 		return nil, err

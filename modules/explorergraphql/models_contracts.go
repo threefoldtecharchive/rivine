@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 
 	"github.com/threefoldtech/rivine/types"
 )
@@ -23,7 +23,7 @@ type (
 
 	AtomicSwapContract struct {
 		uh types.UnlockHash
-		db explorerdb.DB
+		db basedb.DB
 
 		onceData sync.Once
 		data     *atomicSwapContractData
@@ -37,7 +37,7 @@ var (
 	_ Contract = (*AtomicSwapContract)(nil)
 )
 
-func NewAtomicSwapContract(uh types.UnlockHash, db explorerdb.DB) *AtomicSwapContract {
+func NewAtomicSwapContract(uh types.UnlockHash, db basedb.DB) *AtomicSwapContract {
 	return &AtomicSwapContract{
 		uh: uh,
 		db: db,
@@ -58,7 +58,7 @@ func (contract *AtomicSwapContract) _contractDataOnce() {
 
 	dbContract, err := contract.db.GetAtomicSwapContract(contract.uh)
 	if err != nil {
-		if err != explorerdb.ErrNotFound {
+		if err != basedb.ErrNotFound {
 			contract.dataErr = fmt.Errorf("failed to fetch atomic swap contract %s data from DB: %v", contract.uh.String(), err)
 			return
 		}

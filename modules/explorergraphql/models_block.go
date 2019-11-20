@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -19,7 +19,7 @@ type (
 
 	Block struct {
 		id types.BlockID
-		db explorerdb.DB
+		db basedb.DB
 
 		onceData sync.Once
 		data     *blockData
@@ -33,14 +33,14 @@ var (
 	_ OutputParent = (*Block)(nil)
 )
 
-func NewBlock(id types.BlockID, db explorerdb.DB) *Block {
+func NewBlock(id types.BlockID, db basedb.DB) *Block {
 	return &Block{
 		id: id,
 		db: db,
 	}
 }
 
-func NewBlockFromDB(block *explorerdb.Block, db explorerdb.DB) (*Block, error) {
+func NewBlockFromDB(block *basedb.Block, db basedb.DB) (*Block, error) {
 	apiBlock := NewBlock(block.ID, db)
 	apiBlock.onceData.Do(func() {
 		apiBlock._blockDataOnceFromData(block)
@@ -69,7 +69,7 @@ func (block *Block) _blockDataOnce() {
 	block._blockDataOnceFromData(&data)
 }
 
-func (block *Block) _blockDataOnceFromData(data *explorerdb.Block) {
+func (block *Block) _blockDataOnceFromData(data *basedb.Block) {
 	defer func() {
 		if e := recover(); e != nil {
 			block.dataErr = fmt.Errorf("failed to fetch block %s data from DB: %v", block.id.String(), e)
@@ -144,7 +144,7 @@ func (block *Block) Transactions(ctx context.Context, filter *TransactionsFilter
 	return FilterTransactions(ctx, data.Transactions, filter)
 }
 
-func dbBlockFactsAsGQL(dbBlockFacts *explorerdb.BlockFacts) *BlockFacts {
+func dbBlockFactsAsGQL(dbBlockFacts *basedb.BlockFacts) *BlockFacts {
 	return &BlockFacts{
 		Difficulty: dbBigIntAsGQLRef(dbBlockFacts.Constants.Difficulty.Big()),
 		Target:     dbTargetAsHash(dbBlockFacts.Constants.Target),
@@ -164,7 +164,7 @@ type (
 	}
 )
 
-func NewBlockPayout(id types.OutputID, parent OutputParent, db explorerdb.DB) *BlockPayout {
+func NewBlockPayout(id types.OutputID, parent OutputParent, db basedb.DB) *BlockPayout {
 	return &BlockPayout{
 		output: NewOutput(id, nil, parent, db),
 	}

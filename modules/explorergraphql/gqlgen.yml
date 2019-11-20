@@ -94,4 +94,4 @@ models:
   ByteVersion:
     model: github.com/threefoldtech/rivine/modules/explorergraphql.ByteVersion
   Cursor:
-    model: github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb.Cursor
+    model: github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb.Cursor

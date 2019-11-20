@@ -8,6 +8,7 @@ import (
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/99designs/gqlgen/handler"
@@ -19,7 +20,7 @@ import (
 // An Explorer contains a more comprehensive view of the blockchain,
 // including various statistics and metrics.
 type Explorer struct {
-	db             explorerdb.DB
+	db             basedb.DB
 	cs             modules.ConsensusSet
 	chainConstants types.ChainConstants
 	blockChainInfo types.BlockchainInfo
@@ -31,7 +32,7 @@ var (
 
 // New creates the internal data structures, and subscribes to
 // consensus for changes to the blockchain
-func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo, chainConstants types.ChainConstants, verboseLogging bool) (*Explorer, error) {
+func New(cs modules.ConsensusSet, persistDir, bcdbAddress string, bcInfo types.BlockchainInfo, chainConstants types.ChainConstants, verboseLogging bool) (*Explorer, error) {
 	// Check that input modules are non-nil
 	if cs == nil {
 		return nil, errNilCS
@@ -43,29 +44,38 @@ func New(cs modules.ConsensusSet, persistDir string, bcInfo types.BlockchainInfo
 		return nil, err
 	}
 
-	db, err := explorerdb.NewStormDB(persistDir, bcInfo, chainConstants, verboseLogging)
-	if err != nil {
-		return nil, err
+	var db basedb.DB
+	if bcdbAddress == "" {
+		db, err = explorerdb.NewStormDB(persistDir, bcInfo, chainConstants, verboseLogging)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		db, err = explorerdb.NewBCDB(bcdbAddress, persistDir, bcInfo, chainConstants, verboseLogging)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	chainCtx, err := db.GetChainContext()
-	if err != nil {
-		return nil, err
-	}
-	e := &Explorer{
+	return &Explorer{
 		db:             db,
 		cs:             cs,
 		chainConstants: chainConstants,
 		blockChainInfo: bcInfo,
-	}
+	}, nil
+}
 
-	err = cs.ConsensusSetSubscribe(e, chainCtx.ConsensusChangeID, nil)
+func (e *Explorer) SubscribeToConsensusSet() error {
+	chainCtx, err := e.db.GetChainContext()
+	if err != nil {
+		return err
+	}
+	err = e.cs.ConsensusSetSubscribe(e, chainCtx.ConsensusChangeID, nil)
 	if err != nil {
 		// TODO: restart from 0
-		return nil, errors.New("explorer subscription failed: " + err.Error())
+		return errors.New("graphql explorer subscription failed: " + err.Error())
 	}
-
-	return e, nil
+	return nil
 }
 
 func (e *Explorer) SetHTTPHandlers(router *httprouter.Router, endpoint string) {

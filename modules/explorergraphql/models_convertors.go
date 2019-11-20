@@ -5,11 +5,11 @@ import (
 	"math/big"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/types"
 )
 
-func dbChainAggregatedFactsAsGQL(facts *explorerdb.ChainAggregatedFacts) (*ChainAggregatedData, error) {
+func dbChainAggregatedFactsAsGQL(facts *basedb.ChainAggregatedFacts) (*ChainAggregatedData, error) {
 	return &ChainAggregatedData{
 		TotalCoins:                 dbCurrencyAsBigIntRef(facts.TotalCoins),
 		TotalLockedCoins:           dbCurrencyAsBigIntRef(facts.TotalLockedCoins),
@@ -19,7 +19,7 @@ func dbChainAggregatedFactsAsGQL(facts *explorerdb.ChainAggregatedFacts) (*Chain
 	}, nil
 }
 
-func dbBalanceAsGQL(dbBalance *explorerdb.Balance) *Balance {
+func dbBalanceAsGQL(dbBalance *basedb.Balance) *Balance {
 	if dbBalance.Unlocked.IsZero() && dbBalance.Locked.IsZero() {
 		return nil
 	}
@@ -29,18 +29,18 @@ func dbBalanceAsGQL(dbBalance *explorerdb.Balance) *Balance {
 	}
 }
 
-func dbOutputTypeAsGQL(outputType explorerdb.OutputType) *OutputType {
+func dbOutputTypeAsGQL(outputType basedb.OutputType) *OutputType {
 	switch outputType {
-	case explorerdb.OutputTypeCoin:
+	case basedb.OutputTypeCoin:
 		ot := OutputTypeCoin
 		return &ot
-	case explorerdb.OutputTypeBlockStake:
+	case basedb.OutputTypeBlockStake:
 		ot := OutputTypeBlockStake
 		return &ot
-	case explorerdb.OutputTypeBlockCreationReward:
+	case basedb.OutputTypeBlockCreationReward:
 		ot := OutputTypeBlockCreationReward
 		return &ot
-	case explorerdb.OutputTypeTransactionFee:
+	case basedb.OutputTypeTransactionFee:
 		ot := OutputTypeTransactionFee
 		return &ot
 	default:
@@ -179,7 +179,7 @@ func dbUnlockHashAsUnlockHashPublicKeyPair(uh types.UnlockHash) *UnlockHashPubli
 	}
 }
 
-func dbTxFeePayoutInfoAsGQL(fpInfo *explorerdb.TransactionFeePayoutInfo, db explorerdb.DB) []*TransactionFeePayout {
+func dbTxFeePayoutInfoAsGQL(fpInfo *basedb.TransactionFeePayoutInfo, db basedb.DB) []*TransactionFeePayout {
 	payouts := make([]*TransactionFeePayout, 0, len(fpInfo.Values))
 	blockPayout := NewBlockPayout(fpInfo.PayoutID, nil, db)
 	for _, v := range fpInfo.Values {
@@ -191,12 +191,12 @@ func dbTxFeePayoutInfoAsGQL(fpInfo *explorerdb.TransactionFeePayoutInfo, db expl
 	return payouts
 }
 
-func dbOutputTypeAsBlockPayoutType(outputType explorerdb.OutputType) *BlockPayoutType {
+func dbOutputTypeAsBlockPayoutType(outputType basedb.OutputType) *BlockPayoutType {
 	switch outputType {
-	case explorerdb.OutputTypeBlockCreationReward:
+	case basedb.OutputTypeBlockCreationReward:
 		bpt := BlockPayoutTypeBlockReward
 		return &bpt
-	case explorerdb.OutputTypeTransactionFee:
+	case basedb.OutputTypeTransactionFee:
 		bpt := BlockPayoutTypeTransactionFee
 		return &bpt
 	default:

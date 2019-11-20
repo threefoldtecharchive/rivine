@@ -33,6 +33,11 @@ func main() {
 	// also add our modules as a flag
 	cmds.moduleSetFlag.RegisterFlag(rootCommand.Flags(), fmt.Sprintf("%s modules", os.Args[0]))
 
+	// register a custom explorerGraphQL BCDB Flag
+	rootCommand.Flags().StringVar(
+		&cmds.cfg.ExplorerBCDBAddress, "explorer-bcdb", "",
+		"when GraphQL Explorer enabled, use the BCDB as backend reachable at this address instead of an embedded StormDB")
+
 	// create the other commands
 	rootCommand.AddCommand(&cobra.Command{
 		Use:   "version",

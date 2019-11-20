@@ -14,7 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/types"
 	"github.com/vektah/gqlparser"
 	"github.com/vektah/gqlparser/ast"
@@ -8807,7 +8807,7 @@ func (ec *executionContext) _ResponseBlocks_NextCursor(ctx context.Context, fiel
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*explorerdb.Cursor)
+	res := resTmp.(*basedb.Cursor)
 	rctx.Result = res
 	ctx = ec.Tracer.StartFieldChildExecution(ctx)
 	return ec.marshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx, field.Selections, res)
@@ -15390,16 +15390,16 @@ func (ec *executionContext) marshalOContract2githubᚗcomᚋthreefoldtechᚋrivi
 	return ec._Contract(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalOCursor2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, v interface{}) (explorerdb.Cursor, error) {
-	var res explorerdb.Cursor
+func (ec *executionContext) unmarshalOCursor2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, v interface{}) (basedb.Cursor, error) {
+	var res basedb.Cursor
 	return res, res.UnmarshalGQL(v)
 }
 
-func (ec *executionContext) marshalOCursor2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, sel ast.SelectionSet, v explorerdb.Cursor) graphql.Marshaler {
+func (ec *executionContext) marshalOCursor2githubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, sel ast.SelectionSet, v basedb.Cursor) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, v interface{}) (*explorerdb.Cursor, error) {
+func (ec *executionContext) unmarshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, v interface{}) (*basedb.Cursor, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -15407,7 +15407,7 @@ func (ec *executionContext) unmarshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋr
 	return &res, err
 }
 
-func (ec *executionContext) marshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, sel ast.SelectionSet, v *explorerdb.Cursor) graphql.Marshaler {
+func (ec *executionContext) marshalOCursor2ᚖgithubᚗcomᚋthreefoldtechᚋrivineᚋmodulesᚋexplorergraphqlᚋexplorerdbᚐCursor(ctx context.Context, sel ast.SelectionSet, v *basedb.Cursor) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

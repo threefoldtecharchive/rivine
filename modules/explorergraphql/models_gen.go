@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -178,7 +178,7 @@ type BlocksFilter struct {
 	// A cursor that allows the blocks query to pick up from a state previously left off.
 	// When this cursor is defined, you should define the same filters as used last time,
 	// even though this is not enforced. The Limit filter is an exception to this.
-	Cursor *explorerdb.Cursor `json:"Cursor"`
+	Cursor *basedb.Cursor `json:"Cursor"`
 }
 
 // The aggregated chain data,
@@ -331,7 +331,7 @@ type ResponseBlocks struct {
 	Blocks []*Block `json:"Blocks"`
 	// In case all items could not be returned within a single call,
 	// this cursor can be used for a follow-up blocks query call.
-	NextCursor *explorerdb.Cursor `json:"NextCursor"`
+	NextCursor *basedb.Cursor `json:"NextCursor"`
 }
 
 type SingleSignatureFulfillment struct {

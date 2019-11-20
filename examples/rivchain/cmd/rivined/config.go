@@ -7,6 +7,8 @@ import (
 // ExtendedDaemonConfig contains all configurable variables for the deamon.
 type ExtendedDaemonConfig struct {
 	daemon.Config
+
+	ExplorerBCDBAddress string
 }
 
 // DefaultConfig returns the default daemon configuration

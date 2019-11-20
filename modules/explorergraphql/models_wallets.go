@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 
 	"github.com/threefoldtech/rivine/types"
 )
@@ -21,7 +21,7 @@ type (
 
 	FreeForAllWallet struct {
 		uh types.UnlockHash
-		db explorerdb.DB
+		db basedb.DB
 
 		onceData sync.Once
 		data     *baseWalletData
@@ -37,7 +37,7 @@ type (
 
 	SingleSignatureWallet struct {
 		uh types.UnlockHash
-		db explorerdb.DB
+		db basedb.DB
 
 		onceData sync.Once
 		data     *singleSignatureWalletData
@@ -53,7 +53,7 @@ type (
 
 	MultiSignatureWallet struct {
 		uh types.UnlockHash
-		db explorerdb.DB
+		db basedb.DB
 
 		onceData sync.Once
 		data     *multiSignatureWalletData
@@ -73,7 +73,7 @@ var (
 	_ _baseWallet = (*MultiSignatureWallet)(nil)
 )
 
-func newBaseWalletDataFromEDB(data *explorerdb.WalletData, db explorerdb.DB) (wdata *baseWalletData) {
+func newBaseWalletDataFromEDB(data *basedb.WalletData, db basedb.DB) (wdata *baseWalletData) {
 	wdata = &baseWalletData{
 		// CoinOutputs:       make([]*Output, 0, len(data.CoinOutputs)),
 		// BlockStakeOutputs: make([]*Output, 0, len(data.BlockStakeOutputs)),
@@ -91,7 +91,7 @@ func newBaseWalletDataFromEDB(data *explorerdb.WalletData, db explorerdb.DB) (wd
 	return
 }
 
-func NewFreeForAllWallet(uh types.UnlockHash, db explorerdb.DB) *FreeForAllWallet {
+func NewFreeForAllWallet(uh types.UnlockHash, db basedb.DB) *FreeForAllWallet {
 	return &FreeForAllWallet{
 		uh: uh,
 		db: db,
@@ -112,7 +112,7 @@ func (wallet *FreeForAllWallet) _walletDataOnce() {
 
 	data, err := wallet.db.GetFreeForAllWallet(wallet.uh)
 	if err != nil {
-		if err != explorerdb.ErrNotFound {
+		if err != basedb.ErrNotFound {
 			wallet.dataErr = fmt.Errorf("failed to fetch free-for-all wallet %s data from DB: %v", wallet.uh.String(), err)
 			return
 		}
@@ -162,7 +162,7 @@ func (wallet *FreeForAllWallet) BlockStakeBalance(ctx context.Context) (*Balance
 	return data.BlockStakeBalance, nil
 }
 
-func NewSingleSignatureWallet(uh types.UnlockHash, db explorerdb.DB) *SingleSignatureWallet {
+func NewSingleSignatureWallet(uh types.UnlockHash, db basedb.DB) *SingleSignatureWallet {
 	return &SingleSignatureWallet{
 		uh: uh,
 		db: db,
@@ -182,7 +182,7 @@ func (wallet *SingleSignatureWallet) _walletDataOnce() {
 
 	data, err := wallet.db.GetSingleSignatureWallet(wallet.uh)
 	if err != nil {
-		if err != explorerdb.ErrNotFound {
+		if err != basedb.ErrNotFound {
 			wallet.dataErr = fmt.Errorf("failed to fetch single signature wallet %s data from DB: %v", wallet.uh.String(), err)
 			return
 		}
@@ -244,7 +244,7 @@ func (wallet *SingleSignatureWallet) BlockStakeBalance(ctx context.Context) (*Ba
 func (wallet *SingleSignatureWallet) PublicKey(ctx context.Context) (*types.PublicKey, error) {
 	pk, err := wallet.db.GetPublicKey(wallet.uh)
 	if err != nil {
-		if err == explorerdb.ErrNotFound {
+		if err == basedb.ErrNotFound {
 			return nil, nil // no error
 		}
 		return nil, err
@@ -259,7 +259,7 @@ func (wallet *SingleSignatureWallet) MultiSignatureWallets(ctx context.Context) 
 	return data.MultiSignatureWallets, nil
 }
 
-func NewMultiSignatureWallet(uh types.UnlockHash, db explorerdb.DB) *MultiSignatureWallet {
+func NewMultiSignatureWallet(uh types.UnlockHash, db basedb.DB) *MultiSignatureWallet {
 	return &MultiSignatureWallet{
 		uh: uh,
 		db: db,
@@ -280,7 +280,7 @@ func (wallet *MultiSignatureWallet) _walletDataOnce() {
 
 	data, err := wallet.db.GetMultiSignatureWallet(wallet.uh)
 	if err != nil {
-		if err != explorerdb.ErrNotFound {
+		if err != basedb.ErrNotFound {
 			wallet.dataErr = fmt.Errorf("failed to fetch multi signature wallet %s data from DB: %v", wallet.uh.String(), err)
 			return
 		}

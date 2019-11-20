@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/threefoldtech/rivine/crypto"
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/types"
 )
 
@@ -22,7 +22,7 @@ type (
 		id     types.OutputID
 		child  *Input
 		parent OutputParent
-		db     explorerdb.DB
+		db     basedb.DB
 
 		onceData sync.Once
 		data     *outputData
@@ -35,17 +35,17 @@ var (
 	_ Object = (*Output)(nil)
 )
 
-func NewOutputParent(hash crypto.Hash, db explorerdb.DB) (OutputParent, error) {
-	objInfo, err := db.GetObjectInfo(explorerdb.ObjectID(hash[:]))
+func NewOutputParent(hash crypto.Hash, db basedb.DB) (OutputParent, error) {
+	objInfo, err := db.GetObjectInfo(basedb.ObjectID(hash[:]))
 	if err != nil {
 		return nil, err
 	}
 	switch objInfo.Type {
-	case explorerdb.ObjectTypeTransaction:
+	case basedb.ObjectTypeTransaction:
 		return NewTransactionWithVersion(
 			types.TransactionID(hash), types.TransactionVersion(objInfo.Version),
 			nil, db)
-	case explorerdb.ObjectTypeBlock:
+	case basedb.ObjectTypeBlock:
 		return NewBlock(types.BlockID(hash), db), nil
 	default:
 		return nil, fmt.Errorf(
@@ -54,7 +54,7 @@ func NewOutputParent(hash crypto.Hash, db explorerdb.DB) (OutputParent, error) {
 	}
 }
 
-func NewOutput(id types.OutputID, child *Input, parent OutputParent, db explorerdb.DB) *Output {
+func NewOutput(id types.OutputID, child *Input, parent OutputParent, db basedb.DB) *Output {
 	return &Output{
 		id:     id,
 		child:  child,
@@ -182,7 +182,7 @@ type (
 		id        types.OutputID
 		parent    *Output
 		parentTxn Transaction
-		db        explorerdb.DB
+		db        basedb.DB
 
 		onceData sync.Once
 		data     *inputData
@@ -190,7 +190,7 @@ type (
 	}
 )
 
-func NewInput(id types.OutputID, parent *Output, parentTransaction Transaction, db explorerdb.DB) *Input {
+func NewInput(id types.OutputID, parent *Output, parentTransaction Transaction, db basedb.DB) *Input {
 	return &Input{
 		id:        id,
 		parent:    parent,

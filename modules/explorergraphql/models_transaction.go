@@ -11,7 +11,7 @@ import (
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/extensions/authcointx"
 	"github.com/threefoldtech/rivine/extensions/minting"
-	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 	"github.com/threefoldtech/rivine/pkg/encoding/rivbin"
 	"github.com/threefoldtech/rivine/types"
 )
@@ -33,20 +33,20 @@ type (
 	}
 )
 
-func NewTransaction(txid types.TransactionID, parentInfo *TransactionParentInfo, db explorerdb.DB) (Transaction, error) {
-	info, err := db.GetObjectInfo(explorerdb.ObjectID(txid[:]))
+func NewTransaction(txid types.TransactionID, parentInfo *TransactionParentInfo, db basedb.DB) (Transaction, error) {
+	info, err := db.GetObjectInfo(basedb.ObjectID(txid[:]))
 	if err != nil {
 		return nil, err
 	}
-	if info.Type != explorerdb.ObjectTypeTransaction {
+	if info.Type != basedb.ObjectTypeTransaction {
 		return nil, fmt.Errorf(
 			"unexpected object type %d for transaction %s (expected %d)",
-			info.Type, txid.String(), explorerdb.ObjectTypeTransaction)
+			info.Type, txid.String(), basedb.ObjectTypeTransaction)
 	}
 	return NewTransactionWithVersion(txid, types.TransactionVersion(info.Version), parentInfo, db)
 }
 
-func NewTransactionWithVersion(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) (Transaction, error) {
+func NewTransactionWithVersion(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db basedb.DB) (Transaction, error) {
 	switch version {
 	case types.TransactionVersionZero, types.TransactionVersionOne:
 		return NewStandardTransaction(txid, version, parentInfo, db), nil
@@ -86,7 +86,7 @@ type (
 
 		ExtensionDataResolver func([]byte) error
 
-		DB explorerdb.DB
+		DB basedb.DB
 
 		Data     *BaseTransactionData
 		DataOnce sync.Once
@@ -231,7 +231,7 @@ type (
 	}
 )
 
-func NewTransactionParentInfo(txnID types.TransactionID, id types.BlockID, db explorerdb.DB) *TransactionParentInfo {
+func NewTransactionParentInfo(txnID types.TransactionID, id types.BlockID, db basedb.DB) *TransactionParentInfo {
 	return NewTransactionParentInfoForBlock(txnID, NewBlock(id, db))
 }
 
@@ -312,7 +312,7 @@ type (
 	}
 )
 
-func NewStandardTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *StandardTransaction {
+func NewStandardTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db basedb.DB) *StandardTransaction {
 	return &StandardTransaction{
 		BaseTransaction: BaseTransaction{
 			TransactionID:         txid,
@@ -351,7 +351,7 @@ type (
 	}
 )
 
-func NewMintConditionDefinitionTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *MintConditionDefinitionTransaction {
+func NewMintConditionDefinitionTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db basedb.DB) *MintConditionDefinitionTransaction {
 	txn := &MintConditionDefinitionTransaction{
 		BaseTransaction: BaseTransaction{
 			TransactionID:         txid,
@@ -415,7 +415,7 @@ func (txn *MintConditionDefinitionTransaction) _resolveExtensionData(encodedExte
 	return nil
 }
 
-func NewMintCoinCreationTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *MintCoinCreationTransaction {
+func NewMintCoinCreationTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db basedb.DB) *MintCoinCreationTransaction {
 	txn := &MintCoinCreationTransaction{
 		BaseTransaction: BaseTransaction{
 			TransactionID:         txid,
@@ -466,7 +466,7 @@ func (txn *MintCoinCreationTransaction) _resolveExtensionData(encodedExtensionDa
 	return nil
 }
 
-func NewMintCoinDestructionTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *MintCoinDestructionTransaction {
+func NewMintCoinDestructionTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db basedb.DB) *MintCoinDestructionTransaction {
 	return &MintCoinDestructionTransaction{
 		BaseTransaction: BaseTransaction{
 			TransactionID:         txid,
@@ -502,7 +502,7 @@ type (
 	}
 )
 
-func NewAuthAddressUpdateTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *AuthAddressUpdateTransaction {
+func NewAuthAddressUpdateTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db basedb.DB) *AuthAddressUpdateTransaction {
 	txn := &AuthAddressUpdateTransaction{
 		BaseTransaction: BaseTransaction{
 			TransactionID:         txid,
@@ -581,7 +581,7 @@ func (txn *AuthAddressUpdateTransaction) _resolveExtensionData(encodedExtensionD
 	return nil
 }
 
-func NewAuthConditionUpdateTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db explorerdb.DB) *AuthConditionUpdateTransaction {
+func NewAuthConditionUpdateTransaction(txid types.TransactionID, version types.TransactionVersion, parentInfo *TransactionParentInfo, db basedb.DB) *AuthConditionUpdateTransaction {
 	txn := &AuthConditionUpdateTransaction{
 		BaseTransaction: BaseTransaction{
 			TransactionID:         txid,

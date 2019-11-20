@@ -8,6 +8,7 @@ import (
 	"github.com/threefoldtech/rivine/types"
 
 	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/bcdb"
 	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/stormdb"
 )
 
@@ -21,6 +22,10 @@ import (
 
 func NewStormDB(path string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*stormdb.StormDB, error) {
 	return stormdb.New(path, bcInfo, chainCts, verbose)
+}
+
+func NewBCDB(addr, path string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*bcdb.DB, error) {
+	return bcdb.New(addr, path, bcInfo, chainCts, verbose)
 }
 
 func ApplyConsensusChangeWithChannel(db basedb.DB, cs modules.ConsensusSet, ch <-chan modules.ConsensusChange, chainCts *types.ChainConstants) error {
