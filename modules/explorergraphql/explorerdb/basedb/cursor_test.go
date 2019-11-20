@@ -1,4 +1,4 @@
-package explorerdb
+package basedb
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ func TestCursorCycle(t *testing.T) {
 		},
 		{
 			42,
-			`d3000000000000002a`,
+			`2a`,
 		},
 		{
 			struct {
@@ -28,21 +28,11 @@ func TestCursorCycle(t *testing.T) {
 		},
 		{
 			struct {
-				Hash StormHash
-			}{StormHash{}},
-			`81a448617368c4200000000000000000000000000000000000000000000000000000000000000000`,
-		},
-		{
-			StormHash{},
-			`c4200000000000000000000000000000000000000000000000000000000000000000`,
-		},
-		{
-			struct {
 				Foo  uint64
 				Bar  string
 				Flag bool
 			}{42, "answer", true},
-			`83a3466f6fcf000000000000002aa3426172a6616e73776572a4466c6167c3`,
+			`83a3466f6f2aa3426172a6616e73776572a4466c6167c3`,
 		},
 	}
 	for idx, testCase := range testCases {

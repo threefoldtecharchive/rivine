@@ -1,4 +1,4 @@
-package explorerdb
+package basedb
 
 import (
 	"errors"

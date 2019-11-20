@@ -1,9 +1,11 @@
-package explorerdb
+package stormdb
 
 import (
 	"fmt"
 
 	"github.com/asdine/storm/q"
+
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 )
 
 type transactionIDLengthMatcher struct {
@@ -14,7 +16,7 @@ var (
 	_ q.Matcher = (*transactionIDLengthMatcher)(nil)
 )
 
-func newTransactionIDLengthMatcher(filter *IntFilterRange) *transactionIDLengthMatcher {
+func newTransactionIDLengthMatcher(filter *basedb.IntFilterRange) *transactionIDLengthMatcher {
 	if filter == nil {
 		return nil
 	}

@@ -1,4 +1,4 @@
-package explorerdb
+package basedb
 
 import (
 	"encoding/hex"
@@ -20,7 +20,7 @@ type Cursor struct {
 // NewCursor creates a cursor from a MsgPack-encodable value.
 // See `Cursor` for more information.
 func NewCursor(value interface{}) (Cursor, error) {
-	b, err := msgpackMarshal(value)
+	b, err := MsgpackMarshal(value)
 	if err != nil {
 		return Cursor{}, fmt.Errorf("failed to create a new cursor: failed to MsgPack encode the given value: %v", err)
 	}
@@ -30,7 +30,7 @@ func NewCursor(value interface{}) (Cursor, error) {
 // UnpackValue allows you to MsgPack-decode the cursor as
 // an in-memory MsgPack-decodable value.
 func (c Cursor) UnpackValue(value interface{}) error {
-	return msgpackUnmarshal(c.data, value)
+	return MsgpackUnmarshal(c.data, value)
 }
 
 // String formats the MsgPack-encoded cursor as a hex-encoded string.

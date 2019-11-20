@@ -1,4 +1,4 @@
-package explorerdb
+package stormdb
 
 import (
 	"bytes"

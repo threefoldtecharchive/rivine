@@ -1,4 +1,4 @@
-package explorerdb
+package stormdb
 
 import (
 	"bytes"
@@ -17,6 +17,8 @@ import (
 	bolt "go.etcd.io/bbolt"
 
 	mp "github.com/vmihailenco/msgpack"
+
+	"github.com/threefoldtech/rivine/modules/explorergraphql/explorerdb/basedb"
 )
 
 const (
@@ -34,7 +36,7 @@ type StormDB struct {
 }
 
 var (
-	_ DB = (*StormDB)(nil)
+	_ basedb.DB = (*StormDB)(nil)
 )
 
 func (sdb *StormDB) rootNode(name string) storm.Node {
@@ -58,8 +60,8 @@ func (sdb *StormDB) boltUpdate(f func(tx *bolt.Tx) error) error {
 	return sdb.db.Bolt.Update(f)
 }
 
-func NewStormDB(path string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*StormDB, error) {
-	db, err := storm.Open(filepath.Join(path, "explorer.db"), storm.Codec(smsp.Codec)) // smps.Codec
+func New(path string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, verbose bool) (*StormDB, error) {
+	db, err := storm.Open(filepath.Join(path, "explorer.db"), storm.Codec(smsp.Codec))
 	if err != nil {
 		return nil, err
 	}
@@ -122,10 +124,10 @@ type (
 	}
 
 	unlockHashUpdate struct {
-		coinInputs        []*Output
-		coinOutputs       []*Output
-		blockStakeInputs  []*Output
-		blockStakeOutputs []*Output
+		coinInputs        []*basedb.Output
+		coinOutputs       []*basedb.Output
+		blockStakeInputs  []*basedb.Output
+		blockStakeOutputs []*basedb.Output
 
 		transactions    map[types.TransactionID]struct{}
 		linkedAddresses map[types.UnlockHash]struct{}
@@ -170,8 +172,8 @@ func (uhuc *unlockHashUpdateCollection) getUpdateForUnlockHash(uh types.UnlockHa
 	return uhUpdate
 }
 
-func referenceParentHashAsTransactionIfNeeded(uhUpdate *unlockHashUpdate, output *Output) {
-	if output.Type == OutputTypeBlockStake || output.Type == OutputTypeCoin {
+func referenceParentHashAsTransactionIfNeeded(uhUpdate *unlockHashUpdate, output *basedb.Output) {
+	if output.Type == basedb.OutputTypeBlockStake || output.Type == basedb.OutputTypeCoin {
 		uhUpdate.transactions[types.TransactionID(output.ParentID)] = struct{}{}
 	}
 }
@@ -185,7 +187,7 @@ func (uhuc *unlockHashUpdateCollection) linkUnlockhashToOthers(uh types.UnlockHa
 	}
 }
 
-func (uhuc *unlockHashUpdateCollection) RegisterInput(input *Output) {
+func (uhuc *unlockHashUpdateCollection) RegisterInput(input *basedb.Output) {
 	uh := input.Condition.UnlockHash()
 	uhUpdate := uhuc.getUpdateForUnlockHash(uh)
 
@@ -194,7 +196,7 @@ func (uhuc *unlockHashUpdateCollection) RegisterInput(input *Output) {
 	if uh.Type == types.UnlockTypeMultiSig {
 		uhuc.linkUnlockhashToOthers(uh, input.Condition)
 	} else if uh.Type == types.UnlockTypeNil {
-		pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(input.SpenditureData.Fulfillment)
+		pairs := basedb.RivineUnlockHashPublicKeyPairsFromFulfillment(input.SpenditureData.Fulfillment)
 		for _, pair := range pairs {
 			uhUpdate := uhuc.getUpdateForUnlockHash(pair.UnlockHash)
 			registerInputForUnlockHashUpdate(pair.UnlockHash, uhUpdate, input)
@@ -202,8 +204,8 @@ func (uhuc *unlockHashUpdateCollection) RegisterInput(input *Output) {
 	}
 }
 
-func registerInputForUnlockHashUpdate(uh types.UnlockHash, uhUpdate *unlockHashUpdate, input *Output) {
-	if input.Type == OutputTypeBlockStake {
+func registerInputForUnlockHashUpdate(uh types.UnlockHash, uhUpdate *unlockHashUpdate, input *basedb.Output) {
+	if input.Type == basedb.OutputTypeBlockStake {
 		uhUpdate.blockStakeInputs = append(uhUpdate.blockStakeInputs, input)
 	} else {
 		uhUpdate.coinInputs = append(uhUpdate.coinInputs, input)
@@ -211,10 +213,10 @@ func registerInputForUnlockHashUpdate(uh types.UnlockHash, uhUpdate *unlockHashU
 	referenceParentHashAsTransactionIfNeeded(uhUpdate, input)
 }
 
-func (uhuc *unlockHashUpdateCollection) RegisterOutput(output *Output) {
+func (uhuc *unlockHashUpdateCollection) RegisterOutput(output *basedb.Output) {
 	uh := output.Condition.UnlockHash()
 	uhUpdate := uhuc.getUpdateForUnlockHash(uh)
-	if output.Type == OutputTypeBlockStake {
+	if output.Type == basedb.OutputTypeBlockStake {
 		uhUpdate.blockStakeOutputs = append(uhUpdate.blockStakeOutputs, output)
 	} else {
 		uhUpdate.coinOutputs = append(uhUpdate.coinOutputs, output)
@@ -235,7 +237,7 @@ func (uhuc *unlockHashUpdateCollection) RegisterUnlockedOutputs(outputs []StormO
 		output = &outputs[idx]
 		uh = output.Condition.UnlockHash()
 		uhUpdate = uhuc.getUpdateForUnlockHash(uh)
-		if output.Type == OutputTypeBlockStake {
+		if output.Type == basedb.OutputTypeBlockStake {
 			uhUpdate.unlockedBlockStakeOutputs = append(uhUpdate.unlockedBlockStakeOutputs, output)
 		} else {
 			uhUpdate.unlockedCoinOutputs = append(uhUpdate.unlockedCoinOutputs, output)
@@ -292,7 +294,7 @@ func (sdb *StormDB) getInternalData() (stormDBInternalData, error) {
 	return internalData, nil
 }
 
-func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
+func (sdb *StormDB) SetChainContext(chainCtx basedb.ChainContext) error {
 	b, err := rivbin.Marshal(chainCtx)
 	if err != nil {
 		return fmt.Errorf(
@@ -307,7 +309,7 @@ func (sdb *StormDB) SetChainContext(chainCtx ChainContext) error {
 	})
 }
 
-func (sdb *StormDB) GetChainContext() (ChainContext, error) {
+func (sdb *StormDB) GetChainContext() (basedb.ChainContext, error) {
 	var chainCtxBytes []byte
 	err := sdb.boltView(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketNameMetadata)
@@ -318,23 +320,23 @@ func (sdb *StormDB) GetChainContext() (ChainContext, error) {
 		return nil
 	})
 	if err != nil {
-		return ChainContext{}, err
+		return basedb.ChainContext{}, err
 	}
 	if len(chainCtxBytes) == 0 { // start from zero
-		return ChainContext{
+		return basedb.ChainContext{
 			ConsensusChangeID: modules.ConsensusChangeBeginning,
 		}, nil
 	}
-	var chainCtx ChainContext
+	var chainCtx basedb.ChainContext
 	err = rivbin.Unmarshal(chainCtxBytes, &chainCtx)
 	if err != nil {
-		return ChainContext{}, fmt.Errorf(
+		return basedb.ChainContext{}, fmt.Errorf(
 			"failed to unmarshal chain context %x: %v", chainCtxBytes, err)
 	}
 	return chainCtx, nil
 }
 
-func (sdb *StormDB) GetChainAggregatedFacts() (ChainAggregatedFacts, error) {
+func (sdb *StormDB) GetChainAggregatedFacts() (basedb.ChainAggregatedFacts, error) {
 	var factsBytes []byte
 	err := sdb.boltView(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bucketNameMetadata)
@@ -345,21 +347,21 @@ func (sdb *StormDB) GetChainAggregatedFacts() (ChainAggregatedFacts, error) {
 		return nil
 	})
 	if err != nil {
-		return ChainAggregatedFacts{}, err
+		return basedb.ChainAggregatedFacts{}, err
 	}
 	if len(factsBytes) == 0 { // start from zero
-		return ChainAggregatedFacts{}, nil
+		return basedb.ChainAggregatedFacts{}, nil
 	}
-	var facts ChainAggregatedFacts
+	var facts basedb.ChainAggregatedFacts
 	err = rivbin.Unmarshal(factsBytes, &facts)
 	if err != nil {
-		return ChainAggregatedFacts{}, fmt.Errorf(
+		return basedb.ChainAggregatedFacts{}, fmt.Errorf(
 			"failed to unmarshal chain aggregated facts %x: %v", factsBytes, err)
 	}
 	return facts, nil
 }
 
-func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *ChainAggregatedFacts) error) error {
+func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *basedb.ChainAggregatedFacts) error) error {
 	return sdb.boltUpdate(func(tx *bolt.Tx) error {
 		bucket, err := tx.CreateBucketIfNotExists(bucketNameMetadata)
 		if err != nil {
@@ -367,7 +369,7 @@ func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *ChainAggregatedFac
 		}
 
 		var (
-			facts      ChainAggregatedFacts
+			facts      basedb.ChainAggregatedFacts
 			factsBytes []byte
 		)
 		if factsBytes = bucket.Get(metadataKeyChainAggregatedFacts); len(factsBytes) != 0 {
@@ -392,7 +394,7 @@ func (sdb *StormDB) updateChainAggregatedFacts(cb func(facts *ChainAggregatedFac
 	})
 }
 
-func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs []Transaction, outputs []Output, inputs map[types.OutputID]OutputSpenditureData) error {
+func (sdb *StormDB) ApplyBlock(block basedb.Block, blockFacts basedb.BlockFactsConstants, txs []basedb.Transaction, outputs []basedb.Output, inputs map[types.OutputID]basedb.OutputSpenditureData) error {
 	sdb.logger.Debugf("apply block %d (time: %d)", block.Height, block.Timestamp)
 
 	sdbInternalData, err := sdb.getInternalData()
@@ -432,7 +434,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		}
 		// store all fulfillments and link it to the unlockhashes
 		for _, fulfillment := range extensionData.Fulfillments {
-			pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(fulfillment)
+			pairs := basedb.RivineUnlockHashPublicKeyPairsFromFulfillment(fulfillment)
 			// store public keys
 			for _, pair := range pairs {
 				err = publicKeysNode.Save(&unlockHashPublicKeyPair{
@@ -451,7 +453,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		}
 	}
 	// store outputs
-	var output *Output
+	var output *basedb.Output
 	for idx := range outputs {
 		output = &outputs[idx]
 		err = node.SaveOutput(output, block.Height, block.Timestamp)
@@ -463,7 +465,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		uhUpdateCollection.RegisterOutput(output)
 	}
 	// store inputs
-	inputOutputSlice := make([]*Output, 0, len(inputs))
+	inputOutputSlice := make([]*basedb.Output, 0, len(inputs))
 	for outputID, spenditureData := range inputs {
 		output, err := node.UpdateOutputSpenditureData(outputID, &spenditureData)
 		if err != nil {
@@ -475,7 +477,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 		uhUpdateCollection.RegisterInput(&output)
 
 		// store found public key - unlock hash links
-		pairs := RivineUnlockHashPublicKeyPairsFromFulfillment(spenditureData.Fulfillment)
+		pairs := basedb.RivineUnlockHashPublicKeyPairsFromFulfillment(spenditureData.Fulfillment)
 		for _, pair := range pairs {
 			err = publicKeysNode.Save(&unlockHashPublicKeyPair{
 				UnlockHash:         StormUnlockHashFromUnlockHash(pair.UnlockHash),
@@ -496,9 +498,9 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 	uhUpdateCollection.RegisterUnlockedOutputs(outputsUnlocked)
 
 	// store block with facts at the end, now that we have the final chain facts, after applying this block
-	err = node.SaveBlockWithFacts(&block, &BlockFacts{
+	err = node.SaveBlockWithFacts(&block, &basedb.BlockFacts{
 		Constants: blockFacts,
-		Aggregated: BlockFactsAggregated{
+		Aggregated: basedb.BlockFactsAggregated{
 			TotalCoins:                 facts.TotalCoins,
 			TotalLockedCoins:           facts.TotalLockedCoins,
 			TotalBlockStakes:           facts.TotalBlockStakes,
@@ -527,7 +529,7 @@ func (sdb *StormDB) ApplyBlock(block Block, blockFacts BlockFactsConstants, txs 
 	return nil
 }
 
-func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []Output, inputs []*Output, target types.Target) (ChainAggregatedFacts, []StormOutput, error) {
+func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []basedb.Output, inputs []*basedb.Output, target types.Target) (basedb.ChainAggregatedFacts, []StormOutput, error) {
 	var (
 		err             error
 		isLocked        bool
@@ -538,7 +540,7 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 		// get previous block
 		previousBlock, err := sdb.GetBlockAt(height - 1)
 		if err != nil {
-			return ChainAggregatedFacts{}, nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
+			return basedb.ChainAggregatedFacts{}, nil, fmt.Errorf("failed to get previous block at height %d: %v", height-1, err)
 		}
 		outputsUnlocked, err = objectNode.UnlockLockedOutputs(height, previousBlock.Timestamp, timestamp)
 		if err != nil {
@@ -546,17 +548,17 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 				// ignore not found
 				outputsUnlocked = nil
 			} else {
-				return ChainAggregatedFacts{}, nil, fmt.Errorf("failed to get outputs unlocked by height %d or timestamp %d: %v", height, timestamp, err)
+				return basedb.ChainAggregatedFacts{}, nil, fmt.Errorf("failed to get outputs unlocked by height %d or timestamp %d: %v", height, timestamp, err)
 			}
 		}
 	}
 	// get outputs unlocked by timestamp
-	var resultFacts ChainAggregatedFacts
-	err = sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
+	var resultFacts basedb.ChainAggregatedFacts
+	err = sdb.updateChainAggregatedFacts(func(facts *basedb.ChainAggregatedFacts) error {
 		// count all new outputs, and if locked also add them to the total locked assets
 		for _, output := range outputs {
 			isLocked = output.UnlockReferencePoint > 0 && !output.UnlockReferencePoint.Overreached(height, timestamp)
-			if output.Type == OutputTypeBlockStake {
+			if output.Type == basedb.OutputTypeBlockStake {
 				facts.TotalBlockStakes = facts.TotalBlockStakes.Add(output.Value)
 				if isLocked {
 					facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Add(output.Value)
@@ -570,7 +572,7 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 		}
 		// discount all unlocked outputs from total locked coins/blockstakes
 		for _, output := range outputsUnlocked {
-			if output.Type == OutputTypeBlockStake {
+			if output.Type == basedb.OutputTypeBlockStake {
 				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Sub(output.Value.AsCurrency())
 			} else {
 				facts.TotalLockedCoins = facts.TotalLockedCoins.Sub(output.Value.AsCurrency())
@@ -582,14 +584,14 @@ func (sdb *StormDB) applyBlockToAggregatedFacts(height types.BlockHeight, timest
 		// and thus we might go in the red in case we would try to subtract first,
 		// something that does work when you work on transaction level.
 		for _, input := range inputs {
-			if input.Type == OutputTypeBlockStake {
+			if input.Type == basedb.OutputTypeBlockStake {
 				facts.TotalBlockStakes = facts.TotalBlockStakes.Sub(input.Value)
 			} else {
 				facts.TotalCoins = facts.TotalCoins.Sub(input.Value)
 			}
 		}
 		// update estimated active block stakes
-		facts.AddLastBlockContext(BlockFactsContext{
+		facts.AddLastBlockContext(basedb.BlockFactsContext{
 			Target:    target,
 			Timestamp: timestamp,
 		})
@@ -654,7 +656,7 @@ func (sdb *StormDB) applyUnlockHashUpdates(node stormObjectNodeReaderWriter, uhU
 	return nil
 }
 
-func applyBaseWalletUpdate( /*blockID types.BlockID, */ height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *WalletData, uhUpdate *unlockHashUpdate) error {
+func applyBaseWalletUpdate( /*blockID types.BlockID, */ height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *basedb.WalletData, uhUpdate *unlockHashUpdate) error {
 	// update the wallet
 	if wallet.UnlockHash.Type == types.UnlockTypeNil {
 		// start from a fresh contract, thus register it
@@ -880,7 +882,7 @@ func (sdb *StormDB) applyAtomicSwapContractUpdate(node stormObjectNodeReaderWrit
 		if ft := ci.SpenditureData.Fulfillment.FulfillmentType(); ft != types.FulfillmentTypeAtomicSwap {
 			return fmt.Errorf("failed to update atomic swap contract %s: invalid update info: unexpected atomic swap fulfillment %d: %v", uh.String(), ft, err)
 		}
-		contract.SpenditureData = &AtomicSwapContractSpenditureData{
+		contract.SpenditureData = &basedb.AtomicSwapContractSpenditureData{
 			ContractFulfillment: *(ci.SpenditureData.Fulfillment.Fulfillment.(*types.AtomicSwapFulfillment)),
 			CoinOutput:          types.CoinOutputID(ci.ID),
 		}
@@ -907,13 +909,13 @@ func (sdb *StormDB) applyAtomicSwapContractUpdate(node stormObjectNodeReaderWrit
 	return nil
 }
 
-func (sdb *StormDB) estimateActiveBS(height types.BlockHeight, timestamp types.Timestamp, blocks []BlockFactsContext) types.Currency {
+func (sdb *StormDB) estimateActiveBS(height types.BlockHeight, timestamp types.Timestamp, blocks []basedb.BlockFactsContext) types.Currency {
 	if len(blocks) == 0 {
 		return types.Currency{}
 	}
 	var (
 		estimatedActiveBS types.Difficulty
-		block             BlockFactsContext
+		block             basedb.BlockFactsContext
 
 		lBlockOffset    = len(blocks) - 1
 		oldestTimestamp = blocks[lBlockOffset].Timestamp
@@ -932,7 +934,7 @@ func (sdb *StormDB) estimateActiveBS(height types.BlockHeight, timestamp types.T
 	return types.NewCurrency(estimatedActiveBS.Big())
 }
 
-func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error {
+func (sdb *StormDB) RevertBlock(blockContext basedb.BlockRevertContext, txs []types.TransactionID, outputs []types.OutputID, inputs []types.OutputID) error {
 	sdb.logger.Debugf("revert block %d (time: %d)", blockContext.Height, blockContext.Timestamp)
 	sdbInternalData, err := sdb.getInternalData()
 	if err != nil {
@@ -979,7 +981,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		}
 	}
 	// delete outputs
-	outputSlice := make([]*Output, 0, len(outputs))
+	outputSlice := make([]*basedb.Output, 0, len(outputs))
 	for _, outputID := range outputs {
 		output, err := node.DeleteOutput(outputID, blockContext.Height, blockContext.Timestamp)
 		if err != nil {
@@ -991,7 +993,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 		uhUpdateCollection.RegisterOutput(&output)
 	}
 	// delete inputs
-	inputOutputSlice := make([]*Output, 0, len(inputs))
+	inputOutputSlice := make([]*basedb.Output, 0, len(inputs))
 	for _, inputID := range inputs {
 		output, err := node.UpdateOutputSpenditureData(inputID, nil)
 		if err != nil {
@@ -1027,7 +1029,7 @@ func (sdb *StormDB) RevertBlock(blockContext BlockRevertContext, txs []types.Tra
 	return nil
 }
 
-func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []*Output, inputs []*Output) ([]StormOutput, error) {
+func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, timestamp types.Timestamp, objectNode stormObjectNodeReaderWriter, outputs []*basedb.Output, inputs []*basedb.Output) ([]StormOutput, error) {
 	var (
 		err           error
 		isLocked      bool
@@ -1051,14 +1053,14 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 		}
 	}
 	// get outputs unlocked by timestamp
-	err = sdb.updateChainAggregatedFacts(func(facts *ChainAggregatedFacts) error {
+	err = sdb.updateChainAggregatedFacts(func(facts *basedb.ChainAggregatedFacts) error {
 		// re-apply all reverted inputs to total coins/blockstakes
 		//
 		// we'll do this first to ensure that we do not go in the red,
 		// as we work on a block level. This is analog to the updateChainAggregatedFacts
 		// logic used in the applyBlockToAggregatedFacts method
 		for _, input := range inputs {
-			if input.Type == OutputTypeBlockStake {
+			if input.Type == basedb.OutputTypeBlockStake {
 				facts.TotalBlockStakes = facts.TotalBlockStakes.Add(input.Value)
 			} else {
 				facts.TotalCoins = facts.TotalCoins.Add(input.Value)
@@ -1066,7 +1068,7 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 		}
 		// re-apply all locked outputs to total locked coins/blockstakes
 		for _, output := range outputsLocked {
-			if output.Type == OutputTypeBlockStake {
+			if output.Type == basedb.OutputTypeBlockStake {
 				facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Add(output.Value.AsCurrency())
 			} else {
 				facts.TotalLockedCoins = facts.TotalLockedCoins.Add(output.Value.AsCurrency())
@@ -1075,7 +1077,7 @@ func (sdb *StormDB) revertBlockToAggregatedFacts(height types.BlockHeight, times
 		// discount all reverted outputs, and if locked also subtract them to the total locked assets
 		for _, output := range outputs {
 			isLocked = output.UnlockReferencePoint > 0 && !output.UnlockReferencePoint.Overreached(height, timestamp)
-			if output.Type == OutputTypeBlockStake {
+			if output.Type == basedb.OutputTypeBlockStake {
 				facts.TotalBlockStakes = facts.TotalBlockStakes.Sub(output.Value)
 				if isLocked {
 					facts.TotalLockedBlockStakes = facts.TotalLockedBlockStakes.Sub(output.Value)
@@ -1147,7 +1149,7 @@ func (sdb *StormDB) revertUnlockHashUpdates(node stormObjectNodeReaderWriter, uh
 	return nil
 }
 
-func revertBaseWalletUpdate( /*blockID types.BlockID, */ height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *WalletData, uhUpdate *unlockHashUpdate) error {
+func revertBaseWalletUpdate( /*blockID types.BlockID, */ height types.BlockHeight, timestamp types.Timestamp, uh types.UnlockHash, wallet *basedb.WalletData, uhUpdate *unlockHashUpdate) error {
 	// // revert block ID
 	// err := wallet.RevertBlock(blockID)
 	// if err != nil {
@@ -1348,40 +1350,40 @@ func mapStormErrorToExplorerDBError(err error) error {
 	case nil:
 		return nil
 	case storm.ErrNotFound:
-		return ErrNotFound
+		return basedb.ErrNotFound
 	default:
-		return NewInternalError(stormDBName, err)
+		return basedb.NewInternalError(stormDBName, err)
 	}
 }
 
-func (sdb *StormDB) GetObject(id ObjectID) (Object, error) {
+func (sdb *StormDB) GetObject(id basedb.ObjectID) (basedb.Object, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	obj, err := node.GetObject(id)
 	return obj, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetObjectInfo(id ObjectID) (ObjectInfo, error) {
+func (sdb *StormDB) GetObjectInfo(id basedb.ObjectID) (basedb.ObjectInfo, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	objInfo, err := node.GetObjectInfo(id)
 	return objInfo, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetBlock(id types.BlockID) (Block, error) {
+func (sdb *StormDB) GetBlock(id types.BlockID) (basedb.Block, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	block, err := node.GetBlock(id)
 	return block, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetBlockAt(height types.BlockHeight) (Block, error) {
+func (sdb *StormDB) GetBlockAt(height types.BlockHeight) (basedb.Block, error) {
 	blockID, err := sdb.GetBlockIDAt(height)
 	if err != nil {
-		return Block{}, mapStormErrorToExplorerDBError(err)
+		return basedb.Block{}, mapStormErrorToExplorerDBError(err)
 	}
 	block, err := sdb.GetBlock(blockID)
 	return block, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetBlockFacts(id types.BlockID) (BlockFacts, error) {
+func (sdb *StormDB) GetBlockFacts(id types.BlockID) (basedb.BlockFacts, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	facts, err := node.GetBlockFacts(id)
 	return facts, mapStormErrorToExplorerDBError(err)
@@ -1398,13 +1400,13 @@ func (sdb *StormDB) GetBlockIDAt(height types.BlockHeight) (types.BlockID, error
 	return pair.BlockID.AsBlockID(), nil
 }
 
-func (sdb *StormDB) GetTransaction(id types.TransactionID) (Transaction, error) {
+func (sdb *StormDB) GetTransaction(id types.TransactionID) (basedb.Transaction, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	txn, err := node.GetTransaction(id)
 	return txn, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetOutput(id types.OutputID) (Output, error) {
+func (sdb *StormDB) GetOutput(id types.OutputID) (basedb.Output, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	output, err := node.GetOutput(id)
 	return output, mapStormErrorToExplorerDBError(err)
@@ -1415,7 +1417,7 @@ const (
 	StormDBUpperLimitBlocks   = 100
 )
 
-func (sdb *StormDB) GetBlocks(limit *int, filter *BlocksFilter, cursor *Cursor) ([]Block, *Cursor, error) {
+func (sdb *StormDB) GetBlocks(limit *int, filter *basedb.BlocksFilter, cursor *basedb.Cursor) ([]basedb.Block, *basedb.Cursor, error) {
 	var ilimit int
 	if limit == nil {
 		ilimit = StormDBDefaultLimitBlocks
@@ -1433,25 +1435,25 @@ func (sdb *StormDB) GetBlocks(limit *int, filter *BlocksFilter, cursor *Cursor) 
 	return blocks, cursor, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetFreeForAllWallet(uh types.UnlockHash) (FreeForAllWalletData, error) {
+func (sdb *StormDB) GetFreeForAllWallet(uh types.UnlockHash) (basedb.FreeForAllWalletData, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	wallet, err := node.GetFreeForAllWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetSingleSignatureWallet(uh types.UnlockHash) (SingleSignatureWalletData, error) {
+func (sdb *StormDB) GetSingleSignatureWallet(uh types.UnlockHash) (basedb.SingleSignatureWalletData, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	wallet, err := node.GetSingleSignatureWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (MultiSignatureWalletData, error) {
+func (sdb *StormDB) GetMultiSignatureWallet(uh types.UnlockHash) (basedb.MultiSignatureWalletData, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	wallet, err := node.GetMultiSignatureWallet(uh)
 	return wallet, mapStormErrorToExplorerDBError(err)
 }
 
-func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (AtomicSwapContract, error) {
+func (sdb *StormDB) GetAtomicSwapContract(uh types.UnlockHash) (basedb.AtomicSwapContract, error) {
 	node := newStormObjectNodeReader(sdb, sdb.logger)
 	contract, err := node.GetAtomicSwapContract(uh)
 	return contract, mapStormErrorToExplorerDBError(err)
@@ -1488,7 +1490,7 @@ func (sdb *StormDB) Commit(final bool) error {
 
 // ReadTransaction batches multiple read calls together,
 // to keep the disk I/O to a minimum
-func (sdb *StormDB) ReadTransaction(f func(RTxn) error) error {
+func (sdb *StormDB) ReadTransaction(f func(basedb.RTxn) error) error {
 	return sdb.boltView(func(tx *bolt.Tx) error {
 		sdbCopy := &StormDB{
 			db:       sdb.db,
@@ -1507,7 +1509,7 @@ func (sdb *StormDB) ReadTransaction(f func(RTxn) error) error {
 
 // ReadWriteTransaction batches multiple read-write calls together,
 // to keep the disk I/O to a minimum
-func (sdb *StormDB) ReadWriteTransaction(f func(RWTxn) error) (err error) {
+func (sdb *StormDB) ReadWriteTransaction(f func(basedb.RWTxn) error) (err error) {
 	tx, err := sdb.db.Bolt.Begin(true)
 	if err != nil {
 		return
