@@ -14,7 +14,7 @@ Unlike traditional smart contracts, Dragonchain smart contracts are simply code 
 - Configured (with smart contract code deployed on the system)
 - Delivered via blockchain (admin would send multi-signed transaction with smart contract, start date, etc.)
 
-In other words, execute whatever code and have the business verification consensus level have it trusted. Thethe most common way is to execute your code in a docker container.
+In other words, execute whatever code and have the business verification consensus level have it trusted. The most common way is to execute your code in a docker container.
 
 This is pretty blackboxed.
 
