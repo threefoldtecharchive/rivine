@@ -101,6 +101,14 @@ Stellar currently uses the ed25519 signature scheme which is the same as Rivine 
 
 PostgreSQL
 
+## Scalability
+
+Due to the Stellar Consensus protocol, very fast settlement is achieved (seconds). Stellar itself claims 1500 TPS
+while people claim to reach 10 000 TPS easily on Google cloud platform without optimizations.
+
+Private/public stellar networks can easily be created seperate from the  main Stellar network.
+
+Validating nodes do not have to archive the entire history while a full validator or archiver does consume  terrabytes for the full public stellar network.
 
 ## random thoughts
 
