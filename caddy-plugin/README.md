@@ -33,7 +33,7 @@ does allow all the healthcheck logic to be offloaded to the server side.
 To create a caddy with this module enabled, create a directory and add the following
 _main.go_ file:
 
-```
+```go
 package main
 
 import (
@@ -51,9 +51,10 @@ func main() {
 	caddymain.Run()
 }
 ```
+
 Now run the following commands:
 
-```
+```sh
 go mod init caddy
 go get github.com/caddyserver/caddy
 go install

@@ -57,13 +57,13 @@ It is easy to create custom assets on the Stellar network as the [issuetoken exa
 
 Stellar transactions can contain a memotext up to 28 bytes of ASCII/UTF-8 which is not sufficient to hold a sha256 encoded hash.
 
-There is a Memohash field MemoHash which is a hash representing a reference to another transaction. 
+There is a Memohash field MemoHash which is a hash representing a reference to another transaction.
 
 This can be used however to insert the hash of other documents, a concept known as [stellar attachments](https://www.stellar.org/developers/guides/attachment.html).
 
 ## Company accounts and multisig
 
-Stellar allows multiple signatures for custom asset issuer accounts or company accounts: https://www.stellar.org/developers/guides/concepts/multi-sig.html
+[Stellar allows multiple signatures for custom asset issuer accounts or company accounts](https://www.stellar.org/developers/guides/concepts/multi-sig.html).
 
 ## Multiple addresses and anonimity
 
@@ -112,10 +112,10 @@ Validating nodes do not have to archive the entire history while a full validato
 
 ## random thoughts
 
-Not completely decentralized,for example sending with kyc, requires knowledge and trust of the counterparty.
-Very good solution for traditional centralized banks that want to collaborate:
-https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed.jpg
+[Not completely decentralized,for example sending with kyc, requires knowledge and trust of the counterparty.
+Very good solution for [traditional centralized banks that want to collaborate](
+https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed.jpg).
 
-However, the protocol includes who can hold assets: https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders
+However, [the protocol includes who can hold assets](https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders).
 
 A very extensive toolset for managing custom tokens and ICO's.
