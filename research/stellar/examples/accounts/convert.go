@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/stellar/go/keypair"
+	"github.com/stellar/go/strkey"
 
 	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
@@ -30,13 +31,12 @@ func main() {
 	if err != nil {
 		panic("ERROR hashing the seed and the index")
 	}
-	fmt.Printf("Rivine and stellar private key: %x\n", h)
+	fmt.Printf("Private key (1st one generated from the seed): %x\n", h[:])
 	//Rivine
-	rawrivinePublicKey, rawrivineSecretKey, err := ed25519.GenerateKey(bytes.NewReader(h[:]))
+	rawrivinePublicKey, _, err := ed25519.GenerateKey(bytes.NewReader(h[:]))
 	if err != nil {
 		panic("ERROR generating the ed25519 key")
 	}
-	fmt.Printf("Generated rivine ed25519 private key (len=%d): %x\n", len(rawrivineSecretKey), rawrivineSecretKey)
 	var rivinePublicKey crypto.PublicKey
 	copy(rivinePublicKey[:], rawrivinePublicKey)
 	rivineUnlockHash, err := types.NewEd25519PubKeyUnlockHash(rivinePublicKey)
@@ -50,7 +50,18 @@ func main() {
 	if err != nil {
 		panic("ERROR generating the stellar keypair ")
 	}
-	fmt.Println("Stellar Seed:", stellarKeypair.Seed())
-	fmt.Println("Stellar address:", stellarKeypair.Address())
+	stellarSeed := stellarKeypair.Seed()
+	fmt.Println("Stellar Seed:", stellarSeed)
+	stellarAddress := stellarKeypair.Address()
+	fmt.Println("Stellar address:", stellarAddress)
 
+	//Back to Rivine
+	decodedStellarPK := strkey.MustDecode(strkey.VersionByteAccountID, stellarAddress)
+	copy(rivinePublicKey[:], decodedStellarPK)
+
+	rivineFromstellarUnlockHash, err := types.NewEd25519PubKeyUnlockHash(rivinePublicKey)
+	if err != nil {
+		panic("ERROR generating the rivine unlockhash from the decoded stellar address")
+	}
+	fmt.Println("Rivine address from Stellar address:", rivineFromstellarUnlockHash.String())
 }

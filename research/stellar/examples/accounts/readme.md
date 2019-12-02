@@ -24,7 +24,7 @@ To run:
 
 - transfer.go
 
-Tranfers an amount from an account to a destination address
+Transfers an amount from an account to a destination address
 
 ## Rivine key conversion
 
@@ -33,10 +33,10 @@ Rivine hashes the public key along with the key alorithm to create an unlockhash
 
 Stellar also uses uses default ed25519 keys.
 A Stellar seed is just a base32 encoded concatatantion of a versionbyte, a 32byte private key and a checksum.
-An address is the rawseed used to create an ed25519 keypair after which the versionbyte is concatenated with a checksum  and base32 encoded.
+An address is the rawseed used to create an ed25519 keypair after which the versionbyte is concatenated with the public key and a checksum and base32 encoded.
 
 The same 32 bytes can be used to create Rivine and Stellar keypairs.
 
-It is possible to go from a Stellar account address to a Rivine "01"-address but not the reverse.
+It is possible to go from a Stellar account address to a Rivine "01"-address if they are created using the same private key (ed25519 entropy) but not the reverse.
 
 `convert.go`
