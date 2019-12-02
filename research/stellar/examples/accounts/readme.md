@@ -1,4 +1,6 @@
-# Stellar examples
+# Stellar account examples
+
+## basic Stellar account examples
 
 - createkeypair.go
 
@@ -18,8 +20,23 @@ Loads the accounts from the saved `config.toml` and checks the balance.
 To run:
 `go run checkaccount.go`
 
+## Transfer assets
+
 - transfer.go
 
 Tranfers an amount from an account to a destination address
 
+## Rivine key conversion
 
+Rivine uses default ed25519 keys, meaning a private key of 64 bytes from a 32 byte entropy (is actally the private key) and a public key size of 32 bytes.
+Rivine hashes the public key along with the key alorithm to create an unlockhash. The address is then formed by concatenating the type, the hash and a checksum.
+
+Stellar also uses uses default ed25519 keys.
+A Stellar seed is just a base32 encoded concatatantion of a versionbyte, a 32byte private key and a checksum.
+An address is the rawseed used to create an ed25519 keypair after which the versionbyte is concatenated with a checksum  and base32 encoded.
+
+The same 32 bytes can be used to create Rivine and Stellar keypairs.
+
+It is possible to go from a Stellar account address to a Rivine "01"-address but not the reverse.
+
+`convert.go`

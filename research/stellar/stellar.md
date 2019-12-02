@@ -87,7 +87,7 @@ Possible options to issue credit:
 
 We would have to provide a small wallet if people do not already have one.
 
-## Market making
+## Market making, ICO's
 
 A bifrost server exists that will automatically exchange the received BTC or ETH for your custom token. Usefull for market making and ICO's.
 
@@ -106,7 +106,7 @@ PostgreSQL
 Due to the Stellar Consensus protocol, very fast settlement is achieved (seconds). Stellar itself claims 1500 TPS
 while people claim to reach 10 000 TPS easily on Google cloud platform without optimizations.
 
-Private/public stellar networks can easily be created seperate from the  main Stellar network.
+Private/public stellar networks can easily be created separate from the main Stellar network.
 
 Validating nodes do not have to archive the entire history while a full validator or archiver does consume  terrabytes for the full public stellar network.
 
@@ -117,5 +117,3 @@ Very good solution for [traditional centralized banks that want to collaborate](
 https://www.stellar.org/wp-content/uploads/2016/08/Sending-Payment-Flow-Detailed.jpg).
 
 However, [the protocol includes who can hold assets](https://www.stellar.org/developers/guides/concepts/assets.html#controlling-asset-holders).
-
-A very extensive toolset for managing custom tokens and ICO's.
