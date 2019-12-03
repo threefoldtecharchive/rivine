@@ -28,7 +28,7 @@ Transfers an amount from an account to a destination address
 
 ## Rivine key conversion
 
-Rivine uses default ed25519 keys, meaning a private key of 64 bytes from a 32 byte entropy (is actally the private key) and a public key size of 32 bytes.
+Rivine uses default ed25519 keys, meaning a private key of 64 bytes from a 32 byte entropy (is actually the private key) and a public key size of 32 bytes.
 Rivine hashes the public key along with the key alorithm to create an unlockhash. The address is then formed by concatenating the type, the hash and a checksum.
 
 Stellar also uses uses default ed25519 keys.
@@ -37,6 +37,6 @@ An address is the rawseed used to create an ed25519 keypair after which the vers
 
 The same 32 bytes can be used to create Rivine and Stellar keypairs.
 
-It is possible to go from a Stellar account address to a Rivine "01"-address if they are created using the same private key (ed25519 entropy) but not the reverse.
+It is possible to go from a Stellar account address to a Rivine "01"-address if they are created using the same private key (ed25519 entropy) without knowing the private keybut not the reverse.
 
-`convert.go`
+Example code proving the above can be found in `convert.go`
