@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	//MaxPoolSize is them aximum size of the transactionpool
 	MaxPoolSize             uint = 2e7
 	TransactionSetSizeLimit uint = 250e3
 	TransactionSizeLimit    uint = 16e3

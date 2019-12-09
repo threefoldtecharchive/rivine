@@ -435,14 +435,14 @@ func GenerateBlockchain(configFilePath, outputDir string, opts *BlockchainGenera
 		return err
 	}
 
-	commitHash, err := getTemplateRepo(config.Template.Repository, config.Template.Version, outputDir)
+	templateDir, err := getTemplateRepo(config.Template.Repository, config.Template.Version, outputDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error getting the template repo: %v", err)
 	}
 
-	err = generateBlockchainTemplate(outputDir, commitHash, config, opts)
+	err = generateBlockchainTemplate(outputDir, templateDir, config, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error generating the blockchain template:\n%v", err)
 	}
 
 	printSteps(outputDir, config.Blockchain.Binaries.Daemon)

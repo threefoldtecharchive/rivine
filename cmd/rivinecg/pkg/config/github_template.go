@@ -36,7 +36,7 @@ func githubOwnerAndRepoFromString(s string) (string, string, error) {
 }
 
 // getTemplateRepo fetches the template repository from github and extracts this tar file.
-// At the end of this function we extract the commithash from the headers in order to rename this extracted directory later.
+// It returns the top level directory in the tarfile.
 func getTemplateRepo(repository, version, destination string) (string, error) {
 	templOwner, templRepo, err := githubOwnerAndRepoFromString(repository)
 	if err != nil {
@@ -44,19 +44,17 @@ func getTemplateRepo(repository, version, destination string) (string, error) {
 	}
 
 	endPoint := rootGithubAPIurl + path.Join("/repos", templOwner, templRepo, "tarball", version)
-	fmt.Printf("Fetching repository: %s ...\n", endPoint)
+	fmt.Printf("Fetching repository: %s \n", endPoint)
 	resp, err := http.Get(endPoint)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-	err = untar(destination, resp.Body)
+	toplevelDir, err := untar(destination, resp.Body)
 	if err != nil {
 		return "", err
 	}
-	// Extract the commitHash from the headers, need this to rename directory later
-	commitHash := strings.Split(strings.Split(strings.Split(resp.Header["Content-Disposition"][0], "=")[1], ".")[0], "-")[4]
-	return commitHash, nil
+	return toplevelDir, nil
 }
 
 type TemplateConfig struct {
@@ -73,12 +71,11 @@ type TemplateFrontendTypeConfig struct {
 	Branch     string `json:"branch" validate:"required"`
 }
 
-func generateBlockchainTemplate(destinationDirPath, commitHash string, config *Config, opts *BlockchainGenerationOpts) error {
+func generateBlockchainTemplate(destinationDirPath, templateDir string, config *Config, opts *BlockchainGenerationOpts) error {
 	var templateConfig *TemplateConfig
-
 	var fPathAction func(fPath, dirPath, destPath string) error
 	if config.Generation != nil && len(config.Generation.Ignore) > 0 {
-		fPathAction = func(fPath, dirPath, destPath string) error {
+		fPathAction = func(fPath, dirPath, destPath string) (err error) {
 			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
 			cleanRelFilePath := strings.Replace(strings.Replace(
 				strings.TrimSuffix(relFilePath, ".template"),
@@ -89,24 +86,27 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 					return nil
 				}
 			}
-			return copy.Copy(fPath, path.Join(destPath, relFilePath))
+			err = copy.Copy(fPath, path.Join(destPath, relFilePath))
+			if err != nil {
+				err = fmt.Errorf("Error copying %s to %s: %v", fPath, path.Join(destPath, relFilePath), err)
+			}
+			return
 		}
 	} else {
-		fPathAction = func(fPath, dirPath, destPath string) error {
+		fPathAction = func(fPath, dirPath, destPath string) (err error) {
 			relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
-			return copy.Copy(fPath, path.Join(destPath, relFilePath))
+			err = copy.Copy(fPath, path.Join(destPath, relFilePath))
+			if err != nil {
+				err = fmt.Errorf("Error copying %s to %s: %v", fPath, path.Join(destPath, relFilePath), err)
+			}
+			return
 		}
 	}
-
-	templOwner, templRepo, err := githubOwnerAndRepoFromString(config.Template.Repository)
-	if err != nil {
-		return err
-	}
 	// Directory where the contents of template repo is unpackged
-	dirPath := path.Join(destinationDirPath, templOwner+"-"+templRepo+"-"+commitHash)
+	dirPath := path.Join(destinationDirPath, templateDir)
 
 	// walk over the files, and copy only those not ignored
-	err = filepath.Walk(dirPath, func(fPath string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dirPath, func(fPath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err // return an error immediately
 		}
@@ -143,7 +143,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 	}
 
 	// generate optionally also explorer frontend (opt-out)
-	if opts != nil && opts.FrontendExplorerType != FrontendExplorerTypeNone {
+	if opts != nil && opts.FrontendExplorerType != frontendExplorerTypeNone {
 		if templateConfig == nil {
 			return errors.New("an explorer frontend type is selected but usen template repo doesn't link to any explorer frontend template")
 		}
@@ -153,17 +153,13 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 			return fmt.Errorf("used template repo doesn't link to an explorer frontend template of type %s (%d)", frontendExplorerTypeStr, opts.FrontendExplorerType)
 		}
 
-		explorerTemplOwner, explorerTemplRepo, err := githubOwnerAndRepoFromString(explorerFrontendConfig.Repository)
-		if err != nil {
-			return fmt.Errorf("invalid frontend explorer (type: %s) template repo %s: %v", frontendExplorerTypeStr, explorerFrontendConfig.Repository, err)
-		}
-		commitHash, err := getTemplateRepo(explorerFrontendConfig.Repository, explorerFrontendConfig.Branch, destinationDirPath)
+		explorerTemplateDir, err := getTemplateRepo(explorerFrontendConfig.Repository, explorerFrontendConfig.Branch, destinationDirPath)
 		if err != nil {
 			return fmt.Errorf("failed to download frontend explorer (type: %s) template repo %s: %v", frontendExplorerTypeStr, explorerFrontendConfig.Repository, err)
 		}
 
 		// Directory where the contents of template repo is unpacked
-		frontendExplorerDirPath := path.Join(destinationDirPath, explorerTemplOwner+"-"+explorerTemplRepo+"-"+commitHash)
+		frontendExplorerDirPath := path.Join(destinationDirPath, explorerTemplateDir)
 
 		// Directory where the frontend explorer needs to be generated to
 		frontendExplorerDestinationPath := path.Join(destinationDirPath, "frontend", "explorer")
@@ -172,7 +168,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		// as we need to ensure that the frontend/explorer path is prefixed
 		fPathAction := fPathAction
 		if config.Generation != nil && len(config.Generation.Ignore) > 0 {
-			fPathAction = func(fPath, dirPath, destPath string) error {
+			fPathAction = func(fPath, dirPath, destPath string) (err error) {
 				relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
 				cleanRelFilePath := path.Join("frontend", "explorer", strings.TrimSuffix(relFilePath, ".template"))
 				for _, p := range config.Generation.Ignore {
@@ -180,7 +176,11 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 						return nil
 					}
 				}
-				return copy.Copy(fPath, path.Join(destPath, relFilePath))
+				err = copy.Copy(fPath, path.Join(destPath, relFilePath))
+				if err != nil {
+					err = fmt.Errorf("Error copying %s to %s: %v", fPath, path.Join(destPath, relFilePath), err)
+				}
+				return
 			}
 		}
 
@@ -218,17 +218,13 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 			return errors.New("used template repo doesn't link to an faucet frontend template of type go")
 		}
 
-		faucetTemplOwner, faucetTempRepo, err := githubOwnerAndRepoFromString(explorerFaucetConfig.Repository)
-		if err != nil {
-			return fmt.Errorf("invalid faucet explorer (type: go) template repo %s: %v", explorerFaucetConfig.Repository, err)
-		}
-		commitHash, err := getTemplateRepo(explorerFaucetConfig.Repository, explorerFaucetConfig.Branch, destinationDirPath)
+		faucetTemplateDir, err := getTemplateRepo(explorerFaucetConfig.Repository, explorerFaucetConfig.Branch, destinationDirPath)
 		if err != nil {
 			return fmt.Errorf("failed to download faucet explorer (type: go) template repo %s: %v", explorerFaucetConfig.Repository, err)
 		}
 
 		// Directory where the contents of template repo is unpacked
-		frontendFaucetDirPath := path.Join(destinationDirPath, faucetTemplOwner+"-"+faucetTempRepo+"-"+commitHash)
+		frontendFaucetDirPath := path.Join(destinationDirPath, faucetTemplateDir)
 
 		// Directory where the frontend faucet needs to be generated to
 		frontendFaucetDestinationPath := path.Join(destinationDirPath, "frontend", "faucet")
@@ -237,7 +233,7 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 		// as we need to ensure that the frontend/faucet path is prefixed
 		fPathAction := fPathAction
 		if config.Generation != nil && len(config.Generation.Ignore) > 0 {
-			fPathAction = func(fPath, dirPath, destPath string) error {
+			fPathAction = func(fPath, dirPath, destPath string) (err error) {
 				relFilePath := strings.TrimLeft(strings.TrimPrefix(fPath, dirPath), `\/`)
 				cleanRelFilePath := path.Join("frontend", "faucet", strings.TrimSuffix(relFilePath, ".template"))
 				for _, p := range config.Generation.Ignore {
@@ -245,7 +241,11 @@ func generateBlockchainTemplate(destinationDirPath, commitHash string, config *C
 						return nil
 					}
 				}
-				return copy.Copy(fPath, path.Join(destPath, relFilePath))
+				err = copy.Copy(fPath, path.Join(destPath, relFilePath))
+				if err != nil {
+					err = fmt.Errorf("Error copying %s to %s: %v", fPath, path.Join(destPath, relFilePath), err)
+				}
+				return
 			}
 		}
 
@@ -489,27 +489,30 @@ func writeTemplateToFile(templateText, filepath, filename string, config *Config
 
 // untar takes a destination path and a reader; a tar reader loops over the tarfile
 // creating the file structure at 'dst' along the way, and writing any files
-func untar(dst string, r io.Reader) error {
-	gzr, err := gzip.NewReader(r)
+func untar(dst string, r io.Reader) (topLevelDir string, err error) {
+	var gzr *gzip.Reader
+	gzr, err = gzip.NewReader(r)
 	if err != nil {
-		return err
+		return
 	}
 	defer gzr.Close()
 
 	tr := tar.NewReader(gzr)
 
 	for {
-		header, err := tr.Next()
+		var header *tar.Header
+		header, err = tr.Next()
 
 		switch {
 
 		// if no more files are found return
 		case err == io.EOF:
-			return nil
+			err = nil
+			return
 
 		// return any other error
 		case err != nil:
-			return err
+			return
 
 		// if the header is nil, just skip it
 		case header == nil:
@@ -526,22 +529,26 @@ func untar(dst string, r io.Reader) error {
 
 		// if its a dir and it doesn't exist create it
 		case tar.TypeDir:
-			if _, err := os.Stat(target); err != nil {
-				if err := os.MkdirAll(target, 0755); err != nil {
-					return err
+			if topLevelDir == "" {
+				topLevelDir = target
+			}
+			if _, err = os.Stat(target); err != nil {
+				if err = os.MkdirAll(target, 0755); err != nil {
+					return
 				}
 			}
 
 		// if it's a file create it
 		case tar.TypeReg:
-			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			var f *os.File
+			f, err = os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
 			if err != nil {
-				return err
+				return
 			}
 
 			// copy over contents
-			if _, err := io.Copy(f, tr); err != nil {
-				return err
+			if _, err = io.Copy(f, tr); err != nil {
+				return
 			}
 
 			// manually close here after each file operation; defering would cause each file close
