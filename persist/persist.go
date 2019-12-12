@@ -4,7 +4,6 @@ import (
 	"encoding/base32"
 	"errors"
 	"os"
-	"path/filepath"
 	"sync"
 
 	"github.com/NebulousLabs/fastrand"
@@ -61,48 +60,6 @@ type Metadata struct {
 func RandomSuffix() string {
 	str := base32.StdEncoding.EncodeToString(fastrand.Bytes(20))
 	return str[:20]
-}
-
-// A safeFile is a file that is stored under a temporary filename. When Commit
-// is called, the file is renamed to its "final" filename. This allows for
-// atomic updating of files; otherwise, an unexpected shutdown could leave a
-// valuable file in a corrupted state. Callers must still Close the file handle
-// as usual.
-type safeFile struct {
-	*os.File
-	finalName string
-}
-
-// CommitSync syncs the file, closes it, and then renames it to the intended
-// final filename. CommitSync should not be called from a defer if the
-// function it is being called from can return an error.
-func (sf *safeFile) CommitSync() error {
-	if err := sf.Sync(); err != nil {
-		return err
-	}
-	if err := sf.Close(); err != nil {
-		return err
-	}
-	return os.Rename(sf.finalName+"_temp", sf.finalName)
-}
-
-// NewSafeFile returns a file that can atomically be written to disk,
-// minimizing the risk of corruption.
-func NewSafeFile(filename string) (*safeFile, error) {
-	file, err := os.Create(filename + tempSuffix)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get the absolute path of the filename so that calling os.Chdir in
-	// between calling NewSafeFile and calling safeFile.Commit does not change
-	// the final file path.
-	absFilename, err := filepath.Abs(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	return &safeFile{file, absFilename}, nil
 }
 
 // RemoveFile removes an atomic file from disk, along with any uncommitted
