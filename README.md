@@ -21,17 +21,19 @@ Product owners
 Main Repositories
 -----------------
 
-- [rivine](https://github.com/threefoldtech/rivine)
+* [rivine](https://github.com/threefoldtech/rivine)
     Core rivine software
-- [atomicswap](https://github.com/threefoldtech/atomicswap)
+* [rivine-chain-template](https://github.com/threefoldtech/rivine-chain-template)
+    A template to create for Rivine blockchain projects
+* [atomicswap](https://github.com/threefoldtech/atomicswap)
     Ethereum, Stellar and bitcoin light client atomic swap support
-- [rivine-UI](https://github.com/threefoldtech/rivine-UI)
+* [rivine-UI](https://github.com/threefoldtech/rivine-UI)
     Desktop UI for a rivine full node and wallet
-- [ERC20 Extension](https://github.com/threefoldtech/rivine-extension-erc20)
+* [ERC20 Extension](https://github.com/threefoldtech/rivine-extension-erc20)
     Extension for a a rivine Ethereum ERC20 token
-- [Rivine Typescript](https://github.com/threefoldtech/rivine-ts-types)
-    A Typescript library imlementing Rivine types.
-- [Threefold Electron Wallet](https://github.com/threefoldtech/threefold-wallet-electron)
+* [Rivine Typescript](https://github.com/threefoldtech/rivine-ts-types)
+   A Typescript library imlementing Rivine types.
+* [Threefold Electron Wallet](https://github.com/threefoldtech/threefold-wallet-electron)
     A desktop application that implements light wallets
 
 Usage
@@ -83,7 +85,7 @@ you'll need in order to develop your own light wallet for a Rivine-Protocol-base
 Troubleshooting
 ---------------
 
-- I can't connect to more than 8 peers.
+* I can't connect to more than 8 peers.
 
   Once Rivine has connected to 8 peers, it will stop trying to form new
   connections, but it will still accept incoming connection requests (up to 128
@@ -96,7 +98,7 @@ Troubleshooting
   Rivine currently has support for UPnP. While not all routers support UPnP, a
   majority of users should have their ports automatically forwarded by UPnP.
 
-- I loaded a seed, but my coins don't appear yet.
+* I loaded a seed, but my coins don't appear yet.
 
   After loading your seed, you will need to stop and restart your daemon. If after that
   the coins still haven't appeared (and you are sure they should be there), you can
@@ -106,7 +108,7 @@ Troubleshooting
   effectively creating a new wallet using an existing set,
   your addresses will already be loaded when unlocking it.
 
-- My daemon exits imediately upon startup, giving the error: `error opening consensus database: invalid argument`:
+* My daemon exits imediately upon startup, giving the error: `error opening consensus database: invalid argument`:
 
   Make sure that the file system you are using for your daemon's persistent directory
   supports features such as `mmap` and `flock`. Shared folders for example, as is common
@@ -114,7 +116,7 @@ Troubleshooting
   fail to function. The scenario in this example can easily be resolved by making sure
   the persistent directory isn't located within a shared folder.
 
-- My node can be out of sync with the network for hours, if not days.
+* My node can be out of sync with the network for hours, if not days.
 
   Do you have multiple nodes —which includes the out-of-sync node— running
   on a single external IP using the same port within the same blockchain network? If the answer is yes,
@@ -122,5 +124,3 @@ Troubleshooting
   
   If not already, you will run into problems sooner or later when running multiple nodes
   using the same external IP address and RPC address port within the same blockchain network.
-
-
