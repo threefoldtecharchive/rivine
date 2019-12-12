@@ -1,0 +1,109 @@
+.hidden.menu {
+  display: none;
+}
+
+.pusher {
+  height: 100vh;
+}
+
+.clickable {
+  cursor: pointer;
+  text-decoration: underline;
+  color: rgb(175, 175, 244);
+}
+
+.searchBar {
+  width: 76vw;
+  margin: auto;
+}
+
+.rowcontainer {
+  width: 80%;
+  margin: auto;
+}
+
+.rowcontainer-chart {
+  width: 90%;
+  margin: auto;
+  margin-top: 50px;
+  padding: 30px;
+  box-shadow: 0 2px 16px 0 rgba(0, 0, 0, 0.3);
+  border-radius: 1%;
+}
+
+.container {
+  margin: auto;
+  text-align: center;
+  width: 80vw;
+}
+
+.container h1 {
+  text-align: left;
+  font-size: 30px;
+}
+
+.container h2 {
+  text-align: left;
+  font-size: 26px;
+}
+
+.container h3 {
+  text-align: left;
+  font-size: 22px;
+}
+
+.v-data-table {
+  text-align: left;
+}
+
+.ui.vertical.stripe {
+  padding: 8em 0em;
+}
+.ui.vertical.stripe h3 {
+  font-size: 2em;
+}
+.ui.vertical.stripe .button + h3,
+.ui.vertical.stripe p + h3 {
+  margin-top: 3em;
+}
+.ui.vertical.stripe .floated.image {
+  clear: both;
+}
+.ui.vertical.stripe p {
+  font-size: 1.33em;
+}
+.ui.vertical.stripe .horizontal.divider {
+  margin: 3em 0em;
+}
+
+.quote.stripe.segment {
+  padding: 0em;
+}
+.quote.stripe.segment .grid .column {
+  padding-top: 5em;
+  padding-bottom: 5em;
+}
+
+.footer.segment {
+  padding: 5em 0em;
+}
+
+.secondary.pointing.menu .toc.item {
+  display: none;
+}
+
+@media only screen and (min-width: 2320px) {
+  .searchBar {
+    width: 50vw;
+  }
+}
+
+@media only screen and (max-width: 600px) {
+  .rowcontainer {
+    width: 95%;
+  }
+  .rowcontainer-chart {
+    width: 100%;
+  }
+}
+

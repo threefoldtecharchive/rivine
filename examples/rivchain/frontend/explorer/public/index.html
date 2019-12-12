@@ -1,79 +1,22 @@
-<!doctype html>
-<html lang='en'>
-
-<head>
-	<meta charset='utf-8'>
-	<meta name='description' content='An explorer for rivchain'>
-
-	<title>rivchain Explorer</title>
-
-	<link rel='stylesheet' href='css/pure-min.css'>
-	<link rel='stylesheet' href='css/grids-responsive-min.css'>
-	<link rel='stylesheet' href='css/main.css?version=0'>
-
-	<link rel='shortcut icon' type='image/x-icon' href='/assets/icon.ico'>
-</head>
-
-<body>
-<div class='content'>
-	<div class='pure-menu pure-menu-horizontal header'>
-		<a href='index.html' class='pure-menu-heading'><img src='assets/icon.png' width='128px'></a>
-		<a href='/graphs.html' class='graph-link pure-menu-heading'>graphs</a>
-	</div>
-
-	<div class='banner'>
-		<h1 class='banner-head' id='page-title'>rivchain Block Explorer</h1>
-	</div>
-
-	<table class='pure-table pure-table-horizontal stats'>
-		<thead>
-			<tr>
-				<th colspan='2' class='stats-head'>General Statistics</th>
-			</tr>
-		</thead>
-
-		<tr>
-			<th class='stats-title'>Height</th>
-			<th class='stats-info' id='height'></th>
-		</tr>
-
-		<tr>
-			<th class='stats-title'>Current Block</th>
-			<th class='stats-info' id='blockID'></th>
-		</tr>
-
-		<!-- <tr>
-			<th class='stats-title'>Total Coins</th>
-			<th class='stats-info' id='totalCoins'></th>
-		</tr> -->
-
-		<tr>
-			<th class='stats-title'>Difficulty</th>
-			<th class='stats-info' id='difficulty'></th>
-		</tr>
-
-	</table>
-
-	<div class='search-form search'>
-		<form class='search-form-tr' method='get' action='block.html'>
-			<span class='search-form-td'>Search by Block Height:</span>
-			<span class='search-form-td'><input required type='number' name='height' min='0' size='50' class='input-field'></span>
-			<span class='search-form-td'><input type='submit' value='Go'></span>
-		</form>
-		<form class='search-form-tr' method='get' action='hash.html'>
-			<span class='search-form-td'>Search by Hash:</span>
-			<span class='search-form-td'><input required type='text' name='hash' size='50' class='input-field'></span>
-			<span class='search-form-td'><input type='submit' value='Go'></span>
-		</form>
-	</div>
-</div>
-
-<footer id='footer'></footer>
-
-</body>
-
-<script src='js/main.js?version=0'></script>
-<script src='js/index.js?version=0'></script>
-<script src='js/footer.js?version=0'></script>
-
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <!-- <link rel="icon" href="<%= BASE_URL %>favicon.ico"> -->
+    <script src="https://unpkg.com/semantic-ui-vue/dist/umd/semantic-ui-vue.min.js"></script>
+    <!-- <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.3.0/semantic.min.css"> -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+    <title><%= VUE_APP_NAME %>-explorer</title>
+  </head>
+  <body>
+    <noscript>
+      <strong>We're sorry but <%= VUE_APP_NAME %>-explorer doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app" class="app"></div>
+    <!-- built files will be auto injected -->
+  </body>
 </html>

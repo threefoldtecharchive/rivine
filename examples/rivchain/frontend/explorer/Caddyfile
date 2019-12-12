@@ -1,0 +1,15 @@
+:2015
+
+header / {
+	    Access-Control-Allow-Origin  *
+        Access-Control-Allow-Methods  *
+        Access-Control-Allow-Headers  *
+}
+
+proxy /explorer localhost:22110 {
+  header_upstream User-Agent Rivine-Agent
+}
+
+proxy /transactionpool/transactions localhost:22110 {
+  header_upstream User-Agent Rivine-Agent
+}
