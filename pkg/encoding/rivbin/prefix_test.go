@@ -6,11 +6,7 @@ import (
 	"testing"
 )
 
-// badReader/Writer used to test error handling
-
-type badReader struct{}
-
-func (br *badReader) Read([]byte) (int, error) { return 0, io.EOF }
+// badWriter used to test error handling
 
 type badWriter struct{}
 

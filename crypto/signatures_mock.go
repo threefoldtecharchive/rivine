@@ -29,26 +29,6 @@ type sigKeyGen struct {
 	keyDeriver    keyDeriver
 }
 
-// generate builds a signature keypair using a sigKeyGen to manage
-// dependencies.
-func (skg sigKeyGen) generate() (sk SecretKey, pk PublicKey, err error) {
-	var entropy [EntropySize]byte
-	_, err = io.ReadFull(skg.entropySource, entropy[:])
-	if err != nil {
-		return
-	}
-
-	skPointer, pkPointer := skg.keyDeriver.deriveKeyPair(entropy)
-	return skPointer, pkPointer, nil
-}
-
-// generateDeterministic builds a signature keypair deterministically using a
-// sigKeyGen to manage dependencies.
-func (skg sigKeyGen) generateDeterministic(entropy [EntropySize]byte) (SecretKey, PublicKey) {
-	skPointer, pkPointer := skg.keyDeriver.deriveKeyPair(entropy)
-	return skPointer, pkPointer
-}
-
 // stdKeyDeriver implements the keyDeriver dependency for the sigKeyGen.
 type stdKeyDeriver struct{}
 

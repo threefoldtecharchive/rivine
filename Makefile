@@ -48,6 +48,9 @@ install-std:
 ineffassign:
 	ineffassign $(testpkgs)
 
+staticcheck:
+	staticcheck $(testpkgs)
+
 test:
 	go test -short -tags='debug testing' -timeout=30s $(testpkgs) -run=$(run)
 test-v:

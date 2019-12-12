@@ -393,7 +393,7 @@ func TestBlockIDAfterFixForBug302(t *testing.T) { // utility funcs
 	}
 	for idx, testCase := range testCases {
 		blockID := testCase.Block.ID()
-		if bytes.Compare(testCase.BlockID[:], blockID[:]) != 0 {
+		if !bytes.Equal(testCase.BlockID[:], blockID[:]) {
 			t.Error(idx, testCase.BlockID, "!=", blockID)
 		}
 	}

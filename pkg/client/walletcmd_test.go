@@ -176,7 +176,7 @@ func TestParsePairedOutputs(t *testing.T) {
 			if err != nil {
 				t.Errorf("failed to JSON encode expected pair %d/#%d's condition: %v", idx, i, err)
 			}
-			if bytes.Compare(bsA, bsB) != 0 {
+			if !bytes.Equal(bsA, bsB) {
 				t.Errorf("unexpected pair (currency) value for pair %d/#%d: '%s' != '%s'",
 					idx, i, string(bsA), string(bsB))
 			}

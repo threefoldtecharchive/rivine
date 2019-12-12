@@ -56,7 +56,7 @@ func TestJSONExampleAuthAddressUpdateTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedOutput := string(buffer.Bytes())
+	expectedOutput := buffer.String()
 	if expectedOutput != output {
 		t.Fatal(expectedOutput, "!=", output)
 	}
@@ -130,7 +130,7 @@ func TestJSONExampleAuthConditionUpdateTransaction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedOutput := string(buffer.Bytes())
+	expectedOutput := buffer.String()
 	if expectedOutput != output {
 		t.Fatal(expectedOutput, "!=", output)
 	}

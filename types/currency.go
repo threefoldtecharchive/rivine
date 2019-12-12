@@ -63,97 +63,97 @@ func NewCurrency64(x uint64) (c Currency) {
 	return
 }
 
-// Add returns a new Currency value c = x + y
-func (x Currency) Add(y Currency) (c Currency) {
-	c.i.Add(&x.i, &y.i)
+// Add returns a new Currency value z = c + y
+func (c Currency) Add(y Currency) (z Currency) {
+	z.i.Add(&c.i, &y.i)
 	return
 }
 
 // Big returns the value of c as a *big.Int. Importantly, it does not provide
 // access to the c's internal big.Int object, only a copy.
-func (x Currency) Big() *big.Int {
-	return new(big.Int).Set(&x.i)
+func (c Currency) Big() *big.Int {
+	return new(big.Int).Set(&c.i)
 }
 
 // Cmp compares two Currency values. The return value follows the convention
 // of math/big.
-func (x Currency) Cmp(y Currency) int {
-	return x.i.Cmp(&y.i)
+func (c Currency) Cmp(y Currency) int {
+	return c.i.Cmp(&y.i)
 }
 
 // Cmp64 compares x to a uint64. The return value follows the convention of
 // math/big.
-func (x Currency) Cmp64(y uint64) int {
-	return x.Cmp(NewCurrency64(y))
+func (c Currency) Cmp64(y uint64) int {
+	return c.Cmp(NewCurrency64(y))
 }
 
-// Div returns a new Currency value c = x / y.
-func (x Currency) Div(y Currency) (c Currency) {
-	c.i.Div(&x.i, &y.i)
+// Div returns a new Currency value z = c / y.
+func (c Currency) Div(y Currency) (z Currency) {
+	z.i.Div(&c.i, &y.i)
 	return
 }
 
-// Div64 returns a new Currency value c = x / y.
-func (x Currency) Div64(y uint64) (c Currency) {
-	c.i.Div(&x.i, new(big.Int).SetUint64(y))
+// Div64 returns a new Currency value z = c / y.
+func (c Currency) Div64(y uint64) (z Currency) {
+	z.i.Div(&c.i, new(big.Int).SetUint64(y))
 	return
 }
 
-// Equals returns true if x and y have the same value.
-func (x Currency) Equals(y Currency) bool {
-	return x.Cmp(y) == 0
+// Equals returns true if c and y have the same value.
+func (c Currency) Equals(y Currency) bool {
+	return c.Cmp(y) == 0
 }
 
-// Equals64 returns true if x and y have the same value.
-func (x Currency) Equals64(y uint64) bool {
-	return x.Cmp64(y) == 0
+// Equals64 returns true if c and y have the same value.
+func (c Currency) Equals64(y uint64) bool {
+	return c.Cmp64(y) == 0
 }
 
-// Mul returns a new Currency value c = x * y.
-func (x Currency) Mul(y Currency) (c Currency) {
-	c.i.Mul(&x.i, &y.i)
+// Mul returns a new Currency value z = c * y.
+func (c Currency) Mul(y Currency) (z Currency) {
+	z.i.Mul(&c.i, &y.i)
 	return
 }
 
-// Mul64 returns a new Currency value c = x * y.
-func (x Currency) Mul64(y uint64) (c Currency) {
-	c.i.Mul(&x.i, new(big.Int).SetUint64(y))
+// Mul64 returns a new Currency value z = c * y.
+func (c Currency) Mul64(y uint64) (z Currency) {
+	z.i.Mul(&c.i, new(big.Int).SetUint64(y))
 	return
 }
 
 // COMPATv0.4.0 - until the first 10e3 blocks have been archived, MulFloat is
 // needed while verifying the first set of blocks.
 //
-// MulFloat returns a new Currency value y = c * x, where x is a float64.
-// Behavior is undefined when x is negative.
-func (x Currency) MulFloat(y float64) (c Currency) {
+// MulFloat returns a new Currency value z = c * y, where y is a float64.
+// Behavior is undefined when y is negative.
+func (c Currency) MulFloat(y float64) (z Currency) {
 	if y < 0 {
 		build.Critical(ErrNegativeCurrency)
 	} else {
 		cRat := new(big.Rat).Mul(
-			new(big.Rat).SetInt(&x.i),
+			new(big.Rat).SetInt(&c.i),
 			new(big.Rat).SetFloat64(y),
 		)
-		c.i.Div(cRat.Num(), cRat.Denom())
+		z.i.Div(cRat.Num(), cRat.Denom())
 	}
 	return
 }
 
-// MulRat returns a new Currency value c = x * y, where y is a big.Rat.
-func (x Currency) MulRat(y *big.Rat) (c Currency) {
+// MulRat returns a new Currency value z = c * y, where y is a big.Rat.
+func (c Currency) MulRat(y *big.Rat) (z Currency) {
 	if y.Sign() < 0 {
 		build.Critical(ErrNegativeCurrency)
 	} else {
-		c.i.Mul(&x.i, y.Num())
-		c.i.Div(&c.i, y.Denom())
+		z.i.Mul(&c.i, y.Num())
+		z.i.Div(&z.i, y.Denom())
 	}
 	return
 }
 
 // RoundDown returns the largest multiple of y <= x.
-func (x Currency) RoundDown(y Currency) (c Currency) {
-	diff := new(big.Int).Mod(&x.i, &y.i)
-	c.i.Sub(&x.i, diff)
+func (c Currency) RoundDown(y Currency) (z Currency) {
+	diff := new(big.Int).Mod(&c.i, &y.i)
+	z.i.Sub(&c.i, diff)
 	return
 }
 
@@ -164,21 +164,21 @@ func (c Currency) IsZero() bool {
 
 // Sqrt returns a new Currency value y = sqrt(c). Result is rounded down to the
 // nearest integer.
-func (x Currency) Sqrt() (c Currency) {
-	f, _ := new(big.Rat).SetInt(&x.i).Float64()
+func (c Currency) Sqrt() (z Currency) {
+	f, _ := new(big.Rat).SetInt(&c.i).Float64()
 	sqrt := new(big.Rat).SetFloat64(math.Sqrt(f))
-	c.i.Div(sqrt.Num(), sqrt.Denom())
+	z.i.Div(sqrt.Num(), sqrt.Denom())
 	return
 }
 
-// Sub returns a new Currency value c = x - y. Behavior is undefined when
-// x < y.
-func (x Currency) Sub(y Currency) (c Currency) {
-	if x.Cmp(y) < 0 {
-		c = x
+// Sub returns a new Currency value z = c - y. Behavior is undefined when
+// c < y.
+func (c Currency) Sub(y Currency) (z Currency) {
+	if c.Cmp(y) < 0 {
+		z = c
 		build.Critical(ErrNegativeCurrency)
 	} else {
-		c.i.Sub(&x.i, &y.i)
+		z.i.Sub(&c.i, &y.i)
 	}
 	return
 }

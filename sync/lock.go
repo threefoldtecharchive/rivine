@@ -56,7 +56,7 @@ func (rwm *RWMutex) threadedDeadlockFinder() {
 		rwm.openLocksMutex.Lock()
 		for id, info := range rwm.openLocks {
 			// Check if the lock has been held for longer than 'maxLockTime'.
-			if time.Now().Sub(info.lockTime) > rwm.maxLockTime {
+			if time.Since(info.lockTime) > rwm.maxLockTime {
 				str := fmt.Sprintf("A lock was held for too long, id '%v'. Call stack:\n", id)
 				for i := 0; i <= rwm.callDepth; i++ {
 					str += fmt.Sprintf("\tFile: '%v:%v'\n", info.callingFiles[i], info.callingLines[i])

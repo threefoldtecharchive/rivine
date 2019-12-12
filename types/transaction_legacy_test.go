@@ -117,7 +117,7 @@ func TestLegacyTransactionInputLockProxyJSONEncoding(t *testing.T) {
 			continue
 		}
 
-		output := strings.TrimSpace(string(buf.Bytes()))
+		output := strings.TrimSpace(buf.String())
 		if output != testCase {
 			t.Error(testIndex, "'", output, "'!='", testCase, "'")
 		}
@@ -269,7 +269,7 @@ func TestLegacyTransactionJSONEncoding(t *testing.T) {
 			continue
 		}
 
-		output := strings.TrimSpace(string(buf.Bytes()))
+		output := strings.TrimSpace(buf.String())
 		if output != testCase {
 			t.Error(testIndex, "'", output, "'!='", testCase, "'")
 		}
@@ -700,13 +700,13 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 			}
 			switch tf := ci.Fulfillment.Fulfillment.(type) {
 			case *SingleSignatureFulfillment:
-				if bytes.Compare(tf.Signature[:], testCase.ExpectedCoinSignatures[i][:]) != 0 {
+				if !bytes.Equal(tf.Signature[:], testCase.ExpectedCoinSignatures[i][:]) {
 					t.Error(idx, "coin", i,
 						hex.EncodeToString(tf.Signature[:]), "!=",
 						hex.EncodeToString(testCase.ExpectedCoinSignatures[i][:]))
 				}
 			case *LegacyAtomicSwapFulfillment:
-				if bytes.Compare(tf.Signature[:], testCase.ExpectedCoinSignatures[i][:]) != 0 {
+				if !bytes.Equal(tf.Signature[:], testCase.ExpectedCoinSignatures[i][:]) {
 					t.Error(idx, "coin", i,
 						hex.EncodeToString(tf.Signature[:]), "!=",
 						hex.EncodeToString(testCase.ExpectedCoinSignatures[i][:]))
@@ -724,13 +724,13 @@ func TestLegacyTransactionSignatures(t *testing.T) {
 			}
 			switch tf := bsi.Fulfillment.Fulfillment.(type) {
 			case *SingleSignatureFulfillment:
-				if bytes.Compare(tf.Signature[:], testCase.ExpectedBlockStakeSignatures[i][:]) != 0 {
+				if !bytes.Equal(tf.Signature[:], testCase.ExpectedBlockStakeSignatures[i][:]) {
 					t.Error(idx, "block stake", i,
 						hex.EncodeToString(tf.Signature[:]), "!=",
 						hex.EncodeToString(testCase.ExpectedBlockStakeSignatures[i][:]))
 				}
 			case *LegacyAtomicSwapFulfillment:
-				if bytes.Compare(tf.Signature[:], testCase.ExpectedBlockStakeSignatures[i][:]) != 0 {
+				if !bytes.Equal(tf.Signature[:], testCase.ExpectedBlockStakeSignatures[i][:]) {
 					t.Error(idx, "block stake", i,
 						hex.EncodeToString(tf.Signature[:]), "!=",
 						hex.EncodeToString(testCase.ExpectedBlockStakeSignatures[i][:]))

@@ -92,7 +92,7 @@ func (w *Wallet) UnspentBlockStakeOutputs() (map[types.BlockStakeOutputID]types.
 	ctx := w.getFulfillableContextForLatestBlock()
 
 	// get all unspend block stake outputs, which are fulfillable
-	outputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput, 0)
+	outputs := make(map[types.BlockStakeOutputID]types.BlockStakeOutput)
 	for id := range w.blockstakeOutputs {
 		output := w.blockstakeOutputs[id]
 		if output.Condition.Fulfillable(ctx) {

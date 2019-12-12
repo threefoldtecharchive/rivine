@@ -594,14 +594,16 @@ func (g *Gateway) acceptConnSessionHandshakeV102(conn net.Conn) (remoteAddress m
 	err = siabin.ReadObject(conn, &remoteAddress, modules.MaxEncodedNetAddressLength)
 	if err != nil {
 		err = errors.New("accept: could not read remote address: " + err.Error())
+		return
 	}
 	// validate the address
 	err = remoteAddress.IsStdValid()
 	if err != nil {
-		if err := siabin.WriteObject(conn, "reject"); err != nil {
-			g.log.Println("WARN: failed to write reject address:", err)
+		if rerr := siabin.WriteObject(conn, "reject"); rerr != nil {
+			g.log.Println("WARN: failed to write reject address:", rerr)
 		}
 		err = fmt.Errorf("peer's address (%v) is invalid: %v", remoteAddress, err)
+		return
 	}
 	// write now our net address
 	g.mu.RLock()

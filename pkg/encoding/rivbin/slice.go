@@ -102,7 +102,7 @@ func UnmarshalTinySlice(r io.Reader, v interface{}) error {
 
 		// sanity-check the sliceLen, otherwise you can crash a peer by making
 		// them allocate a massive slice
-		if sliceLen > math.MaxUint8 || uint64(sliceLen)*uint64(val.Type().Elem().Size()) > MaxSliceSize {
+		if uint64(sliceLen)*uint64(val.Type().Elem().Size()) > MaxSliceSize {
 			return ErrSliceTooLarge
 		}
 

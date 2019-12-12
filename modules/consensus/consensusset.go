@@ -223,7 +223,7 @@ func New(gateway modules.Gateway, bootstrap bool, persistDir string, bcInfo type
 						cs.log.Println("[ERROR] Failed to close consensus db debug file: ", err)
 					}
 					return
-				case <-time.Tick(time.Second):
+				case <-time.NewTicker(time.Second).C:
 					currentStats = cs.db.Stats()
 					if err := enc.Encode(currentStats.Sub(&previousStats)); err != nil {
 						cs.log.Println("[WARN] Failed to collect database stats: ", err)

@@ -758,7 +758,7 @@ func (uh *UnlockHashCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			// in order for the receiver to spend,
 			// the secret has to be known
 			hashedSecret := NewAtomicSwapHashedSecret(tf.Secret)
-			if bytes.Compare(tf.HashedSecret[:], hashedSecret[:]) != 0 {
+			if !bytes.Equal(tf.HashedSecret[:], hashedSecret[:]) {
 				return ErrInvalidPreImageSha256
 			}
 
@@ -861,10 +861,10 @@ func (ss *SingleSignatureFulfillment) Equal(f UnlockFulfillment) bool {
 	if ss.PublicKey.Algorithm != oss.PublicKey.Algorithm {
 		return false
 	}
-	if bytes.Compare(ss.PublicKey.Key[:], oss.PublicKey.Key[:]) != 0 {
+	if !bytes.Equal(ss.PublicKey.Key[:], oss.PublicKey.Key[:]) {
 		return false
 	}
-	return bytes.Compare(ss.Signature[:], oss.Signature[:]) == 0
+	return bytes.Equal(ss.Signature[:], oss.Signature[:])
 }
 
 // Marshal implements MarshalableUnlockFulfillment.Marshal
@@ -907,7 +907,7 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 			// in order for the receiver to spend,
 			// the secret has to be known
 			hashedSecret := NewAtomicSwapHashedSecret(tf.Secret)
-			if bytes.Compare(as.HashedSecret[:], hashedSecret[:]) != 0 {
+			if !bytes.Equal(as.HashedSecret[:], hashedSecret[:]) {
 				return ErrInvalidPreImageSha256
 			}
 
@@ -946,7 +946,7 @@ func (as *AtomicSwapCondition) Fulfill(fulfillment UnlockFulfillment, ctx Fulfil
 		if as.TimeLock != tf.TimeLock {
 			return errors.New("legacy atomic swap fulfillment defines an incorrect time lock")
 		}
-		if bytes.Compare(as.HashedSecret[:], tf.HashedSecret[:]) != 0 {
+		if !bytes.Equal(as.HashedSecret[:], tf.HashedSecret[:]) {
 			return errors.New("legacy atomic swap fulfillment defines an incorrect hashed secret")
 		}
 		// delegate logic to the fulfillment in the new format,
@@ -1001,7 +1001,7 @@ func (as *AtomicSwapCondition) Equal(c UnlockCondition) bool {
 	if as.TimeLock != oas.TimeLock {
 		return false
 	}
-	if bytes.Compare(as.HashedSecret[:], oas.HashedSecret[:]) != 0 {
+	if !bytes.Equal(as.HashedSecret[:], oas.HashedSecret[:]) {
 		return false
 	}
 	if as.Sender.Cmp(oas.Sender) != 0 {
@@ -1090,13 +1090,13 @@ func (as *AtomicSwapFulfillment) Equal(f UnlockFulfillment) bool {
 	if as.PublicKey.Algorithm != oas.PublicKey.Algorithm {
 		return false
 	}
-	if bytes.Compare(as.PublicKey.Key[:], oas.PublicKey.Key[:]) != 0 {
+	if !bytes.Equal(as.PublicKey.Key[:], oas.PublicKey.Key[:]) {
 		return false
 	}
-	if bytes.Compare(as.Signature[:], oas.Signature[:]) != 0 {
+	if !bytes.Equal(as.Signature[:], oas.Signature[:]) {
 		return false
 	}
-	return bytes.Compare(as.Secret[:], oas.Secret[:]) == 0
+	return bytes.Equal(as.Secret[:], oas.Secret[:])
 }
 
 // Marshal implements MarshalableUnlockFulfillment.Marshal
@@ -1164,7 +1164,7 @@ func (as *LegacyAtomicSwapFulfillment) Equal(f UnlockFulfillment) bool {
 	if as.TimeLock != olas.TimeLock {
 		return false
 	}
-	if bytes.Compare(as.HashedSecret[:], olas.HashedSecret[:]) != 0 {
+	if !bytes.Equal(as.HashedSecret[:], olas.HashedSecret[:]) {
 		return false
 	}
 	if as.Sender.Cmp(olas.Sender) != 0 {
@@ -1176,13 +1176,13 @@ func (as *LegacyAtomicSwapFulfillment) Equal(f UnlockFulfillment) bool {
 	if as.PublicKey.Algorithm != olas.PublicKey.Algorithm {
 		return false
 	}
-	if bytes.Compare(as.PublicKey.Key[:], olas.PublicKey.Key[:]) != 0 {
+	if !bytes.Equal(as.PublicKey.Key[:], olas.PublicKey.Key[:]) {
 		return false
 	}
-	if bytes.Compare(as.Signature[:], olas.Signature[:]) != 0 {
+	if !bytes.Equal(as.Signature[:], olas.Signature[:]) {
 		return false
 	}
-	return bytes.Compare(as.Secret[:], olas.Secret[:]) == 0
+	return bytes.Equal(as.Secret[:], olas.Secret[:])
 }
 
 // Marshal implements MarshalableUnlockFulfillment.Marshal
@@ -1358,7 +1358,7 @@ func (as *anyAtomicSwapFulfillment) UnmarshalJSON(b []byte) error {
 	if lasf.TimeLock == 0 {
 		undefOptArgCount++
 	}
-	if nilHS := (AtomicSwapHashedSecret{}); bytes.Compare(lasf.HashedSecret[:], nilHS[:]) == 0 {
+	if nilHS := (AtomicSwapHashedSecret{}); bytes.Equal(lasf.HashedSecret[:], nilHS[:]) {
 		undefOptArgCount++
 	}
 	switch undefOptArgCount {
@@ -1784,8 +1784,8 @@ func (ms *MultiSignatureFulfillment) Equal(f UnlockFulfillment) bool {
 	for _, pair := range ms.Pairs {
 		for i, op := range omsC {
 			if pair.PublicKey.Algorithm == op.PublicKey.Algorithm &&
-				bytes.Compare(pair.PublicKey.Key[:], op.PublicKey.Key[:]) == 0 &&
-				bytes.Compare(pair.Signature[:], op.Signature[:]) == 0 {
+				bytes.Equal(pair.PublicKey.Key[:], op.PublicKey.Key[:]) &&
+				bytes.Equal(pair.Signature[:], op.Signature[:]) {
 				omsC = append(omsC[:i], omsC[i+1:]...)
 				break
 			}
