@@ -361,7 +361,7 @@ func getCertAndKey(
 		return "", "", fmt.Errorf("error pem-encoding key: %s", err)
 	}
 
-	return string(certBuffer.Bytes()), string(keyBuffer.Bytes()), nil
+	return certBuffer.String(), keyBuffer.String(), nil
 }
 
 func getBaseCertTemplate(

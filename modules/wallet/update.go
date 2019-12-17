@@ -17,7 +17,7 @@ func (w *Wallet) subscribeWallet() error {
 	if build.Release != "testing" {
 		go func() {
 			println("Rescanning consensus set...")
-			for range time.Tick(time.Second * 3) {
+			for range time.NewTicker(time.Second * 3).C {
 				w.mu.RLock()
 				height := w.consensusSetHeight
 				done := w.subscribed

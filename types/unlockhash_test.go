@@ -216,7 +216,7 @@ func TestUnlockHashSiaMarshalling(t *testing.T) {
 		if err != nil {
 			t.Errorf("error sia-marshalling #%d: %v", idx, err)
 		}
-		if bytes.Compare(testCase.Expected, buf.Bytes()) != 0 {
+		if !bytes.Equal(testCase.Expected, buf.Bytes()) {
 			t.Errorf("unexpected marshalled form of the unlock hash: (%v) != (%v)",
 				testCase.Expected, buf.Bytes())
 		}
@@ -260,7 +260,7 @@ func TestUnlockHashRivineMarshalling(t *testing.T) {
 		if err != nil {
 			t.Errorf("error rivine-marshalling #%d: %v", idx, err)
 		}
-		if bytes.Compare(testCase.Expected, buf.Bytes()) != 0 {
+		if !bytes.Equal(testCase.Expected, buf.Bytes()) {
 			t.Errorf("unexpected marshalled form of the unlock hash: (%v) != (%v)",
 				testCase.Expected, buf.Bytes())
 		}
@@ -305,7 +305,7 @@ func TestUnlockHashLoadString(t *testing.T) {
 	if uh.Type != UnlockType(unlockType) {
 		t.Fatal("loaded unlock type isn't equal:", uh.Type, unlockType)
 	}
-	if bytes.Compare(hash[:], uh.Hash[:]) != 0 {
+	if !bytes.Equal(hash[:], uh.Hash[:]) {
 		t.Fatal("loaded hash isn't correct:", hash, uh.Hash)
 	}
 }

@@ -34,8 +34,8 @@ var (
 
 // Big returns the value of c as a *big.Int. Importantly, it does not provide
 // access to the c's internal big.Int object, only a copy.
-func (x Difficulty) Big() *big.Int {
-	return new(big.Int).Set(&x.i)
+func (c Difficulty) Big() *big.Int {
+	return new(big.Int).Set(&c.i)
 }
 
 // NewDifficulty creates a Difficulty value from a big.Int. Undefined behavior
@@ -49,16 +49,16 @@ func NewDifficulty(b *big.Int) (d Difficulty) {
 	return
 }
 
-// Div64 returns a new Difficulty value c = x / y.
-func (x Difficulty) Div64(y uint64) (c Difficulty) {
-	c.i.Div(&x.i, new(big.Int).SetUint64(y))
+// Div64 returns a new Difficulty value z = c / y.
+func (c Difficulty) Div64(y uint64) (z Difficulty) {
+	z.i.Div(&c.i, new(big.Int).SetUint64(y))
 	return
 }
 
 // Cmp compares two Difficulty values. The return value follows the convention
 // of math/big.
-func (x Difficulty) Cmp(y Difficulty) int {
-	return x.i.Cmp(&y.i)
+func (c Difficulty) Cmp(y Difficulty) int {
+	return c.i.Cmp(&y.i)
 }
 
 // MarshalJSON implements the json.Marshaler interface.

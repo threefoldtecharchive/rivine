@@ -357,7 +357,7 @@ func Test_arbitraryDataFlag(t *testing.T) {
 			if err != nil {
 				t.Errorf("error parsing")
 			}
-			if bytes.Compare(value, tt.output) != 0 {
+			if !bytes.Equal(value, tt.output) {
 				t.Errorf("Set() = %v (%s) is not %v", value, string(value), tt.output)
 			}
 			if got := flag.String(); got != tt.input {

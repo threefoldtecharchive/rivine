@@ -103,7 +103,7 @@ func TestPrimarySeed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Compare(seed[:], seedDup[:]) != 0 {
+	if !bytes.Equal(seed[:], seedDup[:]) {
 		t.Fatal(seed, "!=", seedDup)
 	}
 

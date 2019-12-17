@@ -17,17 +17,21 @@ jobs:
       go: 1.12.x
       install:
         - go get -u github.com/gordonklaus/ineffassign
+        - go get -u honnef.co/go/tools/cmd/staticcheck
       script:
         - make test-long
         - make ineffassign
+        - make staticcheck
     - stage: test
       language: go
       go: 1.13.x
       install:
         - go get -u github.com/gordonklaus/ineffassign
+        - go get -u honnef.co/go/tools/cmd/staticcheck
       script:
         - make test-long
         - make ineffassign
+        - make staticcheck
     - stage: test
       language: go
       go: 1.13.x

@@ -354,21 +354,6 @@ func (dtc DisabledTransactionController) JSONDecodeTransactionData(b []byte) (Tr
 
 // EncodeTransactionData imple
 
-func (dtc DisabledTransactionController) validateTransaction(t Transaction) error {
-	if t.Version != 0 {
-		return fmt.Errorf("DisabledTransactionController allows only empty (nil) transactions: invalid %d tx version", t.Version)
-	}
-	return dtc.validateTransactionData(TransactionData{
-		CoinInputs:        t.CoinInputs,
-		CoinOutputs:       t.CoinOutputs,
-		BlockStakeInputs:  t.BlockStakeInputs,
-		BlockStakeOutputs: t.BlockStakeOutputs,
-		MinerFees:         t.MinerFees,
-		ArbitraryData:     t.ArbitraryData,
-		Extension:         t.Extension,
-	})
-}
-
 func (dtc DisabledTransactionController) validateTransactionData(t TransactionData) error {
 	if len(t.CoinInputs) != 0 {
 		return errors.New("DisabledTransactionController allows only empty (nil) transactions: coin inputs not allowed")

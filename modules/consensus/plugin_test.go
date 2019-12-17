@@ -21,13 +21,12 @@ func (plugin *testPlugin) Close() error {
 	plugin.closeCalled = true
 	return nil
 }
-func (plugin *testPlugin) InitPlugin(metadata *persist.Metadata, bucket *bolt.Bucket, ps modules.PluginViewStorage, cb modules.PluginUnregisterCallback) (persist.Metadata, error) {
+func (plugin *testPlugin) InitPlugin(_ *persist.Metadata, _ *bolt.Bucket, ps modules.PluginViewStorage, _ modules.PluginUnregisterCallback) (persist.Metadata, error) {
 	plugin.storage = ps
-	metadata = &persist.Metadata{
+	return persist.Metadata{
 		Version: "1.0.0.0",
 		Header:  "testPlugin",
-	}
-	return *metadata, nil
+	}, nil
 }
 func (plugin *testPlugin) ApplyBlock(block modules.ConsensusBlock, bucket *persist.LazyBoltBucket) error {
 	return nil

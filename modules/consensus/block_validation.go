@@ -11,14 +11,13 @@ import (
 )
 
 var (
-	errBadMinerPayouts            = errors.New("miner payout sum does not equal block subsidy")
-	errEarlyTimestamp             = errors.New("block timestamp is too early")
-	errExtremeFutureTimestamp     = errors.New("block timestamp too far in future, discarded")
-	errFutureTimestamp            = errors.New("block timestamp too far in future, but saved for later use")
-	errLargeBlock                 = errors.New("block is too large to be accepted")
-	errBlockStakeAgeNotMet        = errors.New("The unspent blockstake (not at index 0 in transaction) is not aged enough")
-	errBlockStakeNotRespent       = errors.New("The block stake used to generate block should be respent")
-	errPOBSBlockIndexDoesNotExist = errors.New("POBS blockheight index points to unexisting block")
+	errBadMinerPayouts        = errors.New("miner payout sum does not equal block subsidy")
+	errEarlyTimestamp         = errors.New("block timestamp is too early")
+	errExtremeFutureTimestamp = errors.New("block timestamp too far in future, discarded")
+	errFutureTimestamp        = errors.New("block timestamp too far in future, but saved for later use")
+	errLargeBlock             = errors.New("block is too large to be accepted")
+	errBlockStakeAgeNotMet    = errors.New("The unspent blockstake (not at index 0 in transaction) is not aged enough")
+	errBlockStakeNotRespent   = errors.New("The block stake used to generate block should be respent")
 )
 
 // blockValidator validates a Block against a set of block validity rules.
@@ -62,10 +61,7 @@ func checkTarget(b types.Block, target types.Target, value types.Currency, heigh
 	pobshashvalue := big.NewInt(0).SetBytes(pobshash[:])
 	pobshashvalue.Div(pobshashvalue, value.Big()) //TODO rivine : this div can be mul on the other side of the compare
 
-	if pobshashvalue.Cmp(target.Int()) == -1 {
-		return true
-	}
-	return false
+	return pobshashvalue.Cmp(target.Int()) == -1
 }
 
 // ValidateBlock validates a block against a minimum timestamp, a block target,

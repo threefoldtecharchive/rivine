@@ -41,7 +41,7 @@ func TestSeedMnemonicFunctions(t *testing.T) {
 			t.Errorf("failed to recover seed from mnemonic %q: %v", mnemonic, err)
 			continue
 		}
-		if bytes.Compare(initialSeed[:], seed[:]) != 0 {
+		if !bytes.Equal(initialSeed[:], seed[:]) {
 			t.Errorf("out %v != %v in", seed, initialSeed)
 		}
 	}

@@ -68,7 +68,6 @@ var (
 		}
 	}()
 
-	errEarlyStop         = errors.New("initial blockchain download did not complete by the time shutdown was issued")
 	errSendBlocksStalled = errors.New("SendBlocks RPC timed and never received any blocks")
 )
 

@@ -12,7 +12,6 @@ import (
 
 var (
 	errOutputAlreadyMature = errors.New("delayed coin output is already in the matured outputs set")
-	errPayoutsAlreadyPaid  = errors.New("payouts are already in the consensus set")
 )
 
 // applyMinerPayouts adds a block's miner payouts to the consensus set as

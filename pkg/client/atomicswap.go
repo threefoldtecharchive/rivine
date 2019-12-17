@@ -1089,7 +1089,7 @@ TimeLock: %[7]d (%[7]s)
 TimeLock reached in: %s
 `, cuh, amountStr, condition.Receiver, condition.Sender, condition.HashedSecret,
 		secretStr, condition.TimeLock,
-		time.Unix(int64(condition.TimeLock), 0).Sub(time.Now()))
+		time.Until(time.Unix(int64(condition.TimeLock), 0)))
 }
 
 func askYesNoQuestion(str string) bool {

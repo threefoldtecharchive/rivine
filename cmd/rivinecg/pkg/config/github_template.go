@@ -400,7 +400,7 @@ func formatConditionAsUnlockhashString(c Condition) (string, error) {
 		ct = c.ConditionType()
 	}
 	if ct == types.ConditionTypeUnlockHash {
-		return fmt.Sprintf("%s", string(c.UnlockHash().String())), nil
+		return c.UnlockHash().String(), nil
 	}
 	return "", fmt.Errorf("cannot marshal unsupported condition of type %d", ct)
 }

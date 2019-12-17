@@ -19,8 +19,7 @@ const (
 )
 
 var (
-	errAddressExhaustion = errors.New("current seed has used all available addresses")
-	errKnownSeed         = errors.New("seed is already known")
+	errKnownSeed = errors.New("seed is already known")
 )
 
 type (

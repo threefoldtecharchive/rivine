@@ -1789,17 +1789,17 @@ func TestIDComputationCompatibleWithLegacyIDs(t *testing.T) {
 		// compare ID, CoinOutputID and BlockStakeOutputID
 		// these should be equal
 		idA, idB := tx.ID(), tx.LegacyID()
-		if bytes.Compare(idA[:], idB[:]) != 0 {
+		if !bytes.Equal(idA[:], idB[:]) {
 			t.Error(idx, idA, "!=", idB)
 			continue
 		}
 		coinOutputIDA, coinOutputIDB := tx.CoinOutputID(42), tx.LegacyCoinOutputID(42)
-		if bytes.Compare(coinOutputIDA[:], coinOutputIDB[:]) != 0 {
+		if !bytes.Equal(coinOutputIDA[:], coinOutputIDB[:]) {
 			t.Error(idx, coinOutputIDA, "!=", coinOutputIDB)
 			continue
 		}
 		blockStakeOutputIDA, blockStakeOutputIDB := tx.BlockStakeOutputID(42), tx.LegacyBlockStakeOutputID(42)
-		if bytes.Compare(blockStakeOutputIDA[:], blockStakeOutputIDB[:]) != 0 {
+		if !bytes.Equal(blockStakeOutputIDA[:], blockStakeOutputIDB[:]) {
 			t.Error(idx, blockStakeOutputIDA, "!=", blockStakeOutputIDB)
 		}
 
@@ -1809,17 +1809,17 @@ func TestIDComputationCompatibleWithLegacyIDs(t *testing.T) {
 		// compare ID, CoinOutputID and BlockStakeOutputID
 		// these should now be different
 		idA, idB = tx.ID(), tx.LegacyID()
-		if bytes.Compare(idA[:], idB[:]) == 0 {
+		if bytes.Equal(idA[:], idB[:]) {
 			t.Error(idx, idA, "==", idB)
 			continue
 		}
 		coinOutputIDA, coinOutputIDB = tx.CoinOutputID(42), tx.LegacyCoinOutputID(42)
-		if bytes.Compare(coinOutputIDA[:], coinOutputIDB[:]) == 0 {
+		if bytes.Equal(coinOutputIDA[:], coinOutputIDB[:]) {
 			t.Error(idx, coinOutputIDA, "==", coinOutputIDB)
 			continue
 		}
 		blockStakeOutputIDA, blockStakeOutputIDB = tx.BlockStakeOutputID(42), tx.LegacyBlockStakeOutputID(42)
-		if bytes.Compare(blockStakeOutputIDA[:], blockStakeOutputIDB[:]) == 0 {
+		if bytes.Equal(blockStakeOutputIDA[:], blockStakeOutputIDB[:]) {
 			t.Error(idx, blockStakeOutputIDA, "==", blockStakeOutputIDB)
 		}
 	}

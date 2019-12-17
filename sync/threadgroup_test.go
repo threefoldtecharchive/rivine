@@ -437,11 +437,10 @@ func TestAddOnStop(t *testing.T) {
 	tg.OnStop(func() {
 		close(stopChan)
 	})
+	errs := make(chan error, 1)
 	go func() {
 		err := tg.Add()
-		if err != nil {
-			t.Fatal(err)
-		}
+		errs <- err
 		close(addChan)
 
 		// Wait for the call to 'Stop' to be called in the parent thread, and
@@ -458,6 +457,9 @@ func TestAddOnStop(t *testing.T) {
 		}
 		tg.Done()
 	}()
+	if err := <-errs; err != nil {
+		t.Fatal(err)
+	}
 
 	// Wait for 'Add' to be called in the above thread, to guarantee that
 	// OnStop and AfterStop will be called after 'Add' and 'Stop' have been

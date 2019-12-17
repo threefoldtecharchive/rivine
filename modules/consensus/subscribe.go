@@ -3,9 +3,8 @@ package consensus
 import (
 	"errors"
 
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/modules"
-
-	"github.com/rivine/bbolt"
 )
 
 // computeConsensusChange computes the consensus change from the change entry
@@ -43,12 +42,8 @@ func (cs *ConsensusSet) computeConsensusChange(tx *bolt.Tx, ce changeEntry) (mod
 		}
 
 		cc.AppliedBlocks = append(cc.AppliedBlocks, appliedBlock.Block)
-		for _, scod := range appliedBlock.CoinOutputDiffs {
-			cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, scod)
-		}
-		for _, sfod := range appliedBlock.BlockStakeOutputDiffs {
-			cc.BlockStakeOutputDiffs = append(cc.BlockStakeOutputDiffs, sfod)
-		}
+		cc.CoinOutputDiffs = append(cc.CoinOutputDiffs, appliedBlock.CoinOutputDiffs...)
+		cc.BlockStakeOutputDiffs = append(cc.BlockStakeOutputDiffs, appliedBlock.BlockStakeOutputDiffs...)
 	}
 
 	// Grab the child target and the minimum valid child timestamp.

@@ -517,7 +517,6 @@ func (ms *ModuleSet) Set(mod *Module) {
 		Description:  mod.Description,
 		Dependencies: ModuleIdentifierSet{identifiers: mod.Dependencies.Identifiers()},
 	})
-	return
 }
 
 // String returns the module set as a string,

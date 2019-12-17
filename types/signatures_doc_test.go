@@ -241,7 +241,7 @@ func TestInputSigHash(t *testing.T) {
 			`416c6c2043726561747572657320477265617420616e6420536d616c6c2057696c6c2047657420537475636b20617420427265786974e280997320426f726465722c2030382f30352f323031382030363a30302043455354`, // arbitraryData
 	)
 	signature = txn.BlockStakeInputs[0].Fulfillment.Fulfillment.(*SingleSignatureFulfillment).Signature
-	if bytes.Compare(expectedSignature[:], signature[:]) != 0 {
+	if !bytes.Equal(expectedSignature[:], signature[:]) {
 		t.Error("blockStake input #0: ",
 			hex.EncodeToString(expectedSignature[:]), "!=",
 			hex.EncodeToString(signature[:]))
@@ -259,7 +259,7 @@ func TestInputSigHash(t *testing.T) {
 	}
 	signature = txn.CoinInputs[0].Fulfillment.Fulfillment.(*SingleSignatureFulfillment).Signature
 	// signature is same as previous signature, so we can compare directly
-	if bytes.Compare(expectedSignature[:], signature[:]) != 0 {
+	if !bytes.Equal(expectedSignature[:], signature[:]) {
 		t.Error("coin input #0: ",
 			hex.EncodeToString(expectedSignature[:]), "!=",
 			hex.EncodeToString(signature[:]))
@@ -311,7 +311,7 @@ func TestInputSigHash(t *testing.T) {
 			`5800000000000000` + // length(arbitraryData)
 			`416c6c2043726561747572657320477265617420616e6420536d616c6c2057696c6c2047657420537475636b20617420427265786974e280997320426f726465722c2030382f30352f323031382030363a30302043455354`, // arbitraryData
 	)
-	if bytes.Compare(expectedSignature[:], signature[:]) != 0 {
+	if !bytes.Equal(expectedSignature[:], signature[:]) {
 		t.Error("coin input #1: ",
 			hex.EncodeToString(expectedSignature[:]), "!=",
 			hex.EncodeToString(signature[:]))
@@ -541,7 +541,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 			`4e6573746c6520506179732024372e322042696c6c696f6e20746f2053656c6c20436f66666565205769746820537461726275636b73204272616e642c2030372f30352f323031382030373a31332043455354`, // arbitraryData
 	)
 	signature = txn.BlockStakeInputs[0].Fulfillment.Fulfillment.(*SingleSignatureFulfillment).Signature
-	if bytes.Compare(expectedSignature[:], signature[:]) != 0 {
+	if !bytes.Equal(expectedSignature[:], signature[:]) {
 		t.Error("blockStake input #0: ",
 			hex.EncodeToString(expectedSignature[:]), "!=",
 			hex.EncodeToString(signature[:]))
@@ -559,7 +559,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 	}
 	signature = txn.CoinInputs[0].Fulfillment.Fulfillment.(*SingleSignatureFulfillment).Signature
 	// signature is same as previous signature, so we can compare directly
-	if bytes.Compare(expectedSignature[:], signature[:]) != 0 {
+	if !bytes.Equal(expectedSignature[:], signature[:]) {
 		t.Error("coin input #0: ",
 			hex.EncodeToString(expectedSignature[:]), "!=",
 			hex.EncodeToString(signature[:]))
@@ -604,7 +604,7 @@ func TestLegacyInputSigHash(t *testing.T) {
 			`5300000000000000` + // length(arbitraryData)
 			`4e6573746c6520506179732024372e322042696c6c696f6e20746f2053656c6c20436f66666565205769746820537461726275636b73204272616e642c2030372f30352f323031382030373a31332043455354`, // arbitraryData
 	)
-	if bytes.Compare(expectedSignature[:], signature[:]) != 0 {
+	if !bytes.Equal(expectedSignature[:], signature[:]) {
 		t.Error("coin input #1: ",
 			hex.EncodeToString(expectedSignature[:]), "!=",
 			hex.EncodeToString(signature[:]))

@@ -15,11 +15,9 @@ import (
 )
 
 var (
-	errRepeatInsert   = errors.New("attempting to add an already existing item to the consensus set")
-	errNilBucket      = errors.New("using a bucket that does not exist")
-	errNilItem        = errors.New("requested item does not exist")
-	errDBInconsistent = errors.New("database guard indicates inconsistency within database")
-	errNonEmptyBucket = errors.New("cannot remove a map with objects still in it")
+	errRepeatInsert = errors.New("attempting to add an already existing item to the consensus set")
+	errNilBucket    = errors.New("using a bucket that does not exist")
+	errNilItem      = errors.New("requested item does not exist")
 
 	dbMetadata = persist.Metadata{
 		Header:  "Consensus Set Database",

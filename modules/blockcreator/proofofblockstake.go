@@ -13,42 +13,42 @@ import (
 // unspent block stake outputs make a solution for the current unsolved block.
 // If a match is found, the block is submitted to the consensus set.
 // This function does not return until the blockcreator threadgroup is stopped.
-func (bc *BlockCreator) SolveBlocks() {
+func (b *BlockCreator) SolveBlocks() {
 	for {
 
 		// Bail if 'Stop' has been called.
 		select {
-		case <-bc.tg.StopChan():
+		case <-b.tg.StopChan():
 			return
 		default:
 		}
 
 		// This is mainly here to avoid the creation of useless blocks during IBD and when a node comes back online
 		// after some downtime
-		if !bc.csSynced {
-			if !bc.cs.Synced() {
-				bc.log.Debugln("Consensus set is not synced, don't create blocks yet")
+		if !b.csSynced {
+			if !b.cs.Synced() {
+				b.log.Debugln("Consensus set is not synced, don't create blocks yet")
 				time.Sleep(8 * time.Second)
 				continue
 			}
-			bc.csSynced = true
+			b.csSynced = true
 		}
 
 		// Try to solve a block for blocktimes of the next 10 seconds
 		now := time.Now().Unix()
-		bc.log.Debugln("[BC] Attempting to solve blocks")
-		b := bc.solveBlock(uint64(now), 10)
-		if b != nil {
-			bjson, err := json.Marshal(b)
+		b.log.Debugln("[BC] Attempting to solve blocks")
+		block := b.solveBlock(uint64(now), 10)
+		if block != nil {
+			bjson, err := json.Marshal(block)
 			if err != nil {
-				bc.log.Println("Solved block but failed to JSON-marshal it for logging purposes:", err)
+				b.log.Println("Solved block but failed to JSON-marshal it for logging purposes:", err)
 			} else {
-				bc.log.Println("Solved block:", string(bjson))
+				b.log.Println("Solved block:", string(bjson))
 			}
 
-			err = bc.submitBlock(*b)
+			err = b.submitBlock(*block)
 			if err != nil {
-				bc.log.Println("ERROR: An error occurred while submitting a solved block:", err)
+				b.log.Println("ERROR: An error occurred while submitting a solved block:", err)
 			}
 		}
 		//sleep a while before recalculating
@@ -56,19 +56,19 @@ func (bc *BlockCreator) SolveBlocks() {
 	}
 }
 
-func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) (b *types.Block) {
-	bc.mu.RLock()
-	defer bc.mu.RUnlock()
+func (b *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) *types.Block {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
 
-	currentBlock := bc.cs.CurrentBlock()
-	stakemodifier := bc.cs.CalculateStakeModifier(bc.persist.Height+1, currentBlock, bc.chainCts.StakeModifierDelay-1)
-	cbid := bc.cs.CurrentBlock().ID()
-	target, _ := bc.cs.ChildTarget(cbid)
+	currentBlock := b.cs.CurrentBlock()
+	stakemodifier := b.cs.CalculateStakeModifier(b.persist.Height+1, currentBlock, b.chainCts.StakeModifierDelay-1)
+	cbid := b.cs.CurrentBlock().ID()
+	target, _ := b.cs.ChildTarget(cbid)
 
 	// Try all unspent blockstake outputs
-	unspentBlockStakeOutputs, err := bc.wallet.GetUnspentBlockStakeOutputs()
+	unspentBlockStakeOutputs, err := b.wallet.GetUnspentBlockStakeOutputs()
 	if err != nil {
-		bc.log.Printf("failed to start solving block stakes: %v", err)
+		b.log.Printf("failed to start solving block stakes: %v", err)
 		return nil
 	}
 	for _, ubso := range unspentBlockStakeOutputs {
@@ -78,8 +78,8 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 		// then block stake can only be used to solve blocks after its aging is
 		// older than types.BlockStakeAging (more than 1 day)
 		if ubso.Indexes.TransactionIndex != 0 || ubso.Indexes.OutputIndex != 0 {
-			blockatheigh, _ := bc.cs.BlockAtHeight(ubso.Indexes.BlockHeight)
-			BlockStakeAge = blockatheigh.Header().Timestamp + types.Timestamp(bc.chainCts.BlockStakeAging)
+			blockatheigh, _ := b.cs.BlockAtHeight(ubso.Indexes.BlockHeight)
+			BlockStakeAge = blockatheigh.Header().Timestamp + types.Timestamp(b.chainCts.BlockStakeAging)
 		}
 		// Try all timestamps for this timerange
 		for blocktime := startTime; blocktime < startTime+secondsInTheFuture; blocktime++ {
@@ -89,7 +89,7 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 			// Calculate the hash for the given unspent output and timestamp
 			pobshash, err := crypto.HashAll(stakemodifier.Bytes(), ubso.Indexes.BlockHeight, ubso.Indexes.TransactionIndex, ubso.Indexes.OutputIndex, blocktime)
 			if err != nil {
-				bc.log.Printf("solveBlock failed due to failed crypto hash All %q: %v", ubso.BlockStakeOutputID.String(), err)
+				b.log.Printf("solveBlock failed due to failed crypto hash All %q: %v", ubso.BlockStakeOutputID.String(), err)
 				return nil
 			}
 			// Check if it meets the difficulty
@@ -97,15 +97,15 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 			pobshashvalue.Div(pobshashvalue, ubso.Value.Big()) //TODO rivine : this div can be mul on the other side of the compare
 
 			if pobshashvalue.Cmp(target.Int()) == -1 {
-				err := bc.RespentBlockStake(ubso)
+				err := b.RespentBlockStake(ubso)
 				if err != nil {
-					bc.log.Printf("failed to respond block stake %q: %v", ubso.BlockStakeOutputID.String(), err)
+					b.log.Printf("failed to respond block stake %q: %v", ubso.BlockStakeOutputID.String(), err)
 					return nil
 				}
 
-				bc.log.Debugln("\nSolved block with target", target)
+				b.log.Debugln("\nSolved block with target", target)
 				blockToSubmit := types.Block{
-					ParentID:   bc.unsolvedBlock.ParentID,
+					ParentID:   b.unsolvedBlock.ParentID,
 					Timestamp:  types.Timestamp(blocktime),
 					POBSOutput: ubso.Indexes,
 				}
@@ -113,18 +113,18 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 				// Block is going to be passed to external memory, but the memory pointed
 				// to by the transactions slice is still being modified - needs to be
 				// copied.
-				txns := make([]types.Transaction, len(bc.unsolvedBlock.Transactions))
-				copy(txns, bc.unsolvedBlock.Transactions)
+				txns := make([]types.Transaction, len(b.unsolvedBlock.Transactions))
+				copy(txns, b.unsolvedBlock.Transactions)
 				blockToSubmit.Transactions = txns
 				// Collect the block creation fee
-				if !bc.chainCts.BlockCreatorFee.IsZero() {
+				if !b.chainCts.BlockCreatorFee.IsZero() {
 					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, types.MinerPayout{
-						Value: bc.chainCts.BlockCreatorFee, UnlockHash: ubso.Condition.UnlockHash()})
+						Value: b.chainCts.BlockCreatorFee, UnlockHash: ubso.Condition.UnlockHash()})
 				}
 				// Collect the summed miner fee of all transactions
 				collectedMinerFees := blockToSubmit.CalculateTotalMinerFees()
 				if !collectedMinerFees.IsZero() {
-					condition := bc.chainCts.TransactionFeeCondition
+					condition := b.chainCts.TransactionFeeCondition
 					if condition.ConditionType() == types.ConditionTypeNil {
 						condition = ubso.Condition
 					}
@@ -137,7 +137,7 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 					mps, err = txn.CustomMinerPayouts()
 					if err != nil {
 						// ignore here, not critical, but do log
-						bc.log.Printf("error occured while fetching custom miner payouts from txn v%v: %v", txn.Version, err)
+						b.log.Printf("error occured while fetching custom miner payouts from txn v%v: %v", txn.Version, err)
 						continue
 					}
 					blockToSubmit.MinerPayouts = append(blockToSubmit.MinerPayouts, mps...)
@@ -147,17 +147,17 @@ func (bc *BlockCreator) solveBlock(startTime uint64, secondsInTheFuture uint64) 
 			}
 		}
 	}
-	return
+	return nil
 }
 
 // RespentBlockStake will spent the unspent block stake output which is needed
 // for the POBS algorithm. The transaction created will be the first transaction
 // in the block to avoid the BlockStakeAging for later use of this block stake.
-func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) error {
+func (b *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) error {
 	// There is a special case: When the unspent block stake output is already
 	// used in another transaction in this unsolved block, this extra transaction
 	// is obsolete
-	for _, ubstr := range bc.unsolvedBlock.Transactions {
+	for _, ubstr := range b.unsolvedBlock.Transactions {
 		for _, ubstrinput := range ubstr.BlockStakeInputs {
 			if ubstrinput.ParentID == ubso.BlockStakeOutputID {
 				return nil
@@ -166,7 +166,7 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) er
 	}
 
 	//otherwise the blockstake is not yet spent in this block, spent it now
-	t := bc.wallet.StartTransaction()
+	t := b.wallet.StartTransaction()
 	err := t.SpendBlockStake(ubso.BlockStakeOutputID) // link the input of this transaction
 	// to the used BlockStake output
 	if err != nil {
@@ -183,6 +183,6 @@ func (bc *BlockCreator) RespentBlockStake(ubso types.UnspentBlockStakeOutput) er
 		return err
 	}
 	//add this transaction in front of the list of unsolved block transactions
-	bc.unsolvedBlock.Transactions = append(txnSet, bc.unsolvedBlock.Transactions...)
+	b.unsolvedBlock.Transactions = append(txnSet, b.unsolvedBlock.Transactions...)
 	return nil
 }

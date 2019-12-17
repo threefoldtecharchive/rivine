@@ -62,6 +62,7 @@ func TestTryMutexBasicTryLock(t *testing.T) {
 	tm.Unlock()
 
 	tm.Lock()
+	//lint:ignore SA2001 desired as test
 	tm.Unlock()
 
 	// TryLock and then TryLock.
@@ -117,7 +118,7 @@ func TestTryMutexTimed(t *testing.T) {
 		t.Error("was able to grab a locked lock")
 	}
 
-	wait := time.Now().Sub(startTime)
+	wait := time.Since(startTime)
 	if wait < time.Millisecond*450 {
 		t.Error("lock did not wait the correct amount of time before timing out", wait)
 	}
@@ -150,7 +151,7 @@ func TestTryMutexTimedConcurrent(t *testing.T) {
 			t.Error("was able to grab a locked lock")
 		}
 
-		wait := time.Now().Sub(startTime)
+		wait := time.Since(startTime)
 		if wait < time.Millisecond*450 {
 			t.Error("lock did not wait the correct amount of time before timing out:", wait)
 		}

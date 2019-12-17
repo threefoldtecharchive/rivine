@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/threefoldtech/rivine/build"
-	"github.com/threefoldtech/rivine/crypto"
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/modules/gateway"
 	"github.com/threefoldtech/rivine/types"
@@ -14,10 +13,10 @@ import (
 // including helper modules and methods for controlling synchronization between
 // the tester and the modules.
 type consensusSetTester struct {
-	gateway   modules.Gateway
-	tpool     modules.TransactionPool
-	wallet    modules.Wallet
-	walletKey crypto.TwofishKey
+	gateway modules.Gateway
+	// tpool     modules.TransactionPool
+	// wallet    modules.Wallet
+	// walletKey crypto.TwofishKey
 
 	cs *ConsensusSet
 

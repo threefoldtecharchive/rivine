@@ -247,7 +247,7 @@ func TestMarshalUnmarshalDynamicIntegers(t *testing.T) {
 		}
 
 		// ensure that the unmarshal process has read the exact amount of bytes
-		remaining := string(b.Bytes())
+		remaining := b.String()
 		if remaining != "test" {
 			t.Error(idx, "read more or less than it should have, unexpected remaining:", remaining, "!= test")
 		}

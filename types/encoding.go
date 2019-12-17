@@ -14,19 +14,6 @@ type encHelper struct {
 	err error
 }
 
-// reset reslices e's internal buffer to have a length of 0.
-func (e *encHelper) reset() {
-	e.buf = e.buf[:0]
-}
-
-// append appends a byte to e's internal buffer.
-func (e *encHelper) append(b byte) {
-	if e.err != nil {
-		return
-	}
-	e.buf = append(e.buf, b)
-}
-
 // flush writes e's internal buffer to the underlying io.Writer.
 func (e *encHelper) flush() (int, error) {
 	if e.err != nil {

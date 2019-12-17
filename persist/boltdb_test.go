@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/NebulousLabs/fastrand"
-	"github.com/rivine/bbolt"
+	bolt "github.com/rivine/bbolt"
 	"github.com/threefoldtech/rivine/build"
 )
 
@@ -134,6 +134,8 @@ func TestOpenDatabase(t *testing.T) {
 			return err
 		})
 		if err != bolt.ErrBucketNameRequired {
+			t.Error("expected bolt.ErrBucketNameRequired, but received: ", err)
+			continue
 		}
 		// Fill each bucket with a random number (0-9, inclusive) of key/value
 		// pairs, where each key is a length-10 random byteslice and each value
@@ -400,7 +402,7 @@ func TestErrIntegratedCheckMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Should return an error because boltDB was set up with metadata in.md, not in.newMd
-		boltDB, err = OpenDatabase(in.newMd, dbFilepath)
+		_, err = OpenDatabase(in.newMd, dbFilepath)
 		if err != in.err {
 			t.Errorf("expected error %v for input %v and filename %v; got %v instead", in.err, in, dbFilename, err)
 		}

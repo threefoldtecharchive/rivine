@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
 	"github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/types"
-	"github.com/spf13/cobra"
 )
 
 func createMergeCmd(*CommandLineClient) *cobra.Command {
@@ -72,7 +72,7 @@ func (mergeCmd *mergeCmd) mergeTransactions(cmd *cobra.Command, args []string) {
 		for i := range masterTxn.Data.CoinInputs {
 			inputIndex := i + 1
 
-			if bytes.Compare(masterTxn.Data.CoinInputs[i].ParentID[:], otherTxn.Data.CoinInputs[i].ParentID[:]) != 0 {
+			if !bytes.Equal(masterTxn.Data.CoinInputs[i].ParentID[:], otherTxn.Data.CoinInputs[i].ParentID[:]) {
 				cli.Die(fmt.Sprintf("transaction #%d has a different coin input at index %v", txnIndex, inputIndex))
 			}
 
@@ -87,7 +87,7 @@ func (mergeCmd *mergeCmd) mergeTransactions(cmd *cobra.Command, args []string) {
 		for i := range masterTxn.Data.BlockStakeInputs {
 			inputIndex := i + 1
 
-			if bytes.Compare(masterTxn.Data.BlockStakeInputs[i].ParentID[:], otherTxn.Data.BlockStakeInputs[i].ParentID[:]) != 0 {
+			if !bytes.Equal(masterTxn.Data.BlockStakeInputs[i].ParentID[:], otherTxn.Data.BlockStakeInputs[i].ParentID[:]) {
 				cli.Die(fmt.Sprintf("transaction #%d has a different block stake input at index %v", txnIndex, inputIndex))
 			}
 
@@ -111,16 +111,16 @@ func compareNonMergeableTransactionData(masterTxn, otherTxn transactionInputs) e
 	if masterTxn.Version != otherTxn.Version {
 		return errors.New("transaction version is different")
 	}
-	if bytes.Compare(masterTxn.Data.CoinOutputs, otherTxn.Data.CoinOutputs) != 0 {
+	if !bytes.Equal(masterTxn.Data.CoinOutputs, otherTxn.Data.CoinOutputs) {
 		return errors.New("coin outputs are different")
 	}
-	if bytes.Compare(masterTxn.Data.MinerFees, otherTxn.Data.MinerFees) != 0 {
+	if !bytes.Equal(masterTxn.Data.MinerFees, otherTxn.Data.MinerFees) {
 		return errors.New("miner fees are different")
 	}
-	if bytes.Compare(masterTxn.Data.BlockStakeOutputs, otherTxn.Data.BlockStakeOutputs) != 0 {
+	if !bytes.Equal(masterTxn.Data.BlockStakeOutputs, otherTxn.Data.BlockStakeOutputs) {
 		return errors.New("blockstake outputs are different")
 	}
-	if bytes.Compare(masterTxn.Data.ArbitraryData, otherTxn.Data.ArbitraryData) != 0 {
+	if !bytes.Equal(masterTxn.Data.ArbitraryData, otherTxn.Data.ArbitraryData) {
 		return errors.New("arbitrary data different")
 	}
 	if len(masterTxn.Data.CoinInputs) != len(otherTxn.Data.CoinInputs) {
@@ -167,8 +167,8 @@ func compareAndMergeFulfillmentsIfNeeded(masterFulfillment *types.UnlockFulfillm
 			newPksp := ff2.Pairs[i]
 			// Check for equality. If the pair matches, remove it so we don't add it
 			if pksp.PublicKey.Algorithm == newPksp.PublicKey.Algorithm &&
-				bytes.Compare(pksp.PublicKey.Key, newPksp.PublicKey.Key) == 0 &&
-				bytes.Compare(pksp.Signature, newPksp.Signature) == 0 {
+				bytes.Equal(pksp.PublicKey.Key, newPksp.PublicKey.Key) &&
+				bytes.Equal(pksp.Signature, newPksp.Signature) {
 				ff2.Pairs = append(ff2.Pairs[:i], ff2.Pairs[i+1:]...)
 				break
 			}

@@ -111,8 +111,7 @@ import (
 )
 
 var (
-	errNoPeers     = errors.New("no peers")
-	errUnreachable = errors.New("peer did not respond to ping")
+	errNoPeers = errors.New("no peers")
 )
 
 // Gateway implements the modules.Gateway interface.

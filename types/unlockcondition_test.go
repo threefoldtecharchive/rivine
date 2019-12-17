@@ -472,10 +472,10 @@ func TestNilUnlockConditionProxy(t *testing.T) {
 	if b, err := c.MarshalJSON(); err != nil || string(b) != "{}" {
 		t.Error("MarshalJSON", b, err)
 	}
-	if b, err := siabin.Marshal(c); err != nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+	if b, err := siabin.Marshal(c); err != nil || !bytes.Equal(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) {
 		t.Error("MarshalSia", b, err)
 	}
-	if b, err := rivbin.Marshal(c); err!= nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+	if b, err := rivbin.Marshal(c); err != nil || !bytes.Equal(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) {
 		t.Error("MarshalRivine", b, err)
 	}
 	if !c.Equal(nil) {
@@ -500,10 +500,10 @@ func TestNilUnlockFulfillmentProxy(t *testing.T) {
 	if b, err := f.MarshalJSON(); err != nil || string(b) != "{}" {
 		t.Error("MarshalJSON", b, err)
 	}
-	if b, err := siabin.Marshal(f); err != nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+	if b, err := siabin.Marshal(f); err != nil || !bytes.Equal(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) {
 		t.Error("MarshalSia", b, err)
 	}
-	if b, err := rivbin.Marshal(f); err != nil || bytes.Compare(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) != 0 {
+	if b, err := rivbin.Marshal(f); err != nil || !bytes.Equal(b, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0}) {
 		t.Error("MarshalRivine", b, err)
 	}
 	if !f.Equal(nil) {
@@ -1825,7 +1825,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
-			if bytes.Compare(testCase.ExpectedCoinInputSigHashes[idx][:], sigHash[:]) != 0 {
+			if !bytes.Equal(testCase.ExpectedCoinInputSigHashes[idx][:], sigHash[:]) {
 				t.Error(tidx, idx, "invalid coin input sigh hash",
 					testCase.ExpectedCoinInputSigHashes[idx], "!=", sigHash)
 			}
@@ -1848,7 +1848,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			if err != nil {
 				t.Error(tidx, idx, "unexpected error", err)
 			}
-			if bytes.Compare(testCase.ExpectedBlockStakeInputSigHashes[idx][:], sigHash[:]) != 0 {
+			if !bytes.Equal(testCase.ExpectedBlockStakeInputSigHashes[idx][:], sigHash[:]) {
 				t.Error(tidx, idx, "invalid bs input sigh hash",
 					testCase.ExpectedBlockStakeInputSigHashes[idx], "!=", sigHash)
 			}
@@ -1868,7 +1868,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 		}
 		for idx, co := range testCase.Transaction.CoinOutputs {
 			outputID := testCase.Transaction.CoinOutputID(uint64(idx))
-			if bytes.Compare(testCase.ExpectedCoinIdentifiers[idx][:], outputID[:]) != 0 {
+			if !bytes.Equal(testCase.ExpectedCoinIdentifiers[idx][:], outputID[:]) {
 				t.Error(tidx, idx, testCase.ExpectedCoinIdentifiers[idx], "!=", outputID)
 			}
 
@@ -1879,7 +1879,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 		}
 		for idx, bso := range testCase.Transaction.BlockStakeOutputs {
 			outputID := testCase.Transaction.BlockStakeOutputID(uint64(idx))
-			if bytes.Compare(testCase.ExpectedBlockStakeIdentifiers[idx][:], outputID[:]) != 0 {
+			if !bytes.Equal(testCase.ExpectedBlockStakeIdentifiers[idx][:], outputID[:]) {
 				t.Error(tidx, idx, testCase.ExpectedBlockStakeIdentifiers[idx], "!=", outputID)
 			}
 
@@ -1889,7 +1889,7 @@ func TestFulfillLegacyCompatibility(t *testing.T) {
 			}
 		}
 		transactionID := testCase.Transaction.ID()
-		if bytes.Compare(testCase.ExpectedTransactionIdentifier[:], transactionID[:]) != 0 {
+		if !bytes.Equal(testCase.ExpectedTransactionIdentifier[:], transactionID[:]) {
 			t.Error(tidx, testCase.ExpectedTransactionIdentifier, "!=", transactionID)
 		}
 	}
@@ -3001,9 +3001,9 @@ func TestAtomicSwapHashedSecretStringify(t *testing.T) {
 	if err != nil {
 		t.Error("failed to load hashed secret in hash format:", err)
 	}
-	if bytes.Compare([]byte{
+	if !bytes.Equal([]byte{
 		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, hs[:]) != 0 {
+		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, hs[:]) {
 		t.Error("unexpected loaded hashed secret:", hs)
 	}
 
@@ -3029,7 +3029,7 @@ func TestAtomicSwapHashedSecretStringify(t *testing.T) {
 			t.Error(i, "failed to load hashed secret in hash format:", err)
 		}
 
-		if bytes.Compare(hs2[:], hs[:]) != 0 {
+		if !bytes.Equal(hs2[:], hs[:]) {
 			t.Error(i, "unexpected loaded hashed secret:", hs2, "!=", hs)
 		}
 	}
@@ -3042,9 +3042,9 @@ func TestAtomicSwapHashedSecretJSON(t *testing.T) {
 	if err != nil {
 		t.Error("failed to load hashed secret in hash format:", err)
 	}
-	if bytes.Compare([]byte{
+	if !bytes.Equal([]byte{
 		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, hs[:]) != 0 {
+		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, hs[:]) {
 		t.Error("unexpected loaded hashed secret:", hs)
 	}
 
@@ -3074,7 +3074,7 @@ func TestAtomicSwapHashedSecretJSON(t *testing.T) {
 			t.Error(i, "failed to load hashed secret in hex format:", err)
 		}
 
-		if bytes.Compare(hs2[:], hs[:]) != 0 {
+		if !bytes.Equal(hs2[:], hs[:]) {
 			t.Error(i, "unexpected loaded hashed secret:", hs2, "!=", hs)
 		}
 	}
@@ -3087,9 +3087,9 @@ func TestAtomicSwapSecretStringify(t *testing.T) {
 	if err != nil {
 		t.Error("failed to load secret in hex format:", err)
 	}
-	if bytes.Compare([]byte{
+	if !bytes.Equal([]byte{
 		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, s[:]) != 0 {
+		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, s[:]) {
 		t.Error("unexpected loaded secret:", s)
 	}
 
@@ -3115,7 +3115,7 @@ func TestAtomicSwapSecretStringify(t *testing.T) {
 			t.Error(i, "failed to load secret in hex format:", err)
 		}
 
-		if bytes.Compare(s2[:], s[:]) != 0 {
+		if !bytes.Equal(s2[:], s[:]) {
 			t.Error(i, "unexpected loaded secret:", s2, "!=", s)
 		}
 	}
@@ -3128,9 +3128,9 @@ func TestAtomicSwapSecretJSON(t *testing.T) {
 	if err != nil {
 		t.Error("failed to load secret in hash format:", err)
 	}
-	if bytes.Compare([]byte{
+	if !bytes.Equal([]byte{
 		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
-		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, s[:]) != 0 {
+		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}, s[:]) {
 		t.Error("unexpected loaded secret:", s)
 	}
 
@@ -3160,7 +3160,7 @@ func TestAtomicSwapSecretJSON(t *testing.T) {
 			t.Error(i, "failed to load secret in hex format:", err)
 		}
 
-		if bytes.Compare(s2[:], s[:]) != 0 {
+		if !bytes.Equal(s2[:], s[:]) {
 			t.Error(i, "unexpected loaded secret:", s2, "!=", s)
 		}
 	}

@@ -8,6 +8,10 @@ import (
 	"github.com/threefoldtech/rivine/build"
 )
 
+const (
+	persistDir = "persist"
+)
+
 // TestIntegrationRandomSuffix checks that the random suffix creator creates
 // valid files.
 func TestIntegrationRandomSuffix(t *testing.T) {

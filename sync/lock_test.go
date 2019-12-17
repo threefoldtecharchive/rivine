@@ -1,6 +1,7 @@
 package sync
 
 import (
+	"fmt"
 	"runtime"
 	"sync"
 	"testing"
@@ -16,6 +17,7 @@ func TestLowThreadLocking(t *testing.T) {
 
 	// Create a value and lock a mutex to protect the value.
 	value := 0
+	errs := make(chan error, 1)
 	safeLock := New(time.Second, 1)
 	outerID := safeLock.Lock()
 	go func() {
@@ -24,13 +26,20 @@ func TestLowThreadLocking(t *testing.T) {
 		innerID := safeLock.Lock()
 		defer safeLock.Unlock(innerID)
 		if value != 1 {
-			t.Fatal("Lock was grabbed incorrectly")
+			errs <- fmt.Errorf("Lock was grabbed incorrectly: value = %d", value)
+		} else {
+			errs <- nil
 		}
 	}()
 
 	// After spawning the other thread, increment value.
 	value = 1
 	safeLock.Unlock(outerID)
+
+	// check if grabbing went succesfully
+	if err := <-errs; err != nil {
+		t.Fatal(err)
+	}
 }
 
 // TestHighThreadLocking tries to trigger race conditions while using lots of
@@ -42,6 +51,8 @@ func TestHighThreadLocking(t *testing.T) {
 
 	// Try to trigger a race condition by using lots of threads.
 	for i := 0; i < 50; i++ {
+		index := i
+		errs := make(chan error, 1)
 		go func() {
 			// Create a value and lock a mutex to protect the value.
 			value := 0
@@ -53,7 +64,9 @@ func TestHighThreadLocking(t *testing.T) {
 				innerID := safeLock.Lock()
 				defer safeLock.Unlock(innerID)
 				if value != 1 {
-					t.Fatal("Lock was grabbed incorrectly")
+					errs <- fmt.Errorf("go>go(%d): Lock was grabbed incorrectly", index)
+				} else {
+					errs <- nil
 				}
 			}()
 
@@ -65,6 +78,9 @@ func TestHighThreadLocking(t *testing.T) {
 			value = 1
 			safeLock.Unlock(outerID)
 		}()
+		if err := <-errs; err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

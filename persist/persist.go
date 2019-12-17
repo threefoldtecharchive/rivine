@@ -10,10 +10,6 @@ import (
 )
 
 const (
-	// persistDir defines the folder that is used for testing the persist
-	// package.
-	persistDir = "persist"
-
 	// tempSuffix is the suffix that is applied to the temporary/backup versions
 	// of the files being persisted.
 	tempSuffix = "_temp"
