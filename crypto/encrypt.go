@@ -11,6 +11,7 @@ import (
 
 	"github.com/NebulousLabs/fastrand"
 
+	//lint:ignore SA1019 twofish is a legacy cipher but already actively used in this implementation
 	"golang.org/x/crypto/twofish"
 )
 

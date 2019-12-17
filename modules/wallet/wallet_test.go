@@ -35,6 +35,7 @@ type walletTester struct {
 }
 
 // createWalletTester takes a testing.T and creates a WalletTester.
+//lint:ignore U1000 used in `TestDoubleSignError` test in the `transactionbuilder_test.go` file of this package.
 func createWalletTester(name string) (*walletTester, error) {
 	bcInfo := types.DefaultBlockchainInfo()
 	chainCts := types.TestnetChainConstants()

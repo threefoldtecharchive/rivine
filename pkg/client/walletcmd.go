@@ -15,7 +15,6 @@ import (
 
 	"github.com/threefoldtech/rivine/modules"
 	"github.com/threefoldtech/rivine/pkg/api"
-	"github.com/threefoldtech/rivine/pkg/cli"
 	clipkg "github.com/threefoldtech/rivine/pkg/cli"
 	"github.com/threefoldtech/rivine/types"
 )
@@ -365,7 +364,7 @@ func (walletCmd *walletCmd) addressCmd() {
 	addr := new(api.WalletAddressGET)
 	err := walletCmd.cli.GetWithResponse("/wallet/address", addr)
 	if err != nil {
-		cli.DieWithError("Could not generate new address:", err)
+		clipkg.DieWithError("Could not generate new address:", err)
 	}
 	fmt.Printf("Created new address: %s\n", addr.Address)
 }
@@ -375,7 +374,7 @@ func (walletCmd *walletCmd) addressesCmd() {
 	addrs := new(api.WalletAddressesGET)
 	err := walletCmd.cli.GetWithResponse("/wallet/addresses", addrs)
 	if err != nil {
-		cli.DieWithError("Failed to fetch addresses:", err)
+		clipkg.DieWithError("Failed to fetch addresses:", err)
 	}
 	if !walletCmd.walletAddressesCfg.ShowIndices {
 		for _, addr := range addrs.Addresses {
@@ -403,19 +402,19 @@ func (walletCmd *walletCmd) initCmd() {
 
 		passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 		if err != nil {
-			cli.Die("Reading passphrase failed:", err)
+			clipkg.Die("Reading passphrase failed:", err)
 		}
 		if passphrase == "" {
-			cli.Die("passphrase is required and cannot be empty")
+			clipkg.Die("passphrase is required and cannot be empty")
 		}
 
 		repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
 		if err != nil {
-			cli.Die("Reading passphrase failed:", err)
+			clipkg.Die("Reading passphrase failed:", err)
 		}
 
 		if repassphrase != passphrase {
-			cli.Die("Given passphrases do not match !!")
+			clipkg.Die("Given passphrases do not match !!")
 		}
 
 		data = fmt.Sprintf("passphrase=%s", passphrase)
@@ -424,9 +423,9 @@ func (walletCmd *walletCmd) initCmd() {
 	err := walletCmd.cli.PostWithResponse("/wallet/init", data, &er)
 	if err != nil {
 		if walletCmd.walletInitCfg.Plain {
-			cli.DieWithError("Error when creating plain wallet:", err)
+			clipkg.DieWithError("Error when creating plain wallet:", err)
 		} else {
-			cli.DieWithError("Error when creating encrypted wallet:", err)
+			clipkg.DieWithError("Error when creating encrypted wallet:", err)
 		}
 	}
 
@@ -448,19 +447,19 @@ func (walletCmd *walletCmd) recoverCmd() {
 
 		passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 		if err != nil {
-			cli.Die("Reading passphrase failed:", err)
+			clipkg.Die("Reading passphrase failed:", err)
 		}
 		if passphrase == "" {
-			cli.Die("passphrase is required and cannot be empty")
+			clipkg.Die("passphrase is required and cannot be empty")
 		}
 
 		repassphrase, err := speakeasy.Ask("Reenter passphrase: ")
 		if err != nil {
-			cli.Die("Reading passphrase failed:", err)
+			clipkg.Die("Reading passphrase failed:", err)
 		}
 
 		if repassphrase != passphrase {
-			cli.Die("Given passphrases do not match !!")
+			clipkg.Die("Given passphrases do not match !!")
 		}
 
 		data = fmt.Sprintf("passphrase=%s&", passphrase)
@@ -471,26 +470,26 @@ func (walletCmd *walletCmd) recoverCmd() {
 		var err error
 		mnemonic, err = speakeasy.Ask("Enter existing mnemonic to be used as primary seed: ")
 		if err != nil {
-			cli.Die("Reading mnemonic failed:", err)
+			clipkg.Die("Reading mnemonic failed:", err)
 		}
 	}
 	seed, err := modules.InitialSeedFromMnemonic(mnemonic)
 	if err != nil {
-		cli.Die("Invalid mnemonic given:", err)
+		clipkg.Die("Invalid mnemonic given:", err)
 	}
 	data += fmt.Sprintf("seed=%s", seed.String())
 
 	err = walletCmd.cli.PostWithResponse("/wallet/init", data, &er)
 	if err != nil {
 		if walletCmd.walletRecoverCfg.Plain {
-			cli.DieWithError("Error when creating plain wallet:", err)
+			clipkg.DieWithError("Error when creating plain wallet:", err)
 		} else {
-			cli.DieWithError("Error when creating encrypted wallet:", err)
+			clipkg.DieWithError("Error when creating encrypted wallet:", err)
 		}
 	}
 
 	if er.PrimarySeed != mnemonic {
-		cli.Die("Wallet was created, but returned primary seed mnemonic was unexpected:\n\n" + er.PrimarySeed)
+		clipkg.Die("Wallet was created, but returned primary seed mnemonic was unexpected:\n\n" + er.PrimarySeed)
 	}
 
 	fmt.Printf("Mnemonic of primary seed:\n%s\n\n", er.PrimarySeed)
@@ -505,7 +504,7 @@ func (walletCmd *walletCmd) loadSeedCmd() {
 	if !walletCmd.walletLoadSeedCfg.Plain {
 		passphrase, err := speakeasy.Ask("Wallet passphrase: ")
 		if err != nil {
-			cli.Die("Reading passphrase failed:", err)
+			clipkg.Die("Reading passphrase failed:", err)
 		}
 		data = fmt.Sprintf("passphrase=%s&", passphrase)
 	}
@@ -514,13 +513,13 @@ func (walletCmd *walletCmd) loadSeedCmd() {
 		var err error
 		seed, err = speakeasy.Ask("Existing Mnemonic: ")
 		if err != nil {
-			cli.Die("Reading seed failed:", err)
+			clipkg.Die("Reading seed failed:", err)
 		}
 	}
 	data += fmt.Sprintf("mnemonic=%s", seed)
 	err := walletCmd.cli.Post("/wallet/seed", data)
 	if err != nil {
-		cli.DieWithError("Could not add seed:", err)
+		clipkg.DieWithError("Could not add seed:", err)
 	}
 	fmt.Println("Added Key")
 }
@@ -529,7 +528,7 @@ func (walletCmd *walletCmd) loadSeedCmd() {
 func (walletCmd *walletCmd) lockCmd() {
 	err := walletCmd.cli.Post("/wallet/lock", "")
 	if err != nil {
-		cli.DieWithError("Could not lock wallet:", err)
+		clipkg.DieWithError("Could not lock wallet:", err)
 	}
 }
 
@@ -538,7 +537,7 @@ func (walletCmd *walletCmd) seedsCmd() {
 	var seedInfo api.WalletSeedsGET
 	err := walletCmd.cli.GetWithResponse("/wallet/seeds", &seedInfo)
 	if err != nil {
-		cli.DieWithError("Error retrieving the current seed:", err)
+		clipkg.DieWithError("Error retrieving the current seed:", err)
 	}
 	fmt.Printf("Primary Seed: %s\n"+
 		"Addresses Remaining %d\n"+
@@ -554,7 +553,7 @@ func (walletCmd *walletCmd) sendCoinsCmd(cmd *cobra.Command, args []string) {
 	pairs, err := parsePairedOutputs(args, currencyConvertor.ParseCoinString)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
-		cli.Die(err)
+		clipkg.Die(err)
 	}
 
 	body := api.WalletCoinsPOST{
@@ -572,7 +571,7 @@ func (walletCmd *walletCmd) sendCoinsCmd(cmd *cobra.Command, args []string) {
 		var uh types.UnlockHash
 		err = uh.LoadString(walletCmd.sendCoinsCfg.RefundAddress)
 		if err != nil {
-			cli.DieWithError("invalid refund address specified", err)
+			clipkg.DieWithError("invalid refund address specified", err)
 		}
 		body.RefundAddress = &uh
 	} else if walletCmd.sendCoinsCfg.RefundAddressNew {
@@ -582,12 +581,12 @@ func (walletCmd *walletCmd) sendCoinsCmd(cmd *cobra.Command, args []string) {
 
 	bytes, err := json.Marshal(&body)
 	if err != nil {
-		cli.Die("Failed to JSON Marshal the input body:", err)
+		clipkg.Die("Failed to JSON Marshal the input body:", err)
 	}
 	var resp api.WalletCoinsPOSTResp
 	err = walletCmd.cli.PostWithResponse("/wallet/coins", string(bytes), &resp)
 	if err != nil {
-		cli.DieWithError("Could not send coins:", err)
+		clipkg.DieWithError("Could not send coins:", err)
 	}
 	fmt.Println("Succesfully sent coins as transaction " + resp.TransactionID.String())
 	for _, co := range body.CoinOutputs {
@@ -602,7 +601,7 @@ func (walletCmd *walletCmd) sendBlockStakesCmd(cmd *cobra.Command, args []string
 	pairs, err := parsePairedOutputs(args, stringToBlockStakes)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
-		cli.Die(err)
+		clipkg.Die(err)
 	}
 
 	body := api.WalletBlockStakesPOST{
@@ -620,7 +619,7 @@ func (walletCmd *walletCmd) sendBlockStakesCmd(cmd *cobra.Command, args []string
 		var uh types.UnlockHash
 		err = uh.LoadString(walletCmd.sendBlockStakesCfg.RefundAddress)
 		if err != nil {
-			cli.DieWithError("invalid refund address specified", err)
+			clipkg.DieWithError("invalid refund address specified", err)
 		}
 		body.RefundAddress = &uh
 	} else if walletCmd.sendBlockStakesCfg.RefundAddressNew {
@@ -630,12 +629,12 @@ func (walletCmd *walletCmd) sendBlockStakesCmd(cmd *cobra.Command, args []string
 
 	bytes, err := json.Marshal(&body)
 	if err != nil {
-		cli.Die("Failed to JSON Marshal the input body:", err)
+		clipkg.Die("Failed to JSON Marshal the input body:", err)
 	}
 	var resp api.WalletBlockStakesPOSTResp
 	err = walletCmd.cli.PostWithResponse("/wallet/blockstakes", string(bytes), &resp)
 	if err != nil {
-		cli.DieWithError("Could not send block stakes:", err)
+		clipkg.DieWithError("Could not send block stakes:", err)
 	}
 	fmt.Println("Succesfully sent blockstakes as transaction " + resp.TransactionID.String())
 	for _, bo := range body.BlockStakeOutputs {
@@ -705,7 +704,7 @@ func (walletCmd *walletCmd) blockStakesStatsCmd() {
 	bsstat := new(api.WalletBlockStakeStatsGET)
 	err := walletCmd.cli.GetWithResponse("/wallet/blockstakestats", bsstat)
 	if err != nil {
-		cli.DieWithError("Could not gen blockstake info:", err)
+		clipkg.DieWithError("Could not gen blockstake info:", err)
 	}
 	fmt.Printf("BlockStake stats:\n")
 	fmt.Printf("Total active Blockstake is %v\n", bsstat.TotalActiveBlockStake)
@@ -735,14 +734,14 @@ func (walletCmd *walletCmd) balanceCmd() {
 	status := new(api.WalletGET)
 	err := walletCmd.cli.GetWithResponse("/wallet", status)
 	if err != nil {
-		cli.DieWithError("Could not get wallet status:", err)
+		clipkg.DieWithError("Could not get wallet status:", err)
 	}
 	encStatus := "Unencrypted"
 	if status.Encrypted {
 		encStatus = "Encrypted"
 	}
 	if !status.Unlocked {
-		cli.DieWithExitCode(cli.ExitCodeUsage, fmt.Sprintf(`Wallet status:
+		clipkg.DieWithExitCode(clipkg.ExitCodeUsage, fmt.Sprintf(`Wallet status:
 %v, Locked
 Unlock the wallet to view balance
 `, encStatus))
@@ -830,7 +829,7 @@ func (walletCmd *walletCmd) listTransactionsCmd() {
 	wtg := new(api.WalletTransactionsGET)
 	err := walletCmd.cli.GetWithResponse("/wallet/transactions?startheight=0&endheight=10000000", wtg)
 	if err != nil {
-		cli.DieWithError("Could not fetch transaction history:", err)
+		clipkg.DieWithError("Could not fetch transaction history:", err)
 	}
 
 	multiSigWalletTxns := make(map[types.UnlockHash][]modules.ProcessedTransaction)
@@ -972,13 +971,13 @@ func (walletCmd *walletCmd) listTransactionsCmd() {
 func (walletCmd *walletCmd) unlockCmd() {
 	password, err := speakeasy.Ask("Wallet password: ")
 	if err != nil {
-		cli.Die("Reading password failed:", err)
+		clipkg.Die("Reading password failed:", err)
 	}
 	fmt.Println("Unlocking the wallet. This may take several minutes...")
 	qs := fmt.Sprintf("passphrase=%s", password)
 	err = walletCmd.cli.Post("/wallet/unlock", qs)
 	if err != nil {
-		cli.DieWithError("Could not unlock wallet:", err)
+		clipkg.DieWithError("Could not unlock wallet:", err)
 	}
 	fmt.Println("Wallet unlocked")
 }
@@ -989,7 +988,7 @@ func (walletCmd *walletCmd) sendTxCmd(txnjson string) {
 	var resp api.TransactionPoolPOST
 	err := walletCmd.cli.PostWithResponse("/transactionpool/transactions", txnjson, &resp)
 	if err != nil {
-		cli.DieWithError("Could not publish transaction:", err)
+		clipkg.DieWithError("Could not publish transaction:", err)
 	}
 	fmt.Println("Transaction published, transaction id:", resp.TransactionID)
 }
@@ -1005,14 +1004,14 @@ func (walletCmd *walletCmd) listUnlockedCmd(_ *cobra.Command, args []string) {
 	if addressGiven {
 		err = address.LoadString(args[0])
 		if err != nil {
-			cli.Die("failed to parse given wallet address: ", err)
+			clipkg.Die("failed to parse given wallet address: ", err)
 		}
 	}
 
 	var resp api.WalletListUnlockedGET
 	err = walletCmd.cli.GetWithResponse("/wallet/unlocked", &resp)
 	if err != nil {
-		cli.DieWithError("failed to get unlocked outputs: ", err)
+		clipkg.DieWithError("failed to get unlocked outputs: ", err)
 	}
 
 	if addressGiven {
@@ -1082,14 +1081,14 @@ func (walletCmd *walletCmd) listLockedCmd(_ *cobra.Command, args []string) {
 	if addressGiven {
 		err = address.LoadString(args[0])
 		if err != nil {
-			cli.Die("failed to parse given wallet address: ", err)
+			clipkg.Die("failed to parse given wallet address: ", err)
 		}
 	}
 
 	var resp api.WalletListLockedGET
 	err = walletCmd.cli.GetWithResponse("/wallet/locked", &resp)
 	if err != nil {
-		cli.DieWithError("Could not get locked outputs: ", err)
+		clipkg.DieWithError("Could not get locked outputs: ", err)
 	}
 
 	if addressGiven {
@@ -1151,11 +1150,11 @@ func (walletCmd *walletCmd) listLockedCmd(_ *cobra.Command, args []string) {
 func (walletCmd *walletCmd) createMultisigAddressesCmd(cmd *cobra.Command, args []string) {
 	msr, err := strconv.ParseUint(args[0], 10, 64)
 	if err != nil {
-		cli.Die(err)
+		clipkg.Die(err)
 	}
 
 	if uint64(len(args[1:])) < msr {
-		cli.Die("Invalid amount of signatures required")
+		clipkg.Die("Invalid amount of signatures required")
 	}
 
 	uhs := types.UnlockHashSlice{}
@@ -1163,7 +1162,7 @@ func (walletCmd *walletCmd) createMultisigAddressesCmd(cmd *cobra.Command, args 
 	for _, addr := range args[1:] {
 		err = uh.LoadString(addr)
 		if err != nil {
-			cli.Die("Failed to load unlock hash:", err)
+			clipkg.Die("Failed to load unlock hash:", err)
 		}
 		uhs = append(uhs, uh)
 	}
@@ -1188,14 +1187,14 @@ func (walletCmd *walletCmd) createCoinTxCmd(cmd *cobra.Command, args []string) {
 	// Check that the remaining args are condition + value pairs
 	if (len(args)-len(inputs))%2 != 0 {
 		cmd.UsageFunc()(cmd)
-		cli.Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
+		clipkg.Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
 	}
 
 	// parse the remainder as output coditions and values
 	pairs, err := parsePairedOutputs(args[len(inputs):], currencyConvertor.ParseCoinString)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
-		cli.Die(err)
+		clipkg.Die(err)
 	}
 
 	body := api.WalletCreateTransactionPOST{}
@@ -1207,12 +1206,12 @@ func (walletCmd *walletCmd) createCoinTxCmd(cmd *cobra.Command, args []string) {
 	buffer := bytes.NewBuffer(nil)
 	err = json.NewEncoder(buffer).Encode(body)
 	if err != nil {
-		cli.Die("Could not create raw transaction from inputs and outputs: ", err)
+		clipkg.Die("Could not create raw transaction from inputs and outputs: ", err)
 	}
 	var resp api.WalletCreateTransactionRESP
 	err = walletCmd.cli.PostWithResponse("/wallet/create/transaction", buffer.String(), &resp)
 	if err != nil {
-		cli.DieWithError("Failed to create transaction:", err)
+		clipkg.DieWithError("Failed to create transaction:", err)
 	}
 
 	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
@@ -1232,14 +1231,14 @@ func (walletCmd *walletCmd) createBlockStakeTxCmd(cmd *cobra.Command, args []str
 	// Check that the remaining args are condition + value pairs
 	if (len(args)-len(inputs))%2 != 0 {
 		cmd.UsageFunc()(cmd)
-		cli.Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
+		clipkg.Die("Invalid arguments. Arguments must be of the form <parentID>... <dest>|<rawCondition> <amount> [<dest>|<rawCondition> <amount>]...")
 	}
 
 	// parse the remainder as output coditions and values
 	pairs, err := parsePairedOutputs(args[len(inputs):], stringToBlockStakes)
 	if err != nil {
 		cmd.UsageFunc()(cmd)
-		cli.Die(err)
+		clipkg.Die(err)
 	}
 
 	body := api.WalletCreateTransactionPOST{}
@@ -1251,12 +1250,12 @@ func (walletCmd *walletCmd) createBlockStakeTxCmd(cmd *cobra.Command, args []str
 	buffer := bytes.NewBuffer(nil)
 	err = json.NewEncoder(buffer).Encode(body)
 	if err != nil {
-		cli.Die("Could not create raw transaction from inputs and outputs: ", err)
+		clipkg.Die("Could not create raw transaction from inputs and outputs: ", err)
 	}
 	var resp api.WalletCreateTransactionRESP
 	err = walletCmd.cli.PostWithResponse("/wallet/create/transaction", buffer.String(), &resp)
 	if err != nil {
-		cli.DieWithError("Failed to create transaction:", err)
+		clipkg.DieWithError("Failed to create transaction:", err)
 	}
 
 	json.NewEncoder(os.Stdout).Encode(resp.Transaction)
@@ -1266,7 +1265,7 @@ func (walletCmd *walletCmd) signTxCmd(txnjson string) {
 	var txn types.Transaction
 	err := walletCmd.cli.PostWithResponse("/wallet/sign", txnjson, &txn)
 	if err != nil {
-		cli.DieWithError("Failed to sign transaction:", err)
+		clipkg.DieWithError("Failed to sign transaction:", err)
 	}
 
 	json.NewEncoder(os.Stdout).Encode(txn)
