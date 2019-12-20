@@ -36,9 +36,9 @@ type SpendableKeyFile struct {
 	SpendableKey           crypto.Ciphertext
 }
 
-// WalletPersist contains all data that persists on disk during wallet
+// persistentData contains all data that persists on disk during wallet
 // operation.
-type WalletPersist struct {
+type persistentData struct {
 	// EncryptionVerification is an encrypted string that, when decrypted, is
 	// 32 '0' bytes. The UID is used to prevent leaking information in the
 	// event that the same key gets used for multiple wallets.
