@@ -15,33 +15,6 @@ var (
 	ErrNilOutputs = errors.New("nil outputs cannot be send")
 )
 
-// sortedOutputs is a struct containing a slice of siacoin outputs and their
-// corresponding ids. sortedOutputs can be sorted using the sort package.
-type sortedOutputs struct {
-	ids     []types.CoinOutputID
-	outputs []types.CoinOutput
-}
-
-// Len returns the number of elements in the sortedOutputs struct.
-func (so sortedOutputs) Len() int {
-	if len(so.ids) != len(so.outputs) {
-		build.Severe("sortedOutputs object is corrupt")
-	}
-	return len(so.ids)
-}
-
-// Less returns whether element 'i' is less than element 'j'. The currency
-// value of each output is used for comparison.
-func (so sortedOutputs) Less(i, j int) bool {
-	return so.outputs[i].Value.Cmp(so.outputs[j].Value) < 0
-}
-
-// Swap swaps two elements in the sortedOutputs set.
-func (so sortedOutputs) Swap(i, j int) {
-	so.ids[i], so.ids[j] = so.ids[j], so.ids[i]
-	so.outputs[i], so.outputs[j] = so.outputs[j], so.outputs[i]
-}
-
 // ConfirmedBalance returns the balance of the wallet according to all of the
 // confirmed transactions.
 func (w *Wallet) ConfirmedBalance() (coinBalance types.Currency, blockstakeBalance types.Currency, err error) {
