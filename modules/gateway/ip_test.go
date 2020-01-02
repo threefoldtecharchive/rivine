@@ -49,7 +49,6 @@ func TestIPFromPeers(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	// Create gateways for testing.
 	g1 := newNamedTestingGateway(t, "1")

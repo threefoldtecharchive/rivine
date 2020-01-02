@@ -33,7 +33,6 @@ func TestAddPeer(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -55,7 +54,6 @@ func TestAcceptPeer(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 	g.mu.Lock()
@@ -135,7 +133,6 @@ func TestRandomOutboundPeer(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 	g.mu.Lock()
@@ -167,7 +164,6 @@ func TestListen(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -273,7 +269,6 @@ func TestConnect(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	// create bootstrap peer
 	bootstrap := newNamedTestingGateway(t, "1")
 	defer bootstrap.Close()
@@ -331,7 +326,6 @@ func TestConnectRejectsInvalidAddrs(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newNamedTestingGateway(t, "1")
 	defer g.Close()
 
@@ -495,7 +489,6 @@ func TestDisconnect(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -538,7 +531,6 @@ func TestPeerManager(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 
@@ -571,7 +563,6 @@ func TestOverloadedBootstrap(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	// Create fullyConnectedThreshold*2 peers and connect them all to only the
 	// first node.
@@ -695,7 +686,6 @@ func TestPeerManagerPriority(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
@@ -796,7 +786,6 @@ func TestPeerManagerOutboundSave(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	// Create enough gateways so that every gateway should automatically end up
 	// with every other gateway as an outbound peer.

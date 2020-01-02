@@ -20,7 +20,6 @@ func TestAddNode(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -53,7 +52,6 @@ func TestRemoveNode(t *testing.T) {
 	}
 	g := newTestingGateway(t)
 	defer g.Close()
-	t.Parallel()
 
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -74,7 +72,6 @@ func TestRandomNode(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -152,7 +149,6 @@ func TestShareNodes(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -228,7 +224,6 @@ func TestNodesAreSharedOnConnect(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")

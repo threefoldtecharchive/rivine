@@ -41,7 +41,6 @@ func TestRegisterRPC(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -60,7 +59,6 @@ func TestUnregisterRPC(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -106,7 +104,6 @@ func TestRegisterConnectCall(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -126,7 +123,6 @@ func TestUnregisterConnectCallPanics(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -176,7 +172,6 @@ func TestRPC(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 
@@ -252,7 +247,6 @@ func TestThreadedHandleConn(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -316,7 +310,6 @@ func TestBroadcast(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -440,7 +433,6 @@ func TestOutboundAndInboundRPCs(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -489,7 +481,6 @@ func TestCallingRPCFromRPC(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -549,7 +540,6 @@ func TestRPCRatelimit(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")

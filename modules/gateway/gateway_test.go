@@ -51,7 +51,6 @@ func TestExportedMethodsErrAfterClose(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 
 	if err := g.Close(); err != nil {
@@ -72,7 +71,6 @@ func TestAddress(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g := newTestingGateway(t)
 	defer g.Close()
 
@@ -100,7 +98,6 @@ func TestPeers(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 	g1 := newNamedTestingGateway(t, "1")
 	defer g1.Close()
 	g2 := newNamedTestingGateway(t, "2")
@@ -159,7 +156,6 @@ func TestClose(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	g := newTestingGateway(t)
 	err := g.Close()
@@ -175,7 +171,6 @@ func TestParallelClose(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	// Spin up three gateways in parallel.
 	var gs [3]*Gateway
