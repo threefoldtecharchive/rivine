@@ -19,7 +19,7 @@ jobs:
         - go get -u github.com/gordonklaus/ineffassign
         - go get -u honnef.co/go/tools/cmd/staticcheck
       script:
-        - make test-long
+        - make test-long PARALLEL=4
         - make ineffassign
         - make staticcheck
     - stage: test
@@ -29,7 +29,7 @@ jobs:
         - go get -u github.com/gordonklaus/ineffassign
         - go get -u honnef.co/go/tools/cmd/staticcheck
       script:
-        - make test-long
+        - make test-long PARALLEL=4
         - make ineffassign
         - make staticcheck
     - stage: test

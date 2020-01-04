@@ -8,6 +8,7 @@ run = Test
 rivinecgpkgs = ./cmd/rivinecg
 pkgs = ./build ./modules/gateway $(rivinecgpkgs)
 testpkgs = ./build ./crypto ./pkg/encoding/siabin ./pkg/encoding/rivbin ./modules ./modules/gateway ./modules/blockcreator ./modules/wallet ./modules/explorer ./modules/consensus ./persist ./sync ./types ./pkg/cli ./pkg/client ./pkg/daemon ./cmd/rivinecg/cmd ./cmd/rivinecg/pkg/config
+PARALLEL=1
 
 version = $(shell git describe | cut -d '-' -f 1)
 commit = $(shell git rev-parse --short HEAD)
@@ -52,11 +53,11 @@ staticcheck:
 	staticcheck $(testpkgs)
 
 test:
-	go test -short -tags='debug testing' -timeout=30s $(testpkgs) -run=$(run)
+	go test -short -tags='debug testing' -parallel=$(PARALLEL) -timeout=30s $(testpkgs) -run=$(run)
 test-v:
-	go test -race -v -short -tags='debug testing' -timeout=60s $(testpkgs) -run=$(run)
+	go test -race -v -short -tags='debug testing' -parallel=$(PARALLEL) -timeout=60s $(testpkgs) -run=$(run)
 test-long: fmt vet
-	go test -v -race -tags='debug testing' -timeout=1000s $(testpkgs) -run=$(run)
+	go test -v -race -tags='debug testing' -parallel=$(PARALLEL) -timeout=1000s $(testpkgs) -run=$(run)
 bench: fmt
 	go test -tags='testing' -timeout=1000s -run=XXX -bench=. $(testpkgs)
 cover:
