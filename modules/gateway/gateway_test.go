@@ -18,16 +18,7 @@ import (
 // newTestingGateway returns a gateway ready to use in a testing environment.
 // Do not call it more than once during the same test as the peristent files can interfere.
 func newTestingGateway(t *testing.T) *Gateway {
-	if testing.Short() {
-		build.Critical("newTestingGateway called during short test")
-	}
-
-	g, err := New("localhost:0", false, 1, build.TempDir("gateway", t.Name()),
-		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
-	if err != nil {
-		build.Critical(err)
-	}
-	return g
+	return newNamedTestingGateway(t, "")
 }
 
 // newNamedTestingGateway returns a gateway ready to use in a testing
@@ -121,12 +112,11 @@ func TestPeers(t *testing.T) {
 	}
 }
 
-// TestNew checks that a call to New is effective.
-func TestNew(t *testing.T) {
+// TestNewErrors checks that a call to New with invalid paramaters returns an error
+func TestNewErrors(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	bcInfo := types.DefaultBlockchainInfo()
 	cts := types.TestnetChainConstants()

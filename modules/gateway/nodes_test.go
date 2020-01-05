@@ -258,7 +258,6 @@ func TestPruneNodeThreshold(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-	t.Parallel()
 
 	// The next part of the test expects the pruneNodeListLen to be at least
 	// 'maxSharedNodes * 2 + 2 in size.
