@@ -352,7 +352,8 @@ func TestHealthyNodeListPruning(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
-
+	//Limit the number of required healthy nodes for this test
+	healthyNodeListLen = 15
 	// Create and connect healthyNodeListLen*2 gateways.
 	var gs []*Gateway
 	for i := 0; i < healthyNodeListLen*2; i++ {

@@ -191,8 +191,8 @@ func (g *Gateway) Close() error {
 	return g.saveSync()
 }
 
-// New returns an initialized Gateway.
-func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress, verboseLogging bool) (*Gateway, error) {
+// newGateway returns an initialized Gateway.
+func newGateway(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress, logger *persist.Logger) (*Gateway, error) {
 	// Create the directory if it doesn't exist.
 	err := os.MkdirAll(persistDir, 0700)
 	if err != nil {
@@ -200,7 +200,7 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	}
 
 	g := &Gateway{
-
+		log:                  logger,
 		concurrentRPCPerPeer: concurrentRPCPerPeer,
 
 		handlers: make(map[rpcID]modules.RPCFunc),
@@ -218,12 +218,6 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	// Set Unique GatewayID
 	fastrand.Read(g.id[:])
 
-	// Create the logger.
-	g.log, err = persist.NewFileLogger(bcInfo,
-		filepath.Join(g.persistDir, logFile), verboseLogging)
-	if err != nil {
-		return nil, err
-	}
 	// Establish the closing of the logger.
 	g.threads.AfterStop(func() {
 		if err := g.log.Close(); err != nil {
@@ -350,6 +344,23 @@ func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir st
 	go g.threadedLearnHostname(ctx)
 
 	return g, nil
+}
+
+// New returns an initialized Gateway with a file;ogger in the persistent directory.
+func New(addr string, bootstrap bool, concurrentRPCPerPeer uint64, persistDir string, bcInfo types.BlockchainInfo, chainCts types.ChainConstants, bootstrapPeers []modules.NetAddress, verboseLogging bool) (*Gateway, error) {
+
+	// Create the logger.
+	err := os.MkdirAll(persistDir, 0700)
+	if err != nil {
+		return nil, err
+	}
+	logger, err := persist.NewFileLogger(bcInfo,
+		filepath.Join(persistDir, logFile), verboseLogging)
+	if err != nil {
+		return nil, err
+	}
+	// Create the gateway
+	return newGateway(addr, bootstrap, concurrentRPCPerPeer, persistDir, bcInfo, chainCts, bootstrapPeers, logger)
 }
 
 func (g *Gateway) ensureBootstrapPeerConnection(closeChan chan struct{}, bootstrapPeers []modules.NetAddress) {

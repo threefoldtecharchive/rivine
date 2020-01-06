@@ -3,6 +3,7 @@ package persist
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -131,4 +132,9 @@ func NewFileLogger(info types.BlockchainInfo, logFilename string, verbose bool) 
 	}
 	cf := &closeableFile{File: logFile}
 	return NewLogger(info, cf, verbose), nil
+}
+
+//NewDiscardLogger creates a logger on which all calls succced but do nothing.
+func NewDiscardLogger() *Logger {
+	return NewLogger(types.BlockchainInfo{}, ioutil.Discard, false)
 }

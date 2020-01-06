@@ -11,6 +11,7 @@ import (
 
 	"github.com/threefoldtech/rivine/build"
 	"github.com/threefoldtech/rivine/modules"
+	"github.com/threefoldtech/rivine/persist"
 	siasync "github.com/threefoldtech/rivine/sync"
 	"github.com/threefoldtech/rivine/types"
 )
@@ -28,8 +29,8 @@ func newNamedTestingGateway(t *testing.T, suffix string) *Gateway {
 		build.Critical("newTestingGateway called during short test")
 	}
 
-	g, err := New("localhost:0", false, 1, build.TempDir("gateway", t.Name()+suffix),
-		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, false)
+	g, err := newGateway("localhost:0", false, 1, build.TempDir("gateway", t.Name()+suffix),
+		types.DefaultBlockchainInfo(), types.TestnetChainConstants(), nil, persist.NewDiscardLogger())
 	if err != nil {
 		build.Critical(err)
 	}
