@@ -60,7 +60,7 @@ test:
 test-v:
 	go test -race -v -short -tags='debug testing' -parallel=$(PARALLEL) -timeout=60s $(testpkgs) -run=$(run)
 test-long: fmt vet
-	go test -v -race -tags='debug testing' -parallel=$(PARALLEL) -timeout=1000s $(testpkgs) -run=$(run)
+	go test -v -race -tags='debug testing' -parallel=$(PARALLEL) -timeout=1000s $(testpkgs)
 bench: fmt
 	go test -tags='testing' -timeout=1000s -run=XXX -bench=. $(testpkgs)
 cover:
