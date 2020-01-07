@@ -134,7 +134,7 @@ func NewFileLogger(info types.BlockchainInfo, logFilename string, verbose bool) 
 	return NewLogger(info, cf, verbose), nil
 }
 
-//NewDiscardLogger creates a logger on which all calls succced but do nothing.
+//NewDiscardLogger creates a logger on which all calls succceed but do nothing.
 func NewDiscardLogger() *Logger {
 	return NewLogger(types.BlockchainInfo{}, ioutil.Discard, false)
 }

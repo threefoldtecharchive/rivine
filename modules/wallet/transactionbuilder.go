@@ -40,7 +40,7 @@ type inputSignContext struct {
 	UnlockHash types.UnlockHash
 }
 
-// FundCoins will add a siacoin input of exactly 'amount' to the
+// FundCoins will add coin input of exactly 'amount' to the
 // transaction. The coin input will not be signed until 'Sign' is called
 // on the transaction builder.
 func (tb *transactionBuilder) FundCoins(amount types.Currency, refundAddress *types.UnlockHash, reuseRefundAddress bool) error {
@@ -81,7 +81,7 @@ func (tb *transactionBuilder) FundCoins(amount types.Currency, refundAddress *ty
 	}
 	sort.Sort(sort.Reverse(so))
 
-	// Create a transaction that will add the correct amount of siacoins to the
+	// Create a transaction that will add the correct amount of coins to the
 	// transaction.
 	var fund types.Currency
 	// potentialFund tracks the balance of the wallet including outputs that
