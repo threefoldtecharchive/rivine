@@ -12,9 +12,12 @@ PARALLEL=1
 
 version = $(shell git describe | cut -d '-' -f 1)
 commit = $(shell git rev-parse --short HEAD)
-ifeq ($(commit), $(shell git rev-list -n 1 $(version) | cut -c1-8))
-fullversion = $(version)
-else
+# if the git describe fails, set the version.
+ifeq ($(version),)
+version = v0.1-$(commit)
+endif
+
+ifneq ($(commit), $(shell git rev-list -n 1 $(version) | cut -c1-7))
 fullversion = $(version)-$(commit)
 endif
 
