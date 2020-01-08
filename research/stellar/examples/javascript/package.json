@@ -9,7 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.19.1",
     "stellar-sdk": "^3.3.0"
   }
 }
