@@ -1,14 +1,16 @@
 const StellarSdk = require('stellar-sdk')
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
-async function checkAccountBalance (secret) {
-  const keypair = StellarSdk.Keypair.fromSecret(secret);
-  account = await server.loadAccount(keypair.publicKey())
+var argv = require('yargs')
+    .usage('Usage: $0 --address [string]')
+    .demandOption(['address'])
+    .argv;
+
+async function checkAccountBalance (address) {
+  account = await server.loadAccount(address)
   account.balances.forEach(balance => {
     console.log(balance)
   })
 }
 
-const secret = 'SBCSQ6QX2BRVF2HWYA3WVO2X7KP6S5P52AAEMEK2UO4WD6KC7RQI5ZST'
-
-checkAccountBalance(secret)
+checkAccountBalance(argv.address)

@@ -1,6 +1,12 @@
 const StellarSdk = require('stellar-sdk')
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
+var argv = require('yargs')
+    .usage('Usage: $0 --sourceKey [string] --destinationAddress [string] --amount [string]')
+    .demandOption(['sourceKey', 'destinationAddress', 'amount'])
+    .argv;
+
+
 async function transfer(fromSecret, destination, amount) {
   const sourceKeypair = StellarSdk.Keypair.fromSecret(fromSecret)
   const account = await server.loadAccount(sourceKeypair.publicKey())
@@ -16,7 +22,7 @@ async function transfer(fromSecret, destination, amount) {
       destination,
       // The term native asset refers to lumens
       asset: StellarSdk.Asset.native(),
-      amount,
+      amount: amount.toString(),
     }))
     .setTimeout(30)
     .build()
@@ -36,11 +42,4 @@ async function transfer(fromSecret, destination, amount) {
   }
 }
 
-// The source account is the account we will be signing and sending from.
-const sourceSecretKey = 'SBAHSEMGRJAOFGQRKAIC6TE4ZS2BQTIUM67Z6T7JRNSCQCKRMQJZBGDW'
-
-const receiverPublicKey = 'GBXCKEIL3GTPY2LFUFYMDHUENSBM3HXKOIZM3N7PBMVA4OTEXU353AGM'
-
-const amount = '15'
-
-transfer(sourceSecretKey, receiverPublicKey, amount)
+transfer(argv.sourceKey, argv.destinationAddress, argv.amount)

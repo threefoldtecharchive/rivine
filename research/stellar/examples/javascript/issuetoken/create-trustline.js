@@ -1,6 +1,11 @@
 const StellarSdk = require('stellar-sdk')
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
+var argv = require('yargs')
+    .usage('Usage: $0 --sourceKey [string] --issuerAddress [string] --assetCode [string] --limit [string]')
+    .demandOption(['sourceKey', 'issuerAddress', 'assetCode', 'limit'])
+    .argv;
+
 async function createTrusline(fromAccountSecret, issuerAddress, assetCode, limit) {
   const sourceKeypair = StellarSdk.Keypair.fromSecret(fromAccountSecret)
   const account = await server.loadAccount(sourceKeypair.publicKey())
@@ -16,7 +21,7 @@ async function createTrusline(fromAccountSecret, issuerAddress, assetCode, limit
     // Add a payment operation to the transaction
     .addOperation(StellarSdk.Operation.changeTrust({
       asset,
-      limit
+      limit: limit.toString()
     }))
     .setTimeout(30)
     .build()
@@ -44,4 +49,4 @@ const assetCode = 'TFT'
 
 const limit = '1000'
 
-createTrusline(fromAccountSecret, issuerAddress, assetCode, limit)
+createTrusline(argv.sourceKey, argv.issuerAddress, argv.assetCode, argv.limit)
