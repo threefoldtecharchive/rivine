@@ -1,12 +1,6 @@
 const StellarSdk = require('stellar-sdk')
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
-const sourceSecretKey = 'SBCSQ6QX2BRVF2HWYA3WVO2X7KP6S5P52AAEMEK2UO4WD6KC7RQI5ZST'
-const sourceKeypair = StellarSdk.Keypair.fromSecret(sourceSecretKey);
-
-const destinationSecretKey = 'SA7KHEGR2CE56IBIIRPVXJFGTXFOVL3KKJ2YZHBNNPME2EK5KIW3KT6O'
-const destinationKeypair = StellarSdk.Keypair.fromSecret(destinationSecretKey)
-
 async function fundAccount (sourceAccountKeypair, destinationAccountKeypair) {
   const fee = await server.fetchBaseFee();
   const account = await server.loadAccount(sourceAccountKeypair.publicKey());
@@ -62,5 +56,11 @@ async function fundAccountDemo (sourceKeypair, destinationKeypair, fundThroughFr
 
   return await fundAccount(sourceKeypair, destinationKeypair)
 }
+
+const sourceSecretKey = 'SBCSQ6QX2BRVF2HWYA3WVO2X7KP6S5P52AAEMEK2UO4WD6KC7RQI5ZST'
+const sourceKeypair = StellarSdk.Keypair.fromSecret(sourceSecretKey);
+
+const destinationSecretKey = 'SA7KHEGR2CE56IBIIRPVXJFGTXFOVL3KKJ2YZHBNNPME2EK5KIW3KT6O'
+const destinationKeypair = StellarSdk.Keypair.fromSecret(destinationSecretKey)
 
 fundAccountDemo(sourceKeypair, destinationKeypair, true)

@@ -9,4 +9,6 @@ async function checkAccountBalance (secret) {
   })
 }
 
-checkAccountBalance('SBCSQ6QX2BRVF2HWYA3WVO2X7KP6S5P52AAEMEK2UO4WD6KC7RQI5ZST')
+const secret = 'SBCSQ6QX2BRVF2HWYA3WVO2X7KP6S5P52AAEMEK2UO4WD6KC7RQI5ZST'
+
+checkAccountBalance(secret)

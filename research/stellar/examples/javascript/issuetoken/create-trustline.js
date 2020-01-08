@@ -1,22 +1,22 @@
 const StellarSdk = require('stellar-sdk')
 const server = new StellarSdk.Server('https://horizon-testnet.stellar.org')
 
-async function transfer(fromSecret, destination, amount) {
-  const sourceKeypair = StellarSdk.Keypair.fromSecret(fromSecret)
+async function createTrusline(fromAccountSecret, issuerAddress, assetCode, limit) {
+  const sourceKeypair = StellarSdk.Keypair.fromSecret(fromAccountSecret)
   const account = await server.loadAccount(sourceKeypair.publicKey())
 
   const fee = await server.fetchBaseFee()
+
+  const asset = new StellarSdk.Asset(assetCode, issuerAddress)
 
   const transaction = new StellarSdk.TransactionBuilder(account, {
       fee,
       networkPassphrase: StellarSdk.Networks.TESTNET
     })
     // Add a payment operation to the transaction
-    .addOperation(StellarSdk.Operation.payment({
-      destination,
-      // The term native asset refers to lumens
-      asset: StellarSdk.Asset.native(),
-      amount,
+    .addOperation(StellarSdk.Operation.changeTrust({
+      asset,
+      limit
     }))
     .setTimeout(30)
     .build()
@@ -36,11 +36,12 @@ async function transfer(fromSecret, destination, amount) {
   }
 }
 
-// The source account is the account we will be signing and sending from.
-const sourceSecretKey = 'SBAHSEMGRJAOFGQRKAIC6TE4ZS2BQTIUM67Z6T7JRNSCQCKRMQJZBGDW'
+const fromAccountSecret = 'SBAHSEMGRJAOFGQRKAIC6TE4ZS2BQTIUM67Z6T7JRNSCQCKRMQJZBGDW'
 
-const receiverPublicKey = 'GBXCKEIL3GTPY2LFUFYMDHUENSBM3HXKOIZM3N7PBMVA4OTEXU353AGM'
+const issuerAddress = 'GD2QEOERE2IDRZ6ACFWMJ6HUL5X6A6NB7H3MKH2M4CCX7JZFOET4OCN7'
 
-const amount = '15'
+const assetCode = 'TFT'
 
-transfer(sourceSecretKey, receiverPublicKey, amount)
+const limit = '1000'
+
+createTrusline(fromAccountSecret, issuerAddress, assetCode, limit)
