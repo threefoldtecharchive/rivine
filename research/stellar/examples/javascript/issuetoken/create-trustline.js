@@ -41,12 +41,4 @@ async function createTrusline(fromAccountSecret, issuerAddress, assetCode, limit
   }
 }
 
-const fromAccountSecret = 'SBAHSEMGRJAOFGQRKAIC6TE4ZS2BQTIUM67Z6T7JRNSCQCKRMQJZBGDW'
-
-const issuerAddress = 'GD2QEOERE2IDRZ6ACFWMJ6HUL5X6A6NB7H3MKH2M4CCX7JZFOET4OCN7'
-
-const assetCode = 'TFT'
-
-const limit = '1000'
-
 createTrusline(argv.sourceKey, argv.issuerAddress, argv.assetCode, argv.limit)
