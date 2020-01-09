@@ -50,6 +50,9 @@ func (tg *ThreadGroup) isStopped() bool {
 
 // Add increments the thread group counter.
 func (tg *ThreadGroup) Add() error {
+	if tg.isStopped() {
+		return ErrStopped
+	}
 	tg.bmu.Lock()
 	defer tg.bmu.Unlock()
 
@@ -122,12 +125,17 @@ func (tg *ThreadGroup) Flush() error {
 // order. After Stop is called, most actions will return ErrStopped.
 func (tg *ThreadGroup) Stop() error {
 	// Establish that Stop has been called.
+
+	if tg.isStopped() {
+		return ErrStopped
+	}
 	tg.bmu.Lock()
 	defer tg.bmu.Unlock()
 
 	if tg.isStopped() {
 		return ErrStopped
 	}
+
 	close(tg.stopChan)
 
 	tg.mu.Lock()
@@ -136,12 +144,12 @@ func (tg *ThreadGroup) Stop() error {
 	}
 	tg.onStopFns = nil
 	tg.mu.Unlock()
-
 	tg.wg.Wait()
 
 	// After waiting for all resources to release the thread group, iterate
 	// through the stop functions and call them in reverse oreder.
 	tg.mu.Lock()
+
 	for i := len(tg.afterStopFns) - 1; i >= 0; i-- {
 		tg.afterStopFns[i]()
 	}

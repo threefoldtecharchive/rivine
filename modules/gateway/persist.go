@@ -68,9 +68,8 @@ func (g *Gateway) threadedSaveLoop() {
 			defer g.threads.Done()
 
 			g.mu.Lock()
-			err = g.saveSync()
-			g.mu.Unlock()
-			if err != nil {
+			defer g.mu.Unlock()
+			if err := g.saveSync(); err != nil {
 				g.log.Println("ERROR: Unable to save gateway persist:", err)
 			}
 		}()
