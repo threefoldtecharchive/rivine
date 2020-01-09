@@ -6,10 +6,12 @@ var argv = require('yargs')
     .demandOption(['sourceKey', 'destinationAddress'])
     .argv;
 
-async function fundAccount (sourceAccountKeypair, destination) {
+async function fundAccount (sourceKey, destination) {
+  const sourceKeypair = StellarSdk.Keypair.fromSecret(sourceKey)
+  const account = await server.loadAccount(sourceKeypair.publicKey());
+
   const fee = await server.fetchBaseFee();
-  const account = await server.loadAccount(sourceAccountKeypair.publicKey());
-  console.log(account)
+
   const createTransaction = new StellarSdk.TransactionBuilder(account, {
     fee,
     networkPassphrase: StellarSdk.Networks.TESTNET
@@ -21,7 +23,7 @@ async function fundAccount (sourceAccountKeypair, destination) {
   .setTimeout(30)
   .build()
 
-  createTransaction.sign(sourceAccountKeypair)
+  createTransaction.sign(sourceKeypair)
 
   console.log(createTransaction.toEnvelope().toXDR('base64'));
 
@@ -36,4 +38,4 @@ async function fundAccount (sourceAccountKeypair, destination) {
   }
 }
 
-fundAccount(StellarSdk.Keypair.fromSecret(argv.sourceKey), argv.destinationAddress)
+fundAccount(argv.sourceKey, argv.destinationAddress)

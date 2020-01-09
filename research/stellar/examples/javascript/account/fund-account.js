@@ -5,7 +5,7 @@ var argv = require('yargs')
     .demandOption(['address'])
     .argv;
 
-    
+
 function fundThroughFriendbot (address) {
     return StellarSdk.HorizonAxiosClient.get("https://friendbot.stellar.org/?addr=" + address)
         .then(res => {
