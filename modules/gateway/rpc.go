@@ -158,8 +158,8 @@ func (g *Gateway) threadedListenPeer(p *peer) {
 		// Close the session and remove p from the peer list.
 		p.sess.Close()
 		g.mu.Lock()
+		defer g.mu.Unlock()
 		delete(g.peers, p.NetAddress)
-		g.mu.Unlock()
 	}()
 
 	for {

@@ -205,8 +205,8 @@ func (g *Gateway) managedAcceptConnPeer(conn net.Conn, remoteInfo remoteInfo) er
 			err := g.pingNode(remoteAddr)
 			if err == nil {
 				g.mu.Lock()
+				defer g.mu.Unlock()
 				g.addNode(remoteAddr)
-				g.mu.Unlock()
 			}
 		}()
 	}
