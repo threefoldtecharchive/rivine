@@ -71,6 +71,12 @@ type (
 		DeauthAddresses []types.UnlockHash
 		AuthFulfillment types.UnlockFulfillmentProxy
 	}
+
+	// AuthAddressBaseTransactionController is the base controller for all authaddress controllers,
+	// that require miner fees.
+	AuthAddressBaseTransactionController struct {
+		RequireMinerFees bool
+	}
 )
 
 // AuthAddressUpdateTransactionFromTransaction creates a AuthAddressUpdateTransaction,
@@ -78,7 +84,7 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `AuthAddressUpdateTransactionFromTransactionData` constructor.
-func AuthAddressUpdateTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (AuthAddressUpdateTransaction, error) {
+func AuthAddressUpdateTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion, requireMinerFees bool) (AuthAddressUpdateTransaction, error) {
 	if tx.Version != expectedVersion {
 		return AuthAddressUpdateTransaction{}, fmt.Errorf(
 			"an auth address update transaction requires tx version %d",
@@ -92,17 +98,22 @@ func AuthAddressUpdateTransactionFromTransaction(tx types.Transaction, expectedV
 		MinerFees:         tx.MinerFees,
 		ArbitraryData:     tx.ArbitraryData,
 		Extension:         tx.Extension,
-	})
+	}, requireMinerFees)
 }
 
 // AuthAddressUpdateTransactionFromTransactionData creates a AuthAddressUpdateTransaction,
 // using the TransactionData from a regular in-memory rivine transaction.
-func AuthAddressUpdateTransactionFromTransactionData(txData types.TransactionData) (AuthAddressUpdateTransaction, error) {
+func AuthAddressUpdateTransactionFromTransactionData(txData types.TransactionData, requireMinerFees bool) (AuthAddressUpdateTransaction, error) {
 	// (tx) extension (data) is expected to be a pointer to a valid AuthAddressUpdateTransactionExtension,
 	// which contains all the non-standard information for this transaction type.
 	extensionData, ok := txData.Extension.(*AuthAddressUpdateTransactionExtension)
 	if !ok {
 		return AuthAddressUpdateTransaction{}, errors.New("invalid extension data for a AuthAddressUpdateTransactionExtension")
+	}
+	if requireMinerFees && len(txData.MinerFees) == 0 {
+		return AuthAddressUpdateTransaction{}, errors.New("at least one miner fee is required for a AuthAddressUpdateTransaction")
+	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
+		return AuthAddressUpdateTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
 	// no coin inputs, miner fees, block stake inputs or block stake outputs are allowed
 	if len(txData.CoinInputs) != 0 || len(txData.MinerFees) != 0 || len(txData.CoinOutputs) != 0 || len(txData.BlockStakeInputs) != 0 || len(txData.BlockStakeOutputs) != 0 {
@@ -167,6 +178,8 @@ type (
 	// for an Auth AddressUpdate Transaction. It allows the modification of the set
 	// of addresses that are authorizes in order to receive or send coins.
 	AuthAddressUpdateTransactionController struct {
+		AuthAddressBaseTransactionController
+
 		// AuthInfoGetter is used to get (coin) authorization information.
 		AuthInfoGetter AuthInfoGetter
 
@@ -178,7 +191,7 @@ type (
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (autc AuthAddressUpdateTransactionController) EncodeTransactionData(w io.Writer, txData types.TransactionData) error {
-	autx, err := AuthAddressUpdateTransactionFromTransactionData(txData)
+	autx, err := AuthAddressUpdateTransactionFromTransactionData(txData, autc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a AuthAddressUpdateTx: %v", err)
 	}
@@ -199,7 +212,7 @@ func (autc AuthAddressUpdateTransactionController) DecodeTransactionData(r io.Re
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (autc AuthAddressUpdateTransactionController) JSONEncodeTransactionData(txData types.TransactionData) ([]byte, error) {
-	autx, err := AuthAddressUpdateTransactionFromTransactionData(txData)
+	autx, err := AuthAddressUpdateTransactionFromTransactionData(txData, autc.RequireMinerFees)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert txData to a AuthAddressUpdateTx: %v", err)
 	}
@@ -242,7 +255,7 @@ func (autc AuthAddressUpdateTransactionController) SignExtension(extension inter
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (autc AuthAddressUpdateTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	autx, err := AuthAddressUpdateTransactionFromTransaction(t, autc.TransactionVersion)
+	autx, err := AuthAddressUpdateTransactionFromTransaction(t, autc.TransactionVersion, autc.RequireMinerFees)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as an auth update tx: %v", err)
 	}
@@ -273,7 +286,7 @@ func (autc AuthAddressUpdateTransactionController) SignatureHash(t types.Transac
 
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (autc AuthAddressUpdateTransactionController) EncodeTransactionIDInput(w io.Writer, txData types.TransactionData) error {
-	autx, err := AuthAddressUpdateTransactionFromTransactionData(txData)
+	autx, err := AuthAddressUpdateTransactionFromTransactionData(txData, autc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a AuthAddressUpdateTx: %v", err)
 	}
@@ -334,7 +347,7 @@ type (
 //
 // Past the (tx) Version validation it piggy-backs onto the
 // `AuthAddressUpdateTransactionFromTransactionData` constructor.
-func AuthConditionUpdateTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion) (AuthConditionUpdateTransaction, error) {
+func AuthConditionUpdateTransactionFromTransaction(tx types.Transaction, expectedVersion types.TransactionVersion, requireMinerFees bool) (AuthConditionUpdateTransaction, error) {
 	if tx.Version != expectedVersion {
 		return AuthConditionUpdateTransaction{}, fmt.Errorf(
 			"an auth condition update transaction requires tx version %d",
@@ -348,17 +361,22 @@ func AuthConditionUpdateTransactionFromTransaction(tx types.Transaction, expecte
 		MinerFees:         tx.MinerFees,
 		ArbitraryData:     tx.ArbitraryData,
 		Extension:         tx.Extension,
-	})
+	}, requireMinerFees)
 }
 
 // AuthConditionUpdateTransactionFromTransactionData creates a AuthConditionUpdateTransaction,
 // using the TransactionData from a regular in-memory rivine transaction.
-func AuthConditionUpdateTransactionFromTransactionData(txData types.TransactionData) (AuthConditionUpdateTransaction, error) {
+func AuthConditionUpdateTransactionFromTransactionData(txData types.TransactionData, requireMinerFees bool) (AuthConditionUpdateTransaction, error) {
 	// (tx) extension (data) is expected to be a pointer to a valid AuthAddressUpdateTransactionExtension,
 	// which contains all the non-standard information for this transaction type.
 	extensionData, ok := txData.Extension.(*AuthConditionUpdateTransactionExtension)
 	if !ok {
 		return AuthConditionUpdateTransaction{}, errors.New("invalid extension data for a AuthConditionUpdateTransactionExtension")
+	}
+	if requireMinerFees && len(txData.MinerFees) == 0 {
+		return AuthConditionUpdateTransaction{}, errors.New("at least one miner fee is required for a AuthConditionUpdateTransaction")
+	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
+		return AuthConditionUpdateTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
 	// no coin inputs, miner fees, block stake inputs or block stake outputs are allowed
 	if len(txData.CoinInputs) != 0 || len(txData.MinerFees) != 0 || len(txData.CoinOutputs) != 0 || len(txData.BlockStakeInputs) != 0 || len(txData.BlockStakeOutputs) != 0 {
@@ -420,6 +438,8 @@ type (
 	// for an Auth ConditionUpdate Transaction. It allows the modification of the set
 	// of addresses that are authorizes in order to receive or send coins.
 	AuthConditionUpdateTransactionController struct {
+		AuthAddressBaseTransactionController
+
 		// AuthInfoGetter is used to get (coin) authorization information.
 		AuthInfoGetter AuthInfoGetter
 
@@ -431,7 +451,7 @@ type (
 
 // EncodeTransactionData implements TransactionController.EncodeTransactionData
 func (cutc AuthConditionUpdateTransactionController) EncodeTransactionData(w io.Writer, txData types.TransactionData) error {
-	cutx, err := AuthConditionUpdateTransactionFromTransactionData(txData)
+	cutx, err := AuthConditionUpdateTransactionFromTransactionData(txData, cutc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a AuthConditionUpdateTx: %v", err)
 	}
@@ -452,7 +472,7 @@ func (cutc AuthConditionUpdateTransactionController) DecodeTransactionData(r io.
 
 // JSONEncodeTransactionData implements TransactionController.JSONEncodeTransactionData
 func (cutc AuthConditionUpdateTransactionController) JSONEncodeTransactionData(txData types.TransactionData) ([]byte, error) {
-	autx, err := AuthConditionUpdateTransactionFromTransactionData(txData)
+	autx, err := AuthConditionUpdateTransactionFromTransactionData(txData, cutc.RequireMinerFees)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert txData to a AuthAddressUpdateTx: %v", err)
 	}
@@ -495,7 +515,7 @@ func (cutc AuthConditionUpdateTransactionController) SignExtension(extension int
 
 // SignatureHash implements TransactionSignatureHasher.SignatureHash
 func (cutc AuthConditionUpdateTransactionController) SignatureHash(t types.Transaction, extraObjects ...interface{}) (crypto.Hash, error) {
-	cutx, err := AuthConditionUpdateTransactionFromTransaction(t, cutc.TransactionVersion)
+	cutx, err := AuthConditionUpdateTransactionFromTransaction(t, cutc.TransactionVersion, cutc.RequireMinerFees)
 	if err != nil {
 		return crypto.Hash{}, fmt.Errorf("failed to use tx as an auth condition update tx: %v", err)
 	}
@@ -525,7 +545,7 @@ func (cutc AuthConditionUpdateTransactionController) SignatureHash(t types.Trans
 
 // EncodeTransactionIDInput implements TransactionIDEncoder.EncodeTransactionIDInput
 func (cutc AuthConditionUpdateTransactionController) EncodeTransactionIDInput(w io.Writer, txData types.TransactionData) error {
-	autx, err := AuthConditionUpdateTransactionFromTransactionData(txData)
+	autx, err := AuthConditionUpdateTransactionFromTransactionData(txData, cutc.RequireMinerFees)
 	if err != nil {
 		return fmt.Errorf("failed to convert txData to a AuthConditionUpdateTx: %v", err)
 	}

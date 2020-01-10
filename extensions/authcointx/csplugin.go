@@ -33,6 +33,7 @@ type (
 		unregisterCallback                           modules.PluginUnregisterCallback
 		unauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
 		unlockHashFilter                             func(types.UnlockHash) bool
+		RequireMinerFees                             bool
 	}
 
 	// PluginOpts are extra optional configurations one can make to the AuthCoin Plugin
@@ -47,6 +48,7 @@ type (
 		// the NilUnlockHash and AtomicSwap contract addresses require authorization.
 		// Returns true in case authorization cheque is required, False otherwise.
 		UnlockHashFilter func(types.UnlockHash) bool
+		RequireMinerFees bool
 	}
 
 	// UnauthorizedCoinTransactionExceptionCallback is the function signature for the callback that can be used
@@ -72,6 +74,7 @@ func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdat
 		genesisAuthCondition:                  genesisAuthCondition,
 		authAddressUpdateTransactionVersion:   authAddressUpdateTransactionVersion,
 		authConditionUpdateTransactionVersion: authConditionUpdateTransactionVersion,
+		RequireMinerFees:                      opts != nil && opts.RequireMinerFees,
 	}
 	if opts != nil && opts.UnauthorizedCoinTransactionExceptionCallback != nil {
 		p.unauthorizedCoinTransactionExceptionCallback = opts.UnauthorizedCoinTransactionExceptionCallback
@@ -86,10 +89,16 @@ func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdat
 		}
 	}
 	types.RegisterTransactionVersion(authAddressUpdateTransactionVersion, AuthAddressUpdateTransactionController{
+		AuthAddressBaseTransactionController: AuthAddressBaseTransactionController{
+			RequireMinerFees: p.RequireMinerFees,
+		},
 		AuthInfoGetter:     p,
 		TransactionVersion: authAddressUpdateTransactionVersion,
 	})
 	types.RegisterTransactionVersion(authConditionUpdateTransactionVersion, AuthConditionUpdateTransactionController{
+		AuthAddressBaseTransactionController: AuthAddressBaseTransactionController{
+			RequireMinerFees: p.RequireMinerFees,
+		},
 		AuthInfoGetter:     p,
 		TransactionVersion: authConditionUpdateTransactionVersion,
 	})
@@ -175,7 +184,7 @@ func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, bucket *pers
 	// check the version and handle the ones we care about
 	switch txn.Version {
 	case p.authConditionUpdateTransactionVersion:
-		acutx, err := AuthConditionUpdateTransactionFromTransaction(txn.Transaction, p.authConditionUpdateTransactionVersion)
+		acutx, err := AuthConditionUpdateTransactionFromTransaction(txn.Transaction, p.authConditionUpdateTransactionVersion, p.RequireMinerFees)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the auth condition update tx type: %v" + err.Error())
 		}
@@ -197,7 +206,7 @@ func (p *Plugin) ApplyTransaction(txn modules.ConsensusTransaction, bucket *pers
 		}
 
 	case p.authAddressUpdateTransactionVersion:
-		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn.Transaction, p.authAddressUpdateTransactionVersion)
+		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn.Transaction, p.authAddressUpdateTransactionVersion, p.RequireMinerFees)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
 		}
@@ -299,7 +308,7 @@ func (p *Plugin) RevertTransaction(txn modules.ConsensusTransaction, bucket *per
 		}
 
 	case p.authAddressUpdateTransactionVersion:
-		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn.Transaction, p.authAddressUpdateTransactionVersion)
+		aautx, err := AuthAddressUpdateTransactionFromTransaction(txn.Transaction, p.authAddressUpdateTransactionVersion, p.RequireMinerFees)
 		if err != nil {
 			return fmt.Errorf("unexpected error while unpacking the auth address update tx type: %v" + err.Error())
 		}
@@ -672,7 +681,7 @@ func (p *Plugin) validateAuthorizedCoinFlowForAllTxs(tx modules.ConsensusTransac
 
 func (p *Plugin) validateAuthAddressUpdateTx(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
 	// get AuthAddressUpdateTx
-	autx, err := AuthAddressUpdateTransactionFromTransaction(tx.Transaction, p.authAddressUpdateTransactionVersion)
+	autx, err := AuthAddressUpdateTransactionFromTransaction(tx.Transaction, p.authAddressUpdateTransactionVersion, p.RequireMinerFees)
 	if err != nil {
 		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
 		return fmt.Errorf("failed to use tx as a auth address update tx: %v", err)
@@ -754,7 +763,7 @@ func (p *Plugin) validateAuthAddressUpdateTx(tx modules.ConsensusTransaction, ct
 
 func (p *Plugin) validateAuthConditionUpdateTx(tx modules.ConsensusTransaction, ctx types.TransactionValidationContext, bucket *persist.LazyBoltBucket) error {
 	// get AuthConditionUpdateTx
-	cutx, err := AuthConditionUpdateTransactionFromTransaction(tx.Transaction, p.authConditionUpdateTransactionVersion)
+	cutx, err := AuthConditionUpdateTransactionFromTransaction(tx.Transaction, p.authConditionUpdateTransactionVersion, p.RequireMinerFees)
 	if err != nil {
 		// this check also fails if the tx contains coin/blockstake inputs/outputs or miner fees
 		return fmt.Errorf("failed to use tx as a auth condition update tx: %v", err)

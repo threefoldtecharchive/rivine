@@ -61,7 +61,7 @@ func NewGetActiveAuthConditionHandler(plugin *authcointx.Plugin, txpool modules.
 				if txn.Version != authConditionTxVersion {
 					continue
 				}
-				atxn, err := authcointx.AuthConditionUpdateTransactionFromTransaction(*txn, authConditionTxVersion)
+				atxn, err := authcointx.AuthConditionUpdateTransactionFromTransaction(*txn, authConditionTxVersion, plugin.RequireMinerFees)
 				if err != nil {
 					rapi.WriteError(w, rapi.Error{Message: err.Error()}, http.StatusInternalServerError)
 					return
@@ -182,7 +182,7 @@ func getAddressesAuthStateNowAcceptingTxPool(addresses []types.UnlockHash, plugi
 		if txn.Version != authAddressTxVersion {
 			continue
 		}
-		atxn, err := authcointx.AuthAddressUpdateTransactionFromTransaction(txn, authAddressTxVersion)
+		atxn, err := authcointx.AuthAddressUpdateTransactionFromTransaction(txn, authAddressTxVersion, plugin.RequireMinerFees)
 		if err != nil {
 			return nil, err
 		}
