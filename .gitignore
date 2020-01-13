@@ -13,3 +13,4 @@ release/
 config.toml
 cmd/rivinecg/rivinecg
 cmd/rivined/rivined
+research/stellar/examples/python/env

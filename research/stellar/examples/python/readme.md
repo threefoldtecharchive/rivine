@@ -12,7 +12,6 @@ Install dependencies
 
 `pip3 install -r requirements.txt`
 
-
 ## 1 Creating a keypair
 
 This creates an `account`.
@@ -60,4 +59,3 @@ Is the asset flag is provided in format: `code:issuer` then this asset will be t
 ```sh
 python3 account/transfer.py --sourceKey <address> --destinationAddress <destinationAddress> --amount <amount> --asset <code:issuer>
 ```
-
