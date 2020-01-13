@@ -1,4 +1,4 @@
-# Using the javascript examples
+# Using the python examples
 
 First of all, create a virtual environment
 
