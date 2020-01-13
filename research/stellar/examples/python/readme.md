@@ -12,7 +12,10 @@ Install dependencies
 
 `pip3 install -r requirements.txt`
 
-## 1 Creating a keypair
+## Basic account examples
+There is a more advanced example of [issuing a custom asset on testnet](issuetoken/readme.md)
+
+### 1 Creating a keypair
 
 This creates an `account`.
 
@@ -20,7 +23,7 @@ This creates an `account`.
 python3 account/create-key-pair.py
 ```
 
-## 2 Funding an address
+### 2 Funding an address
 
 Funding an address of a generated keypair through the Stellar Friendbot.
 
@@ -28,7 +31,7 @@ Funding an address of a generated keypair through the Stellar Friendbot.
 python3 account/fund-account.py --address <address>
 ```
 
-## 3 Checking balance of an address
+### 3 Checking balance of an address
 
 Checks the balance of an address.
 
@@ -36,7 +39,7 @@ Checks the balance of an address.
 python3 account/check-account.py --address <address>
 ```
 
-## 4 Activating (Funding) another account
+### 4 Activating (Funding) another account
 
 Folowing funds another account, this account must exist in order to work.
 
@@ -46,7 +49,7 @@ Sourcekey is the secret key from which account another account will be funded.
 python3 account/activate-account.py --sourcekey <address> --destinationaddress <destinationAddress>
 ```
 
-## 5 Transfering assets to another account
+### 5 Transfering assets to another account
 
 Folowing transfers funds to another account, this account must exist in order to work.
 
