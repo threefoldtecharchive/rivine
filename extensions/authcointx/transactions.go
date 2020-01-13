@@ -63,6 +63,8 @@ type (
 		// AuthFulfillment defines the fulfillment which is used in order to
 		// fulfill the globally defined AuthCondition.
 		AuthFulfillment types.UnlockFulfillmentProxy `json:"authfulfillment"`
+		// Minerfees, a fee paid for this minter definition transaction.
+		MinerFees []types.Currency `json:"minerfees,omitempty"`
 	}
 	// AuthAddressUpdateTransactionExtension defines the AuthAddressUpdateTransaction Extension Data
 	AuthAddressUpdateTransactionExtension struct {
@@ -115,10 +117,6 @@ func AuthAddressUpdateTransactionFromTransactionData(txData types.TransactionDat
 	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
 		return AuthAddressUpdateTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
-	// no coin inputs, miner fees, block stake inputs or block stake outputs are allowed
-	if len(txData.CoinInputs) != 0 || len(txData.MinerFees) != 0 || len(txData.CoinOutputs) != 0 || len(txData.BlockStakeInputs) != 0 || len(txData.BlockStakeOutputs) != 0 {
-		return AuthAddressUpdateTransaction{}, errors.New("no coin/blockstake inputs/outputs or miner fees are allowed in a AuthAddressUpdateTransaction")
-	}
 	// return the AuthAddressUpdateTransaction, with the data extracted from the TransactionData
 	return AuthAddressUpdateTransaction{
 		Nonce:           extensionData.Nonce,
@@ -126,6 +124,7 @@ func AuthAddressUpdateTransactionFromTransactionData(txData types.TransactionDat
 		DeauthAddresses: extensionData.DeauthAddresses,
 		ArbitraryData:   txData.ArbitraryData,
 		AuthFulfillment: extensionData.AuthFulfillment,
+		MinerFees:       txData.MinerFees,
 	}, nil
 }
 
@@ -134,6 +133,7 @@ func AuthAddressUpdateTransactionFromTransactionData(txData types.TransactionDat
 func (autx *AuthAddressUpdateTransaction) TransactionData() types.TransactionData {
 	return types.TransactionData{
 		ArbitraryData: autx.ArbitraryData,
+		MinerFees:     autx.MinerFees,
 		Extension: &AuthAddressUpdateTransactionExtension{
 			Nonce:           autx.Nonce,
 			AuthAddresses:   autx.AuthAddresses,
@@ -149,6 +149,7 @@ func (autx *AuthAddressUpdateTransaction) Transaction(version types.TransactionV
 	return types.Transaction{
 		Version:       version,
 		ArbitraryData: autx.ArbitraryData,
+		MinerFees:     autx.MinerFees,
 		Extension: &AuthAddressUpdateTransactionExtension{
 			Nonce:           autx.Nonce,
 			AuthAddresses:   autx.AuthAddresses,
@@ -279,6 +280,10 @@ func (autc AuthAddressUpdateTransactionController) SignatureHash(t types.Transac
 		autx.ArbitraryData,
 	)
 
+	if autc.RequireMinerFees {
+		enc.Encode(autx.MinerFees)
+	}
+
 	var hash crypto.Hash
 	h.Sum(hash[:0])
 	return hash, nil
@@ -333,6 +338,8 @@ type (
 		// AuthFulfillment defines the fulfillment which is used in order to
 		// fulfill the globally defined AuthCondition.
 		AuthFulfillment types.UnlockFulfillmentProxy `json:"authfulfillment"`
+		// Minerfees, a fee paid for this minter definition transaction.
+		MinerFees []types.Currency `json:"minerfees,omitempty"`
 	}
 	// AuthConditionUpdateTransactionExtension defines the AuthConditionUpdateTransaction Extension Data
 	AuthConditionUpdateTransactionExtension struct {
@@ -378,16 +385,13 @@ func AuthConditionUpdateTransactionFromTransactionData(txData types.TransactionD
 	} else if !requireMinerFees && len(txData.MinerFees) != 0 {
 		return AuthConditionUpdateTransaction{}, errors.New("undesired miner fees: no miner fees are required, yet are defined")
 	}
-	// no coin inputs, miner fees, block stake inputs or block stake outputs are allowed
-	if len(txData.CoinInputs) != 0 || len(txData.MinerFees) != 0 || len(txData.CoinOutputs) != 0 || len(txData.BlockStakeInputs) != 0 || len(txData.BlockStakeOutputs) != 0 {
-		return AuthConditionUpdateTransaction{}, errors.New("no coin/blockstake inputs/outputs or miner fees are allowed in a AuthConditionUpdateTransaction")
-	}
 	// return the AuthConditionUpdateTransaction, with the data extracted from the TransactionData
 	return AuthConditionUpdateTransaction{
 		Nonce:           extensionData.Nonce,
 		ArbitraryData:   txData.ArbitraryData,
 		AuthCondition:   extensionData.AuthCondition,
 		AuthFulfillment: extensionData.AuthFulfillment,
+		MinerFees:       txData.MinerFees,
 	}, nil
 }
 
@@ -396,6 +400,7 @@ func AuthConditionUpdateTransactionFromTransactionData(txData types.TransactionD
 func (autx *AuthConditionUpdateTransaction) TransactionData() types.TransactionData {
 	return types.TransactionData{
 		ArbitraryData: autx.ArbitraryData,
+		MinerFees:     autx.MinerFees,
 		Extension: &AuthConditionUpdateTransactionExtension{
 			Nonce:           autx.Nonce,
 			AuthCondition:   autx.AuthCondition,
@@ -410,6 +415,7 @@ func (autx *AuthConditionUpdateTransaction) Transaction(version types.Transactio
 	return types.Transaction{
 		Version:       version,
 		ArbitraryData: autx.ArbitraryData,
+		MinerFees:     autx.MinerFees,
 		Extension: &AuthConditionUpdateTransactionExtension{
 			Nonce:           autx.Nonce,
 			AuthCondition:   autx.AuthCondition,
@@ -537,6 +543,10 @@ func (cutc AuthConditionUpdateTransactionController) SignatureHash(t types.Trans
 		cutx.AuthCondition,
 		cutx.ArbitraryData,
 	)
+
+	if cutc.RequireMinerFees {
+		enc.Encode(cutx.MinerFees)
+	}
 
 	var hash crypto.Hash
 	h.Sum(hash[:0])
