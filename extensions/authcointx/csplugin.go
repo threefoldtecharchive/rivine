@@ -34,6 +34,7 @@ type (
 		unauthorizedCoinTransactionExceptionCallback UnauthorizedCoinTransactionExceptionCallback
 		unlockHashFilter                             func(types.UnlockHash) bool
 		RequireMinerFees                             bool
+		reverse                                      bool
 	}
 
 	// PluginOpts are extra optional configurations one can make to the AuthCoin Plugin
@@ -48,7 +49,11 @@ type (
 		// the NilUnlockHash and AtomicSwap contract addresses require authorization.
 		// Returns true in case authorization cheque is required, False otherwise.
 		UnlockHashFilter func(types.UnlockHash) bool
+		// RequireMinerFees can be used to enable minerfees on authorization transactions.
 		RequireMinerFees bool
+		// Reverse can be used to reverse the logic of this plugin.
+		// This means that by default all addresses are authorized and can send transactions.
+		Reverse bool
 	}
 
 	// UnauthorizedCoinTransactionExceptionCallback is the function signature for the callback that can be used
@@ -80,6 +85,9 @@ func NewPlugin(genesisAuthCondition types.UnlockConditionProxy, authAddressUpdat
 		p.unauthorizedCoinTransactionExceptionCallback = opts.UnauthorizedCoinTransactionExceptionCallback
 	} else {
 		p.unauthorizedCoinTransactionExceptionCallback = DefaultUnauthorizedCoinTransactionExceptionCallback
+	}
+	if opts != nil && opts.Reverse {
+		p.reverse = opts.Reverse
 	}
 	if opts != nil && opts.UnlockHashFilter != nil {
 		p.unlockHashFilter = opts.UnlockHashFilter
@@ -555,6 +563,9 @@ func (p *Plugin) getAuthAddressStateFromBucketAt(authAddressBucket *bolt.Bucket,
 	if err != nil {
 		return false, fmt.Errorf("corrupt transaction DB: failed to decode found address auth state for address %s at height %d: %v", uh.String(), height, err)
 	}
+	if p.reverse {
+		return !state, nil
+	}
 	return state, nil
 }
 
@@ -589,6 +600,10 @@ func (p *Plugin) getAuthAddressStateFromBucket(authAddressBucket *bolt.Bucket, u
 	if err != nil {
 		return false, fmt.Errorf("corrupt transaction DB: failed to decode found address auth state for address %s: %v", uh.String(), err)
 	}
+
+	if p.reverse {
+		return !state, nil
+	}
 	return state, nil
 }
 
@@ -598,11 +613,17 @@ func (p *Plugin) getAuthAddressStateFromBucketWithContextInfo(authAddressBucket 
 		if err != nil {
 			return false, fmt.Errorf("failed to get auth address state for address %s at block height %d", uh.String(), blockHeight)
 		}
+		if p.reverse {
+			return !state, nil
+		}
 		return state, nil
 	}
 	state, err := p.getAuthAddressStateFromBucket(authAddressBucket, uh)
 	if err != nil {
 		return false, fmt.Errorf("failed to get the latest auth address state for address %s", uh.String())
+	}
+	if p.reverse {
+		return !state, nil
 	}
 	return state, nil
 }
