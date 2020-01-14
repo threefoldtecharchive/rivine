@@ -14,8 +14,13 @@ import (
 	client "github.com/threefoldtech/rivine/pkg/client"
 )
 
+//WalletCmdsOpts defines chain-specific options for the wallet commands
+type WalletCmdsOpts struct {
+	RequireMinerFees bool
+}
+
 // CreateWalletCmds creates the auth coin wallet root command as well as its transaction creation sub commands.
-func CreateWalletCmds(client *client.CommandLineClient, conditionUpdateTransactionVersion, addressUpdateTransactionVersion types.TransactionVersion) {
+func CreateWalletCmds(client *client.CommandLineClient, conditionUpdateTransactionVersion, addressUpdateTransactionVersion types.TransactionVersion, opts *WalletCmdsOpts) {
 	walletCmd := &walletCmd{
 		cli: client,
 
@@ -27,6 +32,11 @@ func CreateWalletCmds(client *client.CommandLineClient, conditionUpdateTransacti
 		Use:   "authcoin",
 		Short: "root command for all auth coin transaction commands",
 	}
+
+	if opts != nil {
+		walletCmd.requireMinerFees = opts.RequireMinerFees
+	}
+
 	// coin auth sub cmds
 	var (
 		createAuthAddressUpdateTxCmd = &cobra.Command{
@@ -80,6 +90,7 @@ type walletCmd struct {
 	authConditionUpdateTxCfg struct {
 		Description []byte
 	}
+	requireMinerFees bool
 }
 
 func (walletCmd *walletCmd) authConditionUpdateTxCreateCmd(cmd *cobra.Command, args []string) {
@@ -127,6 +138,10 @@ func (walletCmd *walletCmd) authConditionUpdateTxCreateCmd(cmd *cobra.Command, a
 		AuthCondition: condition,
 	}
 
+	if walletCmd.requireMinerFees {
+		tx.MinerFees = []types.Currency{walletCmd.cli.Config.MinimumTransactionFee}
+	}
+
 	if n := len(walletCmd.authConditionUpdateTxCfg.Description); n > 0 {
 		tx.ArbitraryData = make([]byte, n)
 		copy(tx.ArbitraryData[:], walletCmd.authConditionUpdateTxCfg.Description[:])
@@ -146,6 +161,11 @@ func (walletCmd *walletCmd) authAddressUpdateTxCreateCmd(cmd *cobra.Command, _ [
 	tx := authcointx.AuthAddressUpdateTransaction{
 		Nonce: types.RandomTransactionNonce(),
 	}
+
+	if walletCmd.requireMinerFees {
+		tx.MinerFees = []types.Currency{walletCmd.cli.Config.MinimumTransactionFee}
+	}
+
 	// add authorized addresses
 	tx.AuthAddresses = make([]types.UnlockHash, len(walletCmd.authAddressUpdateTxCfg.AuthAddresses))
 	for index, address := range walletCmd.authAddressUpdateTxCfg.AuthAddresses {
