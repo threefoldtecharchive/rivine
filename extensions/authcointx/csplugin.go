@@ -556,6 +556,9 @@ func (p *Plugin) getAuthAddressStateFromBucketAt(authAddressBucket *bolt.Bucket,
 		return false, err
 	}
 	if b == nil {
+		if p.reverse {
+			return true, nil
+		}
 		return false, nil
 	}
 	var state bool
@@ -593,6 +596,9 @@ func (p *Plugin) getAuthAddressStateFromBucket(authAddressBucket *bolt.Bucket, u
 		return false, err
 	}
 	if b == nil {
+		if p.reverse {
+			return true, nil
+		}
 		return false, nil
 	}
 	var state bool
