@@ -7,7 +7,6 @@ condition authorized to do this and the address authorization.
 
 > :warning: This extension also overwrites the standard Rivine `0x01` transaction controller,
 > and disabled `0x00` transactions by allowing it to be decoded but not validated.
-
 > :warning: This extensions adds a rule that is applied to all transaction versions.
 > Using this extensions means that coin inputs and coin outputs can only be sent if:
 > all parties are authorized, or if only one address is involved with just a single refund coin output.
@@ -61,37 +60,37 @@ can receive (coin outputs targetting the authorized address) or send (coin input
 
 ```javascript
 {
-	// 0xB0, an example version number of an  Auth Address Update Transaction
-	"version": 176, // the decimal representation of the above example version number
-	// Auth Address Update Transaction Data
-	"data": {
-		// crypto-random 8-byte array (base64-encoded to a string) to ensure
-		// the uniqueness of this transaction's ID
-		"nonce": "FoAiO8vN2eU=",
-		// it is not required to define auth addresses,
-		// but an Auth Address Update transaction requires at least one auth address
-		// or one deauth address to be defined
-		"authaddresses": [
-			"0112210f9efa5441ab705226b0628679ed190eb4588b662991747ea3809d93932c7b41cbe4b732",
-			"01450aeb140c58012cb4afb48e068f976272fefa44ffe0991a8a4350a3687558d66c8fc753c37e",
-		],
-		"deauthaddresses": [
-			"019e9b6f2d43a44046b62836ce8d75c935ff66cbba1e624b3e9755b98ac176a08dac5267b2c8ee",
-		],
-		// arbitrary data, can contain anything as long as it
-		// fits within 83 bytes, and is optional
-		"arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
-		// fulfillment which fulfills the AuthCondition,
-		// can be any type of fulfillment as long as it is
-		// valid AND fulfills the AuthCondition
-		"authfulfillment": {
-			"type": 1,
-			"data": {
-				"publickey": "ed25519:d285f92d6d449d9abb27f4c6cf82713cec0696d62b8c123f1627e054dc6d7780",
-				"signature": "bdf023fbe7e0efec584d254b111655e1c2f81b9488943c3a712b91d9ad3a140cb0949a8868c5f72e08ccded337b79479114bdb4ed05f94dfddb359e1a6124602"
-			}
-		},
-	}
+ // 0xB0, an example version number of an  Auth Address Update Transaction
+ "version": 176, // the decimal representation of the above example version number
+ // Auth Address Update Transaction Data
+ "data": {
+  // crypto-random 8-byte array (base64-encoded to a string) to ensure
+  // the uniqueness of this transaction's ID
+  "nonce": "FoAiO8vN2eU=",
+  // it is not required to define auth addresses,
+  // but an Auth Address Update transaction requires at least one auth address
+  // or one deauth address to be defined
+  "authaddresses": [
+   "0112210f9efa5441ab705226b0628679ed190eb4588b662991747ea3809d93932c7b41cbe4b732",
+   "01450aeb140c58012cb4afb48e068f976272fefa44ffe0991a8a4350a3687558d66c8fc753c37e",
+  ],
+  "deauthaddresses": [
+   "019e9b6f2d43a44046b62836ce8d75c935ff66cbba1e624b3e9755b98ac176a08dac5267b2c8ee",
+  ],
+  // arbitrary data, can contain anything as long as it
+  // fits within 83 bytes, and is optional
+  "arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
+  // fulfillment which fulfills the AuthCondition,
+  // can be any type of fulfillment as long as it is
+  // valid AND fulfills the AuthCondition
+  "authfulfillment": {
+   "type": 1,
+   "data": {
+    "publickey": "ed25519:d285f92d6d449d9abb27f4c6cf82713cec0696d62b8c123f1627e054dc6d7780",
+    "signature": "bdf023fbe7e0efec584d254b111655e1c2f81b9488943c3a712b91d9ad3a140cb0949a8868c5f72e08ccded337b79479114bdb4ed05f94dfddb359e1a6124602"
+   }
+  },
+ }
 }
 ```
 
@@ -134,9 +133,9 @@ These transactions are used to change the condition authorized to use these tran
 
 An Auth condition can be any of the following conditions:
 
-* (1) An [UnlockHash Condition][rivine-condition-uh]: it is a single person (or multiple people owning the same private key for the same wallet);
-* (2) A [MultiSignature Condition][rivine-condition-multisig]: it is a multi signature wallet, most likely meaning multiple people owning different private keys that all have a certain degree of control in the same multi signature wallet, allowing them to come to a consensus on the creation of coins and redefinition of who the coin creators are (to be);
-* (3) An [TimeLocked Condition][rivine-condition-tl]: the minting powers (creation of coins and redefinition of the coin creators) are locked until a certain (unix epoch) timestamp or block height. Once this height or time is reached, the internal condition (an [UnlockHash Condition][rivine-condition-uh] (1) or a [MultiSignature Condition][rivine-condition-multisig]) (2) is the condition that defines who can create coins and redefine who the coin creators are to be. Prior to this timestamp or block height no-one can create coins or redefine who the coin creators are to be, not even the ones defined by the internal condition of the currently active [TimeLocked Condition][rivine-condition-tl].
+- (1) An [UnlockHash Condition][rivine-condition-uh]: it is a single person (or multiple people owning the same private key for the same wallet);
+- (2) A [MultiSignature Condition][rivine-condition-multisig]: it is a multi signature wallet, most likely meaning multiple people owning different private keys that all have a certain degree of control in the same multi signature wallet, allowing them to come to a consensus on the creation of coins and redefinition of who the coin creators are (to be);
+- (3) An [TimeLocked Condition][rivine-condition-tl]: the minting powers (creation of coins and redefinition of the coin creators) are locked until a certain (unix epoch) timestamp or block height. Once this height or time is reached, the internal condition (an [UnlockHash Condition][rivine-condition-uh] (1) or a [MultiSignature Condition][rivine-condition-multisig]) (2) is the condition that defines who can create coins and redefine who the coin creators are to be. Prior to this timestamp or block height no-one can create coins or redefine who the coin creators are to be, not even the ones defined by the internal condition of the currently active [TimeLocked Condition][rivine-condition-tl].
 as well as to authorize and deauthorize addresses that can (no longer) send/receive tokens.
 
 The Genesis Auth Condition is hardcoded.
@@ -148,36 +147,36 @@ this is however not a consensus-defined requirement, as discussed earlier.
 
 ```javascript
 {
-	// 0xB1, an example version number of an Auth Condition Update Transaction
-	"version": 177, // the decimal representation of the above example version number
-	// Auth Condition Update Transaction Data
-	"data": {
-		// crypto-random 8-byte array (base64-encoded to a string) to ensure
-		// the uniqueness of this transaction's ID
-		"nonce": "1oQFzIwsLs8=",
-		// arbitrary data, can contain anything as long as it
-		// fits within 83 bytes, and is optional.
-		"arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
-		// condition which will become the new AuthCondition
-		// once the transaction is part of a created block and
-		// until there is a newer block with another accepted AuthCondition
-		"authcondition": {
-			"type": 1,
-			"data": {
-				"unlockhash": "01e78fd5af261e49643dba489b29566db53fa6e195fa0e6aad4430d4f06ce88b73e047fe6a0703"
-			}
-		},
-		// fulfillment which fulfills the current active AuthCondition,
-		// can be any type of fulfillment as long as it is
-		// valid AND fulfills the current active AuthCondition
-		"authfulfillment": {
-			"type": 1,
-			"data": {
-				"publickey": "ed25519:d285f92d6d449d9abb27f4c6cf82713cec0696d62b8c123f1627e054dc6d7780",
-				"signature": "ad59389329ed01c5ee14ce25ae38634c2b3ef694a2bdfa714f73b175f979ba6613025f9123d68c0f11e8f0a7114833c0aab4c8596d4c31671ec8a73923f02305"
-			}
-		},
-	}
+ // 0xB1, an example version number of an Auth Condition Update Transaction
+ "version": 177, // the decimal representation of the above example version number
+ // Auth Condition Update Transaction Data
+ "data": {
+  // crypto-random 8-byte array (base64-encoded to a string) to ensure
+  // the uniqueness of this transaction's ID
+  "nonce": "1oQFzIwsLs8=",
+  // arbitrary data, can contain anything as long as it
+  // fits within 83 bytes, and is optional.
+  "arbitrarydata": "dGVzdC4uLiAxLCAyLi4uIDM="
+  // condition which will become the new AuthCondition
+  // once the transaction is part of a created block and
+  // until there is a newer block with another accepted AuthCondition
+  "authcondition": {
+   "type": 1,
+   "data": {
+    "unlockhash": "01e78fd5af261e49643dba489b29566db53fa6e195fa0e6aad4430d4f06ce88b73e047fe6a0703"
+   }
+  },
+  // fulfillment which fulfills the current active AuthCondition,
+  // can be any type of fulfillment as long as it is
+  // valid AND fulfills the current active AuthCondition
+  "authfulfillment": {
+   "type": 1,
+   "data": {
+    "publickey": "ed25519:d285f92d6d449d9abb27f4c6cf82713cec0696d62b8c123f1627e054dc6d7780",
+    "signature": "ad59389329ed01c5ee14ce25ae38634c2b3ef694a2bdfa714f73b175f979ba6613025f9123d68c0f11e8f0a7114833c0aab4c8596d4c31671ec8a73923f02305"
+   }
+  },
+ }
 }
 ```
 

@@ -10,7 +10,7 @@ def fundThroughFriendbot(address):
   try:
     res = requests.get("https://friendbot.stellar.org/?addr=" + address)
     res.raise_for_status()
-    print("account with address: {} funded through friendbot!".format(address))
+    print("account with address: {} funded through friendbot".format(address))
   except requests.exceptions.HTTPError:
     print(res.json())
     sys.exit(1)
