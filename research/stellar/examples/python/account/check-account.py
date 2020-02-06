@@ -1,19 +1,15 @@
 # pylint: disable=no-value-for-parameter
-from stellar_base import Address
+from stellar_sdk import Server
 import click
 
 @click.command()
 @click.option('--address', help='Address to check', required=True)
 
 def check_account(address):
-  address = Address(address=address)
-  address.get()
-
-  print('Balances: {}'.format(address.balances))
-  print('Sequence Number: {}'.format(address.sequence))
-  print('Flags: {}'.format(address.flags))
-  print('Signers: {}'.format(address.signers))
-  print('Data: {}'.format(address.data))
+  
+  server = Server(horizon_url="https://horizon-testnet.stellar.org")
+  response= server.accounts().account_id(address).call()
+  print(response['balances'])
 
 if __name__ == '__main__':
   check_account()
