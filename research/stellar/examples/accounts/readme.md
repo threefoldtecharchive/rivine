@@ -37,6 +37,6 @@ An address is the rawseed used to create an ed25519 keypair after which the vers
 
 The same 32 bytes can be used to create Rivine and Stellar keypairs.
 
-It is possible to go from a Stellar account address to a Rivine "01"-address if they are created using the same private key (ed25519 entropy) without knowing the private keybut not the reverse.
+It is possible to go from a Stellar account address to a Rivine "01"-address if they are created using the same private key (ed25519 entropy) without knowing the private key but not the reverse.
 
 Example code proving the above can be found in `convert.go`
