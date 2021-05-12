@@ -11,7 +11,7 @@
   "dependencies": {
     "@types/lodash": "^4.14.136",
     "axios": "^0.19.0",
-    "chart.js": "^2.8.0",
+    "chart.js": "^2.9.4",
     "core-js": "^2.6.5",
     "gulp": "^4.0.2",
     "rivine-ts-types": "0.0.1",
